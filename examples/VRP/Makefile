@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.3.2.1 2009/06/19 07:53:33 bzfwolte Exp $
+# $Id: Makefile,v 1.3.2.2 2010/03/22 16:05:06 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ vehicle routing example using SCIP for branch-and-price
@@ -70,7 +70,7 @@ lint:		$(MAINSRC)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
+			$(LINT) $(SCIPDIR)/lint/scip.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
@@ -90,7 +90,11 @@ $(BINDIR):
 
 .PHONY: clean
 clean:
-		-rm -rf $(OBJDIR)/* $(MAINFILE)
+ifneq ($(OBJDIR),)
+		-rm -f $(OBJDIR)/*.o
+		-rmdir -p $(OBJDIR)
+endif
+		-rm -f $(MAINFILE)
 
 .PHONY: depend
 depend:		$(SCIPDIR)

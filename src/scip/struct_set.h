@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.77.2.5 2009/08/12 09:27:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.77.2.6 2010/03/22 16:05:41 bzfwolte Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -46,6 +46,9 @@
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** global SCIP settings */
 struct SCIP_Set
@@ -176,6 +179,7 @@ struct SCIP_Set
    int                   limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
                                               *   (-1: no limit) */
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
+   int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
    /* LP settings */
    int                   lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
@@ -199,6 +203,11 @@ struct SCIP_Set
    SCIP_Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
    SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
+   SCIP_Bool             lp_lexdualalgo;     /**< should the lexicographic dual algorithm be used? */
+   SCIP_Bool             lp_lexdualrootonly; /**< should the lexicographic dual algorithm be applied only at the root node */
+   int                   lp_lexdualmaxrounds;/**< maximum number of rounds in the lexicographic dual algorithm */
+   SCIP_Bool             lp_lexdualbasic;    /**< choose fractional basic variables in lexicographic dual algorithm */
+   SCIP_Bool             lp_simplexrowrep;   /**< should simplex algorithm use row representation of the basis? */
 
    /* memory settings */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
@@ -211,6 +220,9 @@ struct SCIP_Set
    
    /* miscellaneous settings */
    SCIP_Bool             misc_catchctrlc;    /**< should the CTRL-C interrupt be caught by SCIP? */
+   SCIP_Bool             misc_usevartable;   /**< should a hashtable be used to map from variable names to variables? */
+   SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
+   SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
    SCIP_Bool             misc_usefprelax;    /**< if problem is solved exactly, should floating point problem be 
                                               *   a relaxation of the original problem (instead of an approximation)? */
@@ -293,5 +305,8 @@ struct SCIP_Set
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.7.2.2 2009/06/19 07:53:35 bzfwolte Exp $
+# $Id: make.project,v 1.7.2.3 2010/03/22 16:05:08 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -52,8 +52,10 @@ READLINE	=	true
 ZLIB		=	true
 GMP             =       auto
 ZIMPL		=	true
+IPOPT		=	false
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
+IPOPTOPT	=	opt
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
@@ -169,10 +171,6 @@ ifeq ($(LPS),spx)
 LPSLDFLAGS	=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 endif
 
-ifeq ($(LPS),spx121)
-LPSLDFLAGS	=	$(LINKCXX_l)soplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
-endif
-
 ifeq ($(LPS),spx132)
 LPSLDFLAGS	=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 endif
@@ -235,6 +233,16 @@ $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
 endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc $(ZIMPL_FLAGS)
 LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+endif
+
+ifeq ($(IPOPT),true)
+FLAGS		+=	-DWITH_IPOPT -I$(SCIPDIR)/$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
+ifeq ($(LIBEXT),$(STATICLIBEXT))
+LDFLAGS		+=	`cat $(SCIPDIR)/$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
+else
+LDFLAGS		+=	`cat $(SCIPDIR)/$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)`
+endif
 endif
 
 #-----------------------------------------------------------------------------

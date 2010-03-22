@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.85.2.4 2009/08/05 10:10:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.85.2.5 2010/03/22 16:05:30 bzfwolte Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -460,6 +460,21 @@ SCIP_RETCODE primalAddSol(
    assert(0 <= insertpos && insertpos < primal->nsols);
    primal->sols[insertpos] = sol;
    primal->nsolsfound++;
+   
+   /* if its the first primal solution, store the relevan statistics */
+   if(primal->nsolsfound == 1 )
+   {
+      stat->nnodesbeforefirst = SCIPsolGetNodenum(sol);
+      stat->nrunsbeforefirst = SCIPsolGetRunnum(sol);
+      stat->firstprimalheur = SCIPsolGetHeur(sol);
+      stat->firstprimaltime = SCIPsolGetTime(sol);
+      stat->firstprimaldepth = SCIPsolGetDepth(sol);
+      stat->firstprimalbound = SCIPsolGetObj(sol, set, prob);
+      SCIPdebugMessage("First Solution stored in problem specific statistics.\n");
+      SCIPdebugMessage("-> %"SCIP_LONGINT_FORMAT" nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
+         stat->firstprimaltime, stat->firstprimaldepth, stat->firstprimalbound);
+   }
+
    SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n", 
       insertpos, primal->nsols, primal->nsolsfound);
 

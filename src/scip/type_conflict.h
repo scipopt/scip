@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.20.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.20.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_conflict.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for conflict analysis
  * @author Tobias Achterberg
  */
@@ -24,6 +25,14 @@
 #ifndef __SCIP_TYPE_CONFLICT_H__
 #define __SCIP_TYPE_CONFLICT_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_var.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to process conflict sets */
 typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
@@ -117,13 +126,8 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
       SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, int nbdchginfos, \
       SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
 
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_var.h"
-
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,5 +1,5 @@
-#--- $Id: make.darwin.x86_64.gnu.dbg,v 1.2.2.2 2009/06/19 07:53:34 bzfwolte Exp $
-FLAGS		+=	-DNO_REMOVE_HISTORY # -DROUNDING_FE
+#--- $Id: make.darwin.x86_64.gnu.dbg,v 1.2.2.3 2010/03/22 16:05:07 bzfwolte Exp $
+FLAGS		+=	-DNO_REMOVE_HISTORY -DROUNDING_FE
 OFLAGS		+=	-O0 -g -m64
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

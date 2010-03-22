@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_disp.h,v 1.12.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_disp.h,v 1.12.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   pub_disp.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for displaying runtime statistics
  * @author Tobias Achterberg
  */
@@ -31,7 +32,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_disp.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** gets user data of display column */
 extern
@@ -118,5 +121,8 @@ void SCIPdispTime(
    int                   width               /**< width to fit into */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

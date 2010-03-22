@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.65.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.65.2.2 2010/03/22 16:05:17 bzfwolte Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -489,7 +489,7 @@ void consdataPrint(
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
 }
 
 /** adds coefficient in or constraint */
@@ -655,6 +655,7 @@ SCIP_RETCODE applyFixings(
 
    SCIPdebugMessage("after fixings: ");
    SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
 }
@@ -1775,6 +1776,11 @@ SCIP_DECL_CONSPRINT(consPrintOr)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopyOr NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseOr NULL
 
 
 
@@ -1837,7 +1843,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          consPropOr, consPresolOr, consRespropOr, consLockOr,
          consActiveOr, consDeactiveOr, 
          consEnableOr, consDisableOr,
-         consPrintOr,
+         consPrintOr, consCopyOr, consParseOr,
          conshdlrdata) );
 
    return SCIP_OKAY;

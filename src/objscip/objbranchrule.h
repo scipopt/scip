@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.26.2.2 2009/06/19 07:53:37 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.26.2.3 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -28,11 +28,7 @@
 #include <cassert>
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {
@@ -41,6 +37,8 @@ namespace scip
 class ObjBranchrule
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the branching rule */
    char* scip_name_;
    
@@ -82,6 +80,7 @@ public:
    /** destructor */
    virtual ~ObjBranchrule()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

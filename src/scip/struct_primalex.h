@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_primalex.h,v 1.1.2.1 2010/03/02 17:20:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_primalex.h,v 1.1.2.2 2010/03/22 16:05:41 bzfwolte Exp $"
 
 /**@file   struct_primalex.h
  * @brief  datastructures for collecting exact primal CIP solutions and exact primal information
@@ -29,6 +29,9 @@
 #include "scip/type_solex.h"
 #include "scip/type_primalex.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 /** exact primal data and solution storage */
@@ -39,5 +42,8 @@ struct SCIP_Primalex
    int                   nsols;              /**< number of exact primal CIP solutions stored in sols array */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

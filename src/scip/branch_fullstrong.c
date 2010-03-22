@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.50.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.50.2.2 2010/03/22 16:05:13 bzfwolte Exp $"
 
 /**@file   branch_fullstrong.c
  * @ingroup BRANCHINGRULES
@@ -359,6 +359,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 }
 
 
+/** branching execution method for relaxation solutions */
+#define branchExecrelFullstrong NULL
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 #define branchExecpsFullstrong NULL
 
@@ -385,7 +389,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeFullstrong, branchInitFullstrong, branchExitFullstrong, 
          branchInitsolFullstrong, branchExitsolFullstrong, 
-         branchExeclpFullstrong, branchExecpsFullstrong,
+         branchExeclpFullstrong, branchExecrelFullstrong, branchExecpsFullstrong,
          branchruledata) );
 
    /* fullstrong branching rule parameters */

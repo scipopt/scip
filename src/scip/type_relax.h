@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.13.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.13.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_relax.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for relaxators
  * @author Tobias Achterberg
  */
@@ -24,11 +25,18 @@
 #ifndef __SCIP_TYPE_RELAX_H__
 #define __SCIP_TYPE_RELAX_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Relax SCIP_RELAX;             /**< relaxator */
+typedef struct SCIP_Relaxation SCIP_RELAXATION;   /**< relaxator */
 typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator data */
-
-
 
 /** destructor of relaxator to free user data (called when SCIP is exiting)
  *
@@ -84,6 +92,7 @@ typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator
  *  input:
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
+ *  - lowerbound      : pointer to store a lowerbound for the current node
  *  - result          : pointer to store the result of the relaxation call
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
@@ -98,13 +107,10 @@ typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator
  *                      planes); however, it is able to continue the solving in order to improve the dual bound
  *  - SCIP_DIDNOTRUN  : the relaxator was skipped
  */
-#define SCIP_DECL_RELAXEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax, SCIP_RESULT* result)
+#define SCIP_DECL_RELAXEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax, SCIP_Real* lowerbound, SCIP_RESULT* result)
 
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

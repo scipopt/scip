@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.22.2.2 2009/06/19 07:53:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.22.2.3 2010/03/22 16:05:33 bzfwolte Exp $"
 
 /**@file   reader_ppm.c
  * @ingroup FILEREADERS 
@@ -103,11 +103,10 @@ SCIP_RETCODE getActiveVariables(
 
       if( requiredsize > *nvars )
       {
-         *nvars = requiredsize;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, *nvars ) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, *nvars ) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
          
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
    }
@@ -179,7 +178,7 @@ void appendLine(
       endLine(scip, file, readerdata, linebuffer, linecnt);
    
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, PPM_MAX_LINELEN - (*linecnt));
+   strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt));
    (*linecnt) += (int) strlen(extension);
 }
 

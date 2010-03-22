@@ -1,4 +1,4 @@
-#--- $Id: make.windows.x86.intel.opt,v 1.1.2.1 2009/06/19 07:53:35 bzfwolte Exp $
+#--- $Id: make.windows.x86.intel.opt,v 1.1.2.2 2010/03/22 16:05:08 bzfwolte Exp $
 CC		=	icl /nologo
 CC_o		=	/Fo
 CXX		=	icl /nologo
@@ -11,10 +11,10 @@ LINKCXX		=       link
 LINKCXX_L	=	/LIBPATH:
 LINKCXX_l	=	lib
 LINKCXX_o	=	/out:
-FLAGS		+=	/DNO_SIGACTION /DNO_RAND_R /DNO_STRTOK_R /DNDEBUG /DNO_STRERROR_R# -DROUNDING_FE
-OFLAGS		+=	/O3
-CFLAGS		+=
-CXXFLAGS	+=
+FLAGS		+=	/DNO_SIGACTION /DNO_RAND_R /DNO_STRTOK_R /DNDEBUG /DNO_STRERROR_R /DROUNDING_FE
+OFLAGS		+=
+CFLAGS		+=	/O3
+CXXFLAGS		+=	/O3 /EHsc /GR
 LDFLAGS		=	
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	
@@ -30,5 +30,6 @@ AR_o		=	/OUT:
 ARFLAGS		=	
 RANLIB		=
 LIBEXT		=	lib
+STATICLIBEXT    =       lib
 SHAREDLIBEXT	=	dll
 LINKLIBSUFFIX	=	.lib

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cutpool.h,v 1.10.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_cutpool.h,v 1.10.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_cutpool.h
  * @brief  type definitions for storing cuts in a cut pool
@@ -24,9 +24,15 @@
 #ifndef __SCIP_TYPE_CUTPOOL_H__
 #define __SCIP_TYPE_CUTPOOL_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Cutpool SCIP_CUTPOOL;         /**< storage for pooled cuts */
 typedef struct SCIP_Cut SCIP_CUT;                 /**< datastructure for cuts in a cut pool */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

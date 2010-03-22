@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.40.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.40.2.2 2010/03/22 16:05:15 bzfwolte Exp $"
 
 /**@file   cons_binpack.c
  * @ingroup CONSHDLRS 
@@ -408,7 +408,11 @@ SCIP_DECL_CONSPRINT(consPrintBinpack)
 #define consPrintBinpack NULL
 #endif
 
+/** constraint copying method of constraint handler */
+#define consCopyBinpack NULL
 
+/** constraint parsing method of constraint handler */
+#define consParseBinpack NULL
 
 
 /*
@@ -506,7 +510,7 @@ SCIP_RETCODE SCIPincludeConshdlrBinpack(
          consPropBinpack, consPresolBinpack, consRespropBinpack, consLockBinpack,
          consActiveBinpack, consDeactiveBinpack, 
          consEnableBinpack, consDisableBinpack,
-         consPrintBinpack,
+         consPrintBinpack, consCopyBinpack, consParseBinpack,
          conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY

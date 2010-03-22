@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.17.2.2 2010/03/02 17:20:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.17.2.3 2010/03/22 16:05:40 bzfwolte Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -29,7 +29,9 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** priority queue data structure
  *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
@@ -138,5 +140,9 @@ struct SCIP_MpqArray
    int                   minusedidx;         /**< index of first non zero element in vals array */
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.62.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.62.2.2 2010/03/22 16:05:20 bzfwolte Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -200,6 +200,7 @@ SCIP_RETCODE SCIPheurInit(
 
    SCIPclockReset(heur->heurclock);
 
+   heur->delaypos = -1;
    heur->ncalls = 0;
    heur->nsolsfound = 0;
    heur->nbestsolsfound = 0;
@@ -301,13 +302,19 @@ SCIP_RETCODE SCIPheurExec(
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(primal != NULL);
-   assert(depth >= 0);
+   assert(depth >= 0 || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP);
    assert(ndelayedheurs != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
-   if( (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
+   if( ((heur->timingmask & SCIP_HEURTIMING_BEFOREPRESOL) && heurtiming == SCIP_HEURTIMING_BEFOREPRESOL)
+       || ((heur->timingmask & SCIP_HEURTIMING_DURINGPRESOLLOOP) && heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP) )
+   {
+      /* heuristic may be executed before/during presolving. Do so, if it was not disabled by setting the frequency to -1 */
+      execute = heur->freq >= 0; 
+   } 
+   else if( (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
       && (heurtiming == SCIP_HEURTIMING_AFTERLPNODE || heurtiming == SCIP_HEURTIMING_AFTERLPPLUNGE) )
    {
       /* heuristic was skipped on intermediate pseudo nodes: check, if a node matching the execution frequency lies
@@ -395,8 +402,8 @@ SCIP_RETCODE SCIPheurExec(
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d)\n", 
-         heur->name, depth, *ndelayedheurs);
+      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was %s delayed before, had delaypos %d\n", 
+         heur->name, depth, *ndelayedheurs, *result == SCIP_DELAYED ? "" : "not", heur->delaypos);
 
       /* mark the heuristic delayed */
       if( heur->delaypos != *ndelayedheurs )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.43.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.43.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_cons.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for constraints and constraint handlers
  * @author Tobias Achterberg
  */
@@ -24,6 +25,16 @@
 #ifndef __SCIP_TYPE_CONS_H__
 #define __SCIP_TYPE_CONS_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_var.h"
+#include "scip/type_sol.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Conshdlr SCIP_CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct SCIP_Cons SCIP_CONS;               /**< constraint data structure */
@@ -134,7 +145,6 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints of the constraint handler
  *  - nconss          : number of constraints of the constraint handler
  *  - restart         : was this exit solve call triggered by a restart?
-
  */
 #define SCIP_DECL_CONSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_Bool restart)
 
@@ -144,10 +154,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  the corresponding bound change event was not yet processed.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    cons            : the constraint belonging to the constraint data
- *    consdata        : pointer to the constraint data to free
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint belonging to the constraint data
+ *  - consdata        : pointer to the constraint data to free
  */
 #define SCIP_DECL_CONSDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_CONSDATA** consdata)
 
@@ -446,8 +456,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  constraint handler and is set to 0).
  *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
  *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
- *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable z was
- *  set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
+ *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of 
+ *  variable z was set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
  *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
  *  the reason for the deduction of the lower bound of z.
  *
@@ -602,13 +612,70 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, FILE* file)
 
+/** constraint copying method of constraint handler
+ *
+ *  The constraint handler can provide a copy method which copy a constraint from one SCIP data structure into a other
+ *  SCIP data structure.
+ *
+ *  input:
+ *  - scip            : target SCIP data structure
+ *  - conshdlr        : the constraint handler of the source SCIP itself
+ *  - cons            : pointer to store the created target constraint
+    - name            : name of constraint, or NULL if the name of the source constraint should be used
+ *  - sourcescip      : source SCIP data structure
+ *  - sourcecons      : source constraint of the source SCIP
+ *  - varmap          : a SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP
+ *  - initial         : should the LP relaxation of constraint be in the initial LP?
+ *  - separate        : should the constraint be separated during LP processing?
+ *  - enforce         : should the constraint be enforced during node processing?
+ *  - check           : should the constraint be checked for feasibility?
+ *  - propagate       : should the constraint be propagated during node processing?
+ *  - local           : is constraint only valid locally?
+ *  - modifiable      : is constraint modifiable (subject to column generation)?
+ *  - dynamic         : is constraint subject to aging?
+ *  - removable       : should the relaxation be removed from the LP due to aging or cleanup?
+ *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
+ *                      if it may be moved to a more global node?
+ *  output:
+ *  - success         : pointer to store whether the copying was successful or not 
+ */
+#define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, const char* name, \
+      SCIP* sourcescip, SCIP_CONS* sourcecons,  SCIP_HASHMAP* varmap, \
+      SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
+      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* success)
 
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_var.h"
-#include "scip/type_sol.h"
-#include "scip/type_scip.h"
+/** constraint parsing method of constraint handler
+ *
+ *  The constraint handler can provide a callback to parse the output created by the display method
+ *  (SCIP_DECL_CONSDISABLE) and to create a constraint out of it.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : pointer to store the created constraint
+ *  - name            : name of the constrint
+ *  - str             : string to parse 
+ *  - initial         : should the LP relaxation of constraint be in the initial LP?
+ *  - separate        : should the constraint be separated during LP processing?
+ *  - enforce         : should the constraint be enforced during node processing?
+ *  - check           : should the constraint be checked for feasibility?
+ *  - propagate       : should the constraint be propagated during node processing?
+ *  - local           : is constraint only valid locally?
+ *  - modifiable      : is constraint modifiable (subject to column generation)?
+ *  - dynamic         : is constraint subject to aging?
+ *  - removable       : should the relaxation be removed from the LP due to aging or cleanup?
+ *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
+ *                      if it may be moved to a more global node?
+ *  output:
+ *  - success         : pointer to store whether the parsing was successful or not 
+ */
+#define SCIP_DECL_CONSPARSE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, \
+      const char* name, const char* str, \
+      SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
+      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* success)
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

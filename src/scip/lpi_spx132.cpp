@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx132.cpp,v 1.5.2.2 2009/06/19 07:53:46 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpi_spx132.cpp,v 1.5.2.3 2010/03/22 16:05:26 bzfwolte Exp $"
 
 /**@file   lpi_spx132.cpp
  * @ingroup LPIS
@@ -60,10 +60,8 @@
 
 #include <cassert>
 
-extern "C"
-{
 #include "scip/message.h"
-}
+
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
@@ -262,12 +260,8 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-extern "C"
-{
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-}
-
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -2450,8 +2444,10 @@ SCIP_RETCODE SCIPlpiFreeState(
    SCIPdebugMessage("calling SCIPlpiFreeState()\n");
 
    assert(lpi != NULL);
+   assert(lpistate != NULL);
 
-   lpistateFree(lpistate, blkmem);
+   if ( *lpistate != NULL )
+      lpistateFree(lpistate, blkmem);
 
    return SCIP_OKAY;
 }

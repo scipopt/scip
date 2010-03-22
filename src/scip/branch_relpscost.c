@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.50.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.50.2.2 2010/03/22 16:05:14 bzfwolte Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -192,52 +192,21 @@ SCIP_RETCODE applyBdchgs(
    return SCIP_OKAY;
 }
 
-
-
-
-/*
- * Callback methods
- */
-
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
+/** execute reliability pseudo cost branching */
 static
-SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
-{  /*lint --e{715}*/
+SCIP_RETCODE execRelpscost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
+                                              *   in order to cut off the current solution instead of creating a branching? */
+   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
+   SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
+   int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_RESULT*          result              /**< pointer to the result of the execution */
+   )
+{
    SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* free branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemory(scip, &branchruledata);
-   SCIPbranchruleSetData(branchrule, NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitRelpscost NULL
-
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitRelpscost NULL
-
-
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolRelpscost NULL
-
-
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolRelpscost NULL
-
-
-/** branching execution method for fractional LP solutions */
-static
-SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
-{  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
-   SCIP_VAR** lpcands;
-   SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
    SCIP_Real lpobjval;
    SCIP_Real cutoffbound;
    SCIP_Real bestsbdown;
@@ -248,16 +217,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    SCIP_Bool bestisstrongbranch;
    SCIP_Bool allcolsinlp;
    SCIP_Bool exactsolve;
-   int nlpcands;
    int ninitcands;
    int bestcand;
-   
-   assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
-   assert(scip != NULL);
-   assert(result != NULL);
-
-   SCIPdebugMessage("Execlp method of relpscost branching\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -277,10 +238,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
 
-   /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
-   assert(nlpcands > 0);
-
    bestcand = -1;
    bestisstrongbranch = FALSE;
    bestsbdown = SCIP_INVALID;
@@ -289,7 +246,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    bestsbupvalid = FALSE;
    provedbound = lpobjval;
 
-   if( nlpcands == 1 )
+   if( nbranchcands == 1 )
    {
       /* only one candidate: nothing has to be done */
       bestcand = 0;
@@ -336,7 +293,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       avgconflictscore = SCIPgetAvgConflictScore(scip);
       avgconflictscore = MAX(avgconflictscore, 0.1);
       avgconflengthscore = SCIPgetAvgConflictlengthScore(scip);
-      avgconflengthscore = MAX(avgconflictscore, 0.1);
+      avgconflengthscore = MAX(avgconflengthscore, 0.1);
       avginferencescore = SCIPgetAvgInferenceScore(scip);
       avginferencescore = MAX(avginferencescore, 0.1);
       avgcutoffscore = SCIPgetAvgCutoffScore(scip);
@@ -347,7 +304,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       /* get maximal number of candidates to initialize with strong branching; if the current solutions is not basic,
        * we cannot apply the simplex algorithm and therefore don't initialize any candidates
        */
-      maxninitcands = MIN(nlpcands, branchruledata->initcand);
+      maxninitcands = MIN(nbranchcands, branchruledata->initcand);
       if( !SCIPisLPSolBasic(scip) )
          maxninitcands = 0;
 
@@ -387,7 +344,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       bestpsscore = -SCIPinfinity(scip);
       bestpsfracscore = -SCIPinfinity(scip);
       bestpsdomainscore = -SCIPinfinity(scip);
-      for( c = 0; c < nlpcands; ++c )
+      for( c = 0; c < nbranchcands; ++c )
       {
          SCIP_Real conflictscore;
          SCIP_Real conflengthscore;
@@ -397,21 +354,21 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          SCIP_Real score;
          SCIP_Bool usesb;
 
-         assert(lpcands[c] != NULL);
-         assert(!SCIPisFeasIntegral(scip, lpcandssol[c]));
+         assert(branchcands[c] != NULL);
+         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
 
          /* get conflict, inference, cutoff, and pseudo cost scores for candidate */
-         conflictscore = SCIPgetVarConflictScore(scip, lpcands[c]);
-         conflengthscore = SCIPgetVarConflictlengthScore(scip, lpcands[c]);
-         inferencescore = SCIPgetVarAvgInferenceScore(scip, lpcands[c]);
-         cutoffscore = SCIPgetVarAvgCutoffScore(scip, lpcands[c]);
-         pscostscore = SCIPgetVarPseudocostScore(scip, lpcands[c], lpcandssol[c]);
+         conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
+         conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
+         inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
+         cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+         pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
          usesb = FALSE;
 
          /* don't use strong branching on variables that have already been initialized at the current node;
           * instead replace the pseudo cost score with the already calculated one
           */
-         if( SCIPgetVarStrongbranchNode(scip, lpcands[c]) == nodenum )
+         if( SCIPgetVarStrongbranchNode(scip, branchcands[c]) == nodenum )
          {
             SCIP_Real down;
             SCIP_Real up;
@@ -420,13 +377,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             SCIP_Real upgain;
 
             /* use the score of the strong branching call at the current node */
-            SCIP_CALL( SCIPgetVarStrongbranchLast(scip, lpcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
+            SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
-            pscostscore = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
+            pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             SCIPdebugMessage(" -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
-               SCIPvarGetName(lpcands[c]), down, downgain, up, upgain, pscostscore);
+               SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
          }
          else if( maxninitcands > 0 )
          {
@@ -435,8 +392,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             SCIP_Real size;
 
             /* check, if the pseudo cost score of the variable is reliable */
-            downsize = SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_DOWNWARDS);
-            upsize = SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_UPWARDS);
+            downsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS);
+            upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS);
             size = MIN(downsize, upsize);
 
             /* use strong branching on variables with unreliable pseudo cost scores */
@@ -449,7 +406,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
          /* combine the four score values */
          score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
-            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, lpcandsfrac[c]);
+            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
          
          if( usesb )
          {
@@ -474,8 +431,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
                SCIP_Real fracscore;
                SCIP_Real domainscore;
 
-               fracscore = MIN(lpcandsfrac[c], 1.0 - lpcandsfrac[c]);
-               domainscore = -(SCIPvarGetUbLocal(lpcands[c]) - SCIPvarGetLbLocal(lpcands[c]));
+               fracscore = MIN(branchcandsfrac[c], 1.0 - branchcandsfrac[c]);
+               domainscore = -(SCIPvarGetUbLocal(branchcands[c]) - SCIPvarGetLbLocal(branchcands[c]));
                if( SCIPisSumGT(scip, score, bestpsscore)
                   || SCIPisSumGT(scip, fracscore, bestpsfracscore)
                   || (SCIPisSumGE(scip, fracscore, bestpsfracscore) && domainscore > bestpsdomainscore) )
@@ -492,7 +449,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       /* initialize unreliable candidates with strong branching until maxlookahead is reached,
        * search best strong branching candidate
        */
-      maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nlpcands);
+      maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
       inititer = branchruledata->inititer;
       if( inititer == 0 )
       {
@@ -522,8 +479,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          inititer = MIN(inititer, 500);
       }
       
-      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%d)\n",
-         reliable, ninitcands, nlpcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
+      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%u)\n",
+         reliable, ninitcands, nbranchcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
          SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 
       bestsbcand = -1;
@@ -548,16 +505,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
          /* get candidate number to initialize */
          c = initcands[i];
-         assert(!SCIPisFeasIntegral(scip, lpcandssol[c]));
+         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
 
          SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iters) -- %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" iterations\n",
-            SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
-            SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_UPWARDS), 
-            SCIPvarGetName(lpcands[c]), lpcandssol[c], initcandscores[i],
+            SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
+            SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS), 
+            SCIPvarGetName(branchcands[c]), branchcandssol[c], initcandscores[i],
             inititer, SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
          /* use strong branching on candidate */
-         SCIP_CALL( SCIPgetVarStrongbranch(scip, lpcands[c], inititer, 
+         SCIP_CALL( SCIPgetVarStrongbranch(scip, branchcands[c], inititer, 
                &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* check for an error in strong branching */
@@ -567,7 +524,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             {
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
-                  SCIPgetNNodes(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
+                  SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
             }
             break;
          }
@@ -604,7 +561,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             if( allowaddcons && downinf == downconflict && upinf == upconflict )
             {
                SCIPdebugMessage(" -> variable <%s> is infeasible in %s: conflict constraint added\n",
-                  SCIPvarGetName(lpcands[c]), 
+                  SCIPvarGetName(branchcands[c]), 
                   downinf && upinf ? "both directions" : (downinf ? "downward branch" : "upwardbranch"));
                *result = SCIP_CONSADDED;
                nbdconflicts++;
@@ -615,16 +572,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             else if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
-               SCIPdebugMessage(" -> variable <%s> is infeasible in both directions (conflict: %d/%d)\n",
-                  SCIPvarGetName(lpcands[c]), downconflict, upconflict);
+               SCIPdebugMessage(" -> variable <%s> is infeasible in both directions (conflict: %u/%u)\n",
+                  SCIPvarGetName(branchcands[c]), downconflict, upconflict);
                *result = SCIP_CUTOFF;
                break; /* terminate initialization loop, because node is infeasible */
             }
             else
             {
                /* rounding is infeasible in one direction -> round variable in other direction */
-               SCIPdebugMessage(" -> variable <%s> is infeasible in %s branch (conflict: %d/%d)\n",
-                  SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward", downconflict, upconflict);
+               SCIPdebugMessage(" -> variable <%s> is infeasible in %s branch (conflict: %u/%u)\n",
+                  SCIPvarGetName(branchcands[c]), downinf ? "downward" : "upward", downconflict, upconflict);
                SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgdowninfs, &nbdchgs, c, downinf) );
                if( maxbdchgs >= 0 && nbdchgs + nbdconflicts >= maxbdchgs )
                   break; /* terminate initialization loop, because enough roundings are performed */
@@ -640,21 +597,21 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             SCIP_Real score;
 
             /* check for a better score */
-            conflictscore = SCIPgetVarConflictScore(scip, lpcands[c]);
-            conflengthscore = SCIPgetVarConflictlengthScore(scip, lpcands[c]);
-            inferencescore = SCIPgetVarAvgInferenceScore(scip, lpcands[c]);
-            cutoffscore = SCIPgetVarAvgCutoffScore(scip, lpcands[c]);
-            pscostscore = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
+            conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
+            conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
+            inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
+            cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore, 
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, lpcandsfrac[c]);
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
 
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
                SCIP_Real fracscore;
                SCIP_Real domainscore;
 
-               fracscore = MIN(lpcandsfrac[c], 1.0 - lpcandsfrac[c]);
-               domainscore = -(SCIPvarGetUbLocal(lpcands[c]) - SCIPvarGetLbLocal(lpcands[c]));
+               fracscore = MIN(branchcandsfrac[c], 1.0 - branchcandsfrac[c]);
+               domainscore = -(SCIPvarGetUbLocal(branchcands[c]) - SCIPvarGetLbLocal(branchcands[c]));
                if( SCIPisSumGT(scip, score, bestsbscore)
                   || SCIPisSumGT(scip, fracscore, bestsbfracscore)
                   || (SCIPisSumGE(scip, fracscore, bestsbfracscore) && domainscore > bestsbdomainscore) )
@@ -676,17 +633,22 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
                lookahead += 1.0;
          
             /* update pseudo cost values */
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0-branchcandsfrac[c], downgain, 1.0) );
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0-branchcandsfrac[c], upgain, 1.0) );
 
             SCIPdebugMessage(" -> variable <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g/ %g/%g %g/%g -> %g)\n",
-               SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, 
+               SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, up, upgain, 
                pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore,  score);
          }
       }
-      SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
-         SCIPvarGetName(lpcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
-         lookahead, maxlookahead);
+#ifdef SCIP_DEBUG
+      if ( bestsbcand >= 0 )
+      {
+	 SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
+	    SCIPvarGetName(branchcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
+	    lookahead, maxlookahead);
+      }
+#endif
       
       /* get the score of the best uninitialized strong branching candidate */
       if( i < ninitcands )
@@ -722,7 +684,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       {
          if( *result != SCIP_CUTOFF )
          {
-            SCIP_CALL( applyBdchgs(scip, lpcands, lpcandssol, bdchginds, bdchgdowninfs, nbdchgs) );
+            SCIP_CALL( applyBdchgs(scip, branchcands, branchcandssol, bdchginds, bdchgdowninfs, nbdchgs) );
             *result = SCIP_REDUCEDDOM;
          }
          freeBdchgs(scip, &bdchginds, &bdchgdowninfs, &nbdchgs);
@@ -743,19 +705,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       SCIP_Real provedup;
 
       assert(*result == SCIP_DIDNOTRUN);
-      assert(0 <= bestcand && bestcand < nlpcands);
-      assert(!SCIPisFeasIntegral(scip, lpcandssol[bestcand]));
+      assert(0 <= bestcand && bestcand < nbranchcands);
+      assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
-      var = lpcands[bestcand];
+      var = branchcands[bestcand];
 
       /* perform the branching */
-      SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%d, psc=%g/%g [%g])\n",
-         nlpcands, ninitcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand],
+      SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%u, psc=%g/%g [%g])\n",
+         nbranchcands, ninitcands, bestcand, SCIPvarGetName(var), branchcandssol[bestcand],
          bestsbdown, bestsbdown - lpobjval, bestsbup, bestsbup - lpobjval, bestisstrongbranch,
-         SCIPgetVarPseudocostCurrentRun(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
-         SCIPgetVarPseudocostCurrentRun(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
-         SCIPgetVarPseudocostScoreCurrentRun(scip, var, lpcandssol[bestcand]));
+         SCIPgetVarPseudocostCurrentRun(scip, var, SCIPfeasFloor(scip, branchcandssol[bestcand]) - branchcandssol[bestcand]),
+         SCIPgetVarPseudocostCurrentRun(scip, var, SCIPfeasCeil(scip, branchcandssol[bestcand]) - branchcandssol[bestcand]),
+         SCIPgetVarPseudocostScoreCurrentRun(scip, var, branchcandssol[bestcand]));
       SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
@@ -784,9 +746,74 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
       *result = SCIP_BRANCHED;
    }
+   return SCIP_OKAY;
+}
+   
+
+/*
+ * Callback methods
+ */
+
+/** destructor of branching rule to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* free branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
 }
+
+
+/** initialization method of branching rule (called after problem was transformed) */
+#define branchInitRelpscost NULL
+
+
+/** deinitialization method of branching rule (called before transformed problem is freed) */
+#define branchExitRelpscost NULL
+
+
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+#define branchInitsolRelpscost NULL
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+#define branchExitsolRelpscost NULL
+
+
+/** branching execution method for fractional LP solutions */
+static
+SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
+{  /*lint --e{715}*/
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfrac;
+   int nlpcands;
+   
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMessage("Execlp method of relpscost branching\n");
+   
+   /* get branching candidates */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   assert(nlpcands > 0);
+
+   /* execute branching rule */
+   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, lpcands, lpcandssol, lpcandsfrac, nlpcands, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** branching execution method for relaxation solutions */
+#define branchExecrelRelpscost NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -813,7 +840,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, branchInitsolRelpscost, branchExitsolRelpscost, 
-         branchExeclpRelpscost, branchExecpsRelpscost,
+         branchExeclpRelpscost, branchExecrelRelpscost, branchExecpsRelpscost,
          branchruledata) );
 
    /* relpscost branching rule parameters */
@@ -870,5 +897,32 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "maximal number of bound tightenings before the node is reevaluated (-1: unlimited)",
          &branchruledata->maxbdchgs, TRUE, DEFAULT_MAXBDCHGS, -1, INT_MAX, NULL, NULL) );
 
+   return SCIP_OKAY;
+}
+
+/** execution reliability pseudo cost branching with the given branching candidates */
+SCIP_RETCODE SCIPexecRelpscostBranching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
+                                              *   in order to cut off the current solution instead of creating a branching? */
+   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
+   SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
+   int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_RESULT*          result              /**< pointer to the result of the execution */
+   )
+{
+   SCIP_BRANCHRULE* branchrule;
+
+   assert(scip != NULL);
+   assert(result != NULL);
+   
+   /* find branching rule */
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+   
+   /* execute branching rule */
+   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, branchcands, branchcandssol, branchcandsfrac, nbranchcands, result) );
+   
    return SCIP_OKAY;
 }

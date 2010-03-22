@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.126.2.2 2009/06/19 07:53:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.126.2.3 2010/03/22 16:05:25 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -41,7 +41,9 @@
 
 #include "scip/struct_lp.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Column methods
@@ -631,6 +633,7 @@ SCIP_RETCODE SCIPlpAddRow(
 extern
 SCIP_RETCODE SCIPlpShrinkCols(
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
    );
 
@@ -742,6 +745,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
@@ -1326,5 +1330,8 @@ void SCIPlpMarkDivingObjChanged(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

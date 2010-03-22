@@ -1,8 +1,19 @@
-/* 
- * $Id: solve_nlp.c,v 1.3 2007/09/21 15:01:22 bzfniulf Exp $
- *
- * 
- */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: solve_nlp.c,v 1.3.2.1 2010/03/22 16:05:03 bzfwolte Exp $"
+
 #include "IpStdCInterface.h"
 #include <stdlib.h>
 #include <assert.h>

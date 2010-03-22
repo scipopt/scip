@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.28.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.28.2.2 2010/03/22 16:05:23 bzfwolte Exp $"
 
 /**@file   heur_simplerounding.c
  * @ingroup PRIMALHEURISTICS
@@ -133,10 +133,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
-   
-//    if( !strncmp(SCIPgetProbName(scip), "111Orders", 9)&& heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP  )
-//       printf("call heuristics --- \n");
-   
+
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
@@ -213,7 +210,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       mayrounddown = SCIPvarMayRoundDown(var);
       mayroundup = SCIPvarMayRoundUp(var);
-      SCIPdebugMessage("simple rounding heuristic: var <%s>, val=%g, rounddown=%d, roundup=%d\n",
+      SCIPdebugMessage("simple rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
       /* choose rounding direction */

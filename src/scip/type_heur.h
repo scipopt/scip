@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,11 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.17.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.17.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_heur.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for primal heuristics
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -24,20 +26,31 @@
 #ifndef __SCIP_TYPE_HEUR_H__
 #define __SCIP_TYPE_HEUR_H__
 
+#include "scip/def.h"
+#include "scip/type_scip.h"
+#include "scip/type_result.h"
 
-/** heurstics execution timing flags */
-#define SCIP_HEURTIMING_BEFORENODE        0x01 /**< call heuristic before the processing of the node starts */
-#define SCIP_HEURTIMING_DURINGLPLOOP      0x02 /**< call heuristic after each LP solving during cut-and-price loop */
-#define SCIP_HEURTIMING_AFTERLPLOOP       0x04 /**< call heuristic after the cut-and-price loop was finished */
-#define SCIP_HEURTIMING_AFTERLPNODE       0x08 /**< call heuristic after the processing of a node with solved LP was
-					        *   finished */
-#define SCIP_HEURTIMING_AFTERPSEUDONODE   0x10 /**< call heuristic after the processing of a node without solved LP was
-					        *   finished */
-#define SCIP_HEURTIMING_AFTERLPPLUNGE     0x20 /**< call heuristic after the processing of the last node in the current
-						*   plunge was finished, and only if the LP was solved for this node */
-#define SCIP_HEURTIMING_AFTERPSEUDOPLUNGE 0x40 /**< call heuristic after the processing of the last node in the current
-						*   plunge was finished, and only if the LP was not solved for this node */
-#define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x80 /**< call heuristic during pricing loop */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** heuristics execution timing flags */
+#define SCIP_HEURTIMING_BEFORENODE        0x001 /**< call heuristic before the processing of the node starts */
+#define SCIP_HEURTIMING_DURINGLPLOOP      0x002 /**< call heuristic after each LP solving during cut-and-price loop */
+#define SCIP_HEURTIMING_AFTERLPLOOP       0x004 /**< call heuristic after the cut-and-price loop was finished */
+#define SCIP_HEURTIMING_AFTERLPNODE       0x008 /**< call heuristic after the processing of a node with solved LP was
+                                                 *   finished */
+#define SCIP_HEURTIMING_AFTERPSEUDONODE   0x010 /**< call heuristic after the processing of a node without solved LP was
+                                                 *   finished */
+#define SCIP_HEURTIMING_AFTERLPPLUNGE     0x020 /**< call heuristic after the processing of the last node in the current
+                                                 *   plunge was finished, and only if the LP was solved for this node */
+#define SCIP_HEURTIMING_AFTERPSEUDOPLUNGE 0x040 /**< call heuristic after the processing of the last node in the current
+                                                 *   plunge was finished, and only if the LP was not solved for this node */
+#define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x080 /**< call heuristic during pricing loop */
+#define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving */
+#define SCIP_HEURTIMING_DURINGPRESOLLOOP  0x200 /**< call heuristic during presolving loop */
+#define SCIP_HEURTIMING_DURINGPROPLOOP    0x400 /**< call heuristic after each round in the propagation loop */
+#define SCIP_HEURTIMING_AFTERPROPLOOP     0x800 /**< call heuristic after propagation for this node was finished */
 
 typedef unsigned int SCIP_HEURTIMING;
 
@@ -118,12 +131,8 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
 #define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_HEURTIMING heurtiming, \
       SCIP_RESULT* result)
 
-
-
-
-#include "scip/def.h"
-#include "scip/type_scip.h"
-#include "scip/type_result.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

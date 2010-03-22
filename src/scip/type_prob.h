@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.13.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.13.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_prob.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
@@ -24,6 +25,13 @@
 #ifndef __SCIP_TYPE_PROB_H__
 #define __SCIP_TYPE_PROB_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** objective sense: minimization or maximization */
 enum SCIP_Objsense
@@ -42,8 +50,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  This method should free the user data of the original problem.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : pointer to the user problem data to free
+ *  - scip            : SCIP main data structure
+ *  - probdata        : pointer to the user problem data to free
  */
 #define SCIP_DECL_PROBDELORIG(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA** probdata)
 
@@ -60,9 +68,9 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  memory location.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sourcedata      : source problem data to transform
- *    targetdata      : pointer to store created transformed problem data
+ *  - scip            : SCIP main data structure
+ *  - sourcedata      : source problem data to transform
+ *  - targetdata      : pointer to store created transformed problem data
  */
 #define SCIP_DECL_PROBTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* sourcedata, SCIP_PROBDATA** targetdata)
 
@@ -73,8 +81,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  user data of the transformed problem, that was created in the PROBTRANS method.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : pointer to the user problem data to free
+ *  - scip            : SCIP main data structure
+ *  - probdata        : pointer to the user problem data to free
  */
 #define SCIP_DECL_PROBDELTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA** probdata)
 
@@ -84,8 +92,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  data that depends for example on the number of active problem variables, because these are now fixed.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : user problem data
+ *  - scip            : SCIP main data structure
+ *  - probdata        : user problem data
  */
 #define SCIP_DECL_PROBINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata)
 
@@ -96,17 +104,14 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  to the transformed user problem data are released.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : user problem data
+ *  - scip            : SCIP main data structure
+ *  - probdata        : user problem data
+ *  - restart         : was this exit solve call triggered by a restart?
  */
-#define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata)
+#define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata, SCIP_Bool restart)
 
-
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

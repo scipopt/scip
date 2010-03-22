@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.24.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.24.2.2 2010/03/22 16:05:24 bzfwolte Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include "string.h"
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -123,9 +124,8 @@ SCIP_RETCODE vboundsSearchPos(
    SCIP_Bool*            found               /**< pointer to store whether the same variable was found at the returned pos */
    )
 {
-   int varidx;
-   int left;
-   int right;
+   SCIP_Bool exists;
+   int pos;
 
    assert(insertpos != NULL);
    assert(found != NULL);
@@ -140,70 +140,56 @@ SCIP_RETCODE vboundsSearchPos(
    assert(vbounds->len >= 0);
 
    /* binary search for the given variable */
-   varidx = SCIPvarGetIndex(var);
-   left = -1;
-   right = vbounds->len;
-   while( left < right-1 )
+   exists = SCIPsortedvecFindPtr((void**)vbounds->vars, SCIPvarComp, var, vbounds->len, &pos);
+
+   if( exists )
    {
-      int middle;
-      int idx;
-
-      middle = (left+right)/2;
-      assert(0 <= middle && middle < vbounds->len);
-      idx = SCIPvarGetIndex(vbounds->vars[middle]);
-
-      if( varidx < idx )
-         right = middle;
-      else if( varidx > idx )
-         left = middle;
-      else
+      /* we found the variable: check if the sign of the coefficient matches */
+      assert(var == vbounds->vars[pos]);
+      if( (vbounds->coefs[pos] < 0.0) == negativecoef )
       {
-         /* we found the variable: check if the sign of the coefficient matches */
-         assert(var == vbounds->vars[middle]);
-         if( (vbounds->coefs[middle] < 0.0) == negativecoef )
+         /* the variable exists with the same sign at the current position */
+         *insertpos = pos;
+         *found = TRUE;
+      }
+      else if( negativecoef )
+      {
+         if( pos+1 < vbounds->len && vbounds->vars[pos+1] == var )
          {
-            /* the variable exists with the same sign at the current position */
-            *insertpos = middle;
+            /* the variable exists with the desired sign at the next position */
+            assert(vbounds->coefs[pos+1] < 0.0);
+            *insertpos = pos+1;
             *found = TRUE;
-         }
-         else if( negativecoef )
-         {
-            if( middle+1 < vbounds->len && vbounds->vars[middle+1] == var )
-            {
-               /* the variable exists with the desired sign at the next position */
-               assert(vbounds->coefs[middle+1] < 0.0);
-               *insertpos = middle+1;
-               *found = TRUE;
-            }
-            else
-            {
-               /* the negative coefficient should be inserted to the right of the positive one */
-               *insertpos = middle+1;
-               *found = FALSE;
-            }
          }
          else
          {
-            if( middle-1 >= 0 && vbounds->vars[middle-1] == var )
-            {
-               /* the variable exists with the desired sign at the previous position */
-               assert(vbounds->coefs[middle-1] > 0.0);
-               *insertpos = middle-1;
-               *found = TRUE;
-            }
-            else
-            {
-               /* the positive coefficient should be inserted to the left of the negative one */
-               *insertpos = middle;
-               *found = FALSE;
-            }
+            /* the negative coefficient should be inserted to the right of the positive one */
+            *insertpos = pos+1;
+            *found = FALSE;
          }
-         return SCIP_OKAY;
+      }
+      else
+      {
+         if( pos-1 >= 0 && vbounds->vars[pos-1] == var )
+         {
+            /* the variable exists with the desired sign at the previous position */
+            assert(vbounds->coefs[pos-1] > 0.0);
+            *insertpos = pos-1;
+            *found = TRUE;
+            }
+         else
+         {
+            /* the positive coefficient should be inserted to the left of the negative one */
+            *insertpos = pos;
+            *found = FALSE;
+         }
       }
    }
-
-   *insertpos = right;
-   *found = FALSE;
+   else
+   {
+      *insertpos = pos;
+      *found = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -228,6 +214,7 @@ SCIP_RETCODE SCIPvboundsAdd(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
    assert(added != NULL);
+   assert(!SCIPsetIsZero(set, coef));
 
    *added = FALSE;
 
@@ -273,10 +260,12 @@ SCIP_RETCODE SCIPvboundsAdd(
       /* insert variable at the correct position */
       for( i = (*vbounds)->len; i > insertpos; --i )
       {
+         assert(!SCIPsetIsZero(set, (*vbounds)->coefs[i-1]));
          (*vbounds)->vars[i] = (*vbounds)->vars[i-1];
          (*vbounds)->coefs[i] = (*vbounds)->coefs[i-1];
          (*vbounds)->constants[i] = (*vbounds)->constants[i-1];
       }
+      assert(!SCIPsetIsZero(set, coef));
       (*vbounds)->vars[insertpos] = var;
       (*vbounds)->coefs[insertpos] = coef;
       (*vbounds)->constants[insertpos] = constant;
@@ -763,7 +752,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    assert(conflict != NULL);
    assert(added != NULL);
 
-   SCIPdebugMessage("adding implication to implics %p [%d]: <%s> %s %g\n",
+   SCIPdebugMessage("adding implication to implics %p [%u]: <%s> %s %g\n",
       (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
 
    checkImplics(*implics, set);
@@ -947,7 +936,7 @@ SCIP_RETCODE SCIPimplicsDel(
    assert(*implics != NULL);
    assert(implvar != NULL);
 
-   SCIPdebugMessage("deleting implication from implics %p [%d]: <%s> %s x\n",
+   SCIPdebugMessage("deleting implication from implics %p [%u]: <%s> %s x\n",
       (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
 
    checkImplics(*implics, set);
@@ -1198,7 +1187,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
    assert(doubleentry != NULL);
    assert(oppositeentry != NULL);
 
-   SCIPdebugMessage("adding variable <%s> == %d to clique %d\n", SCIPvarGetName(var), value, clique->id);
+   SCIPdebugMessage("adding variable <%s> == %u to clique %u\n", SCIPvarGetName(var), value, clique->id);
 
    *doubleentry = FALSE;
    *oppositeentry = FALSE;
@@ -1247,7 +1236,7 @@ SCIP_RETCODE SCIPcliqueDelVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
-   SCIPdebugMessage("deleting variable <%s> == %d from clique %d\n", SCIPvarGetName(var), value, clique->id);
+   SCIPdebugMessage("deleting variable <%s> == %u from clique %u\n", SCIPvarGetName(var), value, clique->id);
 
    /* find variable in clique */
    pos = SCIPcliqueSearchVar(clique, var, value);
@@ -1422,7 +1411,7 @@ SCIP_RETCODE SCIPcliquelistAdd(
    SCIP_CALL( cliquelistEnsureSize(*cliquelist, blkmem, set, value, (*cliquelist)->ncliques[value]+1) );
    assert((*cliquelist)->cliques[value] != NULL);
 
-   SCIPdebugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
+   SCIPdebugMessage("adding clique %u to cliquelist %p value %u (length: %d)\n", 
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    /* insert clique into list, sorted by clique id */
@@ -1448,7 +1437,7 @@ SCIP_RETCODE SCIPcliquelistDel(
    assert(cliquelist != NULL);
    assert(*cliquelist != NULL);
 
-   SCIPdebugMessage("deleting clique %d from cliquelist %p value %d (length: %d)\n", 
+   SCIPdebugMessage("deleting clique %u from cliquelist %p value %u (length: %d)\n", 
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    pos = cliquesSearchClique((*cliquelist)->cliques[value], (*cliquelist)->ncliques[value], clique);
@@ -1545,7 +1534,7 @@ void SCIPcliquelistRemoveFromCliques(
             clique = cliquelist->cliques[value][i];
             assert(clique != NULL);
 
-            SCIPdebugMessage(" -> removing variable <%s> == %d from clique %d (size %d)\n",
+            SCIPdebugMessage(" -> removing variable <%s> == %d from clique %u (size %d)\n",
                SCIPvarGetName(var), value, clique->id, clique->nvars);
 
             /* binary search the position of the variable in the clique */
@@ -1555,10 +1544,10 @@ void SCIPcliquelistRemoveFromCliques(
             assert(clique->values[pos] == (SCIP_Bool)value);
 
             /* remove the entry from the clique */
-            for( ; pos < clique->nvars-1; ++pos )
+            if( clique->nvars - pos - 1 > 0 )
             {
-               clique->vars[pos] = clique->vars[pos+1];
-               clique->values[pos] = clique->values[pos+1];
+               memmove(&clique->vars[pos], &clique->vars[pos+1], sizeof(clique->vars[0]) * (clique->nvars - pos - 1));
+               memmove(&clique->values[pos], &clique->values[pos+1], sizeof(clique->values[0]) * (clique->nvars - pos - 1));
             }
             clique->nvars--;
 
@@ -1769,7 +1758,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
    /* create hash table to test for multiple cliques */
    hashtablesize = SCIPcalcHashtableSize(10*cliquetable->ncliques);
-   hashtablesize = MAX(hashtablesize, SCIP_HASHSIZE_CLIQUES);
+   hashtablesize = MAX(hashtablesize, (set->misc_usesmalltables ? SCIP_HASHSIZE_CLIQUES_SMALL : SCIP_HASHSIZE_CLIQUES));
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashgetkeyClique, hashkeyeqClique, hashkeyvalClique, NULL) );
 

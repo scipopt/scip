@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.27.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.27.2.2 2010/03/22 16:05:14 bzfwolte Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -203,7 +203,7 @@ void SCIPclockReset(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("resetting clock %p of type %d (usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
+   SCIPdebugMessage("resetting clock %p of type %d (usedefault=%u)\n", (void*)clck, clck->clocktype, clck->usedefault);
    switch( clck->clocktype )
    {
    case SCIP_CLOCKTYPE_DEFAULT:
@@ -229,7 +229,7 @@ void SCIPclockEnable(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("enabling clock %p of type %d (usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
+   SCIPdebugMessage("enabling clock %p of type %d (usedefault=%u)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
    clck->enabled = TRUE;
 }
@@ -241,7 +241,7 @@ void SCIPclockDisable(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("disabling clock %p of type %d (usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
+   SCIPdebugMessage("disabling clock %p of type %d (usedefault=%u)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
    clck->enabled = FALSE;
    SCIPclockReset(clck);
@@ -255,7 +255,7 @@ void SCIPclockSetType(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("setting type of clock %p (type %d, usedefault=%d) to %d\n", 
+   SCIPdebugMessage("setting type of clock %p (type %d, usedefault=%u) to %d\n", 
       (void*)clck, clck->clocktype, clck->usedefault, clocktype);
 
    clck->clocktype = clocktype;
@@ -288,7 +288,7 @@ void SCIPclockStart(
          struct tms now;
 #endif
          
-         SCIPdebugMessage("starting clock %p (type %d, usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
+         SCIPdebugMessage("starting clock %p (type %d, usedefault=%u)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
          {
@@ -358,7 +358,7 @@ void SCIPclockStop(
          struct tms now;
 #endif
          
-         SCIPdebugMessage("stopping clock %p (type %d, usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
+         SCIPdebugMessage("stopping clock %p (type %d, usedefault=%u)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
          {
@@ -419,7 +419,7 @@ SCIP_Real SCIPclockGetTime(
    assert(clck != NULL);
    result = 0.0;
    
-   SCIPdebugMessage("getting time of clock %p (type %d, usedefault=%d, nruns=%d)\n",
+   SCIPdebugMessage("getting time of clock %p (type %d, usedefault=%u, nruns=%d)\n",
       (void*)clck, clck->clocktype, clck->usedefault, clck->nruns);
 
    if( clck->nruns == 0 )
@@ -508,7 +508,7 @@ void SCIPclockSetTime(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("setting time of clock %p (type %d, usedefault=%d, nruns=%d) to %g\n",
+   SCIPdebugMessage("setting time of clock %p (type %d, usedefault=%u, nruns=%d) to %g\n",
       (void*)clck, clck->clocktype, clck->usedefault, clck->nruns, sec);
 
    /* if the clock type is not yet set, set it to an arbitrary value to be able to store the number */

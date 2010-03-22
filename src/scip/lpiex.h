@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.4 2010/03/02 17:20:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.5 2010/03/22 16:05:26 bzfwolte Exp $"
 
 /**@file   lpiex.h
  * @brief  interface methods for specific LP solvers
@@ -31,7 +31,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_lpiex.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Miscellaneous Methods
@@ -857,5 +859,9 @@ SCIP_RETCODE SCIPlpiexFactorSolve(
    mpq_t*                rhs             /**< rhs of system */
    );
 /**@} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

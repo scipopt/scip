@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.98.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.98.2.2 2010/03/22 16:05:38 bzfwolte Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -54,8 +54,9 @@
 #include "scip/pub_misc.h"
 #endif
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates global SCIP settings */
 extern
@@ -277,6 +278,12 @@ SCIP_RETCODE SCIPsetWriteParams(
 /** resets all parameters to their default values */
 extern
 SCIP_RETCODE SCIPsetResetParams(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sets heuristic parameters to aggressive values */
+extern
+SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -610,14 +617,14 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
    SCIP_VERBLEVEL        verblevel           /**< verbosity level for message output */
    );
 
-/** sets LP feasibility tolerance */
+/** sets feasibility tolerance */
 extern
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             feastol             /**< new feasibility tolerance */
    );
 
-/** sets LP feasibility tolerance for reduced costs */
+/** sets feasibility tolerance for reduced costs in LP solution */
 extern
 SCIP_RETCODE SCIPsetSetDualfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -955,7 +962,7 @@ SCIP_Bool SCIPsetIsFeasNegative(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is integral within the LP feasibility bounds */
+/** checks, if value is integral within the feasibility bounds */
 extern
 SCIP_Bool SCIPsetIsFeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1182,12 +1189,15 @@ SCIP_Bool SCIPsetIsSumRelGE(
       (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
          (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
+#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) ) 
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
 #define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

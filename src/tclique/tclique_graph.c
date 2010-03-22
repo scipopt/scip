@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.3.2.1 2009/06/19 07:53:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.3.2.2 2010/03/22 16:05:44 bzfwolte Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -206,13 +206,19 @@ void tcliqueFree(
 
    if( *tcliquegraph != NULL )
    {
-      BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
-      BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
-      BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
-      BMSfreeMemoryArray(&(*tcliquegraph)->weights);
-      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
-      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
-      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+      if ( (*tcliquegraph)->adjedges != NULL )
+      {
+	 BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
+	 BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
+	 BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
+	 BMSfreeMemoryArray(&(*tcliquegraph)->weights);
+      }
+      if ( (*tcliquegraph)->cacheddegrees )
+      {
+	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
+	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
+	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+      }
       BMSfreeMemory(tcliquegraph);
    }
 }
@@ -545,6 +551,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    int node2;
    int currentnode;
    int i;
+   int result;
    
    assert(tcliquegraph != NULL);
    assert(scaleval > 0.0);
@@ -566,10 +573,38 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
  
    /* set name of problem, number of nodes and number of edges in graph */
-   fscanf(file, "%s", probname);
-   fscanf(file, "%d", &(*tcliquegraph)->nnodes);
-   fscanf(file, "%d", &(*tcliquegraph)->nedges);
+   result = fscanf(file, "%s", probname);
+   if( result == EOF )
+   {
+      infoMessage("Error while reading probname in file %s", filename); 
+      fclose(file);
+      return FALSE;
+   }
    
+   result = fscanf(file, "%d", &(*tcliquegraph)->nnodes);
+   if( result == EOF )
+   {
+      infoMessage("Error while reading number of nodes in file %s", filename); 
+      fclose(file);
+      return FALSE;
+   }
+   
+   result = fscanf(file, "%d", &(*tcliquegraph)->nedges);
+   if( result == EOF )
+   {
+      infoMessage("Error while reading number of edges in file %s", filename); 
+      fclose(file);
+      return FALSE;
+   }
+
+   if( (*tcliquegraph)->nnodes < 0 || (*tcliquegraph)->nedges < 0 )
+   {
+      infoMessage("\nInvalid number of %s (%d) in file: %s", (*tcliquegraph)->nnodes < 0 ? "nodes" : "edges", 
+         (*tcliquegraph)->nnodes < 0 ? (*tcliquegraph)->nnodes : (*tcliquegraph)->nedges, filename);
+      fclose(file);
+      return FALSE;
+   }    
+
    /* set data structures for tclique */
    ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) );
    ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) );
@@ -579,7 +614,14 @@ TCLIQUE_Bool tcliqueLoadFile(
    /* set weights of all nodes (scaled!) */
    for( i = 0; i < (*tcliquegraph)->nnodes; i++ )
    {
-      fscanf(file, "%lf", &weight);
+      result = fscanf(file, "%lf", &weight);
+      if( result == EOF )
+      {
+         infoMessage("Error while reading weights of nodes in file %s", filename); 
+         fclose(file);
+         return FALSE;
+      }
+
       (*tcliquegraph)->weights[i] = (TCLIQUE_WEIGHT)(weight * scaleval);
       assert((*tcliquegraph)->weights[i] >= 0);
    }
@@ -589,7 +631,20 @@ TCLIQUE_Bool tcliqueLoadFile(
    for( i = 0; i < (*tcliquegraph)->nedges; i++ )
    {
       /* read edge (node1, node2) */
-      fscanf(file, "%d%d", &node1, &node2);
+      result = fscanf(file, "%d%d", &node1, &node2);
+      if( result == EOF )
+      {
+         infoMessage("Error while reading edges in file %s", filename); 
+         fclose(file);
+         return FALSE;
+      }
+
+      if( node1 < 0 || node2 < 0 )
+      {
+         infoMessage("\nInvalid node index (%d) in file: %s", node1 < 0 ? node1 : node2, filename);
+         fclose(file);
+         return FALSE;
+      } 
       
       /* (node1, node2) is the first adjacent edge of node1 */
       if( node1 != currentnode )

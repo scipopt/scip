@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_relax.h,v 1.11.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_relax.h,v 1.11.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   pub_relax.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for relaxators
  * @author Tobias Achterberg
  */
@@ -29,7 +30,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_relax.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two relaxators w. r. to their priority */
 extern
@@ -96,5 +99,8 @@ void SCIPrelaxMarkUnsolved(
    SCIP_RELAX*           relax               /**< relaxator */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.20.2.1 2009/06/19 07:53:37 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.20.2.2 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -157,6 +157,24 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpObj)
    return SCIP_OKAY;
 }
 
+
+/** branching execution method for relaxation solutions */
+static
+SCIP_DECL_BRANCHEXECREL(branchExecrelObj)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->objbranchrule != NULL);
+
+   /* call virtual method of branchrule object */
+   SCIP_CALL( branchruledata->objbranchrule->scip_execlp(scip, branchrule, allowaddcons, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 static
 SCIP_DECL_BRANCHEXECPS(branchExecpsObj)
@@ -198,7 +216,7 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    SCIP_CALL( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
          branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
-         branchExeclpObj, branchExecpsObj,
+         branchExeclpObj, branchExecrelObj, branchExecpsObj,
          branchruledata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.35.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.35.2.2 2010/03/22 16:05:31 bzfwolte Exp $"
 
 /**@file   pub_cons.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for managing constraints
  * @author Tobias Achterberg
  */
@@ -33,7 +34,9 @@
 #include "scip/struct_cons.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Constraint handler methods
@@ -606,6 +609,8 @@ int SCIPconsGetNLocksNeg(
 
 #endif
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

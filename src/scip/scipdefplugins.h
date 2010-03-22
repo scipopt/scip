@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.16.2.2 2009/07/13 12:48:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.16.2.3 2010/03/22 16:05:35 bzfwolte Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -49,9 +49,12 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_or.h"
+#include "scip/cons_orbitope.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/cons_soc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/dialog_default.h"
@@ -69,6 +72,7 @@
 #include "scip/heur_linesearchdiving.h"
 #include "scip/heur_localbranching.h"
 #include "scip/heur_mutation.h"
+#include "scip/heur_nlp.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
 #include "scip/heur_oneopt.h"
@@ -79,7 +83,12 @@
 #include "scip/heur_rounding.h"
 #include "scip/heur_shifting.h"
 #include "scip/heur_simplerounding.h"
+#include "scip/heur_trivial.h"
+#include "scip/heur_trysol.h"
+#include "scip/heur_twoopt.h"
+#include "scip/heur_undercover.h"
 #include "scip/heur_veclendiving.h"
+#include "scip/heur_zirounding.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_estimate.h"
@@ -93,11 +102,13 @@
 #include "scip/presol_trivial.h"
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_rootredcost.h"
+#include "scip/prop_vbounds.h"
+#include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
-#include "scip/reader_ccg.h"
+#include "scip/reader_gms.h"
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_opb.h"
@@ -112,6 +123,7 @@
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_mcf.h"
+#include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_redcost.h"
 #include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
@@ -123,6 +135,9 @@
 #include "scip/cons_invarknapsack.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes default SCIP plugins into SCIP */
 extern
@@ -130,5 +145,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

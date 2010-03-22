@@ -46,15 +46,17 @@
     <p class="a">
       Except if you want to use SCIP as a pure CP-Solver (see <a href="#Q18">here</a>), 
       you need an underlying LP-Solver which has first to be installed and linked to the libraries 
-      (see the <tt>INSTALL</tt>; file in the SCIP root directory). 
+      (see the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory). 
       LP-solvers currently supported by SCIP are: 
     </p>
     <ul>
-      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
-      <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
-      <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
       <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
+      <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
+      <li><a href="http://www.gurobi.com/">Gurobi</a></li>
+      <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
       <li><a href="http://www.mosek.com/">Mosek</a></li>
+      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a></li>
+      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
     </ul>
     <p class="a">
       We also provide some <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>. Besides that,
@@ -68,7 +70,7 @@
       An easy way is to use the SCIP-binaries and call SCIP from a shell. 
       For that, you just have to download one of the precompiled binaries from the 
       <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
-      with your favorite settings. This is described in detail in the <tt>INSTALL</tt> file in the SCIP main directory.
+      with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
     </p>
     <p class="a">
       Another way is to use SCIP as a solver integrated into your own program source code. 
@@ -106,7 +108,7 @@
        <a name="Q27">I have installation problems. What can I do?</a>
     </p>
     <p class="a">
-      Read the INSTALL file in the SCIP root directory. It contains hints of how to get around problems. You can also try
+      Read the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
       the binaries available on the <a href="http://scip.zib.de">SCIP page</a>.
     </p>
     <p class="a">
@@ -129,23 +131,26 @@
     </p>
     <p class="a">
       If you have any problems while using an LP-solver different from SoPlex,
-      please read the SCIP <tt>INSTALL</tt> file first.                                                     
+      please read the SCIP <a href="INSTALL.html"><tt>INSTALL</tt></a> file first.                                                     
     </p>
     <p class="q">
       <a name="Q8">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
 	Do you have a general hint on that?</a>
     </p>
     <p class="a">
-      Maybe the parameters of a function in SCIP changed. Relevant changes between version 0.9 to 1.0 can be
-      found <a href="http://scip.zib.de/doc/html/CHG1.html">here</a> and the ones between version 1.0 and 1.1
-      are listed <a href="http://scip.zib.de/doc/html/CHG1.html">here</a>.
+      Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
     </p>
+    <ul>
+        <li> <a href="http://scip.zib.de/doc/html/CHG1.html">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
+        <li> <a href="http://scip.zib.de/doc/html/CHG2.html">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
+        <li> <a href="http://scip.zib.de/doc/html/CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+    </ul>
     <p class="q">
       <a name="Q18">Can I use SCIP as a pure CP-Solver?</a>
     </p>
     <p class="a">
       Yes. There is a setting-file "settings/emphasis/cpsolver.set". 
-      Furthermore, you can compile SCIP without any LP-Solver by &quot;make LPS=none&quot;.
+      Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
     </p>    
     <p class="q">
        <a name="Q19">How can I use the SCIP makefiles?</a>

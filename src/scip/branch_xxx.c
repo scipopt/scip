@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.19.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.19.2.2 2010/03/22 16:05:14 bzfwolte Exp $"
 
 /**@file   branch_xxx.c
  * @ingroup BRANCHINGRULES
@@ -155,6 +155,21 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpXxx)
 #endif
 
 
+/** branching execution method for relaxation solutions */
+#if 0
+static
+SCIP_DECL_BRANCHEXECREL(branchExecrelXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define branchExecrelXxx NULL
+#endif
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 #if 0
 static
@@ -193,7 +208,7 @@ SCIP_RETCODE SCIPincludeBranchruleXxx(
 	 BRANCHRULE_MAXBOUNDDIST,
          branchFreeXxx, branchInitXxx, branchExitXxx,
          branchInitsolXxx, branchExitsolXxx,
-         branchExeclpXxx, branchExecpsXxx,
+         branchExeclpXxx, branchExecrelXxx, branchExecpsXxx,
          branchruledata) );
 
    /* add xxx branching rule parameters */

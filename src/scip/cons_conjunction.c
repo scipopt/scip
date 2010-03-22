@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.32.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.32.2.2 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_conjunction.c
  * @ingroup CONSHDLRS 
@@ -501,11 +501,16 @@ SCIP_DECL_CONSPRINT(consPrintConjunction)
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPconsGetName(consdata->conss[i]));
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
    
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopyConjuction NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseConjuction NULL
 
 
 
@@ -535,7 +540,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          consCheckConjunction, consPropConjunction, consPresolConjunction, consRespropConjunction, consLockConjunction,
          consActiveConjunction, consDeactiveConjunction, 
          consEnableConjunction, consDisableConjunction,
-         consPrintConjunction,
+         consPrintConjunction, consCopyConjuction, consParseConjuction,
          conshdlrdata) );
 
    return SCIP_OKAY;

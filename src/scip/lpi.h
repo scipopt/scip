@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.62.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.62.2.2 2010/03/22 16:05:25 bzfwolte Exp $"
 
 /**@file   lpi.h
+ * @ingroup PUBLICMETHODS
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  */
@@ -30,7 +31,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_lpi.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Miscellaneous Methods
@@ -802,6 +805,8 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
 /**@} */
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_grb.c,v 1.2.2.2 2009/06/19 07:53:45 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpi_grb.c,v 1.2.2.3 2010/03/22 16:05:26 bzfwolte Exp $"
 
 /**@file   lpi_grb.c
  * @ingroup LPIS
@@ -765,9 +765,10 @@ void convertSides(
 
    /* convert lhs/rhs into sen/rhs */
    *rngcount = 0;
-   for ( i = 0; i < nrows; ++i )
+   for (i = 0; i < nrows; ++i)
    {
       assert(lhs[i] <= rhs[i]);
+
       if ( lhs[i] == rhs[i] ) /*lint !e777*/
       {
          assert(-GRB_INFINITY < rhs[i] && rhs[i] < GRB_INFINITY);
@@ -777,13 +778,13 @@ void convertSides(
       else if ( lhs[i] <= -GRB_INFINITY )
       {
          assert(-GRB_INFINITY < rhs[i] && rhs[i] < GRB_INFINITY);
-         lpi->senarray[i] = GRB_LESS_THAN;
+         lpi->senarray[i] = GRB_LESS_EQUAL;
          lpi->rhsarray[i] = rhs[i];
       }
       else if ( rhs[i] >= GRB_INFINITY )
       {
          assert(-GRB_INFINITY < lhs[i] && lhs[i] < GRB_INFINITY);
-         lpi->senarray[i] = GRB_GREATER_THAN;
+         lpi->senarray[i] = GRB_GREATER_EQUAL;
          lpi->rhsarray[i] = lhs[i];
       }
       else
@@ -821,12 +822,12 @@ void reconvertBothSides(
          rhs[i] = lpi->rhsarray[i];
          break;
 
-      case GRB_LESS_THAN:
+      case GRB_LESS_EQUAL:
          lhs[i] = -GRB_INFINITY;
          rhs[i] = lpi->rhsarray[i];
          break;
 
-      case GRB_GREATER_THAN:
+      case GRB_GREATER_EQUAL:
          lhs[i] = lpi->rhsarray[i];
          rhs[i] = GRB_INFINITY;
          break;
@@ -861,11 +862,11 @@ void reconvertLhs(
          lhs[i] = lpi->rhsarray[i];
          break;
 
-      case GRB_LESS_THAN:
+      case GRB_LESS_EQUAL:
          lhs[i] = -GRB_INFINITY;
          break;
 
-      case GRB_GREATER_THAN:
+      case GRB_GREATER_EQUAL:
          lhs[i] = lpi->rhsarray[i];
          break;
 
@@ -898,11 +899,11 @@ void reconvertRhs(
          rhs[i] = lpi->rhsarray[i];
          break;
 
-      case GRB_LESS_THAN:
+      case GRB_LESS_EQUAL:
          rhs[i] = lpi->rhsarray[i];
          break;
 
-      case GRB_GREATER_THAN:
+      case GRB_GREATER_EQUAL:
          rhs[i] = GRB_INFINITY;
          break;
 
@@ -2504,6 +2505,9 @@ SCIP_Bool SCIPlpiHasDualRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   return FALSE;
+
+   /*
    int algo;
 
    assert(grbenv != NULL);
@@ -2514,6 +2518,7 @@ SCIP_Bool SCIPlpiHasDualRay(
    CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
 
    return (lpi->solstat == GRB_INFEASIBLE && algo == GRB_LPMETHOD_DUAL);
+   */
 }
 
 /** returns TRUE iff LP is proven to be dual unbounded */
@@ -2736,11 +2741,11 @@ SCIP_RETCODE SCIPlpiGetSol(
       {
 	 switch (lpi->senarray[i])
 	 {
-	 case GRB_LESS_THAN:
+	 case GRB_LESS_EQUAL:
 	 case GRB_EQUAL:
 	    activity[i] = lpi->rhsarray[i] - activity[i];
 	    break;
-	 case GRB_GREATER_THAN:
+	 case GRB_GREATER_EQUAL:
 	    activity[i] = lpi->rhsarray[i] - activity[i];
 	    break;
 	 default:

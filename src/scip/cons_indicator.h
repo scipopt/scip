@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.8.2.2 2009/06/19 07:53:40 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.8.2.3 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -42,6 +42,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for indicator constraints and includes it in SCIP */
 extern
@@ -81,7 +84,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-
 /** adds variable to the inequality of the indicator constraint */
 extern
 SCIP_RETCODE SCIPaddVarIndicator(
@@ -95,6 +97,14 @@ SCIP_RETCODE SCIPaddVarIndicator(
 extern
 SCIP_CONS* SCIPgetLinearConsIndicator(
    SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** sets binary indicator variable for indicator constraint */
+extern
+SCIP_RETCODE SCIPsetBinaryVarIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             binvar              /**< binary variable to add to the inequality */
    );
 
 /** gets binary variable corresponding to indicator constraint */
@@ -116,5 +126,17 @@ SCIP_Bool SCIPisViolatedIndicator(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
+
+/** Based on values of other variables, computes slack and binary variable to turn constraint feasible */
+extern
+SCIP_RETCODE SCIPmakeIndicatorFeasible(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

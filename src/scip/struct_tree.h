@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.38.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.38.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -34,6 +34,9 @@
 #include "scip/type_nodesel.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** probing node, possibly with solved LP, where bounds and constraints have been changed,
  *  and rows and columns might have been added
@@ -195,5 +198,9 @@ struct SCIP_Tree
    SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

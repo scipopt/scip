@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.49.2.2 2009/06/19 07:53:37 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.49.2.3 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -28,11 +28,7 @@
 #include <cassert>
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {
@@ -41,6 +37,7 @@ namespace scip
 class ObjConshdlr
 {
 public:
+   /*lint --e{1540}*/
    /** name of the constraint handler */
    char* scip_name_;
    
@@ -118,6 +115,7 @@ public:
    /** destructor */
    virtual ~ObjConshdlr()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }
@@ -718,6 +716,65 @@ public:
 	 fprintf(stdout, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       else
 	 fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
+      return SCIP_OKAY;
+   }
+
+   /** constraint copying method of constraint handler
+    *
+    *  The constraint handler can provide a copy method which copy a constraint from one SCIP data structure into a other
+    *  SCIP data structure.
+    */
+   virtual SCIP_RETCODE scip_copy(
+      SCIP*              scip,               /**< target SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler of the source SCIP itself */
+      SCIP_CONS**        cons,               /**< pointer to store the created target constraint */
+      const char*        name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
+      SCIP*              sourcescip,         /**< source SCIP data structure */
+      SCIP_CONS*         sourcecons,         /**< source constraint of the source SCIP */
+      SCIP_HASHMAP*      varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                              *   variables of the target SCIP */
+      SCIP_Bool          initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+      SCIP_Bool          separate,           /**< should the constraint be separated during LP processing? */
+      SCIP_Bool          enforce,            /**< should the constraint be enforced during node processing? */
+      SCIP_Bool          check,              /**< should the constraint be checked for feasibility? */
+      SCIP_Bool          propagate,          /**< should the constraint be propagated during node processing? */
+      SCIP_Bool          local,              /**< is constraint only valid locally? */
+      SCIP_Bool          modifiable,         /**< is constraint modifiable (subject to column generation)? */
+      SCIP_Bool          dynamic,            /**< is constraint subject to aging? */
+      SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+      SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
+      SCIP_Bool*         success             /**< pointer to store whether the copying was successful or not */
+      )
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
+   
+   /** constraint parsing method of constraint handler
+    *
+    *  The constraint handler should be able to parse the output created by the display method (SCIP_DECL_CONSDISABLE) 
+    *  and to create constraint out of it.
+    */
+   virtual SCIP_RETCODE scip_parse(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        cons,               /**< pointer to store the created constraint */
+      const char*        name,               /**< name of the constraint */
+      const char*        str,                /**< string to parse */
+      SCIP_Bool          initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+      SCIP_Bool          separate,           /**< should the constraint be separated during LP processing? */
+      SCIP_Bool          enforce,            /**< should the constraint be enforced during node processing? */
+      SCIP_Bool          check,              /**< should the constraint be checked for feasibility? */
+      SCIP_Bool          propagate,          /**< should the constraint be propagated during node processing? */
+      SCIP_Bool          local,              /**< is constraint only valid locally? */
+      SCIP_Bool          modifiable,         /**< is constraint modifiable (subject to column generation)? */
+      SCIP_Bool          dynamic,            /**< is constraint subject to aging? */
+      SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+      SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
+      SCIP_Bool*         success             /**< pointer to store whether the parsing was successful or not */
+      )
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 };

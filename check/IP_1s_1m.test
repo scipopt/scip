@@ -4,9 +4,9 @@ IP/2matching/rat195.mps.gz
 IP/Clique/Instances/hamming10-2.clq.lp.gz
 IP/Clique/Instances/johnson8-4-4.clq.lp.gz
 IP/Clique/Instances/san200_0.9_1.clq.lp.gz
-IP/Coloring/Infeasible/2-Insertions_3.col.lp.gz
-IP/Coloring/Infeasible/3-FullIns_3.col.lp.gz
-IP/Coloring/Infeasible/mug88_25.col.lp.gz
+IP/Coloring/Infeasible/2-Insertions_3_inf.col.lp.gz
+IP/Coloring/Infeasible/3-FullIns_3_inf.col.lp.gz
+IP/Coloring/Infeasible/mug88_25_inf.col.lp.gz
 IP/Coloring/Instances/games120.col.lp.gz
 IP/Coloring/Instances/mug100_1.col.lp.gz
 IP/Coloring/Instances/myciel4.col.lp.gz

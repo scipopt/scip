@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_primalex.h,v 1.1.2.1 2010/03/02 17:20:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_primalex.h,v 1.1.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_primalex.h
  * @brief  type definitions for collecting exact primal CIP solutions and exact primal information
@@ -24,8 +24,14 @@
 #ifndef __SCIP_TYPE_PRIMALEX_H__
 #define __SCIP_TYPE_PRIMALEX_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Primalex SCIP_PRIMALEX;       /** exact primal data and solution storage */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

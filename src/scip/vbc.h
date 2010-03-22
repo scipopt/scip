@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.15.2.1 2009/06/19 07:53:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.15.2.2 2010/03/22 16:05:44 bzfwolte Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -31,7 +31,9 @@
 #include "scip/type_tree.h"
 #include "scip/type_vbc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates VBCTool data structure */
 extern
@@ -132,5 +134,8 @@ void SCIPvbcUpperbound(
    SCIP_Real             upperbound          /**< new upper bound */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

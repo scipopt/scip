@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.h,v 1.7.2.2 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_countsols.h,v 1.7.2.3 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_countsols.h
  * @brief  constraint handler for counting feasible solutions
@@ -27,6 +27,10 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct SparseSolution
 {
    SCIP_Longint*         lbvalues;
@@ -38,6 +42,10 @@ typedef struct SparseSolution SPARSESOLUTION;
 /** dialog execution method for the count command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
+   
+/** execution method of dialog for writing all solutions */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecAllsolutions);
 
 /** creates the handler for countsol constraints and includes it in SCIP */
 extern
@@ -92,5 +100,9 @@ void SCIPgetCountedSparseSolutions(
    SPARSESOLUTION***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

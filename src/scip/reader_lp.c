@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.37.2.1 2009/06/19 07:53:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.37.2.2 2010/03/22 16:05:33 bzfwolte Exp $"
 
 /**@file   reader_lp.c
- * @ingroup FILEReaders 
+ * @ingroup FILEREADERS 
  * @brief  LP file reader
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -84,7 +84,7 @@ typedef enum LpSense LPSENSE;
 struct LpInput
 {
    SCIP_FILE*           file;
-   char                 linebuf[LP_MAX_LINELEN];
+   char                 linebuf[LP_MAX_LINELEN+1];
    char                 probname[LP_MAX_LINELEN];
    char                 objname[LP_MAX_LINELEN];
    char*                token;
@@ -184,7 +184,7 @@ SCIP_Bool isValueChar(
 
    if( isdigit(c) )
       return TRUE;
-   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') )
+   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
    {
       *hasdot = TRUE;
       return TRUE;
@@ -805,7 +805,7 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
+            (void)strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
             name[LP_MAX_LINELEN - 1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
          }
@@ -938,7 +938,7 @@ SCIP_RETCODE readObjective(
       /* set the objective values */
       for( i = 0; i < ncoefs; ++i )
       {
-         SCIP_CALL( SCIPchgVarObj(scip, vars[i], coefs[i]) );
+         SCIP_CALL( SCIPchgVarObj(scip, vars[i], SCIPvarGetObj(vars[i]) + coefs[i]) );
       }
    }
 
@@ -1227,15 +1227,18 @@ SCIP_RETCODE readConstraints(
    {
       if ( strcmp(lpinput->token, "-") == 0 )
       {
-	 /* remember the token in the token buffer */
+	 /* remember '-' in token buffer */
 	 swapTokenBuffer(lpinput);
 
-	 if ( getNextToken(lpinput) && ! isNewSection(lpinput) )
+	 /* check next token - cannot be a new section */
+	 if ( getNextToken(lpinput) )
 	 {
+	    /* check for "->" */
 	    if ( strcmp(lpinput->token, ">") == 0 )
 	       isIndicatorCons = TRUE;
 	    else
 	    {
+	       /* push back last token and '-' */
 	       pushToken(lpinput);
 	       pushBufferToken(lpinput);
 	    }
@@ -1460,6 +1463,7 @@ SCIP_RETCODE readBounds(
       /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
       if ( lb != 0.0 )
 	 SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+      /*lint --e{777}*/
       if ( ub != SCIPinfinity(scip) )
 	 SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
       SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", lpinput->linenumber, SCIPvarGetName(var),
@@ -1603,7 +1607,6 @@ SCIP_RETCODE readSos(
    {
       int type = -1;
       SCIP_CONS* cons;
-      SCIP_Bool nextSection = FALSE;
 
       /* check if we reached a new section */
       if ( isNewSection(lpinput) )
@@ -1621,7 +1624,7 @@ SCIP_RETCODE readSos(
          if ( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
-            strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
+            (void)strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
             name[SCIP_MAXSTRLEN-1] = '\0';
          }
          else
@@ -1694,7 +1697,7 @@ SCIP_RETCODE readSos(
       }
 
       /* parse elements of SOS constraint */
-      while ( getNextToken(lpinput) && ! nextSection )
+      while ( getNextToken(lpinput) )
       {
 	 SCIP_VAR* var;
 	 SCIP_Real weight;
@@ -1702,7 +1705,6 @@ SCIP_RETCODE readSos(
 	 /* check if we reached a new section */
 	 if ( isNewSection(lpinput) )
 	 {
-	    nextSection = TRUE;
 	    break;
 	 }
 
@@ -1937,11 +1939,10 @@ SCIP_RETCODE getActiveVariables(
 
       if( requiredsize > *nvars )
       {
-         *nvars = requiredsize;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, *nvars ) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, *nvars ) );
-
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
+         
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
    }
@@ -1999,7 +2000,6 @@ void appendLine(
    const char*           extension           /**< string to extent the line */
    )
 {
-   int len;
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
@@ -2008,14 +2008,13 @@ void appendLine(
 
    /* NOTE: avoid
     *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
-    * because of overlapping memory arreas in memcpy used in sprintf.
+    * because of overlapping memory areas in memcpy used in sprintf.
     */
-   len = strlen(linebuffer);
-   strncat(linebuffer, extension, LP_MAX_PRINTLEN - len);
+   strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zd\n", linebuffer, strlen(linebuffer));
+   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, strlen(linebuffer));
    
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -2047,7 +2046,7 @@ void printRow(
    char buffer[LP_MAX_PRINTLEN];
 
    assert( scip != NULL );
-   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") || strcmp(type, ">=") );
+   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
    assert( nvars == 0 || (vars != NULL && vals != NULL) );
 
    clearLine(linebuffer, &linecnt);
@@ -2343,8 +2342,8 @@ void checkVarnames(
 {
    int v;
 
-   assert( scip != NULL );
-   assert( vars != NULL );
+   assert(scip != NULL);
+   assert(vars != NULL || nvars == 0);
 
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
@@ -2598,7 +2597,7 @@ SCIP_RETCODE SCIPwriteLp(
    if ( transformed )
    {
       SCIP_CONS** consInd;
-      int nConsInd = 0;
+      int nConsInd;
       
       consInd = SCIPconshdlrGetConss(conshdlr);
       nConsInd = SCIPconshdlrGetNConss(conshdlr);

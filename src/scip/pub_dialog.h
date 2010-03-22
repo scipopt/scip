@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_dialog.h,v 1.15.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_dialog.h,v 1.15.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   pub_dialog.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for user interface dialog
  * @author Tobias Achterberg
  */
@@ -30,7 +31,9 @@
 #include "scip/type_scip.h"
 #include "scip/type_dialog.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * dialog handler
@@ -191,5 +194,9 @@ void SCIPdialogSetData(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

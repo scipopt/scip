@@ -1,8 +1,8 @@
-#--- $Id: make.linux.x86_64.gnu.opt-gcc42,v 1.4.2.2 2009/06/19 07:53:35 bzfwolte Exp $
-FLAGS		+=	-DNDEBUG # -DROUNDING_FE
-OFLAGS		+=	-O3 -m64 -march=native -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
-CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+#--- $Id: make.linux.x86_64.gnu.opt-gcc42,v 1.4.2.3 2010/03/22 16:05:08 bzfwolte Exp $
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
+OFLAGS		+=	-O3 -m64 -march=native -mtune=native -fomit-frame-pointer #-msse4.1 # -malign-double -mcpu=pentium4 -g
+CFLAGS		+=	$(GCCWARN) -Wno-missing-prototypes -Wno-missing-declarations 
+CXXFLAGS	+=	$(GXXWARN) # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
 LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=

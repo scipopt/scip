@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.38.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.38.2.2 2010/03/22 16:05:22 bzfwolte Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -463,7 +463,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       {
          /* variable was already soft rounded upwards: hard round it downwards */
          SCIP_CALL( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
-         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%d/%d, sol=%g, was already soft rounded upwards -> bounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded upwards -> bounds=[%g,%g]\n",
             divedepth, maxdivedepth, SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var));
       }
@@ -471,7 +471,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       {
          /* variable was already soft rounded downwards: hard round it upwards */
          SCIP_CALL( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
-         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%d/%d, sol=%g, was already soft rounded downwards -> bounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded downwards -> bounds=[%g,%g]\n",
             divedepth, maxdivedepth, SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var));
       }
@@ -507,7 +507,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             roundings[varidx] = -1;
          }
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobj) );
-         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var), oldobj, newobj);

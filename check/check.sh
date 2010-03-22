@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,7 +13,8 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.45.2.2 2009/06/19 07:53:29 bzfwolte Exp $
+# $Id: check.sh,v 1.45.2.3 2010/03/22 16:05:00 bzfwolte Exp $
+
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -21,12 +22,13 @@ BINID=$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-DISPFREQ=$9
-CONTINUE=${10}
-LOCK=${11}
-VERSION=${12}
-LPS=${13}
+THREADS=$8
+FEASTOL=$9
+DISPFREQ=${10}
+CONTINUE=${11}
+LOCK=${12}
+VERSION=${13}
+LPS=${14}
 
 SETDIR=../settings
 
@@ -148,6 +150,7 @@ do
 	    echo set limits time $TIMELIMIT        >> $TMPFILE
 	    echo set limits nodes $NODELIMIT       >> $TMPFILE
 	    echo set limits memory $MEMLIMIT       >> $TMPFILE
+#THREADS not supported yet (version 1.2.0.8)
 	    echo set timing clocktype 1            >> $TMPFILE
 	    echo set display verblevel 4           >> $TMPFILE
 	    echo set display freq $DISPFREQ        >> $TMPFILE

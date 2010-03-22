@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.4 2009/08/03 07:40:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.5 2010/03/22 16:05:35 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -65,9 +65,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
       SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
       SCIP_CALL( SCIPincludeConshdlrOr(scip) );
+      SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
+      SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
       SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
       SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
       SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
+      SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC need to be after quadratic due to constraint upgrading */
       SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
       SCIP_CALL( SCIPincludeConshdlrXor(scip) );
 
@@ -77,11 +80,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeConshdlrBinpack(scip) );
 #endif
 
+      SCIP_CALL( SCIPincludeReaderCcg(scip) );
       SCIP_CALL( SCIPincludeReaderCip(scip) );
       SCIP_CALL( SCIPincludeReaderCnf(scip) );
       SCIP_CALL( SCIPincludeReaderFix(scip) );
       SCIP_CALL( SCIPincludeReaderFzn(scip) );
-      SCIP_CALL( SCIPincludeReaderCcg(scip) );
+      SCIP_CALL( SCIPincludeReaderGms(scip) );
       SCIP_CALL( SCIPincludeReaderLp(scip) );
       SCIP_CALL( SCIPincludeReaderMps(scip) );
       SCIP_CALL( SCIPincludeReaderOpb(scip) );
@@ -121,6 +125,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
       SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
       SCIP_CALL( SCIPincludeHeurMutation(scip) );
+      SCIP_CALL( SCIPincludeHeurNlp(scip) );
       SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
       SCIP_CALL( SCIPincludeHeurOctane(scip) );
       SCIP_CALL( SCIPincludeHeurOneopt(scip) );
@@ -131,9 +136,15 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeHeurRounding(scip) );
       SCIP_CALL( SCIPincludeHeurShifting(scip) );
       SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
+      SCIP_CALL( SCIPincludeHeurTrivial(scip) );
+      SCIP_CALL( SCIPincludeHeurTrySol(scip) );
+      SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
+      SCIP_CALL( SCIPincludeHeurUndercover(scip) );
       SCIP_CALL( SCIPincludeHeurVeclendiving(scip) );
+      SCIP_CALL( SCIPincludeHeurZirounding(scip) );
       SCIP_CALL( SCIPincludePropPseudoobj(scip) );
       SCIP_CALL( SCIPincludePropRootredcost(scip) );
+      SCIP_CALL( SCIPincludePropVbounds(scip) );
       SCIP_CALL( SCIPincludeSepaClique(scip) );
       SCIP_CALL( SCIPincludeSepaCmir(scip) );
       SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
@@ -141,6 +152,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
       SCIP_CALL( SCIPincludeSepaIntobj(scip) );
       SCIP_CALL( SCIPincludeSepaMcf(scip) );
+      SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
       SCIP_CALL( SCIPincludeSepaRedcost(scip) );
       SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
       SCIP_CALL( SCIPincludeSepaZerohalf(scip) );

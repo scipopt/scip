@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.15.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.15.2.2 2010/03/22 16:05:41 bzfwolte Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -29,7 +29,9 @@
 #include "scip/type_tree.h"
 #include "scip/type_nodesel.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** node priority queue data structure;
  *  the fields lowerboundnode, lowerbound, nlowerbounds and validlowerbound are only used for node selection rules,
@@ -64,5 +66,8 @@ struct SCIP_Nodesel
    SCIP_Bool             initialized;        /**< is node selector initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

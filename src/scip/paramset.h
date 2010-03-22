@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.24.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.24.2.2 2010/03/22 16:05:29 bzfwolte Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -33,7 +33,9 @@
 #include "scip/pub_paramset.h"
 #include "scip/pub_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates parameter set */
 extern
@@ -275,5 +277,9 @@ extern
 int SCIPparamsetGetNParams(
    SCIP_PARAMSET*        paramset            /**< parameter set */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

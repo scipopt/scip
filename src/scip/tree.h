@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.95.2.2 2009/07/13 12:48:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.95.2.3 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -44,6 +44,9 @@
 #include "scip/struct_tree.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 /*
@@ -408,7 +411,10 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** branches on a variable v; if solution value x' is fractional, two child nodes are created
+/** branches on a variable v
+ *  if v is a continuous variable, then two child nodes with x <= x' and x >= x' are created
+ *  if v is not a continuous variable, then:
+ *  if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')), 
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
  *  variable and the bounds of v are finite, then two child nodes are created
@@ -426,6 +432,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution. A branching value is required for branching on continuous variables */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
@@ -709,5 +716,9 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Real             cutoffbound         /**< global cutoff bound */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

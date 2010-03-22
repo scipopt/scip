@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.201.2.5 2009/08/05 10:10:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.201.2.6 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -952,7 +952,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    /* output node creation to VBC file */
    SCIP_CALL( SCIPvbcNewChild(stat->vbc, stat, *node) );
 
-   SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %d (prio: %g)\n",
+   SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %u (prio: %g)\n",
       SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
 
    return SCIP_OKAY;
@@ -1240,7 +1240,7 @@ SCIP_RETCODE nodeRepropagate(
 
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
-   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, prob, tree, conflict, SCIPnodeGetDepth(node), 0, cutoff) );
+   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, prob, primal, tree, conflict, SCIPnodeGetDepth(node), 0, cutoff) );
    assert(!node->reprop || *cutoff);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
@@ -1258,7 +1258,7 @@ SCIP_RETCODE nodeRepropagate(
    if( *cutoff )
       stat->nrepropcutoffs++;
 
-   SCIPdebugMessage("repropagation %"SCIP_LONGINT_FORMAT" at depth %d changed %"SCIP_LONGINT_FORMAT" bounds (total reprop bound changes: %"SCIP_LONGINT_FORMAT"), cutoff: %d\n",
+   SCIPdebugMessage("repropagation %"SCIP_LONGINT_FORMAT" at depth %u changed %"SCIP_LONGINT_FORMAT" bounds (total reprop bound changes: %"SCIP_LONGINT_FORMAT"), cutoff: %u\n",
       stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs, *cutoff);
 
    /* if a propagation marked with the reprop flag was successful, we want to repropagate the whole subtree */
@@ -1270,7 +1270,7 @@ SCIP_RETCODE nodeRepropagate(
    {
       treeNextRepropsubtreecount(tree);
       node->repropsubtreemark = tree->repropsubtreecount; /*lint !e732*/
-      SCIPdebugMessage("initial repropagation at depth %d changed %"SCIP_LONGINT_FORMAT" bounds -> repropagating subtree (new mark: %d)\n",
+      SCIPdebugMessage("initial repropagation at depth %u changed %"SCIP_LONGINT_FORMAT" bounds -> repropagating subtree (new mark: %d)\n",
          node->depth, stat->nboundchgs - oldnboundchgs, tree->repropsubtreecount);
       assert((int)(node->repropsubtreemark) == tree->repropsubtreecount); /* bitfield must be large enough */
    }
@@ -1331,7 +1331,7 @@ SCIP_RETCODE nodeActivate(
    assert(!SCIPtreeProbing(tree));
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("activate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d (reprop subtree mark: %d)\n",
+   SCIPdebugMessage("activate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* apply domain and constraint set changes */
@@ -1386,13 +1386,13 @@ SCIP_RETCODE nodeDeactivate(
    )
 {
    SCIP_Bool freeNode;
-   
+
    assert(node != NULL);
    assert(node->active);
    assert(tree != NULL);
    assert(SCIPnodeGetType(node) != SCIP_NODETYPE_FOCUSNODE);
 
-   SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %d)\n",
+   SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* undo domain and constraint set changes */
@@ -1489,7 +1489,7 @@ SCIP_RETCODE SCIPnodeDelCons(
    assert(tree != NULL);
    assert(cons != NULL);
 
-   SCIPdebugMessage("disabling constraint <%s> at node at depth %d\n", cons->name, node->depth);
+   SCIPdebugMessage("disabling constraint <%s> at node at depth %u\n", cons->name, node->depth);
 
    /* add constraint disabling to the node's constraint set change data */
    SCIP_CALL( SCIPconssetchgAddDisabledCons(&node->conssetchg, blkmem, set, cons) );
@@ -1581,7 +1581,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
 
-   SCIPdebugMessage("adding boundchange at node at depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
+   SCIPdebugMessage("adding boundchange at node at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
       infercons != NULL ? "cons" : "prop", 
@@ -1686,7 +1686,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       {
          /* the root should be repropagated due to the bound change */
          SCIPnodePropagateAgain(tree->root, set, stat, tree);
-         SCIPdebugMessage("marked root node to be repropagated due to global bound change <%s>:[%g,%g] -> [%g,%g] found in depth %d\n",
+         SCIPdebugMessage("marked root node to be repropagated due to global bound change <%s>:[%g,%g] -> [%g,%g] found in depth %u\n",
             SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? newbound : oldlb,
             boundtype == SCIP_BOUNDTYPE_LOWER ? oldub : newbound, node->depth);
       }
@@ -1816,7 +1816,7 @@ SCIP_RETCODE SCIPnodeAddHolechg(
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD);
 
-   SCIPdebugMessage("adding holechange at node at depth %d: changed pointer at %p from %p to %p\n",
+   SCIPdebugMessage("adding holechange at node at depth %u: changed pointer at %p from %p to %p\n",
       node->depth, (void*)ptr, (void*)newlist, (void*)oldlist);
 
    stat->nholechgs++;
@@ -2065,6 +2065,9 @@ SCIP_RETCODE SCIPnodePropagateImplics(
             SCIP_Real lb;
             SCIP_Real ub;
                   
+            if( SCIPvarGetStatus(implvars[j]) == SCIP_VARSTATUS_MULTAGGR )
+               continue;
+
             /* check for infeasibility */
             lb = SCIPvarGetLbLocal(implvars[j]);
             ub = SCIPvarGetUbLocal(implvars[j]);
@@ -2113,6 +2116,9 @@ SCIP_RETCODE SCIPnodePropagateImplics(
                SCIP_Real ub;
                   
                assert(SCIPvarGetType(vars[k]) == SCIP_VARTYPE_BINARY);
+
+               if( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_MULTAGGR )
+                  continue;
 
                if( vars[k] == var && values[k] == varfixing )
                   continue;
@@ -2417,7 +2423,7 @@ void treeFindSwitchForks(
    assert(lpfork == NULL || !lpfork->active || lpfork == fork);
    assert(lpstatefork == NULL || !lpstatefork->active || lpstatefork == fork);
    assert(subroot == NULL || !subroot->active || subroot == fork);
-   SCIPdebugMessage("find switch forks: forkdepth=%d\n", fork->depth);
+   SCIPdebugMessage("find switch forks: forkdepth=%u\n", fork->depth);
 
    /* if the common fork node is below the current cutoff depth, the cutoff node is an ancestor of the common fork
     * and thus an ancestor of the new focus node, s.t. the new node can also be cut off
@@ -2937,7 +2943,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
       assert(lpforkdepth == -1 || tree->pathnlprows[tree->correctlpdepth] <= tree->pathnlprows[lpforkdepth]);
       assert(lpforkdepth >= 0 || tree->pathnlpcols[tree->correctlpdepth] == 0);
       assert(lpforkdepth >= 0 || tree->pathnlprows[tree->correctlpdepth] == 0);
-      SCIP_CALL( SCIPlpShrinkCols(lp, tree->pathnlpcols[tree->correctlpdepth]) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, tree->pathnlpcols[tree->correctlpdepth]) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, tree->pathnlprows[tree->correctlpdepth]) );
    }
    else
@@ -3079,7 +3085,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       lp->primalfeasible = (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
    }
 
-   SCIPdebugMessage("-> primalfeasible=%d, dualfeasible=%d\n", lp->primalfeasible, lp->dualfeasible);
+   SCIPdebugMessage("-> primalfeasible=%u, dualfeasible=%u\n", lp->primalfeasible, lp->dualfeasible);
 
    return SCIP_OKAY;
 }
@@ -3334,7 +3340,7 @@ SCIP_RETCODE focusnodeToFork(
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
-      SCIP_CALL( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
@@ -3440,7 +3446,7 @@ SCIP_RETCODE focusnodeToSubroot(
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
-      SCIP_CALL( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
@@ -3593,7 +3599,7 @@ SCIP_RETCODE SCIPnodeFocus(
     * thereby checking, if the new node can be cut off
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
-   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
+   SCIPdebugMessage("focus node: focusnodedepth=%u, forkdepth=%u, lpforkdepth=%u, lpstateforkdepth=%u, subrootdepth=%u, cutoff=%u\n",
       *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1,
       lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1,
       subroot != NULL ? subroot->depth : -1, *cutoff);
@@ -3643,7 +3649,7 @@ SCIP_RETCODE SCIPnodeFocus(
     */
    if( tree->focusnode != NULL && oldcutoffdepth <= (int)tree->focusnode->depth )
    {
-      SCIPdebugMessage("path to old focus node of depth %d was cut off at depth %d\n", 
+      SCIPdebugMessage("path to old focus node of depth %u was cut off at depth %d\n", 
          tree->focusnode->depth, oldcutoffdepth);
 
       /* delete the focus node's children by converting them to leaves with a cutoffbound of SCIP_REAL_MIN;
@@ -4438,7 +4444,10 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    return estimate;
 }
 
-/** branches on a variable v; if solution value x' is fractional, two child nodes are created
+/** branches on a variable v
+ *  if v is a continuous variable, then two child nodes with x <= x' and x >= x' are created
+ *  if v is not a continuous variable, then:
+ *  if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')), 
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
  *  variable and the bounds of v are finite, then two child nodes are created
@@ -4455,13 +4464,14 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution. 
+                                              *   A branching value is required for branching on continuous variables */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    )
 {
    SCIP_NODE* node;
-   SCIP_Real solval;
    SCIP_Real priority;
    SCIP_Real estimate;
 
@@ -4481,8 +4491,31 @@ SCIP_RETCODE SCIPtreeBranchVar(
    if( upchild != NULL )
       *upchild = NULL;
 
-   /* get the corresponding active problem variable */
-   var = SCIPvarGetProbvar(var);
+   /* get the corresponding active problem variable
+    * if branching value is given, then transform it to the value of the active variable */
+   if( val == SCIP_INVALID )
+   {
+      var = SCIPvarGetProbvar(var);
+   }
+   else
+   {
+      SCIP_Real scalar;
+      SCIP_Real constant;
+      
+      scalar   = 1.0;
+      constant = 0.0;
+      
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      
+      if( scalar == 0.0 )
+      {
+         SCIPerrorMessage("cannot branch on fixed variable <%s>\n", SCIPvarGetName(var));
+         return SCIP_INVALIDDATA;
+      }
+      
+      /* we should have givenvariable = scalar * activevariable + constant */
+      val = (val - constant) / scalar;
+   }   
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
@@ -4490,25 +4523,40 @@ SCIP_RETCODE SCIPtreeBranchVar(
       return SCIP_INVALIDDATA;
    }
 
+   /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && val == SCIP_INVALID )
+   {
+      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
+
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
-      || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
-      || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
-   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-   solval = SCIPvarGetSol(var, tree->focusnodehaslp);
-   assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(var)));
+   /* if there was no explicit value given for branching, branch on current LP or pseudo solution value */
+   if( val == SCIP_INVALID )
+     val = SCIPvarGetSol(var, tree->focusnodehaslp);
+   assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || 
+      (SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val) && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) ) );
 
    downub = SCIP_INVALID;
    fixval = SCIP_INVALID;
    uplb = SCIP_INVALID;
    
-   if( SCIPsetIsFeasIntegral(set, solval) )
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      downub = val;
+      uplb = val;
+      SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
+         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+   }
+   else if( SCIPsetIsFeasIntegral(set, val) )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -4517,7 +4565,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       ub = SCIPvarGetUbLocal(var);
 
       if( !SCIPsetIsInfinity(set, lb) && !SCIPsetIsInfinity(set, ub) 
-	 && (SCIPsetIsFeasEQ(set, solval, lb) || SCIPsetIsFeasEQ(set, solval, ub)) )
+	 && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
       {
          SCIP_Real center;
 
@@ -4526,7 +4574,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
           * is still feasible
           */
          center = (ub + lb) / 2.0;
-         if( solval <= center )
+         if( val <= center )
          {
             downub = SCIPsetFeasFloor(set, center);
             uplb = downub + 1.0;
@@ -4540,9 +4588,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       else
       {
          /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
-         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), SCIPsetFeasFloor(set, solval)));
+         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), SCIPsetFeasFloor(set, val)));
          
-         fixval = solval;
+         fixval = val;
          
          /* create child node with x <= x'-1, if this would be feasible */
          if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
@@ -4553,16 +4601,16 @@ SCIP_RETCODE SCIPtreeBranchVar(
             uplb = fixval + 1.0;
       }
       SCIPdebugMessage("integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
-         SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
    else
    {
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
-      downub = SCIPsetFeasFloor(set, solval);
+      downub = SCIPsetFeasFloor(set, val);
       uplb = downub + 1.0;
-      assert( SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), uplb) );
+      assert( SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), uplb) );
       SCIPdebugMessage("fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n", 
-         SCIPvarGetName(var), solval, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
    
    /* perform the branching;
@@ -4714,7 +4762,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
 
-   SCIPdebugMessage("probing started in depth %d (LP flushed: %d, LP solved: %d, solstat: %d), probing root in depth %d\n",
+   SCIPdebugMessage("probing started in depth %d (LP flushed: %u, LP solved: %u, solstat: %d), probing root in depth %d\n",
       tree->pathlen-1, lp->flushed, lp->solved, SCIPlpGetSolstat(lp), tree->pathlen);
 
    /* inform LP about probing mode */
@@ -4915,7 +4963,7 @@ SCIP_RETCODE treeBacktrackProbing(
       treeCheckPath(tree);
 
       /* undo LP extensions */
-      SCIP_CALL( SCIPlpShrinkCols(lp, ncols) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, ncols) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
       tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
 
@@ -5056,7 +5104,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );
 
-   SCIPdebugMessage("probing ended in depth %d (LP flushed: %d, solstat: %d)\n",
+   SCIPdebugMessage("probing ended in depth %d (LP flushed: %u, solstat: %d)\n",
       tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));
    
    return SCIP_OKAY;
@@ -5376,7 +5424,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetFocusNode
 #undef SCIPtreeGetFocusDepth
 #undef SCIPtreeHasFocusNodeLP
-#undef SCIPtreeSetFocusNodeLP
+#undef SCIPtreeSetFocusNodeLP 
 #undef SCIPtreeIsFocusNodeLPConstructed
 #undef SCIPtreeInRepropagation
 #undef SCIPtreeGetCurrentNode
@@ -5471,7 +5519,7 @@ void SCIPnodeGetParentBranchings(
    assert(branchvarssize >= 0);
   
    (*nbranchvars) = 0;
-   if( SCIPnodeGetDepth(node) == 0 )
+   if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
       return;
    nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
    boundchgs = node->domchg->domchgbound.boundchgs;
@@ -5481,22 +5529,22 @@ void SCIPnodeGetParentBranchings(
 
    for( i = 0; i < nboundchgs; i++)
    {
-      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
          break;
       (*nbranchvars)++; 
    }   
 #ifndef NDEBUG
    for( ; i < nboundchgs; i++)
-      assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING); 
+      assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING); /*lint !e641*/
 #endif
 
    if( branchvarssize >= *nbranchvars )
    {
       for( i = 0; i < *nbranchvars; i++)
       {
-         assert( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING );
+         assert( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
          branchvars[i] = boundchgs[i].var;
-         boundtypes[i] = boundchgs[i].boundtype;
+         boundtypes[i] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
          branchbounds[i] = boundchgs[i].newbound;       
       }   
    }

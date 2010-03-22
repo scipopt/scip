@@ -107,8 +107,8 @@ constraints/linear/maxcardbounddist = 0
 constraints/linear/separateall = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 0]
-constraints/and/sepafreq = 0
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/and/sepafreq = 1
 
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -137,6 +137,30 @@ constraints/countsols/sepafreq = -1
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/countsols/delaysepa = FALSE
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+constraints/indicator/sepafreq = 10
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/delaysepa = FALSE
+
+# Generate logicor constraints instead of cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/genLogicor = FALSE
+
+# Separate using the alternative LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepaAlternativeLP = FALSE
+
+# add initial coupling inequalities
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/addCoupling = FALSE
+
+# Update bounds of original variables for separation?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/updateBounds = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -177,10 +201,6 @@ constraints/knapsack/maxsepacuts = 50
 # maximal number of cuts separated per separation round in the root node
 # [type: int, range: [0,2147483647], default: 200]
 constraints/knapsack/maxsepacutsroot = 500
-
-# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/knapsack/maxnumcardlift = -1
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -551,7 +571,7 @@ separating/intobj/delay = FALSE
 separating/mcf/priority = -10000
 
 # frequency for calling separator <mcf> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
+# [type: int, range: [-1,2147483647], default: 0]
 separating/mcf/freq = 0
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <mcf> (0.0: only on current best node, 1.0: on all nodes)
@@ -562,29 +582,21 @@ separating/mcf/maxbounddist = 0
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/mcf/delay = FALSE
 
-# number of clusters to generate in the shrunken network
-# [type: int, range: [2,32], default: 6]
-separating/mcf/nclusters = 6
+# number of clusters to generate in the shrunken network -- default separation
+# [type: int, range: [2,32], default: 5]
+separating/mcf/nclusters = 5
 
 # maximal valid range max(|weights|)/min(|weights|) of row weights
 # [type: real, range: [1,1.79769313486232e+308], default: 1000000]
 separating/mcf/maxweightrange = 1000000
 
-# maximal number of different deltas to try (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
+# maximal number of different deltas to try (-1: unlimited)  -- default separation
+# [type: int, range: [-1,2147483647], default: 20]
 separating/mcf/maxtestdelta = -1
-
-# model type of network (0: auto, 1:directed, 2:undirected)
-# [type: int, range: [0,2], default: 0]
-separating/mcf/modeltype = 0
-
-# type of flow variables in the network (0: auto, 1:continuous/integer, 2:binary)
-# [type: int, range: [0,2], default: 0]
-separating/mcf/flowtype = 0
 
 # should negative values also be tested in scaling?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/mcf/trynegscaling = FALSE
+separating/mcf/trynegscaling = TRUE
 
 # should an additional variable be complemented if f0 = 0?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -593,6 +605,42 @@ separating/mcf/fixintegralrhs = TRUE
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/mcf/dynamiccuts = TRUE
+
+# model type of network (0: auto, 1:directed, 2:undirected)
+# [type: int, range: [0,2], default: 0]
+separating/mcf/modeltype = 0
+
+# maximal number of mcf cuts separated per separation round
+# [type: int, range: [-1,2147483647], default: 100]
+separating/mcf/maxsepacuts = 100
+
+# maximal number of mcf cuts separated per separation round in the root node  -- default separation
+# [type: int, range: [-1,2147483647], default: 200]
+separating/mcf/maxsepacutsroot = 200
+
+# maximum inconsistency ratio for separation at all
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
+separating/mcf/maxinconsistencyratio = 0.02
+
+# maximum inconsistency ratio of arcs not to be deleted
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+separating/mcf/maxarcinconsistencyratio = 0.5
+
+# should we separate only if the cuts shores are connected?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/checkcutshoreconnectivity = TRUE
+
+# should we separate inequalities based on single-node cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/separatesinglenodecuts = TRUE
+
+# should we separate flowcutset inequalities on the network cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/separateflowcutset = TRUE
+
+# should we separate knapsack cover inequalities on the network cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/separateknapsack = TRUE
 
 # priority of separator <redcost>
 # [type: int, range: [-536870912,536870911], default: 10000000]
@@ -713,8 +761,8 @@ separating/zerohalf/maxncalls = -1
 separating/zerohalf/relaxcontvars = FALSE
 
 # should rows be scaled to make fractional coefficients integer?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/zerohalf/scalefraccoeffs = FALSE
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/scalefraccoeffs = TRUE
 
 # should zerohalf cuts found in previous callbacks ignored?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -728,8 +776,16 @@ separating/zerohalf/onlyorigrows = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/zerohalf/usezhcutpool = TRUE
 
-# should problem be decomposed into subproblems (if possible) before applying preprocessing?
+# maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/zerohalf/maxtestdelta = 10
+
+# should negative values also be tested in scaling for cmir?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/trynegscaling = TRUE
+
+# should problem be decomposed into subproblems (if possible) before applying preprocessing?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/zerohalf/preprocessing/decomposeproblem = TRUE
 
 # value of delta parameter used in preprocessing method 'd'
@@ -752,8 +808,8 @@ separating/zerohalf/preprocessing/delta = 0.5
    #                      
    #                      '-' no preprocessing
    #                     
-# [type: string, default: "CXRGXIM"]
-separating/zerohalf/preprocessing/ppmethods = "CXRGXIM"
+# [type: string, default: "CXGXIM"]
+separating/zerohalf/preprocessing/ppmethods = "CXGXIM"
 
 # should the cuts be forced to enter the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

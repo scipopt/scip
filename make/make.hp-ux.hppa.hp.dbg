@@ -1,5 +1,5 @@
-#--- $Id: make.hp-ux.hppa.hp.dbg,v 1.1.2.1 2009/06/19 07:53:34 bzfwolte Exp $
-FLAGS		+=	# -DROUNDING_FE
+#--- $Id: make.hp-ux.hppa.hp.dbg,v 1.1.2.2 2010/03/22 16:05:07 bzfwolte Exp $
+FLAGS		+=	-DROUNDING_FE
 OFLAGS		+=	-z -g +DD64 +W21,486,474
 CFLAGS		+=	
 CXXFLAGS	+=	

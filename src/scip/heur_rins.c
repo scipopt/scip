@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.22.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.22.2.2 2010/03/22 16:05:22 bzfwolte Exp $"
 
 /**@file   heur_rins.c
  * @ingroup PRIMALHEURISTICS
@@ -405,11 +405,13 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
 
    /* disable cut separation in sub problem */
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );

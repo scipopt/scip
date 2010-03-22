@@ -3,6 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.46.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.46.2.2 2010/03/22 16:05:13 bzfwolte Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -40,8 +41,9 @@
 #include "scip/type_branch.h"
 #include "scip/pub_branch.h"
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * branching candidate storage methods
@@ -71,6 +73,80 @@ SCIP_RETCODE SCIPbranchcandGetLPCands(
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
+   );
+
+/** gets branching candidates for relaxation solution branching */
+extern
+SCIP_RETCODE SCIPbranchcandGetRelaxCands(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_VAR***           relaxcands,         /**< pointer to store the array of relax branching candidates, or NULL */
+   SCIP_Real**           relaxcandssol,      /**< pointer to store the array of relax candidate solution values, or NULL */
+   SCIP_Real**           relaxcandsscore,    /**< pointer to store the array of relax candidate scores, or NULL */
+   int*                  nrelaxcands,        /**< pointer to store the number of relax branching candidates, or NULL */
+   int*                  npriorelaxcands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriorelaxbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
+   int*                  npriorelaxints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
+   int*                  npriorelaximpls     /**< pointer to store the number of implicit integercandidates with maximal priority, 
+                                              *   or NULL */
+   );
+
+/** gets number of branching candidates for relaxation solution branching */
+extern
+int SCIPbranchcandGetNRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of binary branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxBins(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of integer branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxInts(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of implicit integer branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxImpls(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of continuous branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxConts(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** insert variable, its score and its solution value into the relaxation branching candidate storage */
+extern
+SCIP_RETCODE SCIPbranchcandAddRelaxCand(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable to insert */
+   SCIP_Real             score,              /**< score of relax candidate, e.g. infeasibility */
+   SCIP_Real             solval              /**< value of the variable in the relaxation's solution */
+   );
+
+/** removes all relax candidates from the storage for relaxation branching */
+extern
+void SCIPbranchcandClearRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** checks whether the given variable is contained in the candidate storage for relaxation branching */
+extern
+SCIP_Bool SCIPbranchcandContainsRelaxCand(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_VAR*             var                 /**< variable to look for */
    );
 
 /** gets branching candidates for pseudo solution branching (nonfixed variables) */
@@ -155,6 +231,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   SCIP_DECL_BRANCHEXECREL((*branchexecrel)),/**< branching execution method for relaxation solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    );
@@ -197,6 +274,19 @@ SCIP_RETCODE SCIPbranchruleExitsol(
 /** executes branching rule for fractional LP solution */
 extern
 SCIP_RETCODE SCIPbranchruleExecLPSol(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
+   SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** executes branching rule for not completely fixed relaxation solution */
+extern
+SCIP_RETCODE SCIPbranchruleExecRelaxSol(
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -284,6 +374,22 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
+/** calls branching rules to branch on a relaxation solution; if no relaxation branching candidates exist, the result is SCIP_DIDNOTRUN */
+extern
+SCIP_RETCODE SCIPbranchExecRelax(
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
+   SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
 /** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
 extern
 SCIP_RETCODE SCIPbranchExecPseudo(
@@ -299,5 +405,8 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

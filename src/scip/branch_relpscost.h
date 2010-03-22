@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.h,v 1.10.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.h,v 1.10.2.2 2010/03/22 16:05:14 bzfwolte Exp $"
 
 /**@file   branch_relpscost.h
  * @brief  reliable pseudo costs branching rule
@@ -27,11 +27,31 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the reliable pseudo cost braching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** execution reliability pseudo cost branching with the given branching candidates */
+extern
+SCIP_RETCODE SCIPexecRelpscostBranching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
+                                              *   in order to cut off the current solution instead of creating a branching? */
+   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
+   SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
+   int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_RESULT*          result              /**< pointer to the result of the execution */
+   );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

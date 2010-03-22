@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.115.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.115.2.2 2010/03/22 16:05:44 bzfwolte Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -49,8 +49,9 @@
 #include "scip/event.h"
 #endif
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * domain change methods
@@ -234,6 +235,46 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
+   );
+
+/** parses variable information (in cip format) out of a string; if the parsing process was successful an original
+ *  problem variable is creates and captures; an integer variable with bounds zero and one is automatically converted
+ *  into a binary variable
+ */
+extern
+SCIP_RETCODE SCIPvarParseOriginal(
+   SCIP_VAR**            var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   const char*           str,                /**< stirng to parse */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
+   );
+
+/** parses variable information (in cip format) out of a string; if the parsing process was successful a loose variable
+ *  belonging to the transformed problem is creates and captures; an integer variable with bounds zero and one is
+ *  automatically converted into a binary variable
+ */
+extern
+SCIP_RETCODE SCIPvarParseTransformed(
+   SCIP_VAR**            var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   const char*           str,                /**< stirng to parse */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
 /** increases usage counter of variable */
@@ -617,6 +658,22 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
+/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPvarChgLbLazy(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   );
+
+/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPvarChgUbLazy(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   );
+
+
 /** changes current local bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */
@@ -862,23 +919,27 @@ SCIP_Real SCIPvarGetUbLP(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable lower bound is available
+/** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable lower bound is available
  */
 extern
 void SCIPvarGetClosestVlb(
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
    int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
    );
 
-/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable upper bound is available
+/** returns solution value and index of variable upper bound that is closest to the variable's value in the given primal solution;
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
  */
 extern
 void SCIPvarGetClosestVub(
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable upper bound */
    int*                  closestvubidx       /**< pointer to store the index of the closest variable upper bound */
@@ -891,6 +952,29 @@ void SCIPvarStoreRootSol(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
+   );
+
+/** returns the solution value of the problem variables in the relaxation solution */
+extern
+SCIP_Real SCIPvarGetRelaxSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns the solution value of the transformed problem variable in the relaxation solution */
+extern
+SCIP_Real SCIPvarGetRelaxSolTransVar(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** stores the solution value as relaxation solution in the problem variable */
+extern
+SCIP_RETCODE SCIPvarSetRelaxSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             solval,             /**< solution value in the current relaxation solution */
+   SCIP_Bool             updateobj           /**< should the objective value be updated? */
    );
 
 /** resolves variable to columns and adds them with the coefficient to the row */
@@ -968,13 +1052,11 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    );
 
-/* begin ????????????????????? */
-
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
-   SCIP_Real             length              /**< length of the conflict */
+   int                   length              /**< length of the conflict */
    );
 
 /**  gets the number of active conflicts containing this variable in given direction */
@@ -1007,8 +1089,6 @@ SCIP_Real SCIPvarGetAvgConflictlengthCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/* end ???????????????????????????? */
-
 /** increases the number of branchings counter of the variable */
 extern
 SCIP_RETCODE SCIPvarIncNBranchings(
@@ -1026,6 +1106,15 @@ SCIP_RETCODE SCIPvarIncNInferences(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** increases the number of inferences counter of the variable by a certain value*/
+extern
+SCIP_RETCODE SCIPvarIncNInferencesVal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */   
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   int                   val                 /**< value by which the number of inferences counter is increased */
+   );
+
 /** increases the number of cutoffs counter of the variable */
 extern
 SCIP_RETCODE SCIPvarIncNCutoffs(
@@ -1036,7 +1125,7 @@ SCIP_RETCODE SCIPvarIncNCutoffs(
 
 /** returns the average number of inferences found after branching on the variable in given direction */
 extern
-SCIP_Real SCIPvarGetConflictScore(
+SCIP_Real SCIPvarGetConflictScore_rec(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1125,6 +1214,14 @@ SCIP_RETCODE SCIPvarDropEvent(
    int                   filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
    );
 
+/** returns the average number of inferences found after branching on the variable in given direction */
+extern
+SCIP_Real SCIPvarGetConflictScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1135,6 +1232,8 @@ SCIP_RETCODE SCIPvarDropEvent(
    SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
 #define SCIPvarDropEvent(var, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) \
    SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
+#define SCIPvarGetConflictScore(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
+      SCIPhistoryGetConflictScore(var->history, dir)/stat->conflictscoreweight : SCIPvarGetConflictScore_rec(var, stat, dir))
 
 #endif
 
@@ -1149,6 +1248,8 @@ SCIP_RETCODE SCIPvarDropEvent(
 extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar);
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

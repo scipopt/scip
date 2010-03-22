@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.24.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.24.2.2 2010/03/22 16:05:20 bzfwolte Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -35,7 +35,7 @@
 #define HEUR_DISPCHAR         'C'
 #define HEUR_PRIORITY         -1104000
 #define HEUR_FREQ             30
-#define HEUR_FREQOFS          10
+#define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 
@@ -48,6 +48,7 @@
 #define DEFAULT_NUSEDSOLS     3             /* number of solutions that will be taken into account                 */
 #define DEFAULT_NWAITINGNODES 200LL         /* number of nodes without incumbent change heuristic should wait      */
 #define DEFAULT_RANDOMIZATION TRUE          /* should the choice which sols to take be randomized?                 */ 
+#define DEFAULT_DONTWAITATROOT FALSE        /* should the nwaitingnodes parameter be ignored at the root node?     */ 
 
 #define HASHSIZE_SOLS         11113         /* size of hash table for solution tuples in crossover heuristic       */
 
@@ -78,6 +79,7 @@ struct SCIP_HeurData
    SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed     */
    SCIP_Real             minimprove;        /**< factor by which Crossover should at least improve the incumbent   */
    SCIP_Bool             randomization;     /**< should the choice which sols to take be randomized?               */ 
+   SCIP_Bool             dontwaitatroot;    /**< should the nwaitingnodes parameter be ignored at the root node?   */
    unsigned int          randseed;          /**< seed value for random number generator                            */
    SCIP_HASHTABLE* 	 hashtable;         /**< hashtable used to store the solution tuples already used          */
    SOLTUPLE*             lasttuple;         /**< last tuple of solutions created by crossover                      */ 
@@ -726,7 +728,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       return SCIP_OKAY;
    
    /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes )
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes 
+      && (SCIPgetDepth(scip) > 0 || !heurdata->dontwaitatroot) )
       return SCIP_OKAY;
    
    *result = SCIP_DIDNOTRUN;
@@ -825,12 +828,14 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics solving subMIPs */
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
 
    /* disable cut separation in sub problem */
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
@@ -1027,6 +1032,10 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/randomization",
          "should the choice which sols to take be randomized?",
          &heurdata->randomization, TRUE, DEFAULT_RANDOMIZATION, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/dontwaitatroot",
+         "should the nwaitingnodes parameter be ignored at the root node?",
+         &heurdata->dontwaitatroot, TRUE, DEFAULT_DONTWAITATROOT, NULL, NULL) );
 
    return SCIP_OKAY;
 }

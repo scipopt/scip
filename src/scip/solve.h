@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.48.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.48.2.2 2010/03/22 16:05:39 bzfwolte Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -42,7 +42,9 @@
 #include "scip/type_cutpool.h"
 #include "scip/type_conflict.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
@@ -61,6 +63,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
@@ -82,6 +85,19 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   );
+
+/** calls primal heuristics */
+extern
+SCIP_RETCODE SCIPprimalHeuristics(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    );
 
 /** applies one round of separation on the given primal solution or on the LP solution */
@@ -136,6 +152,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
@@ -146,5 +163,8 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_Bool*            restart             /**< should solving process be started again with presolving? */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

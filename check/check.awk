@@ -1,10 +1,10 @@
-#!/bin/gawk -f
+#!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.63.2.1 2009/06/19 07:53:29 bzfwolte Exp $
+# $Id: check.awk,v 1.63.2.2 2010/03/22 16:05:00 bzfwolte Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -21,6 +21,8 @@
 #@author  Tobias Achterberg
 #@author  Alexander Martin
 #@author  Timo Berthold
+#@author  Robert Waniek
+#
 function abs(x)
 {
    return x < 0 ? -x : x;
@@ -42,6 +44,7 @@ BEGIN {
    onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -99,14 +102,7 @@ BEGIN {
 /^IP\// { # TEMPORARY HACK to parse .test files
    intestfile[$1] = 1;
 }
-/=opt=/  {  # get optimum
-   if( NF >= 3 ) {
-      solstatus[$2] = "opt";
-      sol[$2] = $3;
-   }
-   else
-      solstatus[$2] = "feas";
-}
+/=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
 /=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
@@ -141,8 +137,8 @@ BEGIN {
    origcons = 0;
    timeout = 0;
    feasible = 0;
-   pb = +1e20;
-   db = -1e20;
+   pb = +infty;
+   db = -infty;
    simpiters = 0;
    bbnodes = 0;
    primlps = 0;
@@ -183,6 +179,8 @@ BEGIN {
       lpsname = "none";
    else if ($13 == "Clp")
       lpsname = "clp";
+   else if ($13 == "MOSEK")
+      lpsname = "msk";
 
    # get LP solver version 
    if( NF >= 14 ) 
@@ -275,13 +273,13 @@ BEGIN {
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
    {
-      pb = 1e+20;
-      db = 1e+20;
+      pb = +infty;
+      db = +infty;
       feasible = 0;
    }
    else if( $4 == "-" )
    {
-      pb = 1e+20;
+      pb = +infty;
       feasible = 0;
    }
    else
@@ -309,17 +307,31 @@ BEGIN {
 #
 /^Solving Time       :/ { tottime = $4 }
 #
-# Output
+# solver status overview (in order of priority): 
+# 1) solver broke before returning solution => abort
+# 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
+#    (especially of problem is claimed to be solved but solution is not the optimal solution)
+# 3) solver solved problem with the value in solu-file (if existing) => ok
+# 4) solver solved problem which has no (optimal) value in solu-file => solved
+# 5) solver found solution better than known best solution (or no solution was known so far) => better
+# 7) solver reached gaplimit or limit of number of solutions => gaplimit, sollimit
+# 8) solver reached any other limit (like time or nodes) => timeout
+# 9) otherwise => unknown
 #
 /^=ready=/ {
    if( (!onlyinsolufile || solstatus[prob] != "") &&
       (!onlyintestfile || intestfile[filename]) )
    {
+      temp = pb;
+      pb = 1.0*temp;
+      temp = db;
+      db = 1.0*temp;
+
       nprobs++;
 
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 )
+      if( abs(pb - db) < 1e-06 && pb < infty)
       {
          gap = 0.0;
          optimal = 1;
@@ -329,9 +341,9 @@ BEGIN {
          gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
-      else if( abs(db) >= 1e+20 )
+      else if( abs(db) >= +infty )
          gap = -1.0;
-      else if( abs(pb) >= 1e+20 )
+      else if( abs(pb) >= +infty )
          gap = -1.0;
       else
          gap = 100.0*abs((pb-db)/db);
@@ -414,80 +426,162 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
-         if( !sollimitreached && !gapreached && !timeout )
-            wronganswer = (pb - db > 1e-4 || abs(pb - sol[prob]) > 1e-5*max(abs(pb),1.0));
-         else if( pb >= db )
-            wronganswer = (db > sol[prob] + 1e-5*max(abs(sol[prob]),1.0) ||
-               pb < sol[prob] - 1e-5*max(abs(sol[prob]),1.0));
-         else
-            wronganswer = (pb > sol[prob] + 1e-5*max(abs(sol[prob]),1.0) ||
-               db < sol[prob] - 1e-5*max(abs(sol[prob]),1.0));
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
 
-         if( wronganswer )
+         if( (db <= pb && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || (db >= pb && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) )
          {
             status = "fail";
             failtime += tottime;
             fail++;
          }
-         else if( timeout )
-         {
-            status = "timeout";
-            timeouttime += tottime;
-            timeouts++;
-         }
          else
          {
-            status = "ok";
-            pass++;
-         }
-      }
-      else if( solstatus[prob] == "feas" || solstatus[prob] == "inf" )
-      {
-         if( timeout )
-            wronganswer = (feasible && solstatus[prob] == "inf");
-         else
-            wronganswer = (feasible != (solstatus[prob] == "feas"));
-
-         if( wronganswer )
-         {
-            status = "fail";
-            failtime += tottime;
-            fail++;
-         }
-         else if( timeout )
-         {
-            status = "timeout";
-            timeouttime += tottime;
-            timeouts++;
-         }
-         else
-         {
-            status = "ok";
-            pass++;
+            if (timeout || gapreached || sollimitreached)
+            {
+               if( timeout )
+                  status = "timeout";
+               else if( gapreached )
+                  status = "gaplimit";
+               else if( sollimitreached )
+                  status = "sollimit";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+               {
+                  status = "ok";
+                  pass++;
+               }
+               else
+               {
+                  status = "fail";
+                  failtime += tottime;
+                  fail++;
+               }
+            }
          }
       }
       else if( solstatus[prob] == "best" )
       {
-         if( db > sol[prob] + 1e-4 )
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+         if( (db <= pb && db-sol[prob] > reltol) || (db >= pb && sol[prob]-db > reltol) )
          {
             status = "fail";
             failtime += tottime;
             fail++;
          }
-         else if( timeout )
+         else
          {
-            status = "timeout";
-            timeouttime += tottime;
-            timeouts++;
+            if (timeout || gapreached || sollimitreached)
+            {
+               if ( (db <= pb && sol[prob]-pb > reltol) || (db >= pb && pb-sol[prob] > reltol) )
+               {
+                  status = "better";
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+               {
+                  if( timeout )
+                     status = "timeout";
+                  else if( gapreached )
+                     status = "gaplimit";
+                  else if( sollimitreached )
+                  status = "sollimit";
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+            }
+            else
+            {
+               if( abs(pb - db) <= max(abstol, reltol) )
+               {
+                  status = "solved";
+                  pass++;
+               }
+               else
+               {
+                  status = "fail";
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
+      }
+      else if( solstatus[prob] == "unkn" )
+      {
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
+         
+         if( abs(pb - db) <= max(abstol, reltol) )
+         {
+            status = "solved";
+            pass++;
          }
          else
-            status = "unknown";
+         {
+            if( abs(pb) < infty )
+            {
+               status = "better";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               if (timeout || gapreached || sollimitreached)
+               {
+                  if( timeout )
+                     status = "timeout";
+                  else if( gapreached )
+                     status = "gaplimit";
+                  else if( sollimitreached )
+                     status = "sollimit";
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else 
+                  status = "unknown";
+            }
+         }
+      }
+      else if( solstatus[prob] == "inf" )
+      {
+         if (feasible)
+         {
+            if (timeout)
+            {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               status = "fail";
+               failtime += tottime;
+               fail++;
+            }
+         }
+         else
+         {
+            status = "ok";
+            pass++;
+         }
       }
       else
       {
-         if( timeout )
+         if (timeout || gapreached || sollimitreached)
          {
-            status = "timeout";
+            if( timeout )
+               status = "timeout";
+            else if( gapreached )
+               status = "gaplimit";
+            else if( sollimitreached )
+               status = "sollimit";
             timeouttime += tottime;
             timeouts++;
          }

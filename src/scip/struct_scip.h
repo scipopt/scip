@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.21.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.21.2.2 2010/03/22 16:05:41 bzfwolte Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -44,6 +44,9 @@
 #include "scip/type_conflict.h"
 #include "scip/type_dialog.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** SCIP main data structure */
 struct Scip
@@ -64,6 +67,7 @@ struct Scip
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
+   SCIP_RELAXATION*      relaxation;         /**< global relaxation data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
    SCIP_TREE*            tree;               /**< branch and bound tree */
    SCIP_CONFLICT*        conflict;           /**< conflict analysis data */
@@ -76,5 +80,8 @@ struct Scip
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

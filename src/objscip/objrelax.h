@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.18.2.2 2009/06/19 07:53:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.18.2.3 2010/03/22 16:05:13 bzfwolte Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -26,11 +26,7 @@
 
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {
@@ -39,6 +35,8 @@ namespace scip
 class ObjRelax
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the relaxator */
    char* scip_name_;
    
@@ -70,6 +68,7 @@ public:
    /** destructor */
    virtual ~ObjRelax()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }
@@ -149,6 +148,7 @@ public:
    virtual SCIP_RETCODE scip_exec(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_RELAX*        relax,              /**< the relaxator itself */
+      SCIP_Real*         lowerbound,         /**< pointer to store a lowerbound for the current node */
       SCIP_RESULT*       result              /**< pointer to store the result of the relaxation call */
       ) = 0;
 };

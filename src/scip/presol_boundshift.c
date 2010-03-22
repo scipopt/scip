@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_boundshift.c,v 1.8.2.2 2009/06/19 07:53:47 bzfwolte Exp $"
+#pragma ident "@(#) $Id: presol_boundshift.c,v 1.8.2.3 2010/03/22 16:05:29 bzfwolte Exp $"
 
 /**@file   presol_boundshift.c
  * @ingroup PRESOLVERS
@@ -255,7 +255,7 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "presolving/boundshift/maxshift", 
          "absolute value of maximum shift",
-         &presoldata->maxshift, TRUE, DEFAULT_MAXSHIFT, 0, SCIP_LONGINT_MAX, NULL, NULL) );
+         &presoldata->maxshift, TRUE, DEFAULT_MAXSHIFT, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/boundshift/flipping", 
          "is flipping allowed (multiplying with -1)?",

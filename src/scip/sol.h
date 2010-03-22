@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.54.2.3 2009/08/05 10:10:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.54.2.4 2010/03/22 16:05:39 bzfwolte Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -41,8 +41,9 @@
 #include "scip/type_heur.h"
 #include "scip/pub_sol.h"
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates primal CIP solution, initialized to zero */
 extern
@@ -90,6 +91,19 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates primal CIP solution, initialized to the current relaxation solution */
+extern
+SCIP_RETCODE SCIPsolCreateRelaxSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -150,6 +164,16 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** copies current relaxation solution into CIP solution by linking */
+extern
+SCIP_RETCODE SCIPsolLinkRelaxSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
 /** copies current pseudo solution into CIP solution by linking */
@@ -354,5 +378,8 @@ void SCIPsolSetPrimalIndex(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

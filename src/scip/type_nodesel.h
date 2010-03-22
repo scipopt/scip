@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.14.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.14.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_nodesel.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for node selectors
  * @author Tobias Achterberg
  */
@@ -24,6 +25,14 @@
 #ifndef __SCIP_TYPE_NODESEL_H__
 #define __SCIP_TYPE_NODESEL_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_tree.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_NodePQ SCIP_NODEPQ;           /**< node priority queue */
 typedef struct SCIP_Nodesel SCIP_NODESEL;         /**< node selector data structure */
@@ -108,12 +117,8 @@ typedef struct SCIP_NodeselData SCIP_NODESELDATA; /**< node selector specific da
  */
 #define SCIP_DECL_NODESELCOMP(x) int x (SCIP* scip, SCIP_NODESEL* nodesel, SCIP_NODE* node1, SCIP_NODE* node2)
 
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_tree.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

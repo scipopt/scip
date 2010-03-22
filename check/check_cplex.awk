@@ -1,10 +1,10 @@
-#!/bin/awk -f
+#!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,12 +13,13 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.33.2.1 2009/06/19 07:53:29 bzfwolte Exp $
+# $Id: check_cplex.awk,v 1.33.2.2 2010/03/22 16:05:00 bzfwolte Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
+#@author  Robert Waniek
 #
 function abs(x)
 {
@@ -33,6 +34,7 @@ BEGIN {
    nodegeomshift = 1000.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -48,9 +50,9 @@ BEGIN {
    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
    printf("\\midrule\n")                                            >TEXFILE;
 
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
-   printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    nprobs   = 0;
    sbab     = 0;
@@ -68,6 +70,7 @@ BEGIN {
    timeouts = 0;
    settings = "default";
    version = "?";
+   threads = 1;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
@@ -101,8 +104,8 @@ BEGIN {
    opti       = 0;
    feasible   = 1;
    cuts       = 0;
-   pb         = +1e+75;
-   db         = -1e+75;
+   pb         = +infty;
+   db         = -infty;
    mipgap     = 1e-4;
    absmipgap  = 1e-6;
    bbnodes    = 0;
@@ -117,6 +120,8 @@ BEGIN {
    aborted    = 1;
 }
 /^Welcome/ {version = $6;}
+
+/^CPLEX> CPLEX> New value for time limit in seconds:/ {timelimit = $10;}
 
 /^CPLEX> Parameter file / {
    settings = $4;
@@ -154,18 +159,50 @@ BEGIN {
 /^New value for absolute mixed integer optimality gap tolerance: / {
    absmipgap = $10;
 }
+/^CPLEX> New value for default parallel thread count: / {
+   threads = $9;
+}
+/^New value for default parallel thread count: / {
+   threads = $8;
+}
 #
 # problem size
 #
-/^Reduced MIP has/ { cons = $4; vars = $6; }
+/^Variables            : / {
+   if ( $3 != "Min" )
+   {
+      origvars = $3;
+      intvars = $10;
+      binvars = $7;
+   }
+   if ( vars == 0 )
+      vars = origvars;
+   contvars = vars - intvars - binvars;
+}
+/^Linear constraints   : / {
+   if ( $4 > 0 )
+      origcons = $4;
+   if ( cons == 0 )
+      cons = origcons;
+}
+/nonzeros.$/ { 
+    cons = $4; 
+    vars = $6; 
+}
+/indicators.$/ {
+   binvars = $4;
+   intvars = $6;
+   contvars = vars - intvars - binvars;
+}
 #
 # solution
 #
+/^CPLEX Error  1001: Out of memory./ { timeout = 1; }
 /^Integer /  {
    if ($2 == "infeasible." || $2 == "infeasible")
    {
-      db = 1e+20;
-      pb = 1e+20;
+      db = +infty;
+      pb = +infty;
       absgap = 0.0;
       feasible = 0;
    }
@@ -181,8 +218,8 @@ BEGIN {
 /^MIP - Integer /  { # since CPLEX 10.0
    if ($4 == "infeasible." || $4 == "infeasible")
    {
-      db = 1e+20;
-      pb = 1e+20;
+      db = +infty;
+      pb = +infty;
       absgap = 0.0;
       feasible = 0;
    }
@@ -204,11 +241,11 @@ BEGIN {
    timeout = 1;
 }
 /^Time /  {
-   pb = ($4 == "no") ? 1e+75 : $8;
+   pb = ($4 == "no") ? +infty : $8;
    timeout = 1;
 }
 /^MIP - Time /  { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
+   pb = ($6 == "no") ? +infty : $10;
    timeout = 1;
 }
 /^Memory limit exceeded, integer feasible:/ {
@@ -220,29 +257,29 @@ BEGIN {
    timeout = 1;
 }
 /^Node / {
-   pb = ($4 == "no") ? 1e+75 : $8;
+   pb = ($4 == "no") ? +infty : $8;
    timeout = 1;
 }
 /^MIP - Node / { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
+   pb = ($6 == "no") ? +infty : $10;
    timeout = 1;
 }
 /^Tree /  {
-   pb = ($4 == "no") ? 1e+75 : $8;
+   pb = ($4 == "no") ? +infty : $8;
    timeout = 1;
 }
 /^MIP - Tree /  { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
+   pb = ($6 == "no") ? +infty : $10;
    timeout = 1;
 }
 /^Error /  {
-   pb = ($3 == "no") ? 1e+75 : $7;
+   pb = ($3 == "no") ? +infty : $7;
 }
 /^MIP - Error /  { # since CPLEX 10.0
-   pb = ($5 == "no") ? 1e+75 : $9;
+   pb = ($5 == "no") ? +infty : $9;
 }
 /^MIP - Unknown status / {
-   pb = ($6 == "Objective") ? $8 : 1e+75;
+   pb = ($6 == "Objective") ? $8 : +infty;
 }
 /cuts applied/ { 
    cuts += $NF;
@@ -260,16 +297,34 @@ BEGIN {
    bbnodes   = $11;
    aborted   = 0;
 }
+#
+# evaluation
+#
+# solver status overview (in order of priority): 
+# 1) solver broke before returning solution => abort
+# 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
+#    (especially of problem is claimed to be solved but solution is not the optimal solution)
+# 3) solver solved problem with the value in solu-file (if existing) => ok
+# 4) solver solved problem which has no (optimal) value in solu-file => solved
+# 5) solver found solution better than known best solution (or no solution was known so far) => better
+# 6) solver reached any other limit (like time or nodes) => timeout
+# 7) otherwise => unknown
+#
 /^=ready=/ {
    if( !onlyinsolufile || solstatus[prob] != "" )
    {
-      bbnodes = max(bbnodes, 1); # CPLEX reports 0 nodes if the primal heuristics find the optimal solution in the root node
+      temp = pb;
+      pb = 1.0*temp;
+      temp = db;
+      db = 1.0*temp;
+
+      bbnodes = max(bbnodes, 1); # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
       nprobs++;
     
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 )
+      if( abs(pb - db) < 1e-06 && pb < infty)
       {
          gap = 0.0;
          optimal = 1;
@@ -279,12 +334,13 @@ BEGIN {
          gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
-      else if( abs(db) >= 1e+20 )
+      else if( abs(db) >= +infty )
          gap = -1.0;
-      else if( abs(pb) >= 1e+20 )
+      else if( abs(pb) >= +infty )
          gap = -1.0;
       else
          gap = 100.0*abs((pb-db)/db);
+
       if( gap < 0.0 )
          gapstr = "  --  ";
       else if( gap < 1e+04 )
@@ -292,11 +348,29 @@ BEGIN {
       else
          gapstr = " Large";
 
+      if( vars == 0 )
+         probtype = "--";
+      else if( binvars == 0 && intvars == 0 )
+         probtype = "LP";
+      else if( contvars == 0 )
+      {
+         if( intvars == 0 && implvars == 0 )
+            probtype = "BP";
+         else
+            probtype = "IP";
+      }
+      else
+      {
+         if( intvars == 0 )
+            probtype = "MBP";
+         else
+            probtype = "MIP";
+      }
+
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-
-      printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
-             shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+      printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+         shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
 
       if( aborted )
       {
@@ -306,9 +380,16 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
- 	 reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
-	 abstol = max(absmipgap, 1e-4);
-         if( (abs(pb - db) > max(abstol, reltol)) || (abs(pb - sol[prob]) > reltol) )
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || (db >= pb && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
+         }
+         else
          {
             if (timeout)
             {
@@ -318,15 +399,93 @@ BEGIN {
             }
             else
             {
-               printf("fail\n");
-               failtime += tottime;
-               fail++;
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+               {
+                  printf("ok\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
             }
+         }
+      }
+      else if( solstatus[prob] == "best" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && db-sol[prob] > reltol) || (db >= pb && sol[prob]-db > reltol) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
          }
          else
          {
-            printf("ok\n");
+            if (timeout)
+            {
+               if ( (db <= pb && sol[prob]-pb > reltol) || (db >= pb && pb-sol[prob] > reltol) )
+               {
+                  printf("better\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+            }
+            else
+            {
+               if( abs(pb - db) <= max(abstol, reltol) )
+               {
+                  printf("solved\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
+      }
+      else if( solstatus[prob] == "unkn" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+         
+         if( abs(pb - db) <= max(abstol, reltol) )
+         {
+            printf("solved\n");
             pass++;
+         }
+         else
+         {
+            if( abs(pb) < infty )
+            {
+               printf("better\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               if( timeout )
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+                  printf("unknown\n");
+            }
          }
       }
       else if( solstatus[prob] == "inf" )
@@ -392,7 +551,7 @@ END {
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
@@ -404,5 +563,7 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
+   printf("@02 threads: %g\n", threads);
+   printf("@02 timelimit: %g\n", timelimit);
    printf("@01 CPLEX(%s):%s\n", version, settings);
 }

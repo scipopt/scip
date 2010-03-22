@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.36.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.36.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -212,6 +212,10 @@ SCIP_RETCODE SCIPreaderWrite(
    conss = prob->conss;
    nconss = prob->nconss;
    
+   varnames = NULL;
+   fixedvarnames = NULL; 
+   consnames = NULL;
+
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
    {
@@ -219,7 +223,7 @@ SCIP_RETCODE SCIPreaderWrite(
       {
          /* save variable and constraint names and replace these names by generic names */
 
-         /* alloac memory for saving the original variable and constraint names */
+         /* allocate memory for saving the original variable and constraint names */
          SCIP_ALLOC( BMSallocMemoryArray(&varnames, nvars) );
          SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars) );
          SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
@@ -274,10 +278,13 @@ SCIP_RETCODE SCIPreaderWrite(
          fixedvars, nfixedvars, prob->startnvars, 
          conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);
          
+      /* reset variable and constraint names to original names */
       if( genericnames )
-      {  /*lint --e{644}  suppress not initialized for varnames and fixedvarnames */
-         /* reset variable and constraint names to original names */
-         
+      {  
+         assert(varnames != NULL);
+         assert(fixedvarnames != NULL);
+         assert(consnames != NULL);
+
          for( i = 0; i < nvars; ++i )
             resetVarname(vars[i], varnames[i]);
                

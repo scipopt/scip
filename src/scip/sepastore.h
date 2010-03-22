@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.30.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.30.2.2 2010/03/22 16:05:38 bzfwolte Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -36,7 +36,9 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_branch.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates separation storage */
 extern
@@ -144,5 +146,8 @@ int SCIPsepastoreGetNCutsApplied(
    SCIP_SEPASTORE*            sepastore                /**< separation storage */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

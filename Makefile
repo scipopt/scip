@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230.2.6 2010/03/02 17:20:50 bzfwolte Exp $
+# $Id: Makefile,v 1.230.2.7 2010/03/22 16:04:59 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -32,11 +32,12 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	1.1.0.8
+VERSION		:=	1.2.0.8
 
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	1536
+THREADS         =       1
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	shortmiplib
@@ -63,9 +64,11 @@ READLINE	=	true
 ZLIB		=	true
 GMP             =       auto
 ZIMPL		=	true
+IPOPT		=	false
 LPSOPT		=	opt
 LPSEXOPT	=	opt
 ZIMPLOPT	=	opt
+IPOPTOPT	=	opt
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
@@ -94,6 +97,13 @@ LINT		=	flexelint
 DOXY		=	doxygen
 CPLEX		=	cplex
 CBC		=	cbc
+CBCPARALLEL	=	cbc-parallel
+MOSEK           =       mosek
+GUROBI          =       gurobi.sh
+GLPK            =       glpsol
+SYMPHONY        =       symphony
+BLIS            =       blis
+
 
 SHELL		= 	bash
 READ		=	read -e
@@ -154,7 +164,7 @@ DFLAGS		+=	$(USRDFLAGS)
 # Exact MIP Solving
 #-----------------------------------------------------------------------------
 ifeq ($(EXACTSOLVE),true)
-FLAGS		+=	-DROUNDING_FE
+# FLAGS		+=	-DROUNDING_FE
 FLAGS		+=	-DEXACTSOLVE_OUT		# general info 
 FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact version of code
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
@@ -203,19 +213,6 @@ LPIINSTMSG	=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.
 LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
 endif
 
-LPSOPTIONS	+=	cpx903
-ifeq ($(LPS),cpx903)
-FLAGS		+=	-I$(LIBDIR)/cpx903inc
-LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
-LPILIBOBJ	=	scip/lpi_cpx903.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
-SOFTLINKS	+=	$(LIBDIR)/cpx903inc
-SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-LPIINSTMSG	=	"  -> \"cpxinc\" is the path to the CPLEX 9.03 \"include\" directory, e.g., \"<CPLEX-9-path>/include/ilcplex\".\n"
-LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-9-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
-endif
-
 LPSOPTIONS	+=	xprs
 ifeq ($(LPS),xprs)
 FLAGS		+=	-I$(LIBDIR)/xprsinc
@@ -232,14 +229,16 @@ endif
 LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
 FLAGS		+=	-I$(LIBDIR)/mskinc
-LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/mskinc
 SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/include\".\n"
-LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/lib/libmosek.a\""
+LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/lib/libmosek.a\".\n"
+LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the libiomp5, e.g., \"<Mosek-path>/lib/libiomp5.a\""
 endif
 
 LPSOPTIONS	+=	spx
@@ -254,20 +253,6 @@ SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIB
 SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"../../soplex/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"../../soplex/lib/libsoplex.linux.x86.gnu.opt.a\""
-endif
-
-LPSOPTIONS	+=	spx121
-ifeq ($(LPS),spx121)
-LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/spx121inc 
-LPSLDFLAGS	=	$(LINKCXX_l)soplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
-LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx121.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/spx121inc
-SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
-LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex 1.2.1 \"src\" directory, e.g., \"../../soplex-121/src\".\n"
-LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"../../soplex/lib/libsoplex-1.2.1.linux.x86.gnu.opt.a\""
 endif
 
 LPSOPTIONS	+=	spx132
@@ -430,6 +415,27 @@ LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIM
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a\""
 endif
 
+IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
+IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
+ifeq ($(IPOPT),true)
+LINKER		=	CPP
+FLAGS		+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
+ifeq ($(LIBEXT),$(STATICLIBEXT))
+LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
+else
+LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)`
+endif
+SOFTLINKS	+=	$(LIBDIR)/ipoptinc
+SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
+LPIINSTMSG	+=	"\n  -> \"ipoptinc\" is a directory containing the ipopt header files, i.e., \"ipoptinc/IpIpoptApplication.hpp\" should exist.\n"
+LPIINSTMSG	+=	" -> \"libipopt.*\" is the Ipopt library, e.g., \"/client/lib/ipopt-3.7.0/libipopt.a\"\n"
+LPIINSTMSG	+=	" -> \"ipopt_addlibs.*\" is the Ipopt addlibs_cpp file, e.g., \"/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt\"\n"
+endif
+
 ifeq ($(READLINE),true)
 FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
@@ -470,6 +476,8 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/lp.o \
 			scip/mem.o \
 			scip/misc.o \
+			scip/nlpi.o \
+			scip/nlpi_oracle.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -516,7 +524,10 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_linear.o \
 			scip/cons_logicor.o \
 			scip/cons_or.o \
+			scip/cons_orbitope.o \
+			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
+			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
 			scip/cons_varbound.o \
@@ -526,7 +537,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
-                        scip/heur_dins.o \
+			scip/heur_dins.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
@@ -536,6 +547,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_mutation.o \
+			scip/heur_nlp.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
 			scip/heur_oneopt.o \
@@ -546,7 +558,12 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_rounding.o \
 			scip/heur_shifting.o \
 			scip/heur_simplerounding.o \
+			scip/heur_trivial.o \
+			scip/heur_trysol.o \
+			scip/heur_twoopt.o \
+			scip/heur_undercover.o \
 			scip/heur_veclendiving.o \
+			scip/heur_zirounding.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_dfs.o \
 			scip/nodesel_estimate.o \
@@ -560,11 +577,13 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/presol_trivial.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_rootredcost.o \
+			scip/prop_vbounds.o \
+			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
-			scip/reader_ccg.o \
+			scip/reader_gms.o \
 			scip/reader_lp.o \
 			scip/reader_mps.o \
 			scip/reader_opb.o \
@@ -579,6 +598,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
+			scip/sepa_rapidlearning.o \
 			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
@@ -596,8 +616,14 @@ SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
-ALLSRC		+=	$(SCIPLIBSRC)
 
+ifeq ($(IPOPT),true)
+SCIPLIBOBJ += scip/nlpi_ipopt.o
+SCIPLIBOBJFILES += $(LIBOBJDIR)/scip/nlpi_ipopt.o
+SCIPLIBSRC += $(SRCDIR)/scip/nlpi_ipopt.cpp
+endif
+
+ALLSRC		+=	$(SCIPLIBSRC)
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -657,7 +683,7 @@ ALLSRC		+=	$(MAINSRC)
 
 
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(LPSEX)-$(LPSEXOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(LPSEX)-$(LPSEXOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -692,7 +718,7 @@ check:		test
 .PHONY: test
 test:		
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: testcount
 testcount:		
@@ -702,12 +728,22 @@ testcount:
 .PHONY: testcplex
 testcplex:		
 		cd check; \
-		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testmosek
+testmosek:		
+		cd check; \
+		$(SHELL) ./check_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcbc
 testcbc:		
 		cd check; \
-		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testcbcparallel
+testcbcparallel:                
+		cd check; \
+                $(SHELL) ./check_cbc.sh $(TEST) $(CBCPARALLEL) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: testcluster
 testcluster:		
@@ -719,9 +755,29 @@ testclustercbc:
 		cd check; \
 		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE) $(LOCK);
 
+.PHONY: testgurobi
+testgurobi:		
+		cd check; \
+		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testglpk
+testglpk:		
+		cd check; \
+		$(SHELL) ./check_glpk.sh $(TEST) $(GLPK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testsymphony
+testsymphony:		
+		cd check; \
+		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testblis
+testblis:		
+		cd check; \
+		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
+
 .PHONY: tags
 tags:
-		cd src/scip/; rm -f TAGS; ctags -e *.c *.h;
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; 
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
@@ -763,11 +819,22 @@ $(BINDIR):
 
 .PHONY: clean
 clean:
-ifneq ($(OBJDIR),)
-		-rm -rf $(OBJDIR)/*
+ifneq ($(LIBOBJDIR),)
+		@cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS)
+		@-rmdir $(LIBOBJDIR)
 endif
-		-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(MAINFILE) \
+ifneq ($(BINOBJDIR),)
+		@-rm -f $(BINOBJDIR)/*.o && rmdir $(BINOBJDIR)
+endif
+ifneq ($(OBJDIR),)
+		@-rm -f $(LASTSETTINGS)
+		@-rmdir $(OBJDIR)
+endif
+		@echo "-> remove objective files"
+		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(MAINFILE) \
 		$(LPILIBLINK) $(LPIEXLIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+		@echo "-> remove libraries"
+		@echo "-> remove binary"
 
 .PHONY: lpidepend
 lpidepend:
@@ -822,6 +889,7 @@ depend:		lpidepend lpiexdepend maindepend
 		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
+		@echo `grep -l "WITH_IPOPT" $(ALLSRC)` >$(IPOPTDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
@@ -894,7 +962,7 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(IPOPTDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
@@ -907,11 +975,15 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
+ifneq ($(IPOPT),$(LAST_IPOPT))
+		@-touch $(IPOPTSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -924,7 +996,7 @@ links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) LPSEX=$(LPSEX) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT)"
+		@echo "- Current settings: LPS=$(LPS) LPSEX=$(LPSEX) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."

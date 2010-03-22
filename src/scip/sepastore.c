@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.2 2009/07/24 12:52:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.3 2010/03/22 16:05:38 bzfwolte Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -281,7 +281,7 @@ SCIP_RETCODE sepastoreAddCut(
       assert(!SCIPsetIsInfinity(set, cutscore));
    }
 
-   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%d, len=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
+   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%u, len=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
       SCIProwGetName(cut), sepastore->ncuts, forcecut, SCIProwGetNNonz(cut), cutefficacy, cutobjparallelism, cutscore);
    /*SCIPdebug(SCIProwPrint(cut, NULL));*/
 

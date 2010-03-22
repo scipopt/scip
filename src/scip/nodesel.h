@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.47.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.47.2.2 2010/03/22 16:05:29 bzfwolte Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -34,7 +34,9 @@
 #include "scip/type_tree.h"
 #include "scip/pub_nodesel.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* 
  * node priority queue methods
@@ -258,5 +260,8 @@ void SCIPnodeselSetMemsavePriority(
    int                   priority            /**< new priority of the node selector */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

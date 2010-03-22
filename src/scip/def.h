@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.135.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.135.2.2 2010/03/22 16:05:19 bzfwolte Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -31,23 +31,29 @@
 #include <float.h>
 #include <assert.h>
 
-
-#define SCIP_VERSION                110 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               8 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2009 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
-
-
-
 /*
  * Boolean values
  */
 
-#undef SCIP_Bool
+#ifndef SCIP_Bool
 #define SCIP_Bool unsigned int                    /**< type used for boolean values */
 #ifndef TRUE
 #define TRUE  1                         /**< boolean value TRUE */
 #define FALSE 0                         /**< boolean value FALSE */
 #endif
+#endif
+
+#include "scip/type_retcode.h"
+#include "scip/message.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define SCIP_VERSION                120 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               8 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2010 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+
 
 
 /*
@@ -157,11 +163,14 @@
  * Memory settings
  */
 
-#define SCIP_HASHSIZE_NAMES      131101 /**< size of hash table in name tables */
-#define SCIP_HASHSIZE_CUTPOOLS   131101 /**< size of hash table in cut pools */
-#define SCIP_HASHSIZE_CLIQUES    131101 /**< size of hash table in clique tables */
-#define SCIP_HASHSIZE_PARAMS       4099 /**< size of hash table in parameter name tables */
-#define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
+#define SCIP_HASHSIZE_PARAMS         4099 /**< size of hash table in parameter name tables */
+#define SCIP_HASHSIZE_NAMES          131101 /**< size of hash table in name tables */
+#define SCIP_HASHSIZE_CUTPOOLS       131101 /**< size of hash table in cut pools */
+#define SCIP_HASHSIZE_CLIQUES        131101 /**< size of hash table in clique tables */
+#define SCIP_HASHSIZE_NAMES_SMALL    8011   /**< size of hash table in name tables for small problems */
+#define SCIP_HASHSIZE_CUTPOOLS_SMALL 8011   /**< size of hash table in cut pools for small problems */
+#define SCIP_HASHSIZE_CLIQUES_SMALL  8011   /**< size of hash table in clique tables for small problems */
+#define SCIP_HASHSIZE_VBC            131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
 /*#define BMS_NOBLOCKMEM*/
 
@@ -173,11 +182,6 @@
 
 /*#define DEBUG*/
 
-
-
-
-#include "scip/type_retcode.h"
-#include "scip/message.h"
 
 /*
  * Defines for handling SCIP return codes
@@ -232,5 +236,8 @@
                        }                                                                                      \
                        while( FALSE )
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -29,7 +29,7 @@
 =opt= lseu        1.1200000000e+03
 =opt= markshare1  1
 =opt= markshare2  1
-=best= mkc        -554
+=opt= mkc         -5.63846000e+02
 =opt= misc03      3.3600000000e+03 
 =opt= misc06      1.2850860737e+04
 =opt= misc07      2.8100000000e+03
@@ -57,7 +57,7 @@
 =opt= rgn         8.2199999240e+01
 =opt= rout        1.0775600000e+03
 =opt= set1ch      5.4537750000e+04
-=best= seymour    423
+=opt= seymour    423
 =opt= stein27     1.8000000000e+01
 =opt= stein45     3.0000000000e+01
 =opt= swath       4.67407491e+02

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.36.2.1 2009/06/19 07:53:40 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.36.2.2 2010/03/22 16:05:17 bzfwolte Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -24,10 +24,11 @@
 #ifndef __SCIP_CONS_KNAPSACK_H__
 #define __SCIP_CONS_KNAPSACK_H__
 
-
-
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for knapsack constraints and includes it in SCIP */
 extern
@@ -148,6 +149,36 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    );
 
+/** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
+ *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not 
+ *  selected items
+ */
+SCIP_RETCODE SCIPsolveKnapsackApproximately(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nitems,             /**< number of available items */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int*                  items,              /**< item numbers */
+   int*                  solitems,           /**< array to store items in solution, or NULL */
+   int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
+   int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
+   int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
+   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   );
+
+/** separates lifted valid inequalities for given knapsack problem */
+SCIP_RETCODE SCIPseparateKnapsackCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   );
+
 /** solves knapsack problem with dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
  */
@@ -216,5 +247,9 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.12.2.1 2009/06/19 07:53:37 bzfwolte Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.12.2.2 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -327,6 +327,8 @@ void* BMSreallocMemory_call(
       addMemlistEntry(newptr, size, filename, line);
 #endif
 
+   /*   fprintf(stderr, "mem: %p %d\n", newptr, (int)size); */
+
    return newptr;
 }
 
@@ -379,20 +381,17 @@ void* BMSduplicateMemory_call(
 
 /** frees an allocated memory element */
 void BMSfreeMemory_call(
-   void**                ptr,                /**< address of pointer to memory element */
+   void*                 ptr,                /**< pointer to memory element */
    const char*           filename,           /**< source file where the deallocation is performed */
    int                   line                /**< line number in source file where the deallocation is performed */
    )
 {
-   assert(ptr != NULL);
-
-   if( *ptr != NULL )
+   if( ptr != NULL )
    {
 #ifndef NDEBUG
-      removeMemlistEntry(*ptr, filename, line);
+      removeMemlistEntry(ptr, filename, line);
 #endif
-      free(*ptr);
-      *ptr = NULL;
+      free(ptr);
    }
    else
    {
@@ -1159,7 +1158,7 @@ void garbagecollectChkmem(
 #ifndef NDEBUG
       if( chunk == NULL )
       {
-         errorMessage("chunk for lazy free chunk %p not found in chunk block %p\n", lazyfree, chkmem);
+         errorMessage("chunk for lazy free chunk %p not found in chunk block %p\n", (void*)lazyfree, (void*)chkmem);
       }
 #endif
       assert(chunk != NULL);
@@ -1342,19 +1341,18 @@ void* BMSduplicateChunkMemory_call(
 /** frees a memory element of the given chunk block */
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
-   void**                ptr,                /**< pointer to memory element to free */
+   void*                 ptr,                /**< memory element to free */
    size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
 {
    assert(chkmem != NULL);
-   assert(ptr != NULL);
    assert((int)size == chkmem->elemsize);
    
-   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, (void*)*ptr, filename, line);
+   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, ptr, filename, line);
 
-   if( *ptr == NULL )
+   if( ptr == NULL )
    {
       printErrorHeader(filename, line);
       printError("Tried to free null block pointer\n");
@@ -1362,9 +1360,8 @@ void BMSfreeChunkMemory_call(
    }
 
    /* free memory in chunk block */
-   freeChkmemElement(chkmem, *ptr, filename, line);
-   *ptr = NULL;
-
+   freeChkmemElement(chkmem, ptr, filename, line);
+   
    checkChkmem(chkmem);
 }
 
@@ -1650,7 +1647,7 @@ void* BMSreallocBlockMemory_call(
    newptr = BMSallocBlockMemory_call(blkmem, newsize, filename, line);
    if( newptr != NULL )
       BMScopyMemorySize(newptr, ptr, MIN(oldsize, newsize));
-   BMSfreeBlockMemory_call(blkmem, &ptr, oldsize, filename, line);
+   BMSfreeBlockMemory_call(blkmem, ptr, oldsize, filename, line);
 
    return newptr;
 }
@@ -1678,7 +1675,7 @@ void* BMSduplicateBlockMemory_call(
 /** frees memory element in the block memory pool */
 void BMSfreeBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   void**                ptr,                /**< pointer to memory element to free */
+   void*                 ptr,                /**< memory element to free */
    size_t                size,               /**< size of memory element */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -1687,15 +1684,13 @@ void BMSfreeBlockMemory_call(
    BMS_CHKMEM* chkmem;
    int hashnumber;
 
-   assert(ptr != NULL);
-
-   if( *ptr != NULL )
+   if( ptr != NULL )
    {
       /* calculate hash number of given size */
       alignSize(&size);
       hashnumber = getHashNumber((int)size);
 
-      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, *ptr, filename, line);
+      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
       /* find correspoding chunk block */
       chkmem = blkmem->chkmemhash[hashnumber];
@@ -1705,15 +1700,14 @@ void BMSfreeBlockMemory_call(
       {
 	 printErrorHeader(filename, line);
          printError("Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
-            *ptr, (void*)blkmem, (long long) size);
+            ptr, (void*)blkmem, (long long) size);
 	 return;
       }
       assert(chkmem->elemsize == (int)size);
 
       /* free memory in chunk block */
-      freeChkmemElement(chkmem, *ptr, filename, line);
-      *ptr = NULL;
-
+      freeChkmemElement(chkmem, ptr, filename, line);
+      
       blkmem->memused -= size;
       assert(blkmem->memused >= 0);
    }

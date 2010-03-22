@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.59.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.59.2.2 2010/03/22 16:05:30 bzfwolte Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -42,7 +42,9 @@
 
 #include "scip/struct_prob.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * problem creation
@@ -56,6 +58,7 @@ extern
 SCIP_RETCODE SCIPprobCreate(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< problem name */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
@@ -279,7 +282,8 @@ SCIP_RETCODE SCIPprobExitSolve(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
 
@@ -383,5 +387,8 @@ SCIP_RETCODE SCIPprobPrint(
    const char*           comment             /**< string which starts a comment line in requested format (or NULL) */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

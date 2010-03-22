@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.27.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.27.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   pub_misc.h
+ * @ingroup PUBLICMETHODS
  * @brief  public miscellaneous methods
  * @author Tobias Achterberg
  */
@@ -31,7 +32,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Priority Queue
@@ -235,7 +238,60 @@ void SCIPhashmapPrintStatistics(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
+/** indicates whether an hash map has no entries */
+extern
+SCIP_Bool SCIPhashmapIsEmpty(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+);
 
+/** gives the number of entries in an hash map */ 
+extern
+int SCIPhashmapGetNEntries(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+);
+
+/** gives the number of lists (buckets) in an hash map */ 
+extern
+int SCIPhashmapGetNLists(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+);
+
+/** gives a specific list (bucket) in an hash map */
+extern
+SCIP_HASHMAPLIST* SCIPhashmapGetList(
+   SCIP_HASHMAP*     hashmap,          /**< hash map */
+   int               listindex         /**< index of hash map list */
+);
+
+/** gives the number of entries in a list of a hash map */ 
+extern
+int SCIPhashmapListGetNEntries(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
+);
+
+/** retrieves origin of given entry in an hash map */ 
+extern
+void* SCIPhashmapListGetOrigin(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+);
+
+/** retrieves image of given entry in an hash map */ 
+extern
+void* SCIPhashmapListGetImage(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+);
+
+/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
+extern
+SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+);
+
+/** removes all entries in an hash map. */ 
+extern
+SCIP_RETCODE SCIPhashmapRemoveAll(
+   SCIP_HASHMAP*     hashmap           /**< hash map */
+);
 
 
 /*
@@ -317,6 +373,16 @@ void SCIPsortPtrRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortPtrPtrInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order */
 extern
 void SCIPsortPtrPtrReal(
@@ -334,6 +400,17 @@ void SCIPsortPtrRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortPtrPtrLongInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   int*                  intarray,           /**< int array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   len                 /**< length of arrays */
    );
@@ -390,6 +467,16 @@ void SCIPsortRealRealRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order */
+extern
+void SCIPsortRealRealRealPtr(
+   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortRealRealRealBoolPtr(
@@ -424,7 +511,15 @@ void SCIPsortIntPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order */
+/** sort of two joint arrays of ints/reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortIntReal(
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order */
 extern
 void SCIPsortIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
@@ -433,12 +528,30 @@ void SCIPsortIntIntLong(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order */
+/** sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortIntIntReal(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of ints/pointers/reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortIntPtrReal(
+   int*                  intarray,           /**< int array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -555,6 +668,16 @@ void SCIPsortDownPtrRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownPtrPtrInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownPtrPtrReal(
@@ -572,6 +695,17 @@ void SCIPsortDownPtrRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownPtrPtrLongInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   int*                  intarray,           /**< int array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   len                 /**< length of arrays */
    );
@@ -628,6 +762,16 @@ void SCIPsortDownRealRealRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownRealRealRealPtr(
+   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownRealRealRealBoolPtr(
@@ -662,6 +806,14 @@ void SCIPsortDownIntPtr(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of two joint arrays of ints/reals, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownIntReal(
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownIntIntLong(
@@ -677,6 +829,15 @@ void SCIPsortDownIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of ints/ints/reals, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownIntIntReal(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -803,6 +964,19 @@ void SCIPsortedvecInsertPtrRealInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into three joint arrays of pointers/pointers/Ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertPtrPtrInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecInsertPtrPtrReal(
@@ -827,6 +1001,21 @@ void SCIPsortedvecInsertPtrRealIntInt(
    void*                 keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
+   int                   field3val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
+/** insert a new element into four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertPtrPtrLongInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Longint          field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
@@ -899,6 +1088,20 @@ void SCIPsortedvecInsertRealRealRealInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertRealRealRealPtr(
+   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real             keyval,             /**< key value of new element */
+   SCIP_Real             field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   void*                 field3val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecInsertRealRealRealBoolPtr(
@@ -933,6 +1136,26 @@ void SCIPsortedvecInsertIntInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertIntPtr(
+   int*                  intarray,           /**< int array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
+/** insert a new element into two joint arrays of ints/reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertIntReal(
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   keyval,             /**< key value of new element */
+   SCIP_Real             field1val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecInsertIntIntLong(
@@ -957,16 +1180,29 @@ void SCIPsortedvecInsertIntIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
-/** insert a new element into two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
+/** insert a new element into three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order */
 extern
-void SCIPsortedvecInsertIntPtr(
-   int*                  intarray,           /**< int array to be sorted */
-   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+void SCIPsortedvecInsertIntIntReal(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
    int                   keyval,             /**< key value of new element */
-   void*                 field1val,          /**< additional value of new element */
+   int                   field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into three joint arrays of ints/pointers/Reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertIntPtrReal(
+   int*                  intarray,           /**< int array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int                   keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
 
 /** insert a new element into four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
 extern
@@ -1101,6 +1337,19 @@ void SCIPsortedvecInsertDownPtrRealInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into three joint arrays of pointers/pointers/Ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownPtrPtrInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecInsertDownPtrPtrReal(
@@ -1125,6 +1374,21 @@ void SCIPsortedvecInsertDownPtrRealIntInt(
    void*                 keyval,             /**< key value of new element */
    SCIP_Real             field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
+   int                   field3val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
+/** insert a new element into four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownPtrPtrLongInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Longint          field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
@@ -1197,6 +1461,20 @@ void SCIPsortedvecInsertDownRealRealRealInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownRealRealRealPtr(
+   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real             keyval,             /**< key value of new element */
+   SCIP_Real             field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   void*                 field3val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecInsertDownRealRealRealBoolPtr(
@@ -1231,6 +1509,16 @@ void SCIPsortedvecInsertDownIntInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into two joint arrays of ints/reals, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownIntReal(
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   keyval,             /**< key value of new element */
+   SCIP_Real             field1val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecInsertDownIntIntLong(
@@ -1252,6 +1540,18 @@ void SCIPsortedvecInsertDownIntIntPtr(
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
+/** insert a new element into three joint arrays of ints/ints/reals, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownIntIntReal(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   keyval,             /**< key value of new element */
+   int                   field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
@@ -1392,6 +1692,17 @@ void SCIPsortedvecDelPosPtrRealInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of pointers/pointers/Ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosPtrPtrInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecDelPosPtrPtrReal(
@@ -1410,6 +1721,18 @@ void SCIPsortedvecDelPosPtrRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** deletes the element at the given position from four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosPtrPtrLongInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   int*                  intarray,           /**< int array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
@@ -1473,6 +1796,17 @@ void SCIPsortedvecDelPosRealRealRealInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosRealRealRealPtr(
+   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecDelPosRealRealRealBoolPtr(
@@ -1502,6 +1836,15 @@ void SCIPsortedvecDelPosIntInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from two joint arrays of ints/reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosIntReal(
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecDelPosIntIntLong(
@@ -1522,6 +1865,16 @@ void SCIPsortedvecDelPosIntIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosIntIntReal(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecDelPosIntPtr(
@@ -1531,6 +1884,15 @@ void SCIPsortedvecDelPosIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of ints/pointers/Reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosIntPtrReal(
+   int*                  intarray,           /**< int array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
 
 /** delete the element at the given position from four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
 extern
@@ -1648,6 +2010,17 @@ void SCIPsortedvecDelPosDownPtrRealInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of pointers/pointers/Ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownPtrPtrInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecDelPosDownPtrPtrReal(
@@ -1666,6 +2039,18 @@ void SCIPsortedvecDelPosDownPtrRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** deletes the element at the given position from four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownPtrPtrLongInt(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   int*                  intarray,           /**< int array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
@@ -1729,6 +2114,17 @@ void SCIPsortedvecDelPosDownRealRealRealInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownRealRealRealPtr(
+   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecDelPosDownRealRealRealBoolPtr(
@@ -1758,6 +2154,15 @@ void SCIPsortedvecDelPosDownIntInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from two joint arrays of ints/reals, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownIntReal(
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecDelPosDownIntIntLong(
@@ -1774,6 +2179,16 @@ void SCIPsortedvecDelPosDownIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from three joint arrays of ints/ints/reals, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownIntIntReal(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
@@ -2104,6 +2519,38 @@ SCIP_Real SCIPgetRandomReal(
 
 
 
+/*
+ * Permutations / Shuffling
+ */
+
+/** swaps the addresses of two pointers */
+extern
+void SCIPswapPointers(
+   void**                pointer1,           /**< first pointer */
+   void**                pointer2            /**< second pointer */
+   );
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+extern
+void SCIPpermuteArray(
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end,                /**< length of the interval that should be subject to shuffling (array size for whole array) */
+   unsigned int*         randseed            /**< pointer to seed value for the random generator */
+   ); 
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+extern
+SCIP_RETCODE SCIPgetRandomSubset(
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems,          /**< number of elements that should be drawn and stored */
+   unsigned int          randseed            /**< seed value for random generator */
+   );
+
 
 /*
  * Strings
@@ -2164,5 +2611,9 @@ void SCIPsplitFilename(
    char**                extension,          /**< pointer to store extension, or NULL if not needed */
    char**                compression         /**< pointer to store compression extension, or NULL if not needed */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

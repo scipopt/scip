@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.20.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.20.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_LPI_H__
 #define __SCIP_TYPE_LPI_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** objective sense */
 enum SCIP_ObjSen
@@ -49,7 +52,8 @@ enum SCIP_LPParam
    SCIP_LPPAR_UOBJLIM        = 10,      /**< upper objective limit */
    SCIP_LPPAR_LPITLIM        = 11,      /**< LP iteration limit */
    SCIP_LPPAR_LPTILIM        = 12,      /**< LP time limit */
-   SCIP_LPPAR_MARKOWITZ      = 13       /**< Markowitz tolerance */
+   SCIP_LPPAR_MARKOWITZ      = 13,      /**< Markowitz tolerance */
+   SCIP_LPPAR_SIMPLEXROWREP  = 14       /**< should simplex algorithm use row representation of the basis? */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 
@@ -78,5 +82,9 @@ typedef enum SCIP_BaseStat SCIP_BASESTAT;
 
 typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent LP interface */
 typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

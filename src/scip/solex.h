@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solex.h,v 1.1.2.1 2010/03/02 17:20:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solex.h,v 1.1.2.2 2010/03/22 16:05:39 bzfwolte Exp $"
 
 /**@file   solex.h
  * @brief  internal methods for storing exact primal CIP solutions
@@ -36,8 +36,9 @@
 #include "scip/type_heur.h"
 #include "scip/pub_solex.h"
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates exact primal CIP solution, initialized to zero */
 extern
@@ -97,5 +98,9 @@ SCIP_RETCODE SCIPsolexPrint(
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

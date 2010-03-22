@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.68.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.68.2.2 2010/03/22 16:05:35 bzfwolte Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -327,6 +327,7 @@ void decreaseRowScore(
 static
 SCIP_RETCODE tryDelta(
    SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    int                   nvars,              /**< number of problem variables */
    SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */ 
    SCIP_Real*            cutcoefs,           /**< array to store the cut coefficients */
@@ -339,6 +340,7 @@ SCIP_RETCODE tryDelta(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
@@ -373,11 +375,11 @@ SCIP_RETCODE tryDelta(
       (*ntesteddeltas)++;
 
       /* create a MIR cut out of the weighted LP rows */
-      SCIP_CALL( SCIPcalcMIR(scip, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, (int) MAXAGGRLEN(nvars), 
+      SCIP_CALL( SCIPcalcMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, maxmksetcoefs, 
             maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, mksetcoefsvalid, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
-      assert(ALLOWLOCAL || !cutislocal);
-      SCIPdebugMessage("delta = %g  -> success: %d, cutact: %g, cutrhs: %g, vio: %g\n",
+      assert(allowlocal || !cutislocal);
+      SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
          delta, success, cutact, cutrhs, cutact - cutrhs);
                
       /* check if delta generates cut which is more violated */
@@ -406,7 +408,8 @@ SCIP_RETCODE tryDelta(
 }
 
 /** Performs the cut generation heuristic of the c-MIR separation algorithm, i.e., tries to generate a c-MIR cut which is
- *  valid for the mixed knapsack set corresponding to the current aggregated constraint.
+ *  valid for the mixed knapsack set corresponding to the current aggregated constraint. Cuts will only be added here if 
+ *  no pointer to store best scaling factor delta is given.
  */
 SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP*                 scip,               /**< SCIP data structure */ 
@@ -418,13 +421,16 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Bool             trynegscaling,      /**< should negative values also be tested in scaling? */
    SCIP_Bool             cutremovable,       /**< should the cut be removed from the LP due to aging or cleanup? */
    const char*           cutclassname,       /**< name of cut class to use for row names */
-   int*                  ncuts               /**< pointer to count the number of generated cuts */
+   int*                  ncuts,              /**< pointer to count the number of generated cuts */
+   SCIP_Real*            delta,              /**< pointer to store best delta found; NULL, if cut should be added here */
+   SCIP_Bool*            deltavalid          /**< pointer to store whether best delta value is valid or NULL */
 )
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
@@ -443,6 +449,9 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
 
    if( maxtestdelta == -1 )
       maxtestdelta = INT_MAX;
+   
+   if( delta != NULL )
+      *deltavalid = FALSE;
 
    /* get active problem variables */
    vars = SCIPgetVars(scip);
@@ -476,14 +485,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
     * in this case, mksetcoefs is not valid and we can abort the separation heuristic (as the number of nonzeros
     * keeps the same for different values of delta) 
     */
-   SCIP_CALL( tryDelta(scip, nvars, rowweights, cutcoefs, mksetcoefs, &mksetcoefsvalid, testeddeltas, &ntesteddeltas, 1.0,
-                       boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac,
-                       &bestdelta, &bestefficacy) );
+   SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, mksetcoefs, &mksetcoefsvalid, testeddeltas, &ntesteddeltas, 
+         1.0, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, 
+         &bestefficacy) );
    if( mksetcoefsvalid && trynegscaling )
    {
-      SCIP_CALL( tryDelta(scip, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas, -1.0,
-                          boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac,
-                          &bestdelta, &bestefficacy) );
+      SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas, -1.0,
+            boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, maxfrac,
+            &bestdelta, &bestefficacy) );
    }
 
    /* find mult in { +1, -1 } and delta in the corresponding set N* leading to the most violated c-MIR cut */
@@ -521,14 +530,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       /* try to divide aggregated row by absmksetcoef */
       if( !SCIPisFeasZero(scip, absmksetcoef) )
       {
-         SCIP_CALL( tryDelta(scip, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-               1.0/absmksetcoef, boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac,
-               &bestdelta, &bestefficacy) );
+         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
+               1.0/absmksetcoef, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, 
+               maxfrac, &bestdelta, &bestefficacy) );
          if( trynegscaling )
          {
-            SCIP_CALL( tryDelta(scip, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-                  -1.0/absmksetcoef, boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac,
-                  &bestdelta, &bestefficacy) );
+            SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
+                  -1.0/absmksetcoef, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, 
+                  minfrac, maxfrac, &bestdelta, &bestefficacy) );
          }
       }
    }
@@ -536,21 +545,21 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    /* additionally try delta = maxabscoef+1 */
    if( mksetcoefsvalid && !SCIPisFeasZero(scip, maxabsmksetcoef) )
    {
-      SCIP_CALL( tryDelta(scip, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-            1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac,
-            &bestdelta, &bestefficacy) );
+      SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
+            1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, 
+            minfrac, maxfrac, &bestdelta, &bestefficacy) );
       if( trynegscaling )
       {
-         SCIP_CALL( tryDelta(scip, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-               -1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac,
-               &bestdelta, &bestefficacy) );
+         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
+               -1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, 
+               minfrac, maxfrac, &bestdelta, &bestefficacy) );
       }
    }
 
    /* delta found */
    if( mksetcoefsvalid && SCIPisEfficacious(scip, bestefficacy) )
    {
-      SCIP_Real delta;
+      SCIP_Real currentdelta;
       SCIP_Real cutrhs;           
       SCIP_Real cutact;
       SCIP_Bool success;
@@ -560,22 +569,31 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       assert(!SCIPisFeasZero(scip, bestdelta));
 
       /* Try to improve efficacy by multiplying delta with 2, 4 and 8 */
-      for( i = 0, delta = 2.0 * bestdelta; i < 3; i++, delta *= 2.0 )
+      for( i = 0, currentdelta = 2.0 * bestdelta; i < 3; i++, currentdelta *= 2.0 )
       {
-         SCIP_CALL( tryDelta(scip, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-               delta, boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac,
-               &bestdelta, &bestefficacy) );
+         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
+               currentdelta, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, 
+               maxfrac, &bestdelta, &bestefficacy) );
       }
 
-      /* generate cut with bestdelta and best boundswitch value */
-      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, fixintegralrhs, NULL, NULL, 
-            (int) MAXAGGRLEN(nvars), maxweightrange, MINFRAC, MAXFRAC, rowweights, bestdelta, NULL, NULL, cutcoefs, 
-            &cutrhs, &cutact, &success, &cutislocal) );
-      assert(ALLOWLOCAL || !cutislocal);
-      assert(success); 
-
-      /* add the cut to the separation storage */
-      SCIP_CALL( addCut(scip, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutclassname, ncuts) );
+      /* if no pointer to store delta is given, add cut here (zerohalf cuts will be stored in a seperate cut pool first) */
+      if( delta == NULL )
+      {
+         /* generate cut with bestdelta and best boundswitch value */
+         SCIP_CALL( SCIPcalcMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, 
+               maxmksetcoefs, maxweightrange, minfrac, maxfrac, rowweights, bestdelta, NULL, NULL, cutcoefs, 
+               &cutrhs, &cutact, &success, &cutislocal) );
+         assert(allowlocal || !cutislocal);
+         assert(success); 
+         
+         /* add the cut to the separation storage */
+         SCIP_CALL( addCut(scip, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutclassname, ncuts) );
+      }
+      else
+      {
+         *delta = bestdelta;
+         *deltavalid = TRUE;
+      }
    }
 
    /* free datastructures */
@@ -824,9 +842,9 @@ SCIP_RETCODE aggregation(
        * try to generate a MIR cut out of the current aggregation 
        */
       oldncuts = *ncuts;
-      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sol, varsolvals, 
-            sepadata->maxtestdelta, rowweights, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, sepadata->maxrowfac,
-            MINFRAC, MAXFRAC, sepadata->trynegscaling, sepadata->dynamiccuts, "cmir", ncuts) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sol, varsolvals, sepadata->maxtestdelta, rowweights, BOUNDSWITCH, 
+            USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, (int) MAXAGGRLEN(nvars), sepadata->maxrowfac, MINFRAC, MAXFRAC, 
+            sepadata->trynegscaling, sepadata->dynamiccuts, "cmir", ncuts, NULL, NULL) );
 
       /* if the cut was successfully added, abort the aggregation of further rows */
       if( *ncuts > oldncuts )
@@ -1258,8 +1276,8 @@ SCIP_RETCODE separateCuts(
       bestlb = SCIPvarGetLbGlobal(vars[v]);
       bestub = SCIPvarGetUbGlobal(vars[v]);
 #endif
-      SCIP_CALL( SCIPgetVarClosestVlb(scip, vars[v], &bestvlb, &bestvlbidx) );
-      SCIP_CALL( SCIPgetVarClosestVub(scip, vars[v], &bestvub, &bestvubidx) );
+      SCIP_CALL( SCIPgetVarClosestVlb(scip, vars[v], sol, &bestvlb, &bestvlbidx) );
+      SCIP_CALL( SCIPgetVarClosestVub(scip, vars[v], sol, &bestvub, &bestvubidx) );
       if( bestvlbidx >= 0 )
          bestlb = MAX(bestlb, bestvlb);
       if( bestvubidx >= 0 )

@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique.h,v 1.7.2.1 2009/06/19 07:53:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tclique.h,v 1.7.2.2 2010/03/22 16:05:44 bzfwolte Exp $"
 
 /**@file   tclique.h
  * @brief  tclique user interface
@@ -27,6 +27,9 @@
 #ifndef __TCLIQUE_H__
 #define __TCLIQUE_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Data Types and Structures
@@ -279,5 +282,9 @@ void tcliqueMaxClique(
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

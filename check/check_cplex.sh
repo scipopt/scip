@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -21,9 +21,10 @@ BINNAME=$CPLEXBIN.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-MIPGAP=$9
-CONTINUE=${10}
+THREADS=$8
+FEASTOL=$9
+MIPGAP=${10}
+CONTINUE=${11}
 
 if test ! -e results
 then
@@ -62,7 +63,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`getlastprob.awk $OUTFILE`
+    LASTPROB=`./getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -78,6 +79,9 @@ date >>$ERRFILE
 
 # we add 10% to the hard time limit and additional 10 seconds in case of small time limits
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
+
+# since bash counts cpu time we need the time limit for each thread
+HARDTIMELIMIT=`expr $HARDTIMELIMIT \* $THREADS`
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -109,7 +113,7 @@ do
 		echo set mip tolerances integrality $FEASTOL >> $TMPFILE
 	    fi
 	    echo set timelimit $TIMELIMIT           >> $TMPFILE
-	    echo set clocktype 1                    >> $TMPFILE
+	    echo set clocktype 0                    >> $TMPFILE
 	    echo set mip display 3                  >> $TMPFILE
 	    echo set mip interval 10000             >> $TMPFILE
 	    if test $MIPGAP != "default"
@@ -118,7 +122,8 @@ do
 	    fi
 	    echo set mip limits nodes $NODELIMIT    >> $TMPFILE
 	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
-	    echo set threads 1                      >> $TMPFILE
+	    echo set threads $THREADS               >> $TMPFILE
+	    echo set parallel 1                     >> $TMPFILE
 	    echo write $SETFILE                     >> $TMPFILE
 	    echo read $i                            >> $TMPFILE
 	    echo display problem stats              >> $TMPFILE
@@ -126,10 +131,12 @@ do
 	    echo quit                               >> $TMPFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; ./$CPLEXBIN < $TMPFILE" 2>>$ERRFILE
+	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CPLEXBIN < $TMPFILE" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    echo =ready=
 	else

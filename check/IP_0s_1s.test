@@ -83,8 +83,8 @@ IP/Clique/Instances/hamming8-2.clq.lp.gz
 IP/Clique/Instances/hamming6-2.clq.lp.gz
 IP/Clique/Instances/MANN_a9.clq.lp.gz
 IP/Clique/Instances/johnson8-2-4.clq.lp.gz
-IP/Coloring/Infeasible/1-FullIns_3.col.lp.gz
-IP/Coloring/Infeasible/queen5_5.col.lp.gz
+IP/Coloring/Infeasible/1-FullIns_3_inf.col.lp.gz
+IP/Coloring/Infeasible/queen5_5_inf.col.lp.gz
 IP/Coloring/Instances/myciel3.col.lp.gz
 IP/coral/haprp.mps.gz
 IP/coral/neos-530627.mps.gz
@@ -458,3 +458,4 @@ IP/STP/stp-s-14.lp.gz
 IP/STP/stp-s-11.lp.gz
 IP/STP/stp-s-20.lp.gz
 IP/STP/stp-s-18.lp.gz
+IP/ipcount/onespin/no_request.pre.lp.gz

@@ -1,9 +1,9 @@
-#--- $Id: make.darwin.x86.intel.opt,v 1.1.2.2 2009/06/19 07:53:34 bzfwolte Exp $
+#--- $Id: make.darwin.x86.intel.opt,v 1.1.2.3 2010/03/22 16:05:07 bzfwolte Exp $
 CC		=	icc
 CXX		=	icc -Kc++
 LINKCC		=	icc
 LINKCXX		=	icc -Kc++
-FLAGS		+=	-DNDEBUG # -DROUNDING_FE
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
 OFLAGS		+=	-O3 -mtune=core2 -axT -w1 -vec_report0 -ip -par_report0 -fno-rtti
 CFLAGS		+=
 CXXFLAGS	+=	

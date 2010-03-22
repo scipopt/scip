@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_dialog.h,v 1.13.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_dialog.h,v 1.13.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_dialog.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for user interface dialog
  * @author Tobias Achterberg
  */
@@ -24,6 +25,13 @@
 #ifndef __SCIP_TYPE_DIALOG_H__
 #define __SCIP_TYPE_DIALOG_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Dialog SCIP_DIALOG;           /**< user interface dialog */
 typedef struct SCIP_DialogData SCIP_DIALOGDATA;   /**< user defined dialog data */
@@ -65,12 +73,8 @@ typedef struct SCIP_Linelist SCIP_LINELIST;       /**< linked list of single inp
  */
 #define SCIP_DECL_DIALOGEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog, SCIP_DIALOGHDLR* dialoghdlr, SCIP_DIALOG** nextdialog)
 
-
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.35.2.1 2009/06/19 07:53:37 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.35.2.2 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -468,8 +468,41 @@ SCIP_DECL_CONSPRINT(consPrintObj)
 
    return SCIP_OKAY;
 }
+
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_copy(scip, conshdlr, cons, name, sourcescip, sourcecons, varmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+   
+   return SCIP_OKAY;
 }
 
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_parse(scip, conshdlr, cons, name, str, 
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+
+   return SCIP_OKAY;
+}
+}
 
 
 /*
@@ -504,7 +537,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consPropObj, consPresolObj, consRespropObj, consLockObj,
          consActiveObj, consDeactiveObj, 
          consEnableObj, consDisableObj,
-         consPrintObj,
+         consPrintObj, consCopyObj, consParseObj,
          conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

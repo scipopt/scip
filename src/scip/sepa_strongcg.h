@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.h,v 1.11.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.h,v 1.11.2.2 2010/03/22 16:05:37 bzfwolte Exp $"
 
 /**@file   sepa_strongcg.h
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -28,11 +28,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the strong CG cut separator and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeSepaStrongcg(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

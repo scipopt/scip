@@ -3,6 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.c,v 1.16.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: bitencode.c,v 1.16.2.2 2010/03/22 16:05:13 bzfwolte Exp $"
 
 /**@file   bitencode.c
  * @brief  packing single and dual bit values

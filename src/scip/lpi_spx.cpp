@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,23 +12,19 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.65.2.2 2009/06/19 07:53:45 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.65.2.3 2010/03/22 16:05:26 bzfwolte Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
  * @brief  LP interface for SoPlex 1.4
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Ambros Gleixer
  * @author Marc Pfetsch
  */
-//#define SCIP_DEBUG
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #define AUTOPRICING_ITERSWITCH          1000 /**< start with devex and switch to steepest edge after this many iterations */
-
-
-/** use row representation (default is column representation) */
-/* #define SOPLEX_USE_ROW_REP  */
 
 
 /* remember the original value of the SCIP_DEBUG define and undefine it */
@@ -36,8 +32,6 @@
 #define ___DEBUG
 #undef SCIP_DEBUG
 #endif
-
-#include <fstream>
 
 #include "spxsolver.h"
 #include "slufactor.h"
@@ -59,11 +53,7 @@
 #undef ___DEBUG
 #endif
 
-
-extern "C"
-{
 #include "scip/message.h"
-}
 
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
@@ -74,7 +64,6 @@ extern "C"
 #define NULL 0
 
 #include <cassert>
-#include <iostream>
 using namespace soplex;
 
 
@@ -131,14 +120,11 @@ class SPxSCIP : public SPxSolver
    bool             m_lpinfo;           /**< storing whether output is turned on */
    bool             m_autopricing;      /**< is automatic pricing selected? */
    int              m_autophase1iters;  /**< number of iterations spend in phase one of auto pricing */
+   bool             m_rowrep;           /**< is row representation selected? */
 
 public:
    SPxSCIP(const char* probname = NULL)
-#ifdef SOPLEX_USE_ROW_REP
-      : SPxSolver(ENTER, ROW),
-#else
         : SPxSolver(LEAVE, COLUMN),
-#endif
           m_probname(0),
           m_fromscratch(false),
           m_objLoLimit(-soplex::infinity),
@@ -146,7 +132,8 @@ public:
           m_stat(NO_PROBLEM),
           m_lpinfo(false),
           m_autopricing(true),
-          m_autophase1iters(0)
+          m_autophase1iters(0),
+          m_rowrep(false)
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
@@ -220,6 +207,16 @@ public:
    void setLpInfo(bool li)
    {
       m_lpinfo = li;
+   }
+
+   bool getRowRep() const
+   {
+      return m_rowrep;
+   }
+
+   void setRowRep(bool rr)
+   {
+      m_rowrep = rr;
    }
 
    void setProbname(const char* probname)
@@ -354,12 +351,8 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-extern "C" 
-{
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-}
-
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -601,11 +594,7 @@ const char* SCIPlpiGetSolverName(
       int version;
       
       version = spx.version();
-#ifdef SOPLEX_USE_ROW_REP
-      snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex (row) %d.%d.%d", version/100, (version % 100)/10, version % 10);
-#else
       snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
-#endif
    }
    catch(SPxException x)
    {
@@ -1644,10 +1633,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
     * - ENTER = DUAL 
     * - LEAVE = PRIAML
     */
-   if ( lpi->spx->rep() == SPxSolver::COLUMN )
-      return spxSolve(lpi, SPxSolver::ENTER);
-   else
+   if ( lpi->spx->getRowRep() )
       return spxSolve(lpi, SPxSolver::LEAVE);
+   else
+      return spxSolve(lpi, SPxSolver::ENTER);
 }
 
 /** calls dual simplex to solve the LP */
@@ -1667,10 +1656,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
     * - ENTER = DUAL 
     * - LEAVE = PRIAML
     */
-   if ( lpi->spx->rep() == SPxSolver::COLUMN )
-      return spxSolve(lpi, SPxSolver::LEAVE);
-   else
+   if ( lpi->spx->getRowRep() )
       return spxSolve(lpi, SPxSolver::ENTER);
+   else
+      return spxSolve(lpi, SPxSolver::LEAVE);
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
@@ -1752,10 +1741,10 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    spx->setTerminationIter(itlim);
 
    /* set the algorithm type to use dual simplex */
-   if (lpi->spx->rep() == SPxSolver::COLUMN )
-      lpi->spx->setType(SPxSolver::LEAVE);
-   else
+   if( lpi->spx->getRowRep() )
       lpi->spx->setType(SPxSolver::ENTER);
+   else
+      lpi->spx->setType(SPxSolver::LEAVE);
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, 1e-06);
@@ -2298,7 +2287,7 @@ SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
 
    assert( 0 <= col && col < spx->nCols() );
 
-   if (spx->rep() == SPxSolver::COLUMN)
+   if( !(spx->getRowRep()) )
    {
       /* in column case the reduced costs are available: */
       if (spx->spxSense() == SPxLP::MINIMIZE)
@@ -2432,8 +2421,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+   assert(cstat != NULL || lpi->spx->nCols() == 0);
+   assert(rstat != NULL || lpi->spx->nRows() == 0);
 
    invalidateSolution(lpi);
 
@@ -2507,7 +2496,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    /* This function expects that the basis is a column basis. If SoPlex uses row representation, we
     * have to transform the basis and possibly compute a new factorization in the function
     * SCIPlpiGetBInvRow(), etc. */
-   if ( lpi->spx->rep() == SPxSolver::COLUMN ) 
+   if ( !(lpi->spx->getRowRep()) ) 
    {
       /* for column representation, return the basis */
       SPxSolver* spx = lpi->spx;
@@ -2737,6 +2726,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    nrows = lpi->spx->nRows();
    ncols = lpi->spx->nCols();
+   buf = NULL;
 
    /* get (or calculate) the row in B^-1 */
    if( binvrow == NULL )
@@ -2746,10 +2736,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       binv = buf;
    }
    else
-   {
-      buf = NULL;
       binv = const_cast<SCIP_Real*>(binvrow);
-   }
+
    assert(binv != NULL);
 
    /* calculate the scalar product of the row in B^-1 and A */
@@ -2923,8 +2911,10 @@ SCIP_RETCODE SCIPlpiFreeState(
    SCIPdebugMessage("calling SCIPlpiFreeState()\n");
 
    assert(lpi != NULL);
+   assert(lpistate != NULL);
 
-   lpistateFree(lpistate, blkmem);
+   if ( *lpistate != NULL )
+      lpistateFree(lpistate, blkmem);
 
    return SCIP_OKAY;
 }
@@ -3011,6 +3001,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing;
       break;
+   case SCIP_LPPAR_SIMPLEXROWREP:
+      *ival = (int)(lpi->spx->getRowRep());
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3070,7 +3063,19 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          return SCIP_LPERROR;
       }
       break;
-
+   case SCIP_LPPAR_SIMPLEXROWREP:
+      assert(ival == TRUE || ival == FALSE);
+      if( ival && !(lpi->spx->getRowRep()) )
+      {
+         lpi->spx->setRep(SPxSolver::ROW);
+         lpi->spx->setRowRep(true);
+      }
+      else if( !ival && lpi->spx->getRowRep() )
+      {
+         lpi->spx->setRep(SPxSolver::COLUMN);
+         lpi->spx->setRowRep(false);
+      }
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

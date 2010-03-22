@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.41.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.41.2.2 2010/03/22 16:05:19 bzfwolte Exp $"
 
 /**@file   cons_xxx.c
  * @ingroup CONSHDLRS 
@@ -431,6 +431,34 @@ SCIP_DECL_CONSPRINT(consPrintXxx)
 #endif
 
 
+/** constraint copying method of constraint handler */
+#if 0
+static
+SCIP_DECL_CONSCOPY(consCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consCopyXxx NULL
+#endif
+
+
+/** constraint parsing method of constraint handler */
+#if 0
+static
+SCIP_DECL_CONSPARSE(consParseXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consParseXxx NULL
+#endif
 
 
 /*
@@ -459,8 +487,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXxx)
       SCIP_CALL( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), 
+            SCIPconsIsStickingAtNode(cons)) );
    }
 
    return SCIP_OKAY;
@@ -497,12 +525,12 @@ SCIP_RETCODE SCIPincludeConshdlrXxx(
          consPropXxx, consPresolXxx, consRespropXxx, consLockXxx,
          consActiveXxx, consDeactiveXxx, 
          consEnableXxx, consDisableXxx,
-         consPrintXxx,
+         consPrintXxx, consCopyXxx, consParseXxx,
          conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY) );
+   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
 #endif
 
    /* add xxx constraint handler parameters */

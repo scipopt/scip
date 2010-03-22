@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.9 2010/03/09 09:00:01 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.10 2010/03/22 16:05:16 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -387,6 +387,9 @@ SCIP_Bool mpqIsReal(
 {
    SCIP_Bool result;
    mpq_t tmp;
+#ifdef SCIP_DEBUG
+   char s[SCIP_MAXSTRLEN];
+#endif
   
    mpq_init(tmp); 
 
@@ -396,6 +399,11 @@ SCIP_Bool mpqIsReal(
       result = FALSE; /* approx(a) =/= a */
    else
       result = TRUE;
+
+#ifdef SCIP_DEBUG
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "val=%Qd, approx val=%Qd --> FP=%d\n", val, tmp, result);
+   SCIPdebugMessage(s);
+#endif
 
 #ifndef NDEBUG
    {
@@ -726,8 +734,8 @@ SCIP_RETCODE conshdlrdataFree(
    {
       for(i=0;i< (*conshdlrdata)->psdim;i++)
          mpq_clear((*conshdlrdata)->interiorpt[i]);
-      SCIPfreeBlockMemory(scip,(*conshdlrdata)->interiorpt);
-      SCIPfreeBlockMemory(scip,&(*conshdlrdata)->impliedeq);
+      SCIPfreeBlockMemory(scip, &(*conshdlrdata)->interiorpt);
+      SCIPfreeBlockMemory(scip, &(*conshdlrdata)->impliedeq);
    }
 
    if( (*conshdlrdata)->psfactor != NULL )
@@ -2244,10 +2252,12 @@ SCIP_RETCODE checkIntegrality(
 
          SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
          
+#if 0 /* since exact solutions can be stored now, this is not needed anymore */
          if( stored && !fpvalue )
          {
             SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
          }
+#endif
       }
 
       /* add exact primal solution */ 
@@ -4061,10 +4071,23 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
       /* scale exact objective values s.t. all become FP representable and store these values in the transformed problem */
       for( i = 0; i < sourcedata->nvars; ++i )
       {
+#ifdef SCIP_DEBUG
+	char s[SCIP_MAXSTRLEN];
+#endif
          assert(SCIPvarIsOriginal(origvars[i]));
          assert(SCIPvarIsTransformed(vars[i]));
 
+#ifdef SCIP_DEBUG
+	 gmp_snprintf(s, SCIP_MAXSTRLEN, " -> i=%d: old val=%Qd --> \n", i, newobj[i]);
+	 SCIPdebugMessage(s);
+#endif
+
          mpq_mul(newobj[i], newobj[i], intscalar); 
+
+#ifdef SCIP_DEBUG
+	 gmp_snprintf(s, SCIP_MAXSTRLEN, "                           scaled val=%Qd\n", newobj[i]);
+	 SCIPdebugMessage(s);
+#endif
 
          assert(mpqIsReal(scip, newobj[i]));
          SCIP_CALL( SCIPchgVarObj(scip, vars[i], mpqGetRealApprox(scip, newobj[i])) );
@@ -4812,7 +4835,11 @@ SCIP_DECL_CONSPRINT(consPrintExactlp)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopyExactlp NULL
 
+/** constraint parsing method of constraint handler */
+#define consParseExactlp NULL
 
 
 /*
@@ -5046,7 +5073,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
          consPropExactlp, consPresolExactlp, consRespropExactlp, consLockExactlp,
          consActiveExactlp, consDeactiveExactlp, 
          consEnableExactlp, consDisableExactlp,
-         consPrintExactlp,
+         consPrintExactlp, consCopyExactlp, consParseExactlp,
          conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY

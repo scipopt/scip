@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.48.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.48.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -31,16 +31,22 @@
 #include "scip/type_vbc.h"
 #include "scip/type_history.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** problem and runtime specific statistics */
 struct SCIP_Stat
 {
    SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
+   SCIP_Longint          nrootlpiterations;  /**< total number of LP iterations in root node */
    SCIP_Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    SCIP_Longint          nduallpiterations;  /**< number of iterations in dual simplex */
+   SCIP_Longint          nlexduallpiterations;/**< number of iterations in lexicographic dual simplex */
    SCIP_Longint          nbarrierlpiterations;/**< number of iterations in barrier algorithm */
    SCIP_Longint          nprimalresolvelpiterations;  /**< number of primal LP iterations with advanced start basis */
    SCIP_Longint          ndualresolvelpiterations;    /**< number of dual LP iterations with advanced start basis */
+   SCIP_Longint          nlexdualresolvelpiterations; /**< number of lexicographic dual LP iterations with advanced start basis */
    SCIP_Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    SCIP_Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    SCIP_Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
@@ -69,12 +75,16 @@ struct SCIP_Stat
    SCIP_Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    SCIP_Longint          nprobboundchgs;     /**< total number of bound changes generated in the tree during probing */
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
+   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             conflictscoreweight;/**< current weight to use for updating conflict scores in history */
+   SCIP_Real             firstprimalbound;   /**< objective value of first primal solution */
+   SCIP_Real             firstprimaltime;    /**< time (in seconds) needed for first primal solution */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
    SCIP_CLOCK*           duallptime;         /**< dual LP solution time */
+   SCIP_CLOCK*           lexduallptime;      /**< lexicographic dual LP solution time */
    SCIP_CLOCK*           barrierlptime;      /**< barrier LP solution time */
    SCIP_CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
@@ -86,6 +96,7 @@ struct SCIP_Stat
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
    SCIP_VBC*             vbc;                /**< VBC Tool information */
+   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */     
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
@@ -105,9 +116,11 @@ struct SCIP_Stat
    int                   nlps;               /**< total number of LPs solved with at least 1 iteration */
    int                   nprimallps;         /**< number of primal LPs solved */
    int                   nduallps;           /**< number of dual LPs solved */
+   int                   nlexduallps;        /**< number of lexicographic dual LPs solved */
    int                   nbarrierlps;        /**< number of barrier LPs solved */
    int                   nprimalresolvelps;  /**< number of primal LPs solved with advanced start basis and at least 1 iteration */
    int                   ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
+   int                   nlexdualresolvelps; /**< number of lexicographic dual LPs solved with advanced start basis and at least 1 iteration */
    int                   nnodelps;           /**< number of LPs solved for node relaxations */
    int                   ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    int                   ndivinglps;         /**< number of LPs solved during diving and probing */
@@ -134,9 +147,15 @@ struct SCIP_Stat
    int                   npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int                   npresolchgsides;    /**< number of presolving side changes in current run */
    int                   solindex;           /**< consecutively numbered solution index */
+   int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
+   int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
+   SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

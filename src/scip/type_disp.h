@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.13.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_disp.h,v 1.13.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_disp.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for displaying runtime statistics
  * @author Tobias Achterberg
  */
@@ -23,6 +24,16 @@
 
 #ifndef __SCIP_TYPE_DISP_H__
 #define __SCIP_TYPE_DISP_H__
+
+#include <stdio.h>
+
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** display activation status of display column */
 enum SCIP_DispStatus
@@ -92,12 +103,8 @@ typedef struct SCIP_DispData SCIP_DISPDATA;       /**< display column specific d
  */
 #define SCIP_DECL_DISPOUTPUT(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp, FILE* file)
 
-
-#include <stdio.h>
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

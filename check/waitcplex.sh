@@ -1,17 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
 while true
 do
     AVAILABLE=`/home/optimi/adm_cple/ilm-2.6/ilmlist | gawk --source '
 BEGIN { incplex = 0; available = -1; }
-/^\* PRODUCT/ {
+/PRODUCT/ {
     if( $3 == "CPLEX:" )
 	incplex = 1;
     else
 	incplex = 0;
+    next
     }
-/^available tokens:/ {
+/available tokens/ {
     if( incplex )
-	available = $3;
+	available = $4;
+    next
 }
 END {
     printf("%d", available);

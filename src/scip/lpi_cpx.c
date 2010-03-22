@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114.2.2 2010/03/22 16:05:25 bzfwolte Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -524,13 +524,24 @@ int getIntParam(SCIP_LPI* lpi, const int param)
 static
 double getDblParam(SCIP_LPI* lpi, const int param)
 {
+   SCIP_Real val;
    int i;
 
    assert(lpi != NULL);
 
    for( i = 0; i < NUMDBLPARAM; ++i )
+   {
       if( dblparam[i] == param )
-         return lpi->cpxparam.dblparval[i];
+      {
+	 val = lpi->cpxparam.dblparval[i];
+	 if( val >= CPX_INFBOUND )
+	    return CPX_INFBOUND;
+	 else if( val <= -CPX_INFBOUND )
+	    return -CPX_INFBOUND;
+	 else
+	    return val;
+      }
+   }
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");
    SCIPABORT();
@@ -564,11 +575,16 @@ void setDblParam(SCIP_LPI* lpi, const int param, double parval)
 
    assert(lpi != NULL);
 
+   if( parval >= CPX_INFBOUND )
+      parval = 1e+75;
+   else if( parval <= -CPX_INFBOUND )
+      parval = -1e+75;
+
    for( i = 0; i < NUMDBLPARAM; ++i )
       if( dblparam[i] == param )
       {
-         lpi->cpxparam.dblparval[i] = parval;
-         return;
+	 lpi->cpxparam.dblparval[i] = parval;
+	 return;
       }
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");
@@ -3384,7 +3400,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   SCIPdebugMessage("setting real parameter %d to %g\n", type, dval);
+   SCIPdebugMessage("setting real parameter %d to %.15g\n", type, dval);
 
    switch( type )
    {

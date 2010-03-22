@@ -54,10 +54,6 @@ constraints/linear/simplifyinequalities = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/linear/dualpresolving = TRUE
 
-# maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)
-# [type: real, range: [0,1.79769313486232e+308], default: 0]
-constraints/linear/maxaggrnormscale = 0
-
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/and/maxprerounds = -1
@@ -96,6 +92,22 @@ constraints/countsols/delaypresol = FALSE
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
+constraints/indicator/maxprerounds = -1
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/integral/maxprerounds = -1
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/delaypresol = FALSE
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/integral/delaypresol = FALSE
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/maxprerounds = -1
 
 # should presolving method be delayed, if other presolvers found reductions?
@@ -110,13 +122,13 @@ constraints/knapsack/maxprerounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/knapsack/delaypresol = FALSE
 
-# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/knapsack/maxnumcardlift = 0
-
 # should disaggregation of knapsack constraints be allowed in preprocessing?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/knapsack/disaggregation = FALSE
+
+# should presolving try to simplify knapsacks
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/knapsack/simplifyinequalities = FALSE
 
 # enable linear upgrading for constraint handler <knapsack>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -149,6 +161,26 @@ constraints/or/maxprerounds = -1
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/or/delaypresol = FALSE
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/quadratic/maxprerounds = -1
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/quadratic/delaypresol = FALSE
+
+# whether a square of a binary variables should be replaced by the binary variable
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/quadratic/replacesqrbinary = TRUE
+
+# max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)
+# [type: int, range: [0,2147483647], default: 2147483647]
+constraints/quadratic/replacebinaryprod = 2147483647
+
+# whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/quadratic/disaggregate = TRUE
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -209,6 +241,10 @@ constraints/xor/delaypresol = FALSE
 # should pairwise constraint comparison be performed in presolving?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/xor/presolpairwise = FALSE
+
+# should hash table be used for detecting redundant constraints in advance
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/xor/presolusehashing = TRUE
 
 # priority of presolver <boundshift>
 # [type: int, range: [-536870912,536870911], default: 7900000]

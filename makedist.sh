@@ -2,27 +2,37 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="1.1.0.8"
+VERSION="1.2.0.8"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
+if test ! -e release
+then
+    mkdir release
+fi
 rm -f release/$NAME.tgz
-tar --no-recursion -cvzhf release/$NAME.tgz \
+tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
 --exclude="*cvs*" \
 --exclude="*~" \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
-$NAME/doc/* $NAME/doc/inc/faq.inc $NAME/doc/inc/faqcss.inc \
-$NAME/lib \
+$NAME/doc/* $NAME/doc/inc/faq.inc $NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
-$NAME/check/check_cplex.sh $NAME/check/evalcheck_cplex.sh $NAME/check/check_cplex.awk \
+$NAME/check/check_blis.sh $NAME/check/evalcheck_blis.sh $NAME/check/check_blis.awk \
 $NAME/check/check_cbc.sh $NAME/check/evalcheck_cbc.sh $NAME/check/check_cbc.awk \
+$NAME/check/check_cplex.sh $NAME/check/evalcheck_cplex.sh $NAME/check/check_cplex.awk \
+$NAME/check/check_glpk.sh $NAME/check/evalcheck_glpk.sh $NAME/check/check_glpk.awk \
+$NAME/check/check_gurobi.sh $NAME/check/evalcheck_gurobi.sh $NAME/check/check_gurobi.awk \
+$NAME/check/check_mosek.sh $NAME/check/evalcheck_mosek.sh $NAME/check/check_mosek.awk \
+$NAME/check/check_symphony.sh $NAME/check/evalcheck_symphony.sh $NAME/check/check_symphony.awk \
 $NAME/check/checkcount.sh $NAME/check/evalcheckcount.sh $NAME/check/checkcount.awk \
 $NAME/check/shortmiplib.test $NAME/check/shortmiplib.solu \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
+$NAME/check/getlastprob.awk \
 $NAME/settings/cuts/*.set $NAME/settings/emphasis/*.set $NAME/settings/heuristics/*.set $NAME/settings/presolving/*.set \
+$NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \

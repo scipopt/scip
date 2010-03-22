@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.4.2.1 2009/06/19 07:53:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.4.2.2 2010/03/22 16:05:44 bzfwolte Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -334,8 +334,6 @@ TCLIQUE_WEIGHT tcliqueColoring(
 
    /* set up data structures for the current clique */
    ALLOC_ABORT( BMSallocMemoryArray(&currentclique, nV) );
-   ncurrentclique = 0;
-   weightcurrentclique = 0;
    workclique = clique;
 
    /* add node to the current clique */ 
@@ -359,7 +357,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
       assert(range > 0);
       iscolored[nodeVindex] = TRUE;	
 
-      debugMessage("%d. node choosen: vindex=%d, vertex=%d, satdeg=%d, range=%d, growclique=%d, weight=%d)\n",
+      debugMessage("%d. node choosen: vindex=%d, vertex=%d, satdeg=%d, range=%d, growclique=%u, weight=%d)\n",
          i+2, nodeVindex, node, gsd[nodeVindex].satdeg, range, growclique, weightcurrentclique);
 
       /* set apriori bound: apbound(v_i) = satdeg(v_i) + weight(v_i) */

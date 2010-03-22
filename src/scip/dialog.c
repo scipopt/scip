@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.39.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.39.2.2 2010/03/22 16:05:19 bzfwolte Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -442,10 +442,13 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
 
       /* strip trailing spaces */
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
-      while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+      if( len > 0 )
       {
-         dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
-         len--;
+         while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+         {
+            dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
+            len--;
+         }
       }
 
       /* insert command in command history */
@@ -597,7 +600,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
       if( escapecommand )
          SCIPescapeString(h, SCIP_MAXSTRLEN, command);
       else
-         strncpy(h, command, SCIP_MAXSTRLEN-1);
+         (void)strncpy(h, command, SCIP_MAXSTRLEN-1);
    }
    else
       h[0] = '\0';
@@ -605,7 +608,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
    while( dialog != NULL && dialog != dialoghdlr->rootdialog )
    {
       if( h[0] == '\0' )
-         strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
+         (void)strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
       else
       {
          (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
@@ -790,6 +793,13 @@ SCIP_RETCODE SCIPdialogExec(
    return SCIP_OKAY;
 }
 
+/** comparison method for sorting dialogs by non-decreasing index */
+static
+SCIP_DECL_SORTPTRCOMP(dialogComp)
+{
+   return strcmp( SCIPdialogGetName((SCIP_DIALOG*)elem1), SCIPdialogGetName((SCIP_DIALOG*)elem2) );
+}
+
 /** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
 SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
@@ -811,9 +821,8 @@ SCIP_RETCODE SCIPdialogAddEntry(
    /* resize the subdialogs array */
    SCIP_CALL( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
 
-   /* link the dialogs as parent-child pair */
-   dialog->subdialogs[dialog->nsubdialogs] = subdialog;
-   dialog->nsubdialogs++;
+   /* link the dialogs as parent-child pair; the subdialogs are sorted non-decreasing w.r.t. their name */
+   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs);
    subdialog->parent = dialog;
 
    /* capture sub dialog */
@@ -1013,8 +1022,8 @@ void SCIPdialogGetPath(
    dialog = dialog->parent;
    while( dialog != NULL )
    {
-      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      (void) strncpy(path, s, SCIP_MAXSTRLEN);
+      (void)SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
+      (void)strncpy(path, s, SCIP_MAXSTRLEN);
       dialog = dialog->parent;
    }
 }

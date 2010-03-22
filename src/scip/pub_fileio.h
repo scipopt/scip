@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_fileio.h,v 1.4.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_fileio.h,v 1.4.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   pub_fileio.h
+ * @ingroup PUBLICMETHODS
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o
  * @author Tobias Achterberg
  */
@@ -25,6 +26,10 @@
 #define __SCIP_PUB_FILEIO_H__
 
 #include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_File SCIP_FILE;          /**< file data structure */
 
@@ -44,5 +49,8 @@ extern long SCIPftell(SCIP_FILE *stream);
 extern int SCIPfeof(SCIP_FILE *stream);
 extern int SCIPfclose(SCIP_FILE *fp);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.22.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.22.2.2 2010/03/22 16:05:41 bzfwolte Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -30,6 +30,9 @@
 #include "scip/type_var.h"
 #include "scip/type_sepastore.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** storage for separated cuts */
 struct SCIP_SepaStore
@@ -49,5 +52,8 @@ struct SCIP_SepaStore
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

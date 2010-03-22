@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.38.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.38.2.2 2010/03/22 16:05:30 bzfwolte Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -40,7 +40,9 @@
 
 #include "scip/struct_primal.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates primal data */
 extern
@@ -245,5 +247,8 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PROB*            origprob            /**< original problem */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

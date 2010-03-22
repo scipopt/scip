@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.3 2010/03/02 17:20:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.4 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -30,6 +30,10 @@
 #include "scip/scip.h"
 #include "scip/lpiex.h"
 #include "scip/solex.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 /** returns value treated as negative infinite in exactlp constraint handler */
@@ -273,5 +277,9 @@ void SCIPvarGetUbGlobalExactlp(
    SCIP_VAR*             var,                /**< problem variable */
    mpq_t                 ub                  /**< pointer to store global upper bound */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.77.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.77.2.2 2010/03/22 16:05:39 bzfwolte Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -50,6 +50,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->lexduallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->barrierlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -67,6 +68,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
    (*stat)->userinterrupt = FALSE;
+   (*stat)->userrestart = FALSE;
 
    SCIPstatReset(*stat);
 
@@ -86,6 +88,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->presolvingtime);
    SCIPclockFree(&(*stat)->primallptime);
    SCIPclockFree(&(*stat)->duallptime);
+   SCIPclockFree(&(*stat)->lexduallptime);
    SCIPclockFree(&(*stat)->barrierlptime);
    SCIPclockFree(&(*stat)->divinglptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
@@ -116,6 +119,7 @@ void SCIPstatMark(
    assert(stat->nlps == 0);
    assert(stat->nprimallps == 0);
    assert(stat->nduallps == 0);
+   assert(stat->nlexduallps == 0);
    assert(stat->nbarrierlps == 0);
 
    stat->marked_nvaridx = stat->nvaridx;
@@ -137,6 +141,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->presolvingtime);
    SCIPclockReset(stat->primallptime);
    SCIPclockReset(stat->duallptime);
+   SCIPclockReset(stat->lexduallptime);
    SCIPclockReset(stat->barrierlptime);
    SCIPclockReset(stat->divinglptime);
    SCIPclockReset(stat->strongbranchtime);
@@ -149,11 +154,14 @@ void SCIPstatReset(
 
    stat->conflictscoreweight = 1.0;
    stat->nlpiterations = 0;
+   stat->nrootlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
+   stat->nlexduallpiterations = 0;
    stat->nbarrierlpiterations = 0;
    stat->nprimalresolvelpiterations = 0;
    stat->ndualresolvelpiterations = 0;
+   stat->nlexdualresolvelpiterations = 0;
    stat->nnodelpiterations = 0;
    stat->ninitlpiterations = 0;
    stat->ndivinglpiterations = 0;
@@ -181,9 +189,11 @@ void SCIPstatReset(
    stat->nlps = 0;
    stat->nprimallps = 0;
    stat->nduallps = 0;
+   stat->nlexduallps = 0;
    stat->nbarrierlps = 0;
    stat->nprimalresolvelps = 0;
    stat->ndualresolvelps = 0;
+   stat->nlexdualresolvelps = 0;
    stat->nnodelps = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
@@ -195,7 +205,11 @@ void SCIPstatReset(
    stat->nenabledconss = 0;
    stat->solindex = 0;
    stat->memsavemode = FALSE;
-
+   stat->nnodesbeforefirst = -1;
+   stat->nrunsbeforefirst = -1;
+   stat->firstprimalheur = NULL; 
+   stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
+   stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;

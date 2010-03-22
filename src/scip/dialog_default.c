@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.76.2.2 2010/03/02 17:20:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.76.2.3 2010/03/22 16:05:19 bzfwolte Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -203,7 +203,7 @@ SCIP_RETCODE writeProblem(
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
       /* copy filename */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
       extension = NULL;
       
       do
@@ -660,6 +660,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayParameters)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, "number of parameters = %d\n", SCIPgetNParams(scip));
    SCIPdialogMessage(scip, NULL, "non-default parameter settings:\n");
    SCIP_CALL( SCIPwriteParams(scip, NULL, FALSE, TRUE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1174,7 +1175,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
          char* extension;
 
          /* copy filename */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
          extension = NULL;
          
          do
@@ -1860,7 +1861,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
-   strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
+   (void)strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
 
    /* second ask for generic variable and row names */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,

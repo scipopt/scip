@@ -86,9 +86,8 @@
 =opt= hamming6-2.clq                                32 
 =opt= MANN_a9.clq                                   16 
 =opt= johnson8-2-4.clq                               4 
-=inf= 1-FullIns_3.col                            1e+20 
-=inf= myciel3.col                                1e+20 
-=inf= queen5_5.col                               1e+20 
+=inf= 1-FullIns_3_inf.col                        1e+20 
+=inf= queen5_5_inf.col                           1e+20 
 =opt= myciel3.col                                    4 
 =opt= haprp                                 3673280.68 
 =opt= neos-530627                               2995.2 
@@ -497,3 +496,4 @@
 =opt= stp-s-18                                      11 
 =opt= santiago-vmax=17-freq=12-int=int-maxz=9-maxs=170-limx=510-limy=238-obj=sumw        98975.886
 =opt= santiago-vmax=17-freq=12-int=-maxz=0-maxs=inf-sumx=inf-sumy=inf-obj=sumxy           1019.502
+=opt= no_request.pre                                0

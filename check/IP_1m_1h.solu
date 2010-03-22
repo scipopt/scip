@@ -1,4 +1,4 @@
-=inf= 2-FullIns_4.col                          1e+20
+=inf= 2-FullIns_4_inf.col                      1e+20
 =opt= 30:30:4.5:0.95:100                           2
 =opt= 30:70:4.5:0.95:98                           12
 =opt= 4-FullIns_3.col                              7
@@ -18,7 +18,7 @@
 =inf= alu7_7                                   1e+20
 =inf= alu7_8                                   1e+20
 =inf= alu8_8                                   1e+20
-=inf= ash608GPIA.col                           1e+20
+=inf= ash608GPIA_inf.col                       1e+20
 =opt= bc1                                 3.33836255
 =opt= bienst2                                   54.6
 =opt= binkar10_1                          6742.20002

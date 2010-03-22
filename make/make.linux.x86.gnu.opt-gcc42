@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86.gnu.opt-gcc42,v 1.4.2.2 2009/06/19 07:53:34 bzfwolte Exp $
-FLAGS		+=	-DNDEBUG # -DROUNDING_FE
+#--- $Id: make.linux.x86.gnu.opt-gcc42,v 1.4.2.3 2010/03/22 16:05:07 bzfwolte Exp $
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
 OFLAGS		+=	-O3 -march=native -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)

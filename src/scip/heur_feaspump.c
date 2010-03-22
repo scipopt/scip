@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.48.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.48.2.2 2010/03/22 16:05:21 bzfwolte Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -653,7 +653,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", lperror=%d, lpsolstat=%d\n", 
+      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", lperror=%u, lpsolstat=%d\n", 
          heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops), lperror, lpsolstat);
 
       /* check whether LP was solved optimal */

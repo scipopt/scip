@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.9.2.1 2009/06/19 07:53:33 bzfwolte Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.9.2.2 2010/03/22 16:05:04 bzfwolte Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -27,10 +27,9 @@
 #include <sstream>
 
 #include "objscip/objscip.h"
-extern "C" {
+
 #include "scip/cons_linear.h"
 #include <math.h>
-}
 
 #include "ReaderTSP.h"
 #include "ProbDataTSP.h"

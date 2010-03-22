@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.2.2.1 2009/06/19 07:53:33 bzfwolte Exp $"
+#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.2.2.2 2010/03/22 16:05:04 bzfwolte Exp $"
 
 /**@file   HeurFrats.cpp
  * @brief  fractional travelling salesman heuristic - Rounding heuristic for TSP
@@ -60,10 +60,10 @@ SCIP_RETCODE HeurFrats::scip_init(
    
    /* load the problem specific data */
    probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
-   assert( probdata != NULL );
+   assert(probdata != NULL);
 
    graph = probdata->getGraph();
-   assert( graph != NULL );
+   assert(graph != NULL);
 
    capture_graph(graph);
 
@@ -126,9 +126,9 @@ SCIP_RETCODE HeurFrats::scip_exec(
    int i;
    SCIP_Bool success;
 
-   assert( result != NULL );
+   assert(result != NULL);
    /* since the timing is SCIP_HEURTIMING_AFTERLPNODE, the current node should have an LP */
-   assert( SCIPhasCurrentNodeLP(scip) );
+   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 
@@ -137,7 +137,7 @@ SCIP_RETCODE HeurFrats::scip_exec(
       return SCIP_OKAY;
 
    /* get the working solution from heuristic's local data */
-   assert( sol != NULL );
+   assert(sol != NULL);
 
    /* copy the current LP solution to the working solution */
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );
@@ -154,7 +154,7 @@ SCIP_RETCODE HeurFrats::scip_exec(
    SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) ); 
    BMSclearMemoryArray(visited, nnodes);
    
-   assert( currnode->id == 0 );
+   assert(currnode->id == 0);
    visited[0] = TRUE;
 
    /*exactly nnodes edges have to be inserted into the tour */
@@ -214,24 +214,24 @@ SCIP_RETCODE HeurFrats::scip_exec(
          break;
       }
       /* assert that the data is not corrupted */
-      assert( bestedge != NULL );
-      assert( 0 <= bestval && bestval <= 1 );
-      assert( bestval ==  SCIPgetSolVal(scip, sol, bestedge->var) );
+      assert(bestedge != NULL);
+      assert(SCIPisFeasLE(scip, 0.0, bestval) && SCIPisFeasLE(scip, bestval, 1.0));
+      assert(bestval == SCIPgetSolVal(scip, sol, bestedge->var));
 
       /* fix the variable which represents the best edge to one in the new solution and proceed to next node */
       SCIP_CALL( SCIPsetSolVal(scip, newsol, bestedge->var, 1.0) );
       currnode = bestedge->adjac;
-      assert( currnode != NULL );
-      assert( 0 <= currnode->id && currnode->id <= nnodes-1 );
+      assert(currnode != NULL);
+      assert(0 <= currnode->id && currnode->id <= nnodes-1);
       if( i != nnodes-1 )
-         assert( !visited[currnode->id] );
+         assert(!visited[currnode->id]);
       visited[currnode->id] = TRUE;
    }
    /* if we were able to construct a complete tour, try to add the solution to SCIP */
    if( success )
    {
       for( i = 0; i < nnodes; i++ )
-         assert( visited[graph->nodes[i].id] );
+         assert(visited[graph->nodes[i].id]);
       
       success = FALSE;
       /* due to construction we already know, that the solution will be feasible */

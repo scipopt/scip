@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.27.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.27.2.2 2010/03/22 16:05:24 bzfwolte Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -209,6 +209,7 @@ void SCIPhistoryUpdatePseudocost(
 /* end ???????? */
 #undef SCIPhistoryIncNBranchings
 #undef SCIPhistoryIncNInferences
+#undef SCIPhistoryIncNInferencesVal
 #undef SCIPhistoryIncNCutoffs
 #undef SCIPhistoryGetNBranchings
 #undef SCIPhistoryGetNInferences
@@ -380,6 +381,23 @@ void SCIPhistoryIncNInferences(
 
    history->ninferences[dir]++;
 }
+
+/** increases the number of inferences counter by a certian value */
+extern
+void SCIPhistoryIncNInferencesVal(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   int                   val                 /**< value by which the counter should be increased */
+   ) 
+{
+   assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert((int)dir == 0 || (int)dir == 1);
+   assert(history->nbranchings[dir] >= 1);
+   assert(val >= 0);
+
+   history->ninferences[dir] += val;
+} 
 
 /** increases the number of cutoffs counter */
 void SCIPhistoryIncNCutoffs(

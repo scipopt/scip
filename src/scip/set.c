@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.7 2009/08/12 09:27:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.8 2010/03/22 16:05:38 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -133,6 +133,7 @@
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
+#define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
 
 /* LP */
@@ -159,7 +160,11 @@
 #define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
-
+#define SCIP_DEFAULT_LP_LEXDUALALGO       FALSE /**< should the dual lexicographic algorithm be used? */
+#define SCIP_DEFAULT_LP_LEXDUALROOTONLY    TRUE /**< should the lexicographic dual algorithm be applied only at the root node */
+#define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
+#define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
+#define SCIP_DEFAULT_LP_SIMPLEXROWREP     FALSE /**< should simplex algorithm use row representation of the basis? */
 
 /* Memory */
 
@@ -175,6 +180,9 @@
 /* Miscellaneous */
 
 #define SCIP_DEFAULT_MISC_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
+#define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
+#define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
+#define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< if problem is solved exactly, should floating point problem be 
                                                  *   a relaxation of the original problem (instead of an approximation)? */
@@ -651,6 +659,11 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal number of solutions to store in the solution storage",
          &(*set)->limit_maxsol, FALSE, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "limits/restarts",
+         "solving stops, if the given number of restarts was triggered (-1: no limit)",
+         &(*set)->limit_restarts, FALSE, SCIP_DEFAULT_LIMIT_RESTARTS, -1, INT_MAX,
+         NULL, NULL) );
 
    /* LP parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
@@ -733,6 +746,31 @@ SCIP_RETCODE SCIPsetCreate(
          "should presolving of LP solver be used?",
          &(*set)->lp_presolving, TRUE, SCIP_DEFAULT_LP_PRESOLVING,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/lexdualalgo",
+         "should the lexicographic dual alogrithm be used?",
+         &(*set)->lp_lexdualalgo, TRUE, SCIP_DEFAULT_LP_LEXDUALALGO,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/lexdualrootonly",
+         "should the lexicographic dual algorithm be applied only at the root node",
+         &(*set)->lp_lexdualrootonly, TRUE, SCIP_DEFAULT_LP_LEXDUALROOTONLY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "lp/lexdualmaxrounds",
+         "maximum number of rounds in the  lexicographic dual algorithm (-1: unbounded)",
+         &(*set)->lp_lexdualmaxrounds, TRUE, SCIP_DEFAULT_LP_LEXDUALMAXROUNDS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/lexdualbasic",
+         "choose fractional basic variables in lexicographic dual algorithm?",
+         &(*set)->lp_lexdualbasic, TRUE, SCIP_DEFAULT_LP_LEXDUALBASIC,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/simplexrowrep",
+         "should simplex algorithm use row representation of the basis?",
+         &(*set)->lp_simplexrowrep, TRUE, SCIP_DEFAULT_LP_SIMPLEXROWREP,
+         NULL, NULL) );
 
    /* memory parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -776,6 +814,21 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/catchctrlc",
          "should the CTRL-C interrupt be caught by SCIP?",
          &(*set)->misc_catchctrlc, FALSE, SCIP_DEFAULT_MISC_CATCHCTRLC,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/usevartable",
+         "should a hashtable be used to map from variable names to variables?",
+         &(*set)->misc_usevartable, FALSE, SCIP_DEFAULT_MISC_USEVARTABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/useconstable",
+         "should a hashtable be used to map from constraint names to constraints?",
+         &(*set)->misc_useconstable, FALSE, SCIP_DEFAULT_MISC_USECONSTABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/usesmalltables",
+         "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
+         &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
 #if 1
@@ -831,12 +884,12 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/feastol",
-         "LP feasibility tolerance for constraints",
+         "feasibility tolerance for constraints",
          &(*set)->num_feastol, FALSE, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/dualfeastol",
-         "LP feasibility tolerance for reduced costs",
+         "feasibility tolerance for reduced costs in LP solution",
          &(*set)->num_dualfeastol, FALSE, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdDualfeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -1505,6 +1558,16 @@ SCIP_RETCODE SCIPsetResetParams(
    )
 {
    SCIP_CALL( SCIPparamsetSetToDefault(set->paramset, set->scip) );
+
+   return SCIP_OKAY;
+}
+
+/** sets heuristic parameters to aggressive values */
+SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(set->paramset, set->scip) );
 
    return SCIP_OKAY;
 }
@@ -2787,7 +2850,7 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
    return SCIP_OKAY;
 }
 
-/** sets LP feasibility tolerance */
+/** sets feasibility tolerance */
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             feastol             /**< new feasibility tolerance */
@@ -2800,7 +2863,7 @@ SCIP_RETCODE SCIPsetSetFeastol(
    return SCIP_OKAY;
 }
 
-/** sets LP feasibility tolerance for reduced costs */
+/** sets feasibility tolerance for reduced costs in LP solution */
 SCIP_RETCODE SCIPsetSetDualfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             dualfeastol         /**< new reduced costs feasibility tolerance */
@@ -3425,7 +3488,7 @@ SCIP_Bool SCIPsetIsFeasNegative(
    return EPSN(val, set->num_feastol);
 }
 
-/** checks, if value is integral within the LP feasibility bounds */
+/** checks, if value is integral within the feasibility bounds */
 SCIP_Bool SCIPsetIsFeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */

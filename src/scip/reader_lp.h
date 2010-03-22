@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.h,v 1.5.2.1 2009/06/19 07:53:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_lp.h,v 1.5.2.2 2010/03/22 16:05:33 bzfwolte Exp $"
 
 /**@file   reader_lp.h
  * @brief  LP file reader
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the lp file reader into SCIP */
 extern
@@ -66,5 +69,9 @@ SCIP_RETCODE SCIPwriteLp(
    int                nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

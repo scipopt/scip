@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.h,v 1.2.2.1 2009/06/19 07:53:31 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.h,v 1.2.2.2 2010/03/22 16:05:02 bzfwolte Exp $"
 
 /**@file   cons_linearordering.h
  * @brief  constraint handler for linear ordering constraints
@@ -39,6 +39,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 extern
@@ -66,5 +69,9 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

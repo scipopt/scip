@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.5.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.5.2.2 2010/03/22 16:05:36 bzfwolte Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -71,6 +71,7 @@
 #define MAXDYNPROGSPACE         1000000 
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
+#define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
 
 
 
@@ -208,6 +209,12 @@ SCIP_RETCODE getClosestVlb(
          if( !meetscriteria )
             continue;
 
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and 
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation 
+          */
+         if( REALABS(vlbcoefs[i]) > MAXABSVBCOEF || SCIPisInfinity(scip, REALABS(val2)) )
+            continue;
+
          vlbsol = (vlbcoefs[i] * varsolvals[probidxbinvar]) + vlbconsts[i];
          if( SCIPisGT(scip, vlbsol, *closestvlb) )
          {
@@ -321,6 +328,12 @@ SCIP_RETCODE getClosestVub(
          if( !meetscriteria )
             continue;
         
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation 
+          */
+         if( REALABS(vubcoefs[i]) > MAXABSVBCOEF || SCIPisInfinity(scip, REALABS(val2)) )
+            continue;
+
          vubsol = vubcoefs[i] * varsolvals[probidxbinvar] + vubconsts[i];
          if( SCIPisLT(scip, vubsol, *closestvub) )
          {
@@ -956,13 +969,13 @@ SCIP_RETCODE constructSNFRelaxation(
    /* construction was successfull */
    *success = TRUE;
 
-   SCIPdebugMessage("constraint in constructed 0-1 single node flow relaxation: ");
 #ifdef SCIP_DEBUG
+   SCIPdebugMessage("constraint in constructed 0-1 single node flow relaxation: ");
    for( c = 0; c < *ntransvars; c++ )
    {   
-      printf("%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
+      SCIPdebugPrintf("%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
    }
-   printf("<= %g\n", *transrhs);
+   SCIPdebugPrintf("<= %g\n", *transrhs);
 #endif
 
  TERMINATE:
@@ -1065,8 +1078,8 @@ SCIP_Bool isIntegralScalar(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = floor(sval);
+   upval = ceil(sval);
 
    return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
 }
@@ -1091,8 +1104,8 @@ SCIP_Longint getIntegralVal(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = floor(sval);
+   upval = ceil(sval);
 
    if( SCIPrelDiff(sval, upval) >= mindelta )
       intval = (SCIP_Longint) upval;
@@ -1140,7 +1153,7 @@ void buildFlowCover(
    /* get flowcover status for each item */
    for( j = 0; j < nsolitems; j++ )
    {
-      /* j in N1 with z°_j = 1 => j in N1\C1 */
+      /* j in N1 with zÂ°_j = 1 => j in N1\C1 */
       if( coefs[solitems[j]] == 1 )
       {
          flowcoverstatus[solitems[j]] = -1;
@@ -1157,7 +1170,7 @@ void buildFlowCover(
    }
    for( j = 0; j < nnonsolitems; j++ )
    {
-      /* j in N1 with z°_j = 0 => j in C1 */
+      /* j in N1 with zÂ°_j = 0 => j in C1 */
       if( coefs[nonsolitems[j]] == 1 )
       {
          flowcoverstatus[nonsolitems[j]] = 1;
@@ -1338,9 +1351,9 @@ SCIP_RETCODE getFlowCover(
     * 1. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have 
     *    positive weights and the constraint is an "<" constraint, by complementing all variables in N1
     *     
-    *    (KP^SNF_rat)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
-    *                      sum_{j in N1}          u_j z°_j + sum_{j in N2} u_j  z_j < - b + sum_{j in N1} u_j  
-    *                                                 z°_j in {0,1} for all j in N1 
+    *    (KP^SNF_rat)  max sum_{j in N1} ( 1 - x*_j ) zÂ°_j + sum_{j in N2} x*_j z_j
+    *                      sum_{j in N1}          u_j zÂ°_j + sum_{j in N2} u_j  z_j < - b + sum_{j in N1} u_j  
+    *                                                 zÂ°_j in {0,1} for all j in N1 
     *                                                  z_j in {0,1} for all j in N2, 
     *    and solve it approximately under consideration of the fixing, 
     * or 
@@ -1348,9 +1361,9 @@ SCIP_RETCODE getFlowCover(
     *    positive integer weights and the constraint is an "<=" constraint, by complementing all variables in N1
     *    and multilying the constraint by a suitable scalar C
     *
-    *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
-    *                      sum_{j in N1}        C u_j z°_j + sum_{j in N2} C u_j  z_j <= c 
-    *                                                   z°_j in {0,1} for all j in N1 
+    *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) zÂ°_j + sum_{j in N2} x*_j z_j
+    *                      sum_{j in N1}        C u_j zÂ°_j + sum_{j in N2} C u_j  z_j <= c 
+    *                                                   zÂ°_j in {0,1} for all j in N1 
     *                                                    z_j in {0,1} for all j in N2, 
     *    where 
     *      c = floor[ C (- b + sum_{j in N1} u_j ) ]      if frac[ C (- b + sum_{j in N1} u_j ) ] > 0
@@ -2182,7 +2195,7 @@ SCIP_RETCODE cutGenerationHeuristic(
             transvarcoefs, transvarflowcoverstatustmp, ntransvars, boundsforsubst, boundtypesforsubst ) );
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and delta */
-      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
+      SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, NULL, cutcoefs, 
             &cutrhs, &cutact, &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
@@ -2213,8 +2226,11 @@ SCIP_RETCODE cutGenerationHeuristic(
    /* delta found */
    if( SCIPisEfficacious(scip, bestefficacy) )
    {
-      SCIP_Real onedivbestdelta = 1.0 / bestdelta;
+      SCIP_Real onedivbestdelta;
       int i;
+
+      assert(bestdelta != 0.0);
+      onedivbestdelta = 1.0 / bestdelta;
 
       /* for best value of delta: get L1 subset of N1\C1 and L2 subset of N2\C2 by comparison */
       getL1L2(scip, ntransvars, transvarcoefs, transbinvarsolvals, transcontvarsolvals, transvarvubcoefs, 
@@ -2227,7 +2243,7 @@ SCIP_RETCODE cutGenerationHeuristic(
             transvarcoefs, transvarflowcoverstatus, ntransvars, boundsforsubst, boundtypesforsubst ) );
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
-      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
+      SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, NULL, cutcoefs, 
             &cutrhs, &cutact, &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);

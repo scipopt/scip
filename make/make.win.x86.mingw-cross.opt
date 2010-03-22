@@ -1,5 +1,5 @@
-#--- $Id: make.win.x86.mingw-cross.opt,v 1.1.2.1 2009/06/19 07:53:35 bzfwolte Exp $
-FLAGS		+=	-DNDEBUG -DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNO_REMOVE_HISTORY -DSCIP_LONGINT_FORMAT='"lld"' # -DROUNDING_FE
+#--- $Id: make.win.x86.mingw-cross.opt,v 1.1.2.2 2010/03/22 16:05:08 bzfwolte Exp $
+FLAGS		+=	-DNDEBUG -DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNO_REMOVE_HISTORY -DSCIP_LONGINT_FORMAT='"lld"' -DROUNDING_FE
 CFLAGS		=	-O6 -march=pentiumpro
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing

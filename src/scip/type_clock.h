@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_clock.h,v 1.11.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_clock.h,v 1.11.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_clock.h
  * @brief  type definitions for clocks and timing issues
@@ -23,6 +23,12 @@
 
 #ifndef __SCIP_TYPE_CLOCK_H__
 #define __SCIP_TYPE_CLOCK_H__
+
+#include "scip/def.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum SCIP_ClockType
 {
@@ -36,8 +42,8 @@ typedef struct SCIP_Clock SCIP_CLOCK;             /**< clock timer */
 typedef struct SCIP_CPUClock SCIP_CPUCLOCK;       /**< CPU clock counter */
 typedef struct SCIP_WallClock SCIP_WALLCLOCK;     /**< wall clock counter */
 
-
-#include "scip/def.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.4 2009/07/24 12:52:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.5 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -259,6 +259,11 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint display method of constraint handler */
 #define consPrintIntegral NULL
 
+/** constraint copying method of constraint handler */
+#define consCopyIntegral NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseIntegral NULL
 
 
 
@@ -288,7 +293,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
          consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
          consActiveIntegral, consDeactiveIntegral, 
          consEnableIntegral, consDisableIntegral,
-         consPrintIntegral,
+         consPrintIntegral, consCopyIntegral, consParseIntegral,
          conshdlrdata) );
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.46.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.46.2.2 2010/03/22 16:05:39 bzfwolte Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -29,7 +29,9 @@
 #include "scip/type_clock.h"
 #include "scip/type_cons.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** constraint data structure */
 struct SCIP_Cons
@@ -142,6 +144,8 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
    SCIP_DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
+   SCIP_DECL_CONSCOPY    ((*conscopy));      /**< constraint copying method */
+   SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative ones */
    SCIP_CONS**           initconss;          /**< array with active constraints that must enter the LP with their initial representation */
@@ -220,5 +224,8 @@ struct SCIP_Conshdlr
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

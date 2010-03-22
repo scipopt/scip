@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.32.2.2 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.32.2.3 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -34,6 +34,7 @@
 #include "scip/cons_countsols.h"
 #include "scip/dialog_default.h"
 
+/* depending if the GMP library is available we use a GMP data type or a SCIP_Longint */
 #ifdef WITH_GMP
 #include <gmp.h>
 typedef mpz_t                Int;
@@ -112,6 +113,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sparsetest;         /**< allow to check for sparse solutions */
    SCIP_Bool             collect;            /**< should the solutions be collected */
 
+   SCIP_Bool             warning;            /**< was the warning messages already posted? */
+   
    /* specific problem data */
    int                   nvars;              /**< number of variables in problem */
    SCIP_VAR**            vars;               /**< array containing a copy of all variables before presolving */
@@ -279,7 +282,7 @@ SCIP_RETCODE conshdlrdataCreate(
    allocInt(&(*conshdlrdata)->nsols);
    
    (*conshdlrdata)->cutoffSolution = NULL;
-
+   (*conshdlrdata)->warning = FALSE;
    (*conshdlrdata)->nvars = 0;
    (*conshdlrdata)->vars = NULL;
 
@@ -312,7 +315,7 @@ SCIP_RETCODE checkParameters(
       if( value != 0 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-            "The presolver <dualfix> is not turned off! This might cause a wrong counting process.");
+            "The presolver <dualfix> is not turned off! This might cause a wrong counting process.\n");
       }
    }
 
@@ -336,20 +339,20 @@ SCIP_RETCODE checkParameters(
    if( value != 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-         "The parameter <presolving/maxrestarts> is not 0 (currently %d)! This might cause a wrong counting process.",
+         "The parameter <presolving/maxrestarts> is not 0 (currently %d)! This might cause a wrong counting process.\n",
          value);
    }
    
    if( !valid && SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL )
    {
-      SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.");
+      SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.\n");
    }
 
    return SCIP_OKAY;
 }
 
-/** creates and adds a constraints which cuts off the current solution from the
- *  feasibility region in the case there are only binary variables */
+/** creates and adds a constraints which cuts off the current solution from the feasibility region in the case there are
+ *  only binary variables */
 static 
 CUTOFF_CONSTRAINT(addBinaryCons)
 {
@@ -408,10 +411,9 @@ CUTOFF_CONSTRAINT(addBinaryCons)
 }
 
 
-/** creates and adds a bound disjunction constraints which cuts off the current solution
- *  from the feasibility region; if only binary variables are involved, then a set
- *  covering constraint is created which is a special case of a bound disjunction
- *  constraint */
+/** creates and adds a bound disjunction constraints which cuts off the current solution from the feasibility region; if
+ *  only binary variables are involved, then a set covering constraint is created which is a special case of a bound
+ *  disjunction constraint */
 static 
 CUTOFF_CONSTRAINT(addIntegerCons)
 {
@@ -1002,7 +1004,7 @@ SCIP_Bool checkVarbound(
          SCIPdebugMessage("%s\t lb: %lf\t ub: %lf\n",SCIPvarGetName(var_x), SCIPvarGetLbLocal(var_x), SCIPvarGetUbLocal(var_x));
          SCIPdebugMessage("%s\t lb: %lf\t ub: %lf\n",SCIPvarGetName(var_y), SCIPvarGetLbLocal(var_y), SCIPvarGetUbLocal(var_y));
          
-        return FALSE;
+         return FALSE;
       }
       
       /* delete constraint from the problem locally since it is satisfied */
@@ -1116,6 +1118,7 @@ SCIP_RETCODE checkSolution(
    SCIP_RESULT*             result           /**< pointer to store the result of the checking process */
    )
 {
+   SCIP_Longint nsols;
    SCIP_Bool feasible;
 
    SCIPdebugMessage("start to add sparse solution\n");
@@ -1128,12 +1131,12 @@ SCIP_RETCODE checkSolution(
    /* the solution should not be found through a heuristic since in this case the
     * informations of SCIP are not valid for this solution */
    /**@todo it might be not necessary to check this assert since we can check in generale
-       all solutions of feasibility independently of the origin; however, the locally fixed
-       technique does only work if the solution comes from the branch and bound tree; in
-       case the solution comes from a heuristic we should try to sequentially fix the
-       variables in the branch and bound tree and check after every fixing if all
-       constraints are disabled; at the point where all constraints are disabled the
-       unfixed variables are "stars" (arbitrary); */
+      all solutions of feasibility independently of the origin; however, the locally fixed
+      technique does only work if the solution comes from the branch and bound tree; in
+      case the solution comes from a heuristic we should try to sequentially fix the
+      variables in the branch and bound tree and check after every fixing if all
+      constraints are disabled; at the point where all constraints are disabled the
+      unfixed variables are "stars" (arbitrary); */
    assert( SCIPgetNOrigVars(scip) != 0);
    assert( SCIPsolGetHeur(sol) == NULL);
 
@@ -1178,11 +1181,13 @@ SCIP_RETCODE checkSolution(
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
    }
+
+   /* transform the current number of solutions into a SCIP_Longint */
+   nsols = getNCountedSols(conshdlrdata->nsols, &feasible);
    
    /* check if the solution limit is achived and stop SCIP if this is the case */
-   if( conshdlrdata->sollimit > -1 && conshdlrdata->sollimit <= getNCountedSols(conshdlrdata->nsols, &feasible) )
+   if( conshdlrdata->sollimit > -1 && (!feasible || conshdlrdata->sollimit <= nsols) )
    {
-      assert( feasible );
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
    
@@ -1191,7 +1196,6 @@ SCIP_RETCODE checkSolution(
 
    return SCIP_OKAY;
 }
-
 
 /*
  * Callback methods of constraint handler
@@ -1457,7 +1461,12 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
 
    if( conshdlrdata->active )
    {
-      SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
+      if( !conshdlrdata->warning )
+      {
+         SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
+         conshdlrdata->warning = TRUE;
+      }
+      
       *result = SCIP_INFEASIBLE;
    }
    else
@@ -1517,9 +1526,15 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
 /** constraint display method of constraint handler */
 #define consPrintCountsols NULL
 
+/** constraint copying method of constraint handler */
+#define consCopyCountsol NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseCountsol NULL
+
 
 /*
- * Interface methods
+ * Callback methods and local method for dialogs
  */
 
 /** dialog execution method for the count command */
@@ -1656,6 +1671,457 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    return SCIP_OKAY;
 }
 
+/** writes the given sparse solution to the file */
+static 
+void writeSparseSolutions(
+   SCIP*                 scip,                /**< SCIP data structure */
+   FILE*                 file,                /**< file handler */
+   SCIP_VAR**            vars,                /**< SCIP variables */
+   int                   nvars,               /**< number of variables */
+   SPARSESOLUTION**      sols,                /**< sparse solutions */
+   int                   nsols               /**< number of sparse solutions */
+   )
+{
+   SPARSESOLUTION* sol;
+   SCIP_Longint lbvalue;
+   SCIP_Longint ubvalue;
+   SCIP_Real lbobjval;
+   SCIP_Real ubobjval;
+   SCIP_Real objcoeff;
+   int s;
+   
+   for ( s = 0; s < nsols; ++s)
+   {
+      SCIP_VAR* var;
+      int v;
+
+      lbobjval = 0.0;
+      ubobjval = 0.0;
+      
+      /* print solution number */
+      SCIPinfoMessage(scip, file, "%d, ", s+1);
+      
+      sol = sols[s];
+      
+      for ( v = 0; v < nvars; ++v )
+      {
+         lbvalue = sol->lbvalues[v];
+         ubvalue = sol->ubvalues[v];
+         
+         if (lbvalue == ubvalue)
+         {
+            /* if the interval consists of a single value, output the value */
+            SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT", ", lbvalue);
+         }
+         else 
+         {
+            /* if it is a non-singular interval, output the whole interval */
+            SCIPinfoMessage(scip, file, "[%"SCIP_LONGINT_FORMAT", %"SCIP_LONGINT_FORMAT"], ", lbvalue, ubvalue); 
+         }
+         
+         /* compute the objective function value */
+         var = vars[v];
+         objcoeff = SCIPvarGetObj(var);
+         
+         assert(SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE);
+         if (objcoeff > 0) 
+         {
+            lbobjval += objcoeff * lbvalue;
+            ubobjval += objcoeff * ubvalue;
+         }
+         else
+         {
+            lbobjval += objcoeff * ubvalue;
+            ubobjval += objcoeff * lbvalue;
+         }
+      }
+      
+      /* transform objective value into original problem space */
+      lbobjval = SCIPretransformObj(scip, lbobjval);
+      ubobjval = SCIPretransformObj(scip, ubobjval);
+
+      /* output the objective value interval of the (sparse) solution */
+      if ( lbobjval == ubobjval )
+         SCIPinfoMessage(scip, file, "%g\n", lbobjval);
+      else 
+         SCIPinfoMessage(scip, file, "[%g,%g]\n", lbobjval, ubobjval);
+   }
+}
+
+/** constructs the first solution of sparse solution (all variables are set to their lower bound value */
+static void getFirstSolution(
+   SPARSESOLUTION*       sparsesol,          /**< sparse solutions */
+   SCIP_Longint*         sol,                /**< current solution */
+   int                   nvars               /**< number of variables */
+   )
+{
+   int v;
+   
+   for( v = 0; v < nvars; ++v ) 
+      sol[v] = sparsesol->lbvalues[v];
+}
+
+/** constructs the next solution of the sparse solution and return whether there was one more or not */
+static 
+SCIP_Bool getNextSolution(
+   SPARSESOLUTION*       sparsesol,          /**< sparse solutions */
+   SCIP_Longint*         sol,                /**< current solution */
+   int                   nvars               /**< number of variables */
+   )
+{
+   SCIP_Longint lbvalue;
+   SCIP_Longint ubvalue;
+   SCIP_Bool singular;
+   SCIP_Bool carryflag;
+   int v;
+   
+   singular = TRUE;
+   carryflag = FALSE;
+
+   for( v = 0; v < nvars; ++v ) 
+   {
+      lbvalue = sparsesol->lbvalues[v];
+      ubvalue = sparsesol->ubvalues[v];
+      
+      if (lbvalue < ubvalue) 
+      {
+         singular = FALSE;
+         
+         if (carryflag == FALSE) 
+         {
+            if (sol[v] < ubvalue) 
+            {
+               sol[v]++;
+               break;
+            }
+            else 
+            {
+               /* in the last solution the variables v was set to its upper bound value */
+               assert(sol[v] == ubvalue);
+               sol[v] = lbvalue;
+               carryflag = TRUE;
+            }
+         }
+         else 
+         {
+            if (sol[v] < ubvalue) 
+            {
+               sol[v]++;
+               carryflag = FALSE;
+               break;
+            }
+            else
+            {
+               assert(sol[v] == ubvalue);
+               sol[v] = lbvalue;
+            }            
+         }
+      }
+   }
+   
+   return (!carryflag && !singular);
+}
+
+/** expands the sparse solutions and writes them to the file */
+static 
+SCIP_RETCODE writeExpandedSolutions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< file handler */
+   SCIP_VAR**            vars,               /**< SCIP variables */
+   int                   nvars,              /**< number of variables */
+   SPARSESOLUTION**      sols,               /**< sparse solutions to expands and write */
+   int                   nsols               /**< number of sparse solutions */                                   
+   )
+{
+   SPARSESOLUTION* sparsesol;
+   SCIP_Longint* sol;
+   SCIP_Longint solcnt;
+   SCIP_Real objcoeff;
+   int s;
+
+   solcnt = 0;
+   
+   /* get memory to store active solution */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sol, nvars) );
+   
+   /* loop over all sparse solutions */
+   for ( s = 0; s < nsols; ++s )
+   {
+      sparsesol = sols[s];
+      
+      /* get first solution of the sparse solution */
+      getFirstSolution(sparsesol, sol, nvars);
+      
+      do 
+      {
+         SCIP_Longint value;
+         SCIP_Real objval;
+         int v;
+         
+         solcnt++;
+
+         /* print solution number */
+         SCIPinfoMessage(scip, file, "%d(%"SCIP_LONGINT_FORMAT"), ", s+1, solcnt);
+         
+         objval = 0.0;
+         
+         for ( v = 0; v < nvars; ++v )
+         {
+            value = sol[v];
+            
+            SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT", ", value);
+            
+            assert(SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE);
+            objcoeff = SCIPvarGetObj(vars[v]);
+            objval += objcoeff * value;
+         }
+
+
+         /* transform objective value into original problem space */
+         objval = SCIPretransformObj(scip, objval);
+
+         /* output the objective value of the solution */
+         SCIPinfoMessage(scip, file, "%g\n", objval);
+      }
+      while( getNextSolution(sparsesol, sol, nvars) );
+   }
+   
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &sol);
+
+   return SCIP_OKAY;
+}
+
+/** execution method of dialog for writing all solutions */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecAllsolutions)
+{  /*lint --e{715}*/
+   FILE* file;
+   SCIP_Longint nsols;
+   SPARSESOLUTION** sparsesols;
+   SCIP_VAR** vars;
+   char* filename;
+   char* word;
+   SCIP_Bool endoffile;
+   SCIP_Bool valid;
+   int nsparsesols;
+   int nvars;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "no problem available\n");
+      break;
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_FREETRANS:
+      SCIPdialogMessage(scip, NULL, "the counting process was not started yet\n");
+      break;
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:   
+   case SCIP_STAGE_PRESOLVED:    
+   case SCIP_STAGE_INITSOLVE:    
+   case SCIP_STAGE_SOLVING:      
+   case SCIP_STAGE_SOLVED:       
+   case SCIP_STAGE_FREESOLVE:
+      
+      valid = FALSE;
+      nsols = SCIPgetNCountedSols(scip, &valid); 
+         
+      /* get all solutions in sparse format from the counter constraint handle */
+      SCIPgetCountedSparseSolutions(scip, &vars, &nvars, &sparsesols, &nsparsesols);
+
+      if( !valid )
+      {
+         /* too many solutions, output not "possible" */
+         char* buffer;
+         int buffersize;
+         int requiredsize;
+            
+         buffersize = SCIP_MAXSTRLEN;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &buffer, buffersize) );
+         SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
+            
+         if( requiredsize > buffersize )
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
+            SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
+         }
+            
+         assert( buffersize >= requiredsize );
+         SCIPdialogMessage(scip, NULL, "no output, because of too many feasible solutions : %s\n", buffer);
+            
+         SCIPfreeBufferArray(scip, &buffer);            
+      }
+      else if( nsols == 0 )
+      {
+         SCIPdialogMessage(scip, NULL, "there are no counted solutions\n");
+      }
+      else if( nsparsesols == 0 )
+      {
+         SCIPdialogMessage(scip, NULL, "there is no solution collect (parameter <constraints/countsols/collect>)\n");
+      }
+      else
+      {
+         SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &word, &endoffile) );
+            
+         /* copy the filename for later use */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &filename, word, (int)strlen(word)+1) );
+            
+         if( endoffile )
+         {
+            *nextdialog = NULL;
+            return SCIP_OKAY;
+         }
+            
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+
+         if( filename[0] != '\0' )
+         {
+            file = fopen(filename, "w");
+               
+            if( file == NULL )
+            {
+               SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+               SCIPdialoghdlrClearBuffer(dialoghdlr);
+            }
+            else
+            {         
+               SCIP_VAR** origvars;
+               SCIP_VAR* var;
+               const char* varname;
+               int norigvars;
+               int v;
+               
+               /* get original problem variables */
+               origvars = SCIPgetOrigVars(scip);
+               norigvars = SCIPgetNOrigVars(scip);
+               assert(norigvars == nvars);
+
+               SCIPdialogMessage(scip, NULL, "saving %"SCIP_LONGINT_FORMAT" (%d) feasible solutions\n", nsols, nsparsesols);
+               
+               /* first row: output the names of the variables in the given ordering */
+               SCIPinfoMessage(scip, file, "#, ");
+            
+               for ( v = 0; v < nvars; ++v ) 
+               {
+#ifndef NDEBUG
+                  {
+                     /* check if the original variable fits to the transform variable the constraint handler has */
+                     SCIP_VAR* transvar;
+                     SCIP_CALL( SCIPgetTransformedVar(scip, origvars[v], &transvar) );
+                     assert(transvar != NULL);
+                     assert(transvar == vars[v]);
+                  }
+#endif               
+                  var = origvars[v];
+                  varname = SCIPvarGetName(var);
+               
+                  SCIPinfoMessage(scip, file, "%s, ", varname);
+               }
+            
+               SCIPinfoMessage(scip, file, "objval\n");
+            
+               /* check if all solutions are singular (i.e., there are no sparse solutions with intervals) if they
+                * are singular, then they are written to file directly if there are some nonsingular ones among them,
+                * then the user is asked and can decide whether he wants a sparse output (with intervals) or an
+                * expanded output */
+               if( nsparsesols < nsols )
+               {
+                  char* answer;
+                  SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "expand sparse solutions (y/n): ", &answer, &endoffile) );
+                  if ( answer[0] == 'y' )
+                  {
+                     /* user wants expanded output */
+                     SCIP_CALL( writeExpandedSolutions(scip, file, vars, nvars, sparsesols, nsparsesols) );
+                  }
+                  else
+                  {
+                     /* user wants sparse output */
+                     writeSparseSolutions(scip, file, vars, nvars, sparsesols, nsparsesols);
+                  }
+               }
+               else
+               {
+                  /* all solutions are singular */
+                  writeSparseSolutions(scip, file, vars, nvars, sparsesols, nsparsesols);
+               }
+            
+               SCIPdialogMessage(scip, NULL, "written solutions information to file <%s>\n", filename);
+            }
+
+            fclose(file);
+
+            /* free buffer array */
+            SCIPfreeBufferArray(scip, &filename);
+         }
+      }
+   }
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   return SCIP_OKAY;
+}
+
+/** create the interactive shell dialogs for the counting process  */
+static
+SCIP_RETCODE createCountDialog(
+   SCIP*                    scip             /**< SCIP data structure */
+   )
+{
+   SCIP_DIALOG* root;
+   SCIP_DIALOG* dialog;
+   SCIP_DIALOG* submenu;
+   
+   /* add dialog entry for counting */
+   root = SCIPgetRootDialog(scip);
+   if( root == NULL )
+   {
+      SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
+   }
+   assert( root != NULL );
+   
+   if( !SCIPdialogHasEntry(root, "count") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecCount, NULL, NULL,
+            "count", "count number of feasible solutions", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   if( !SCIPdialogHasEntry(root, "write") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL, NULL,
+            "write", "write information to file", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   else
+   {     
+      if( SCIPdialogFindEntry(root, "write", &submenu) != 1 )
+      {
+         SCIPerrorMessage("write sub menu not found\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
+   }
+   assert(submenu != NULL);
+
+   if( !SCIPdialogHasEntry(submenu, "allsolutions") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecAllsolutions, NULL, NULL,
+            "allsolutions", "writes all counted primal solutions to file", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   return SCIP_OKAY;
+}
+
+/*
+ * Callback methods for columns
+ */
 
 /** output method of display column to output file stream 'file' */
 static
@@ -1708,6 +2174,10 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
 }
 
 
+/*
+ * Interface methods of constraint handler
+ */
+
 /** creates the handler for countsols constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1715,8 +2185,6 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
 {
    /* create countsol constraint handler data */
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_DIALOG* root;
-   SCIP_DIALOG* dialog;
    
    /* create constraint handler specific data here */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
@@ -1733,7 +2201,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          consPropCountsols, consPresolCountsols, consRespropCountsols, consLockCountsols,
          consActiveCountsols, consDeactiveCountsols, 
          consEnableCountsols, consDisableCountsols,
-         consPrintCountsols,
+         consPrintCountsols, consCopyCountsol, consParseCountsol,
          conshdlrdata) );
 
    /* add countsols constraint handler parameters */
@@ -1758,22 +2226,9 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          "counting stops, if the given number of solutions were found (-1: no limit)",
          &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1, SCIP_LONGINT_MAX, NULL, NULL));
    
-   /* add dialog entry for counting */
-   root = SCIPgetRootDialog(scip);
-   if( root == NULL )
-   {
-      SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
-   }
-   assert( root != NULL );
+   /* create the interactive shell dialogs for the counting process  */
+   SCIP_CALL( createCountDialog(scip) );
    
-   if( !SCIPdialogHasEntry(root, "count") )
-   {
-      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecCount, NULL, NULL,
-            "count", "count number of feasible solutions", FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_SOLS_NAME, DISP_SOLS_DESC, DISP_SOLS_HEADER, SCIP_DISPSTATUS_OFF, 
          NULL, NULL, NULL, NULL, NULL, dispOutputSols, 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.12.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.12.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_prop.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for propagators
  * @author Tobias Achterberg
  */
@@ -24,6 +25,14 @@
 #ifndef __SCIP_TYPE_PROP_H__
 #define __SCIP_TYPE_PROP_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Prop SCIP_PROP;               /**< propagator */
 typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagator data */
@@ -127,11 +136,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
 #define SCIP_DECL_PROPRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_VAR* infervar, int inferinfo, \
       SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_RESULT* result)
 
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

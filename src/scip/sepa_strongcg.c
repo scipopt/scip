@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.26.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.26.2.2 2010/03/22 16:05:37 bzfwolte Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -418,7 +418,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
-         SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
                
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )

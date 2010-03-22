@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primalex.h,v 1.1.2.1 2010/03/02 17:20:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: primalex.h,v 1.1.2.2 2010/03/22 16:05:30 bzfwolte Exp $"
 
 /**@file   primalex.h
  * @brief  internal methods for collecting exact primal CIP solutions and exact primal information
@@ -33,6 +33,9 @@
 
 #include "scip/struct_primalex.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates exact primal data */
 extern
@@ -58,5 +61,9 @@ SCIP_RETCODE SCIPprimalexAddSolFree(
    SCIP_SOLEX**          sol,                /**< pointer to exact primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

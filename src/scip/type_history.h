@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_history.h,v 1.13.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_history.h,v 1.13.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_history.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for branching and inference history
  * @author Tobias Achterberg
  */
@@ -24,6 +25,9 @@
 #ifndef __SCIP_TYPE_HISTORY_H__
 #define __SCIP_TYPE_HISTORY_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** branching direction for branching on variables */
 enum SCIP_BranchDir
@@ -36,5 +40,8 @@ typedef enum SCIP_BranchDir SCIP_BRANCHDIR;       /**< branching direction for b
 
 typedef struct SCIP_History SCIP_HISTORY;         /**< branching and inference history information for single variable */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

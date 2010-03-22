@@ -1,5 +1,5 @@
-#--- $Id: make.sunos.x86.gnu.dbg,v 1.2.2.2 2009/06/19 07:53:35 bzfwolte Exp $
-FLAGS		+=	-DNO_STRERROR_R # -DROUNDING_FE
+#--- $Id: make.sunos.x86.gnu.dbg,v 1.2.2.3 2010/03/22 16:05:08 bzfwolte Exp $
+FLAGS		+=	-DNO_STRERROR_R -DROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -funit-at-a-time
 CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time

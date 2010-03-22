@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.3.2.1 2009/06/19 07:53:31 bzfwolte Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.3.2.2 2010/03/22 16:05:03 bzfwolte Exp $"
 
 #include "probdata_lop.h"
 
@@ -300,8 +300,8 @@ SCIP_RETCODE LOPevalSolution(
       printf("No solution found.\n");
    else
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &outDegree, n) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &indices, n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &outDegree, n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &indices, n) );
 
       /* compute out-degree */
       for (i = 0; i < n; ++i)
@@ -331,8 +331,8 @@ SCIP_RETCODE LOPevalSolution(
 	 printf("%d ", indices[i]);
       printf("\n");
 
-      SCIPfreeMemoryArray(scip, &outDegree);
-      SCIPfreeMemoryArray(scip, &indices);
+      SCIPfreeBufferArray(scip, &indices);
+      SCIPfreeBufferArray(scip, &outDegree);
    }
 
    return SCIP_OKAY;

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2009 Konrad-Zuse-Zentrum                            */
+/*                  2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,18 +26,13 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
- * @version  1.1.0.8
- * @author   Tobias Achterberg
- * @author   Timo Berthold
- * @author   Gerald Gamrath
- * @author   Stefan Heinz
- * @author   Thorsten Koch
- * @author   Alexander Martin
- * @author   Marc Pfetsch
- * @author   Christian Raack
- * @author   Robert Waniek
- * @author   Michael Winkler
- * @author   Kati Wolter
+ * @version  1.2.0.8
+ *
+ * <b>SCIP Authors:</b>
+ * - <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#zib">Current developers at ZIB</a>
+ * - <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#programmers">Other developers</a>
+ * - <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#contributors">Contributors</a>
+ *
  *
  * <b>What is SCIP?</b>
  *
@@ -54,21 +47,23 @@
  * was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati Wolter. The
  * persons listed above contributed or are currently contributing to SCIP.
  *
- * SCIP is developed together with TU Darmstadt and has approx. 220.000 lines of C code. See the web
- * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to
- * download SCIP.
+ * SCIP is developed together with <a href="http://www.math.tu-bs.de/mo/">TU Braunschweig</a> and <a
+ * href="http://www.opt.tu-darmstadt.de/">TU Darmstadt</a> and has approx. 270'000 lines of C code. See the web
+ * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
  * This documentation provides extensive information about SCIP.
  *
  * <b>General Information</b>
  *
+ * - \ref PUBLICMETHODS "List of callable functions"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
  * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
- * - \ref MAKE    "Makefiles"
+ * - \ref MAKE    "Makefiles / Installation information"
  * - \ref DEBUG   "Debugging"
  * - \ref TEST    "How to run automated tests with SCIP"
- * - \ref COUNTER "How to use SCIP to count feasible solution"
+ * - \ref COUNTER "How to use SCIP to count feasible solutions"
+ * - \ref PARAMETERS "List of all SCIP parameters"
  *
  * <b>Programming with SCIP</b>
  *
@@ -85,14 +80,16 @@
  * - \ref READER  "How to add file readers"
  * - \ref DIALOG  "How to add dialogs"
  * - \ref DISP    "How to add display columns"
+ * - \ref EVENT   "How to add event handler"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
  *
  * <b>Changes between different versions of SCIP</b>
  *
- * - \ref CHG1    "Changes between version 0.9 and 1.0"
- * - \ref CHG2    "Changes between version 1.0 and 1.1"
- * - \ref CHG3    "Changes since version 1.1"
+ * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
+ * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
+ * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
  */
 
@@ -121,7 +118,13 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page MAKE Makefiles
+/**@page MAKE Makefiles / Installation information
+ *
+ * In this section we describe (few) features and use of the SCIP Makefile. We also give two examples for how to install
+ * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
+ * \ref EXAMPLE2 "second example" shows how to get CPLEX linked to SCIP without ZIMPL. This is followed by section with
+ * gives some hints what to do if the \ref COMPILERPROBLEMS "compilation threws some error". We give some comments on
+ * how to install SCIP under \ref WINDOWS "WINDOWS". And show \ref RUN "how to start SCIP".
  *
  * SCIP contains a makefile system, which allows the individual setting of several parameters. For
  * instance, the following settings are supported:
@@ -134,11 +137,13 @@
  *   installed separately from SCIP. The options are the following:
  *      - <code>clp</code>: COIN Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
+ *      - <code>grb</code>: Gurobi LP-solver
  *      - <code>msk</code>: Mosek LP-solver
+ *      - <code>qso</code>: QSopt LP-solver
  *      - <code>spx</code>: SoPlex LP-solver (default)
  *      - <code>xprs</code>: XPress LP-solver
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
- *      .
+      .
  * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available
  *   for SoPlex and CLP)
  *
@@ -186,6 +191,206 @@
  * If your platform or compiler is not supported by SCIP you might try and copy one of the existing
  * makefile in the <code>make</code> directory and modify it. If you succeed, we are always
  * interested in including more Makefiles into the system.
+ *
+ *
+ * @section EXAMPLE1 Example 1 (defaults: SoPlex, with ZIMPL support):
+ *
+ * Typing <code>make</code> uses SoPlex as LP solver and includes support for the modeling language ZIMPL. You will be asked the
+ * following questions on the first call to "make" (example answers are already given):
+ *
+ * \verbatim
+  > make
+  make[1]: Entering directory `scip-1.2'
+ 
+  - Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
+ 
+  * SCIP needs some softlinks to external programs, in particular, LP-solvers. 
+  * Please insert the paths to the corresponding directories/libraries below.
+  * The links will be installed in the 'lib' directory.
+  * For more information and if you experience problems see the INSTALL file.
+ 
+    -> "spxinc" is the path to the SoPlex "src" directory, e.g., "../../soplex/src".
+    -> "libsoplex.*" is the path to the SoPlex library, e.g., "../../soplex/lib/libsoplex.linux.x86.gnu.opt.a"
+    -> "zimplinc" is a directory containing the path to the ZIMPL "src" directory, e.g., "../../zimpl/src".
+    -> "libzimpl.*" is the path to the ZIMPL library, e.g., "../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a"
+  
+  - preparing missing soft-link "lib/spxinc":
+  > Enter soft-link target file or directory for "lib/spxinc" (return if not needed):
+  > ../../soplex/src/ 
+  -> creating softlink "lib/spxinc" -> "../../soplex/src"
+ 
+ 
+  - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.a":
+  > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.a" (return if not needed):
+  > ../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a
+  -> creating softlink "lib/libsoplex.linux.x86_64.gnu.opt.a" -> "../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a"
+ 
+ 
+  - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.so":
+  * this soft-link is not necessarily needed since "lib/libsoplex.linux.x86_64.gnu.opt.a" already exists - press return to skip
+  > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.so" (return if not needed):
+  >
+  * skipped creation of softlink "lib/libsoplex.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
+ 
+ 
+  - preparing missing soft-link "lib/zimplinc/zimpl":
+  > Enter soft-link target file or directory for "lib/zimplinc/zimpl" (return if not needed):
+  ../../zimpl/src/
+   creating softlink "lib/zimplinc/zimpl" -> "../../zimpl/src"
+  
+ 
+  - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.a":
+  > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.a" (return if not needed):
+  > ../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a
+  -> creating softlink "lib/libzimpl.linux.x86_64.gnu.opt.a" -> "../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a"
+  
+ 
+  - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.so":
+  * this soft-link is not necessarily needed since "lib/libzimpl.linux.x86_64.gnu.opt.a" already exists - press return to skip
+  > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.so" (return if not needed):
+  >
+  * skipped creation of softlink "lib/libzimpl.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
+ 
+  ... 
+ 
+  -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/liblpispx-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
+ 
+ * \endverbatim
+ *
+ * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
+ *
+ * Typing <code>make LPS=cpx ZIMPL=false</code>  uses CPLEX as LP solver. You will be asked the following questions on
+ * the first call to "make" (example answers are already given):
+ *
+ * \verbatim
+  > make LPS=cpx ZIMPL=false
+  make[1]: Entering directory `scip-1.2'
+ 
+  - Current settings: LPS=cpx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
+  
+  * SCIP needs some softlinks to external programs, in particular, LP-solvers.
+  * Please insert the paths to the corresponding directories/libraries below.
+  * The links will be installed in the 'lib' directory.
+  * For more information and if you experience problems see the INSTALL file.
+  
+    -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
+    -> "libcplex.*" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a"
+ 
+  - preparing missing soft-link "lib/cpxinc":
+  > Enter soft-link target file or directory for "lib/cpxinc" (return if not needed):
+  > ../../cplex121/include
+  -> creating softlink "lib/cpxinc" -> "../../cplex121/include"
+ 
+ 
+  - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.a":
+  > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.a" (return if not needed):
+  > ../../cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a
+  -> creating softlink "lib/libcplex.linux.x86_64.gnu.a" -> "../../../../adm_cple/cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a"
+ 
+ 
+  - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.so":
+  > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.so" (return if not needed):
+  >
+  * skipped creation of softlink "lib/libcplex.linux.x86_64.gnu.so". Call "make links" if needed later.
+ 
+  ... 
+ 
+  -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/liblpicpx-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
+ 
+ * \endverbatim
+ *
+ * @section COMPILERPROBLEMS Compilation problems:
+ *
+ * - If the soft-link query script does not work on your machine, read step 2 in the \ref INSTALL "INSTALL" file for
+ * instructions on manually creating the soft-links.
+ *
+ * - If you get an error message of the type\n
+ * <code>make: *** No rule to make target `lib/???', needed by `obj/O.linux.x86.gnu.opt/lib/scip/???.o'.  Stop.</code>\n
+ * the corresponding soft-link was not created or points to a wrong location.  Check the soft-link targets in the "lib/"
+ * subdirectory. Try to delete all soft-links from the "lib/" directory\n and call "make links" to generate them
+ * again. If this still fails, read step 2 for instructions on manually\n creating the soft-links.
+ *
+ * - If you get an error message of the type\n
+ * <code>make: *** No rule to make target `make/make.?.?.?.?.?'.  Stop.</code>,\n
+ * the corresponding machine dependent makefile for your architecture and compiler is missing.\n Create one of the given
+ * name in the "make/" subdirectory. You may take\n "make/make.linux.x86.gnu.opt" or any other file in the make
+ * subdirectory as example.\n
+ *
+ * - The readline library seems to differ sligtly on different OS distributions. Some versions do
+ * not support the <code>remove_history()</code> call.  In this case, you have to either add
+ * <code>-DNO_REMOVE_HISTORY</code> to the FLAGS in the appropriate "make/make.*" file, or to
+ * compile with <code>make USRFLAGS=-DNO_REMOVE_HISTORY</code>.  Make sure, the file
+ * "src/scip/dialog.c" is recompiled.  If this doesn't work either, disable the readline library
+ * with <code>make READLINE=false</code>.
+ *
+ * - On some systems, the <code>sigaction()</code> method is not available. In this case, you have
+ * to either add <code>-DNO_SIGACTION</code> to the FLAGS in the appropriate "make/make.*" file, or
+ * to compile with <code>make USRFLAGS=-DNO_SIGACTION</code>.  Make sure, the file
+ * "src/scip/interrupt.c" is recompiled.
+ *
+ * - On some systems, the <code>rand_r()</code> method is not available.  In this case, you have to either add
+ * <code>-DNO_RAND_R</code> to the FLAGS in the appropriate "make/make.*" file, or to compile with
+ * <code>make USRFLAGS=-DNO_RAND_R</code>.  Make sure, the file "src/scip/misc.c" is recompiled.
+ *
+ * - On some systems, the <code>strtok_r()</code> method is not available.  In this case, you have
+ * to either add <code>-DNO_STRTOK_R</code> to the FLAGS in the appropriate make/make.* file, or to
+ * compile with <code>make USRFLAGS=-DNO_STRTOK_R</code>.  Make sure, the file "src/scip/misc.c" is
+ * recompiled.
+ *
+ * - On some systems, the <code>strerror_r()</code> method is not available.  In this case, you have
+ * to either add <code>-DNO_STRERROR_R</code> to the FLAGS in the appropriate "make/make.*" file, or
+ * to compile with <code>make USRFLAGS=-DNO_STRERROR_R</code>.  Make sure, the file
+ * "src/scip/misc.c" is recompiled.
+ *
+ * - On some systems, the option [-e] is not available for the read command.  You have to compile with READ=read.
+ *
+ * - If you encounter other compiler or linker errors, you should recompile with <code>make
+ * VERBOSE=true ...</code> in order to get the full compiler invocation. This might help to fix the
+ * corresponding machine dependent makefile in the make subdirectory.
+ *
+ * @section WINDOWS Remarks on Installing under Windows using MinGW
+ *
+ * To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS
+ * from <a href="http://www.mingw.org">www.mingw.org</a> .
+ *
+ * First install MSYS, then MinGW to the mingw folder inside the msys folder.
+ * Now you need to install the following packages to the mingw folder:
+ * - zlib (or use ZLIB=false)
+ * - pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
+ *
+ * After calling <code>make clean</code> in the ZIMPL folder you will also need flex and bison to
+ * remake ZIMPL. We recommend NOT to use <code>"make clean"</code> inside the ZIMPL-folder if you do
+ * not have these packages installed.
+ *
+ * You can download these additional packages from <a href="http://gnuwin32.sourceforge.net/packages.html">here</a> 
+ * or compile the source on your own from their homepages.
+ *
+ * Second you need to copy the file <code>sh.exe</code> to <code>bash.exe</code> otherwise various
+ * scripts (including makefiles) will not work.  Normally <code>unistd.h</code> covers also the
+ * getopt-options, but for mingw you need to add the entry <code>\#include <getopt.h></code> into
+ * "/mingw/include/unistd.h" after the other include-entries (if not present).
+ *
+ * Finally, there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in
+ * SCIP (otherwise use <code>ZIMPL=false</code> as parameter with the make-call): the
+ * <code>gmplib</code> from <a href="http://www.gmplib.org">gmplib.org</a>. The command
+ * <code>./configure --prefix=/mingw ; make ; make install</code> should succeed without problems
+ * and installs the gmplib to the mingw folder.
+ *
+ * Now <code>make READLINE=false</code> should be compiling without errors.  Please note that we
+ * do NOT support creating the doxygen documentation and readline-usage under windows.
+ *
+ *
+ * @section RUN How to run SCIP after successful compiling SCIP
+ *
+ * To run the program enter <code>bin/scip.\$(OSTYPE).\$(ARCH).\$(COMP).\$(OPT).\$(LPS)</code>
+ * (e.g. <code>bin/scip.linux.x86_64.gnu.opt.spx</code>) or just <code>bin/scip</code> for the last compiled version.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -224,8 +429,9 @@
  *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
  *   object.
  *   For example, all methods operating on variables are grouped together.
- * - The files "pub_<...>.h" contain methods that perform "easy" operations that only affect the corresponding
- *   objects.
+
+ * - The files \ref PUBLICMETHODS "pub_<...>.h" contain methods that perform "easy" operations that only 
+ *   affect the corresponding objects.
  *   Usually, with these methods you can access the data of the object.
  *   For example, in "pub_var.h" you find methods to get information about a variable.
  *
@@ -233,18 +439,17 @@
  * as well as methods for sorting, numerics, random numbers, string operations, and file operations.
  *
  * If you are looking for a description of a callback method of a plugin that you want to implement, you have to
- * look at the corresponding "type_<...>.h".
+ * look at the corresponding \ref TYPEDEFINITIONS "type_<...>.h".
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CONS How to add constraint handlers
  *
- * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.
- * A single constraint handler is responsible for all the constraints belonging to his constraint class.
- * For example, there is one \ref cons_knapsack.c "knapsack constraint handler" that ensures that only solutions are accepted that
- * satisfy all the knapsack constraints in the model. 
- * \n
- * A complete list of all constraint handlers contained in this release can be found \ref CONSHDLRS "here".
+ * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.  A single
+ * constraint handler is responsible for all the constraints belonging to his constraint class.  For example, there is
+ * one \ref cons_knapsack.c "knapsack constraint handler" that ensures that only solutions are accepted that satisfy all
+ * the knapsack constraints in the model. \n A complete list of all constraint handlers contained in this release can be
+ * found \ref CONSHDLRS "here".
  *
  * In the following, we explain how the user can add an own constraint handler.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
@@ -942,6 +1147,32 @@
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
  * which are given in CIP format.
+ *
+ * @subsection CONSCOPY
+ *
+ * The CONSCOPY callback method is used if constraints should get copied from one SCIP environment into another SCIP
+ * environment. To do so, this method comes with the necessary parameters such as a map mapping the variables from the 
+ * source SCIP environment to the corresponding variables of the target SCIP environment. The following code line shows
+ * how to get the corresponding target variable of given source variable:
+ *
+ * \code
+ * target = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, source);
+ * \endcode
+ *
+ * Furthermore, if the copy process was successful the result pointer success has to be set to TRUE.
+ * For an example implementation we refer to cons_linear.c.
+ *
+ * Additional documentation and the complete list of all parameters can be found in the file in type_cons.h. 
+ *
+ * @subsection CONSPARSE
+ *
+ * This method is the counter part to CONSPRINT. The ideal idea is that a constraint handler is able to parse the output
+ * which it generated via the CONSPRINT method and creates the corresponding constraint. If the parsing was successfully
+ * the result pointer success should be set to TRUE. An example implementation can be found in the \ref cons_linear.c
+ * "linear constraint handler".
+ *
+ * Additional documentation and the complete list of all parameters can be found in the file in type_cons.h. 
+ * 
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1092,9 +1323,6 @@
  * there might exist additional variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
  * In this case, which sometimes is referred to as "early branching", the lp solution will not be used as a lower bound. 
  * The pricer can, however, store a valid lower bound in the lowerbound pointer.
- * If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
- * Otherwise, SCIP will use its default branching rules (which all branch on variables). This
- * could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
  *
  * Pricers usually need the dual LP solution as input for the pricing algorithm.
  * Since SCIP does not know the semantics of the individual constraints in the problem, the dual solution
@@ -1188,6 +1416,23 @@
  *
  * The PRICEREXITSOL callback is executed before the branch and bound process is freed.
  * The pricer should use this call to clean up its branch and bound data, which was allocated in PRICERINITSOL.
+ *
+ * @section PRICER_REMARKS Further remarks
+ *
+ * If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
+ * Otherwise, SCIP will use its default branching rules, if necessary(which all branch on variables). This
+ * could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
+ *
+ * Note that if the original problem is a maximization problem, SCIP will transform the problem into a minimization 
+ * problem by multiplying the objective function by -1. The pricer has to consider this and thus, the original 
+ * objective function value of all variables created during the solving process should also be multiplied by -1.
+ *
+ * In some cases, bounds on variables are enforced by constraints of the problem. Therefore, these bounds do not need to be 
+ * added to the LP explicitly, which has the advantage that the pricing routine does not need to respect the corresponding dual values.
+ * We call these bounds lazy bounds, they may be set by SCIPchgVarLbLazy() and SCIPchgVarUbLazy() for upper or lower bounds, respectively.
+ * If the lazy bound is tighter than the local bound, the corresponding bound is not put into the LP.
+ * Attention: The lazy bounds need to be valid for each feasible LP solution. If the objective function implies bounds on the variables for 
+ * each optimal LP solution, but these bounds may be violated for arbitrary LP solutions, these bounds must not be declared lazy!
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2099,7 +2344,7 @@
  * to be processed. The ordering relation of the tree's leaves for storing them in the leave priority queue is also
  * defined by the node selectors.  
  * \n
- * A complete list of all propagators contained in this release can be found \ref NODESELECTORS "here".
+ * A complete list of all node selectors contained in this release can be found \ref NODESELECTORS "here".
  *
  * In the following, we explain how the user can add an own node selector.
  * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
@@ -3348,6 +3593,207 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page EVENT How to add event handler
+ *
+ * While solving a constraint integer program, SCIP drops thousands of events such as SCIP_EVENTTYPE_VARFIXED (a
+ * complete list of all events is given in type_event.h). These events can be caught and used to do something after a
+ * certain event happens. Events can be used to speed up the solution process. For example, the set partitioning
+ * constraint is only worth to propagate if one of the involved variables is fixed. This can be detected by
+ * catching the event SCIP_EVENTTYPE_VARFIXED. To be able to catch an event it is necessary to write an event handler
+ * which defines what to do after a certain event was caught.
+ *
+ * In the following, we explain how the user can add an own event handler. We give the explanation for creating an own
+ * source file for each additional event handler. Of course, you can collect different event handlers in one source file
+ * or you can put the event handler directly into the constraint handler.  In a \ref EVENTUSAGE "second step" we discuss
+ * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the exiting
+ * types of events.
+ *
+ * Take src/scip/cons_logior.c, where the event handler is directly included into the constraint handler. As all other
+ * default plugins, the event handlers are written in C. C++ users can easily adapt the code by using the ObjEventhdlr
+ * wrapper base class and implement the scip_...() virtual methods instead of the SCIP_DECL_EVENT... callback methods.
+ * 
+ * Additional documentation for the callback methods of an event handler can be found in the file type_event.h.
+ *
+ * Here is what you have to do to implement an event handler (assuming your event handler is named "bestsol"):
+ * -# Copy the template files src/scip/event_xxx.c and src/scip/event_xxx.h into files named "event_bestsol.c"
+ *    and "event_bestsol.h".
+      \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "bestsol".
+ * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
+ * -# Implement the \ref EVENT_INTERFACE "interface methods".
+ * -# Implement the \ref EVENT_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref EVENT_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ *
+ *
+ * @section EVENTHDLR_PROPERTIES Properties of a Event Handler
+ *
+ * At the top of the new file "event_bestsol.c" you can find the event handler properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the event handler properties by calling the constructor
+ * of the abstract base class ObjEventhdlr from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par EVENT_NAME: the name of the event handler.
+ * This name has to be unique with respect to all other event handlers. If you are searching for an event handler with
+ * SCIPfindEventhdlr(), this name is looked up.
+ *
+ * \par EVENT_DESC: the description of the display column.
+ * This string is printed as description of the event handler.
+ *
+ * @section EVENTHDLR_DATA Event Handler Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_EventhdlrData".
+ * In this data structure, you can store the data of your event handler. For example, you should store the adjustable 
+ * parameters of the event handler in this data structure.
+ * If you are using C++, you can add event handler data as usual as object variables to your class.
+ * \n
+ * Defining event handler data is optional. You can leave the struct empty.
+ *
+ *
+ * @section EVENT_INTERFACE Interface Methods
+ *
+ * At the bottom of "event_bestsol.c" you can find the interface method SCIPincludeEventHdlrBestsol(), which also
+ * appears in "event_bestsol.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the event handler by calling the method
+ * SCIPincludeEvent().
+ *
+ * The interface method is called by the user, if he wants to include the event handler, i.e., if he wants to use the
+ * event handler in his application.
+ *
+ * If you are using event handler data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_EventhdlrData afterwards.
+ *
+ * Although this is very uncommon, you may also add user parameters for your event handler, see the method
+ * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.c "knapsack constraint handler" for an example.
+ *
+ * 
+ * @section EVENT_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Event Handler
+ *
+ * Event handler plugins have only one fundamental callback method, namely the \ref EVENTEXEC method.  This method has
+ * to be implemented for every event handler; the other callback methods are optional.  In the C++ wrapper class
+ * ObjEventhdlr, the scip_exec() method (which corresponds to the \ref EVENTEXEC callback) is a virtual abstract member
+ * function.  You have to implement it in order to be able to construct an object of your event handler class.
+ *
+ * Additional documentation to the callback methods can be found in type_event.h.
+ *
+ * @subsection EVENTEXEC
+ *
+ * The EVENTEXEC callback is called after the requested event happened. Then the event handler can do some action in
+ * reaction to the event. 
+ *
+ * Typical the execution method sets a parameter to TRUE to indicate later in solving process that something happened
+ * which should be analyzed further. In the \ref cons_knapsack.c "knapsack constraint handler" you find such a typical
+ * example.
+ *
+ * @section EVENT_ADDITIONALCALLBACKS Additional Callback Methods of a Event Handler
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection EVENTFREE
+ *
+ * If you are using event handler data, you have to implement this method in order to free the event handler data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_EVENTFREE(eventFreeBestsol)
+ * {
+ *    SCIP_EVENTHDLRDATA* eventhdlrdata;
+ *  
+ *    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+ *    assert(eventhdlrdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &eventhdlrdata);
+ *
+ *    SCIPeventhdlrSetData(eventhdlr, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you have allocated memory for fields in your event handler data, remember to free this memory 
+ * before freeing the event handler data itself. 
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection EVENTINIT
+ *
+ * The EVENTINIT callback is executed after the problem was transformed.
+ * The event handler may, e.g., use this call to initialize its event handler data.
+ *
+ * @subsection EVENTEXIT
+ *
+ * The EVENTEXIT callback is executed before the transformed problem is freed.
+ * In this method, the event handler should free all resources that have been allocated for the solving process in 
+ * \ref EVENTINIT.
+ *
+ * @subsection EVENTINITSOL
+ *
+ * The EVENTINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
+ * begin. The event handler may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection EVENTEXITSOL
+ *
+ * The EVENTEXITSOL callback is executed before the branch and bound process is freed. The event handler should use this 
+ * call to clean up its branch and bound data specific data.
+ *
+ * @section EVENTUSAGE Catching and Dropping Events
+ *
+ * After you have implemented the event handler, you have to tell SCIP for which events this event handler should be
+ * used. This can be a general events, such as <code>SCIP_EVENTTYPE_BESTSOLFOUND</code>, or a variable event which is the most common
+ * way. 
+ *
+ * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an even and
+ * SCIPdropEvent() to release this event later.
+ *
+ * \code
+ * SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * \code
+ * SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * If you want trigger some variable event, you use the method SCIPcatchVarEvent() to attach the variable event and
+ * SCIPdropVarEvent() to drop it later.
+ * 
+ * \code
+ * SCIP_CALL( SCIPcatchVarEvent( scip, var, SCIP_EVENTTYPE_VARFIXED, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * \code
+ * SCIP_CALL( SCIPdropVarEvent( scip, var, SCIP_EVENTTYPE_VARFIXED, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * @section EVENTTYPES Event types
+ *
+ * All available events are listed in type_event.h. There are atomic events such as <code>SCIP_EVENTTYPE_VARFIXED</code>
+ * and combined events such as <code>SCIP_EVENTTYPE_VARCHANGED</code>. The events are encoded via bit masks. Each atomic
+ * event has a unique power of two. This allows to combine the atomic events.
+ *
+ * SCIP only throws atomic events. However, an event handler might be interested in bunch of events. Through the
+ * underlying bit masks it is possible to combine the atomic events. For example, <code>SCIP_EVENTTYPE_VARCHANGED</code>
+ * is an event which combines the events <code>SCIP_EVENTTYPE_VARFIXED</code>, <code>SCIP_EVENTTYPE_VARUNLOCKED</code>,
+ * <code>SCIP_EVENTTYPE_OBJCHANGED</code>, <code>SCIP_EVENTTYPE_GBDCHANGED</code>,
+ * <code>SCIP_EVENTTYPE_DOMCHANGED</code>, and <code>SCIP_EVENTTYPE_IMPLADDED</code>.
+ *
+ * \code
+ * #define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED 
+ *                                    | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
+ * \endcode
+ *
+ * Depending on the event type, the event offers different information. The methods which are allowed to use to get
+ * access to these information are given in pub_event.h.
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -3432,7 +3878,7 @@
  *    and run the scip interactive shell to solve p0033.mps from the miplib, we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2009 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2010 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  * 
  * user parameter file <scip.set> not found - using default parameters
  * 
@@ -3531,7 +3977,7 @@
  *  \n
  *  All test problems have to be listed by a relative path, e.g., "../../problems/instance1.lp" 
  *  or absolute path, e.g., "/home/problems/instance2.mps" in this file. Thereby, 
- *  only one problem pre line (since the command <code>cat</code> is used to parse this file). 
+ *  only one problem per line (since the command <code>cat</code> is used to parse this file).
  *  Note that these problem have to be readable for SCIP in order to solve them. 
  *  However, you can merge different file formats.
  *
@@ -3630,7 +4076,7 @@
  *
  *  To run SCIP with a custom settings file, say for example <tt>fast.set</tt>, we call
  *
- *  <code> make TEST=testrun SETTING=fast test</code>
+ *  <code> make TEST=testrun SETTINGS=fast test</code>
  *
  *  in the SCIP root directory.
  *
@@ -3775,11 +4221,47 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page CHG3 Interface changes since SCIP 1.1
+/**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
  *
- * - The callback \ref PRICERREDCOST in the pricers got two new parameters: A result pointer and a pointer for providing a 
- *   lower bound. For details, see the documentation of \ref PRICERREDCOST. 
  *
+ * @section CHGCALLBACKS New and changed callbacks
+ *
+ * - The callback SCIP_DECL_PRICERREDCOST(x) in the \ref PRICER "pricers" has two new parameters: 
+ *    - A <code>result</code> pointer determines whether the pricer guarantees that there exist no more variables. This allows for early branching.
+ *    - A pointer for providing a lower bound. 
+ *
+ * - The \ref CONS "constraint handlers" have two new callback methods (see type_cons.h for more details).
+ *    - SCIP_DECL_CONSCOPY(x) - this method can be used to copy a constraint.
+ *    - SCIP_DECL_CONSPARSE(x) - this method can be used to parse a constraint in CIP format.
+ *
+ *  @section CHGINTERFUNC New parameters in interface methods
+ *
+ * - SCIPcalcMIR() in scip.h has two new parameter "mksetcoefsvalid" and "sol". The parameter "mksetcoefsvalid" stores 
+ *   whether the coefficients of the mixed knapsack set ("mksetcoefs") computed in SCIPlpCalcMIR() are valid. If the mixed knapsack constraint obtained after aggregating LP rows 
+ *   is empty or contains too many nonzero elements the generation of the <b>c-MIR cut</b> is aborted in SCIPlpCalcMIR() and "mksetcoefs" is not valid. 
+ *   The input parameter "sol" can be used to separate a solution different from the LP solution.
+ *
+ * - SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() in scip.h have a new parameter "sol". It can be used to obtain the <b>closest variable bound</b> w.r.t. a solution different from the LP solution.
+ *
+ *  @section MISCELLANEOUS Miscellaneous
+ *
+ * - A significant change for <b>C++ users</b> is that all include files of SCIP
+ *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
+ * 
+ * For further release notes we refer the \ref RELEASENOTES "Release notes".
+ */
+
+/* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
+ *
+ * - SCIP has rudimentary support to solve quadratic nonlinear integer programs - see cons_quadratic.c.
+ *
+ * - There are LP-interfaces to QSopt and Gurobi (rudimentary).
+ *
+ * - SCIP can now handle indicator constraints (reading (from LP, ZIMPL), writing, solving, ...) - see cons_indicator.c.
+ *
+ * - One can now do "early branching" usefull for column generation.
+ *
+ * - Can now run a black-box lexicographic dual simplex algorithm.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3811,55 +4293,138 @@
  */
 
 
+/**@page AUTHORS SCIP Authors
+ * \htmlinclude authors.inc  
+ */
+
+/**@page INSTALL Installation information
+ * \verbinclude INSTALL  
+ */
+
+/**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-1.2
+ *
+ * \verbinclude SCIP-release-notes-1.1
+ */
+
+/**@defgroup PUBLICMETHODS Public Methods 
+ * @brief This page lists headers which contain methods that can be used via the callable library.
+ *
+ * All the headers listed above include functions which are allowed to be called by external users. Besides those
+ * functions it is also valid to call methods that are listed in on of the headers of the (default) plugins, e.g.,
+ * cons_linear.h.
+ *
+ * If you are locking for information about a particular object of SCIP, such as a variable or a constraint, you should first search
+ * the corresponding "pub_<...>.h" header. E.g., in case of a constraint pub_cons.h. If you need some information about the
+ * overall problem, you should start searching in scip.h.
+ *
+ * Since there is a huge amount of methods in scip.h, these methods are grouped into different categories. These
+ * categories are:
+ *
+ * - Memory Management 
+ * - Miscellaneous Methods
+ * - General SCIP Methods
+ * - Message Output Methods
+ * - Parameter Methods
+ * - SCIP User Functionality Methods: Managing Plugins
+ * - User Interactive Dialog Methods 
+ * - Global Problem Methods
+ * - Local Subproblem Methods
+ * - Solve Methods
+ * - Variable Methods
+ * - Conflict Analysis Methods
+ * - Constraint Methods
+ * - LP Methods
+ * - LP Column Methods
+ * - LP Row Methods
+ * - Cutting Plane Methods 
+ * - LP Diving Methods
+ * - Probing Methods 
+ * - Branching Methods
+ * - Primal Solution Methods 
+ * - Event Methods
+ * - Tree Methods
+ * - Statistic Methods
+ * - Timing Methods 
+ * - Numerical Methods
+ * - Dynamic Arrays
+ *
+ */
+
+/**@defgroup TYPEDEFINITIONS Type Definitions
+ * @brief This page lists headers which contain type definitions of callback methods.
+ *
+ * All headers above include the descriptions of callback methods of
+ * certain plugin. For more detail see the corresponding header.
+ */
+
 /**@defgroup BRANCHINGRULES Branching Rules 
- * @brief In the following you find a list of all branching rule which are currently available.
+ * @brief This page contains a list of all branching rule which are currently available.
  */
 
 /**@defgroup CONSHDLRS  Constraint Handler 
- * @brief In the following you find a list of all constraint handlers which are currently available.
+ * @brief This page contains a list of all constraint handlers which are currently available.
  */
 
 /**@defgroup DIALOGS Dialogs 
- * @brief In the following you find a list of all dialogs which are currently available.
+ * @brief This page contains a list of all dialogs which are currently available.
  */
 
 /**@defgroup DISPLAYS Displays 
- * @brief In the following you find a list of all displays (output columns)  which are currently available.
+ * @brief This page contains a list of all displays (output columns)  which are currently available.
  */
 
 /**@defgroup FILEREADERS File Readers 
- * @brief In the following you find a list of all file readers which are currently available.
+ * @brief This page contains a list of all file readers which are currently available.
  */
  
 /**@defgroup LPIS LP Interfaces
- * @brief In the following you find a list of all LP instances which are currently available.
+ * @brief This page contains a list of all LP instances which are currently available.
  */
 
 /**@defgroup NODESELECTORS Node Selectors
- * @brief In the following you find a list of all node selectors which are currently available.
+ * @brief This page contains a list of all node selectors which are currently available.
+ */
+
+/**@defgroup NLPIS NLP Interfaces
+ * @brief This page contains a list of all NLP instances which are currently available.
  */
 
 /**@defgroup PRESOLVERS Presolvers
- * @brief In the following you find a list of all presolvers which are currently available.
+ * @brief This page contains a list of all presolvers which are currently available.
  */
 
 /**@defgroup PRICERS Pricers
- * @brief In the following you find a list of all pricers which are currently available.
+ * @brief This page contains a list of all pricers which are currently available.
  */
 
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
- * @brief In the following you find a list of all primal heuristics which are currently available.
+ * @brief This page contains a list of all primal heuristics which are currently available.
  */
 
 /**@defgroup PROPAGATORS Propagators
- * @brief In the following you find a list of all propagators which are currently available.
+ * @brief This page contains a list of all propagators which are currently available.
  */
 
 /**@defgroup RELAXATORS Relaxators
- * @brief In the following you find a list of all relaxators which are currently available.
+ * @brief This page contains a list of all relaxators which are currently available.
  */
 
 /**@defgroup SEPARATORS Separators
- * @brief In the following you find a list of all separators  which are currently available.
+ * @brief This page contains a list of all separators  which are currently available.
  */
 
+/**@page PARAMETERS List of all SCIP parameters
+ *
+ * This page list all parameters of the current SCIP version. This list can 
+ * easily be generated by SCIP via the interactive shell using the following command:
+ *
+ * <code>SCIP&gt; set save &lt;file name&gt;</code>
+ *
+ * or via the function call:
+ *
+ * <code>SCIP_CALL( SCIPwriteParams(scip, &lt;file name&gt;, TRUE, FALSE) );</code>
+ *
+ * \verbinclude parameters.set
+ */

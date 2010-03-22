@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.42.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.42.2.2 2010/03/22 16:05:29 bzfwolte Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -25,7 +25,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/def.h"
+#include "scip/scip.h"
 #include "scip/message.h"
 #include "scip/set.h"
 #include "scip/paramset.h"
@@ -1900,9 +1900,6 @@ SCIP_RETCODE paramsetParse(
    assert(paramset != NULL);
    assert(line != NULL);
 
-   paramname = NULL;
-   paramvaluestr = NULL;
-
    /* find the start of the parameter name */
    while( *line == ' ' || *line == '\t' || *line == '\r' )
       line++;
@@ -2032,27 +2029,27 @@ SCIP_RETCODE SCIPparamsetRead(
       return SCIP_NOFILE;
    }
 
-   /* read the parameters from the file */
+   /*Â read the parameters from the file */
    lineno = 0;
-   while( fgets(line, sizeof(line), file) != NULL )
+   retcode = SCIP_OKAY;
+   while( fgets(line, sizeof(line), file) != NULL && retcode == SCIP_OKAY )
    {
       lineno++;
       retcode = paramsetParse(paramset, set, line);
-      if ( retcode != SCIP_OKAY )
-      {
-	 fclose(file);
-      
-	 if( retcode == SCIP_PARSEERROR )
-	 {
-	    SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
-	 }
-	 SCIP_CALL( retcode );
-      }
    }
 
    /* close input file */
    fclose(file);
 
+   if( retcode == SCIP_PARSEERROR )
+   {
+      SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
+   }
+   else
+   {
+      SCIP_CALL( retcode );
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -2083,7 +2080,20 @@ SCIP_RETCODE SCIPparamsetWrite(
    else
       file = NULL;
 
-   /* write the parameters to the file */
+   if( comments )
+   {
+      /* display the SCIP version as comment in the first line */
+      if( SCIP_SUBVERSION == 0 )
+         SCIPmessageFPrintInfo(file, "# SCIP version %d.%d.%d\n", 
+            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10);
+      else
+         SCIPmessageFPrintInfo(file, "# SCIP version %d.%d.%d.%d\n", 
+            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10, SCIP_SUBVERSION);
+      
+      SCIPmessageFPrintInfo(file, "\n");
+   }
+   
+   /*Â write the parameters to the file */
    for( i = 0; i < paramset->nparams; ++i )
    {
       SCIP_CALL( paramWrite(paramset->params[i], file, comments, onlychanged) );
@@ -2107,7 +2117,7 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 {
    int i;
 
-   /* set all parameters to their default values */
+   /*Â set all parameters to their default values */
    for( i = 0; i < paramset->nparams; ++i )
    {
       SCIP_CALL( SCIPparamSetToDefault(paramset->params[i], scip) );
@@ -2115,6 +2125,105 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 
    return SCIP_OKAY;
 }
+
+/** sets heuristics to aggressive */
+SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_HEUR** heurs;
+   SCIP_PARAM* param;
+   char paramname[SCIP_MAXSTRLEN];
+   int nheurs;
+   int i;
+
+   heurs = SCIPgetHeurs(scip);
+   nheurs = SCIPgetNHeurs(scip);
+
+   for( i = 0; i < nheurs; ++i )
+   {
+      const char* heurname;
+      heurname = SCIPheurGetName(heurs[i]);
+
+      /* get frequency parameter of heuristic */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+ 
+      if( param != NULL )
+      {
+         int deffreq;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         deffreq = SCIPparamGetIntDefault(param);
+
+         /* change frequnecy to half of the default value */
+         if( deffreq == -1 || deffreq == 0 )
+         {
+            int newfreq;
+
+            newfreq = (int) SCIPceil(scip, deffreq/2.0);
+            newfreq = MAX(newfreq, 1);
+            SCIP_CALL( SCIPparamSetInt(param, scip, newfreq) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPparamSetInt(param, scip, 20) );
+         }
+      }
+
+      /* get LP iteration offset parameter of heuristic */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+      /* multiply LP iteration offset by 1.5 */
+      if( param != NULL )
+      {
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         SCIP_CALL( SCIPparamSetInt(param, scip, 1.5*SCIPparamGetIntDefault(param)) );
+      }
+
+      /* get LP iteration quotient parameter of heuristic */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+      /* multiply LP iteration quotient by 1.5 */
+      if( param != NULL )
+      {
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL);
+         SCIP_CALL( SCIPparamSetReal(param, scip, 1.5*SCIPparamGetRealDefault(param)) );
+      }
+   }  
+
+   /* set specific parameters for RENS heuristic */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/rens/nodesofs");
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
+      SCIP_CALL( SCIPparamSetLongint(param, scip, 2000) );
+   }
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/rens/minfixingrate");
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL);
+      SCIP_CALL( SCIPparamSetReal(param, scip, 0.3) );
+   }
+
+   /* set specific parameters for Crossover heuristic */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/crossover/nwaitingnodes");
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
+      SCIP_CALL( SCIPparamSetLongint(param, scip, 20) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** returns the array of parameters */
 SCIP_PARAM** SCIPparamsetGetParams(

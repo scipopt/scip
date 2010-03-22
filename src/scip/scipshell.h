@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.h,v 1.2.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipshell.h,v 1.2.2.2 2010/03/22 16:05:35 bzfwolte Exp $"
 
 /**@file   scipshell.h
  * @brief  SCIP command line interface
@@ -26,6 +26,9 @@
 
 #include "scip/type_retcode.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
 extern
@@ -46,5 +49,8 @@ SCIP_RETCODE SCIPrunShell(
    const char*                defaultsetname      /**< name of default settings file */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

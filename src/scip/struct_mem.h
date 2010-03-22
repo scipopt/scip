@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_mem.h,v 1.9.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_mem.h,v 1.9.2.2 2010/03/22 16:05:40 bzfwolte Exp $"
 
 /**@file   struct_mem.h
  * @brief  datastructures for block memory pools and memory buffers
@@ -29,6 +29,9 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_mem.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** various block memory buffers */
 struct SCIP_Mem
@@ -38,5 +41,8 @@ struct SCIP_Mem
    BMS_BLKMEM*           solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

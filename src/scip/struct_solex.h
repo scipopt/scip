@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_solex.h,v 1.1.2.1 2010/03/02 17:20:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_solex.h,v 1.1.2.2 2010/03/22 16:05:41 bzfwolte Exp $"
 
 /**@file   struct_solex.h
  * @brief  datastructures for storing exact primal CIP solutions
@@ -32,7 +32,9 @@
 #include "scip/type_solex.h"
 #include "scip/type_heur.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** exact primal CIP solution
  *
@@ -50,5 +52,8 @@ struct SCIP_Solex
    SCIP_SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

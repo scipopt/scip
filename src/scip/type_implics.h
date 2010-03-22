@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_implics.h,v 1.7.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_implics.h,v 1.7.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_implics.h
  * @brief  type definitions for implications, variable bounds, and cliques
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_IMPLICS_H__
 #define __SCIP_TYPE_IMPLICS_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_VBounds SCIP_VBOUNDS;         /**< variable bounds of a variable x in the form x <= c*y or x >= c*y */
 typedef struct SCIP_Implics SCIP_IMPLICS;         /**< implications in the form x <= 0 or x >= 1 ==> y <= b or y >= b for x binary, NULL if x nonbinary */
@@ -32,5 +35,8 @@ typedef struct SCIP_Clique SCIP_CLIQUE;           /**< single clique, stating th
 typedef struct SCIP_CliqueTable SCIP_CLIQUETABLE; /**< collection of cliques */
 typedef struct SCIP_CliqueList SCIP_CLIQUELIST;   /**< list of cliques for a single variable */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

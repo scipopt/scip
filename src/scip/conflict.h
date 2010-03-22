@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.39.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.39.2.2 2010/03/22 16:05:15 bzfwolte Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -37,7 +37,9 @@
 #include "scip/type_conflict.h"
 #include "scip/pub_conflict.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Conflict Handler
@@ -533,5 +535,8 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

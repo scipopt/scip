@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.66.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.66.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   pub_var.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for problem variables
  * @author Tobias Achterberg
  */
@@ -39,7 +40,9 @@
 #include "scip/history.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * methods for variables 
@@ -69,17 +72,22 @@ SCIP_Bool SCIPvarMayRoundUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** marks the variable to have a lazy lower bound, this only possible if the variable is not in the LP yet */
+/** compares the index of two variables, only active or negated variables are allowed, if a variable
+ *  is negated then the index of the corresponding active variable is taken, returns -1 if first is
+ *  smaller than, and +1 if first is greater than second variable index; returns 0 if both indices
+ *  are equal, which means both variables are equal
+ */
 extern
-SCIP_RETCODE SCIPvarMarkLazyLb(
-   SCIP_VAR*             var                 /**< problem variable */
+int SCIPvarCompareActiveAndNegated(
+   SCIP_VAR*             var1,               /**< first problem variable */
+   SCIP_VAR*             var2                /**< second problem variable */
    );
-
-/** marks the variable to have a lazy upper bound, this only possible if the variable is not in the LP yet */
+   
+/** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
+ *  variables are handled as the same variables
+ */
 extern
-SCIP_RETCODE SCIPvarMarkLazyUb(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
+SCIP_DECL_SORTPTRCOMP(SCIPvarCompActiveAndNegated);
 
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
  *  variable index; returns 0 if both indices are equal, which means both variables are equal
@@ -100,7 +108,21 @@ SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
+/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *  SCIPvarFlattenAggregationGraph()
+ *  gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and updates the given
+ *  negation status of each variable
+ */
+extern
+SCIP_RETCODE SCIPvarsGetProbvarBinary(
+   SCIP_VAR***           vars,               /**< pointer to binary problem variables */
+   SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
+   int                   nvars               /**< number of variables and values in vars and negated array */
+   );
+
+/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *  SCIPvarFlattenAggregationGraph()
+ *  gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
  *  negation status
  */
 extern
@@ -361,16 +383,6 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether variable has lazy lower bound */
-SCIP_Bool SCIPvarLazyLb(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns whether variable has lazy upper bound */
-SCIP_Bool SCIPvarLazyUb(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** gets unique index of variable */
 extern
 int SCIPvarGetIndex(
@@ -500,6 +512,18 @@ SCIP_Real SCIPvarGetLbLocal(
 /** gets current upper bound of variable */
 extern
 SCIP_Real SCIPvarGetUbLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets lazy lower bound of variable */
+extern
+SCIP_Real SCIPvarGetLbLazy(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets lazy upper bound of variable */
+extern
+SCIP_Real SCIPvarGetUbLazy(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -680,8 +704,6 @@ SCIP_Real SCIPvarGetLPSol(
 #define SCIPvarIsDeleted(var)           (var)->deleted
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
 #define SCIPvarDoNotMultaggr(var)       (var)->donotmultaggr
-#define SCIPvarLazyLb(var)              (var)->lazylb
-#define SCIPvarLazyUb(var)              (var)->lazyub
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar
@@ -709,6 +731,8 @@ SCIP_Real SCIPvarGetLPSol(
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
 #define SCIPvarGetLbLocal(var)          (var)->locdom.lb
 #define SCIPvarGetUbLocal(var)          (var)->locdom.ub
+#define SCIPvarGetLbLazy(var)           (var)->lazylb
+#define SCIPvarGetUbLazy(var)           (var)->lazyub
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
 #define SCIPvarGetBranchDirection(var)  (var)->branchdirection
@@ -1096,6 +1120,10 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
 #define SCIPdomchgGetNBoundchgs(domchg)        ((domchg) != NULL ? (domchg)->domchgbound.nboundchgs : 0)
 #define SCIPdomchgGetBoundchg(domchg, pos)     (&(domchg)->domchgbound.boundchgs[pos])
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

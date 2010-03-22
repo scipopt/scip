@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86.gnu.opt,v 1.14.2.1 2009/06/19 07:53:34 bzfwolte Exp $
-FLAGS		+=	-DNDEBUG # -DROUNDING_FE
-OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+#--- $Id: make.linux.x86.gnu.opt,v 1.14.2.2 2010/03/22 16:05:07 bzfwolte Exp $
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
+OFLAGS		+=	-O3 -mtune=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs

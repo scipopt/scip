@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86_64.gnu.nobufmem,v 1.5.2.2 2009/06/19 07:53:35 bzfwolte Exp $
-FLAGS		+=	-DNDEBUG -DSCIP_NOBUFFERMEM # -DROUNDING_FE
+#--- $Id: make.linux.x86_64.gnu.nobufmem,v 1.5.2.3 2010/03/22 16:05:08 bzfwolte Exp $
+FLAGS		+=	-DNDEBUG -DSCIP_NOBUFFERMEM -DROUNDING_FE
 OFLAGS		+=	-O3 -m64 -march=nocona -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)

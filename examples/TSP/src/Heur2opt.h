@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.h,v 1.8.2.1 2009/06/19 07:53:33 bzfwolte Exp $"
+#pragma ident "@(#) $Id: Heur2opt.h,v 1.8.2.2 2010/03/22 16:05:04 bzfwolte Exp $"
 
 /**@file   Heur2opt.h
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -42,7 +42,7 @@ namespace tsp
       /** default constructor */
       Heur2opt(
       )
-         : ObjHeur("2opt", "2-Opt heuristic for TSPs", 't',-1000000, 1, 0, -1, SCIP_HEURTIMING_AFTERNODE),
+         : ObjHeur("2opt", "2-Opt heuristic for TSPs", 'K',-1000000, 1, 0, -1, SCIP_HEURTIMING_AFTERNODE),
            graph_(0)
       {
       }

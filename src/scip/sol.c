@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.81.2.4 2009/08/05 10:10:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.81.2.5 2010/03/22 16:05:38 bzfwolte Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -31,6 +31,7 @@
 #include "scip/clock.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
+#include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
@@ -138,6 +139,9 @@ SCIP_Real solGetArrayVal(
       case SCIP_SOLORIGIN_LPSOL:
          return SCIPvarGetLPSol(var);
 
+      case SCIP_SOLORIGIN_RELAXSOL:
+         return SCIPvarGetRelaxSolTransVar(var);
+
       case SCIP_SOLORIGIN_PSEUDOSOL:
          return SCIPvarGetPseudoSol(var);
 
@@ -188,6 +192,14 @@ SCIP_RETCODE solUnlinkVar(
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
       if( (set->misc_exactsolve && solval != 0.0) || (!set->misc_exactsolve && !SCIPsetIsZero(set, solval)) )
+      {
+         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
+      }
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_RELAXSOL:
+      solval = SCIPvarGetRelaxSolTransVar(var);
+      if( !SCIPsetIsZero(set, solval) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
@@ -256,7 +268,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree,TRUE);
+   solStamp(*sol, stat, tree, TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -345,6 +357,28 @@ SCIP_RETCODE SCIPsolCreateLPSol(
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, prob, tree, lp) );
+
+   return SCIP_OKAY;
+}
+
+/** creates primal CIP solution, initialized to the current relaxation solution */
+SCIP_RETCODE SCIPsolCreateRelaxSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(relaxation != NULL);
+   assert(SCIPrelaxationIsSolValid(relaxation));
+
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkRelaxSol(*sol, set, stat, tree, relaxation) );
 
    return SCIP_OKAY;
 }
@@ -504,7 +538,37 @@ SCIP_RETCODE SCIPsolLinkLPSol(
       }
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
+
+   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+
+   return SCIP_OKAY;
+}
+
+/** copies current relaxation solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkRelaxSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(sol != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(relaxation != NULL);
+   assert(SCIPrelaxationIsSolValid(relaxation));
+
+   SCIPdebugMessage("linking solution to relaxation\n");
+
+   /* clear the old solution arrays */
+   SCIP_CALL( solClearArrays(sol) );
+
+   /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
+   sol->obj = SCIPrelaxationGetSolObj(relaxation);
+   sol->solorigin = SCIP_SOLORIGIN_RELAXSOL;
+   solStamp(sol, stat, tree, TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -683,18 +747,18 @@ SCIP_RETCODE SCIPsolSetVal(
                {               
                   SCIPintervalSet(&obj, SCIPvarGetObj(var));
                   SCIPintervalSet(&solval, oldval);
-                  SCIPintervalMul(&prod, solval, obj);
-                  SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
+                  SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
+                  SCIPintervalSub(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
                }
                if( val != SCIP_UNKNOWN ) /*lint !e777*/
                {
                   SCIPintervalSet(&obj, SCIPvarGetObj(var));
                   SCIPintervalSet(&solval, val);
-                  SCIPintervalMul(&prod, solval, obj);
-                  SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newval * obj; */
+                  SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
+                  SCIPintervalAdd(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval += newval * obj; */
                }
                SCIPintervalSet(&objval, sol->obj);
-               SCIPintervalAdd(&objval, objval, deltaval);
+               SCIPintervalAdd(SCIPsetInfinity(set), &objval, objval, deltaval);
                sol->obj = SCIPintervalGetSup(objval);
             }
             else
@@ -740,18 +804,18 @@ SCIP_RETCODE SCIPsolSetVal(
             {               
                SCIPintervalSet(&obj, SCIPvarGetObj(var));
                SCIPintervalSet(&solval, oldval);
-               SCIPintervalMul(&prod, solval, obj);
-               SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
+               SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
+               SCIPintervalSub(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
             }
             if( val != SCIP_UNKNOWN ) /*lint !e777*/
             {
                SCIPintervalSet(&obj, SCIPvarGetObj(var));
                SCIPintervalSet(&solval, val);
-               SCIPintervalMul(&prod, solval, obj);
-               SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newval * obj; */
+               SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
+               SCIPintervalAdd(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval += newval * obj; */
             }
             SCIPintervalSet(&objval, sol->obj);
-            SCIPintervalAdd(&objval, objval, deltaval);
+            SCIPintervalAdd(SCIPsetInfinity(set), &objval, objval, deltaval);
             sol->obj = SCIPintervalGetSup(objval);
          }
          else

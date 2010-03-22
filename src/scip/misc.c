@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.64.2.2 2010/03/02 17:20:51 bzfwolte Exp $"
-//#define SCIP_DEBUG /*??????????????*/
+#pragma ident "@(#) $Id: misc.c,v 1.64.2.3 2010/03/22 16:05:26 bzfwolte Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -430,8 +429,6 @@ SCIP_RETCODE SCIPhashtableCreate(
    void*                 userptr             /**< user pointer */
    )
 {
-   int i;
-
    assert(hashtable != NULL);
    assert(tablesize > 0);
    assert(hashgetkey != NULL);
@@ -447,9 +444,7 @@ SCIP_RETCODE SCIPhashtableCreate(
    (*hashtable)->hashkeyval = hashkeyval;
    (*hashtable)->userptr = userptr;
 
-   /* initialize hash lists */
-   for( i = 0; i < tablesize; ++i )
-      (*hashtable)->lists[i] = NULL;
+   BMSclearMemoryArray((*hashtable)->lists, tablesize);
 
    return SCIP_OKAY;
 }
@@ -460,16 +455,23 @@ void SCIPhashtableFree(
    )
 {
    int i;
+   SCIP_HASHTABLE* table;
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
 
    assert(hashtable != NULL);
    assert(*hashtable != NULL);
 
+   table = (*hashtable);
+   blkmem = table->blkmem;
+   lists = table->lists;
+
    /* free hash lists */
-   for( i = 0; i < (*hashtable)->nlists; ++i )
-      hashtablelistFree(&(*hashtable)->lists[i], (*hashtable)->blkmem);
+   for( i = table->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
 
    /* free main hast table data structure */
-   BMSfreeMemoryArray(&(*hashtable)->lists);
+   BMSfreeMemoryArray(&table->lists);
    BMSfreeMemory(hashtable);
 }
 
@@ -1015,6 +1017,117 @@ void SCIPhashmapPrintStatistics(
    SCIPmessagePrintInfo("\n");
 }
 
+/** indicates whether an hash map has no entries */
+SCIP_Bool SCIPhashmapIsEmpty(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+)
+{
+   int i;
+   assert(hashmap != NULL);
+   
+   for( i = 0; i < hashmap->nlists; ++i )
+      if( hashmap->lists[i] )
+         return FALSE;
+   
+   return TRUE;
+}
+
+/** gives the number of entries in an hash map */ 
+int SCIPhashmapGetNEntries(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+)
+{
+   int count = 0;
+   int i;
+   assert(hashmap != NULL);
+   
+   for( i = 0; i < hashmap->nlists; ++i )
+      count += SCIPhashmapListGetNEntries(hashmap->lists[i]);
+
+   return count;
+}
+
+/** gives the number of lists (buckets) in an hash map */ 
+int SCIPhashmapGetNLists(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+)
+{
+   assert(hashmap != NULL);
+   
+   return hashmap->nlists;
+}
+
+/** gives a specific list (bucket) in an hash map */
+SCIP_HASHMAPLIST* SCIPhashmapGetList(
+   SCIP_HASHMAP*     hashmap,          /**< hash map */
+   int               listindex         /**< index of hash map list */
+)
+{
+   assert(hashmap != NULL);
+   assert(listindex >= 0);
+   assert(listindex < hashmap->nlists);
+   
+   return hashmap->lists[listindex];
+}
+
+/** gives the number of entries in a list of a hash map */ 
+int SCIPhashmapListGetNEntries(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
+)
+{
+   int count = 0;
+   
+   for( ; hashmaplist; hashmaplist = hashmaplist->next )
+      ++count;
+   
+   return count;
+}
+
+/** retrieves origin of given entry in an hash map */ 
+void* SCIPhashmapListGetOrigin(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+)
+{
+   assert(hashmaplist != NULL);
+   
+   return hashmaplist->origin;
+}
+
+/** retrieves image of given entry in an hash map */ 
+void* SCIPhashmapListGetImage(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+)
+{
+   assert(hashmaplist != NULL);
+   
+   return hashmaplist->image;
+}
+
+/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
+SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+)
+{
+   assert(hashmaplist != NULL);
+   
+   return hashmaplist->next;
+}
+
+/** removes all entries in an hash map. */ 
+SCIP_RETCODE SCIPhashmapRemoveAll(
+   SCIP_HASHMAP*     hashmap           /**< hash map */
+)
+{
+   int listidx;
+
+   assert(hashmap != NULL);
+   
+   /* free hash lists */
+   for( listidx = 0; listidx < hashmap->nlists; ++listidx )
+      hashmaplistFree(&hashmap->lists[listidx], hashmap->blkmem);
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -1130,6 +1243,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       {
          for( i = 0; i < realarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0.0;
+
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &realarray->vals[realarray->minusedidx - realarray->firstidx],
             realarray->maxusedidx - realarray->minusedidx + 1);
@@ -2021,7 +2135,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    assert(boolarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %u\n", 
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
    if( val != FALSE )
@@ -2929,6 +3043,15 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortPtrPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrPtrReal
 #define SORTTPL_KEYTYPE     void*
@@ -2943,6 +3066,16 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrPtrLongInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrLongInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c"
@@ -2992,6 +3125,13 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  int
 #include "scip/sorttpl.c"
 
+/* SCIPsortRealRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealRealRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  void*
+#include "scip/sorttpl.c"
 
 /* SCIPsortRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealBoolPtr
@@ -3015,6 +3155,13 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntPtr
 #define SORTTPL_KEYTYPE     int
@@ -3035,6 +3182,22 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntPtrReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
 #include "scip/sorttpl.c"
 
 
@@ -3160,6 +3323,16 @@ void SCIPsortDown(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortDownPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortDownPtrPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrPtrReal
 #define SORTTPL_KEYTYPE     void*
@@ -3175,6 +3348,17 @@ void SCIPsortDown(
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrPtrLongInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrLongInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
@@ -3229,6 +3413,16 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  void*
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
@@ -3356,38 +3550,59 @@ SCIP_Longint SCIPcalcGreComDiv(
    SCIP_Longint          val2                /**< second value of greatest common devisor calculation */
    )
 {
-   SCIP_Longint t;
-   SCIP_Longint gcd;
+   int t;
 
    assert(val1 > 0);
    assert(val2 > 0);
-
-   /* extract all prime factors 2 */
-   gcd = 1;
-   while( !(val1 & 1) && !(val2 & 1) )
+   
+   t = 0;
+   /* if val1 is even, divide it by 2 */
+   while( !(val1 & 1) )
    {
-      val1 /= 2;
-      val2 /= 2;
-      gcd *= 2;
-   }
-
-   t = val1 & 1 ? -val2 : val1;
-   do
-   {
-      while( !(t & 1) )
-	 t /= 2;
-
-      if( t > 0 )
-	 val1 = t;
+      val1 >>= 1;
+      
+      /* if val2 is even too, divide it by 2 and increase t(=number of e */
+      if( !(val2 & 1) )
+      {
+         val2 >>= 1;
+         ++t;
+      }
+      /* only val1 can be odd */
       else
-	 val2 = -t;
-
-      t = val1 - val2;
+      {
+         /* while val1 is even, divide it by 2 */
+         while( !(val1 & 1) )
+            val1 >>= 1;
+         
+         break;
+      }
    }
-   while( t != 0 );
-   gcd *= val1;
+   /* while val2 is even, divide it by 2 */
+   while( !(val2 & 1) )
+      val2 >>= 1;
+   
+   /* val1 and val 2 are odd */
+   while (val1 != val2)
+      if (val1 > val2)
+      {
+         val1 -= val2;
+         /* val1 is now even, divide it by 2  */
+         do 
+         {
+            val1 >>= 1;
+         } while ( !(val1 & 1) );
+      }
+      else 
+      {
+         val2 -= val1;
+         /* val2 is now even, divide it by 2  */
+         do 
+         {
+            val2 >>= 1;
+         } while ( !(val2 & 1) );
+      }
 
-   return gcd;
+   return (val1 << t);
 }
 
 /** calculates the smallest common multiple of the two given values */
@@ -3453,7 +3668,7 @@ SCIP_Bool SCIPrealToRational(
       dnom = simplednoms[i];
       while( dnom <= maxdnom )
       {
-         nom = EPSFLOOR(val * dnom, 0.0);
+         nom = floor(val * dnom);
          ratval0 = nom/dnom;
          ratval1 = (nom+1.0)/dnom;
          if( mindelta <= val - ratval0 && val - ratval1 <= maxdelta )
@@ -3559,8 +3774,8 @@ SCIP_Bool isIntegralScalar(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = floor(sval);
+   upval = ceil(sval);
 
    return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
 }
@@ -3659,7 +3874,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
             scaleval *= 2.0;
       }
       scalable = (scaleval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%d\n", 
+      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n", 
          val, scaleval, val*scaleval, scalable);
    }
    if( scalable )
@@ -3700,7 +3915,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
             twomultval *= 2.0;
       }
       twomult = (twomultval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%d\n",
+      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
          val, twomultval, val*twomultval, twomult);
    }
    if( twomult )
@@ -3736,7 +3951,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = ABS(nominator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%d\n",
+         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
          break;
       }
@@ -3756,7 +3971,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%d\n",
+         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
       }
       else
@@ -4015,6 +4230,103 @@ SCIP_Real SCIPgetRandomReal(
    return minrandval + (maxrandval - minrandval)*(SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
 }
 
+
+/*
+ * Permutations / Shuffling
+ */
+
+/** swaps the addresses of two pointers */
+void SCIPswapPointers(
+   void**                pointer1,           /**< first pointer */
+   void**                pointer2            /**< second pointer */
+   )
+{
+   void* tmp;
+
+   tmp = *pointer1;
+   *pointer1 = *pointer2;
+   *pointer2 = tmp;
+}
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+void SCIPpermuteArray(
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end,                /**< length of the interval that should be subject to shuffling (array size for whole array) */
+   unsigned int*         randseed            /**< seed value for the random generator */
+   ) 
+{
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 ) 
+   {
+      int i;
+      void* tmp;
+      
+      end--;
+      
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPgetRandomInt(begin, end, randseed);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+SCIP_RETCODE SCIPgetRandomSubset(
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems,          /**< number of elements that should be drawn and stored */
+   unsigned int          randseed            /**< seed value for random generator */
+   )
+{
+   int i;
+   int j;
+
+   /* if both sets are of equal size, we just copy the array */
+   if( nelems == nsubelems)
+   {
+      BMScopyMemoryArray(subset,set,nelems);
+      return SCIP_OKAY;
+   }
+
+   /* abort, if size of subset is too big */
+   if( nsubelems > nelems )
+   {
+      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);      
+      return SCIP_INVALIDDATA;
+   }
+#ifndef NDEBUG
+   for( i = 0; i < nsubelems; i++ ) 
+      for( j = 0; j < i; j++ ) 
+         assert(set[i] != set[j]);
+#endif   
+
+   /* draw each element individually */
+   for( i = 0; i < nsubelems; i++ ) 
+   {
+      int r;
+
+      r = SCIPgetRandomInt(0, nelems-1, &randseed);
+      subset[i] = set[r];
+
+      /* if we get an element that we already had, we will draw again */
+      for( j = 0; j < i; j++ ) 
+      {
+         if( subset[i] == subset[j] ) 
+         {
+            i--;
+            break;
+         }
+      }
+   }
+   return SCIP_OKAY;
+}
 
 
 

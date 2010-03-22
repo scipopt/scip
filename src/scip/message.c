@@ -3,7 +3,7 @@
 /*                  This1 file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.26.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.26.2.2 2010/03/22 16:05:26 bzfwolte Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -30,6 +30,9 @@
 #include "scip/message.h"
 #include "scip/misc.h"
 
+#ifndef va_copy
+#define va_copy(dest, src) do { BMScopyMemory(&dest, &src); } while (0)
+#endif
 
 /** error message print method of default message handler */
 static
@@ -92,7 +95,7 @@ void bufferMessage(
    if( msg == NULL )
    {
       if( buffer != NULL )
-         strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
+         (void)strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
       (*bufferlen) = 0;
       assert(strlen(outmsg) < SCIP_MAXSTRLEN);
       return;
@@ -102,7 +105,7 @@ void bufferMessage(
    if( buffer == NULL )
    {
       /* no buffer exists -> just copy the message to the output */
-      strncpy(outmsg, msg, SCIP_MAXSTRLEN);
+      (void)strncpy(outmsg, msg, SCIP_MAXSTRLEN);
       assert(strlen(outmsg) < SCIP_MAXSTRLEN);
    }
    else
@@ -125,8 +128,8 @@ void bufferMessage(
          if( *bufferlen >= SCIP_MAXSTRLEN-1 || c == '\n' )
          {
             buffer[*bufferlen] = '\0';
-            strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
-            strncpy(buffer, msg, SCIP_MAXSTRLEN);
+            (void)strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
+            (void)strncpy(buffer, msg, SCIP_MAXSTRLEN);
             *bufferlen = (int)strlen(msg);
             assert(*bufferlen < SCIP_MAXSTRLEN-1);
             assert(strlen(outmsg) < SCIP_MAXSTRLEN);
@@ -362,8 +365,9 @@ void SCIPmessagePrintError(
    int n;
 
    va_start(ap, formatstr); /*lint !e826*/
-
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
+   va_end(ap);
+
    if( n < 0 )
       msg[SCIP_MAXSTRLEN-1] = '\0';
    else if( n >= SCIP_MAXSTRLEN )
@@ -385,7 +389,6 @@ void SCIPmessagePrintError(
    }   
 
    messagePrintError(msg);
-   va_end(ap);
 }
 
 /** prints the header with source file location for an error message */
@@ -495,7 +498,10 @@ void SCIPmessageVFPrintDialog(
       int m;
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+      {
+         va_end(aq);
          return;
+      }
 
       m = vsnprintf(bigmsg, n+1, formatstr, aq);
       assert(m == n);
@@ -566,7 +572,10 @@ void SCIPmessageVFPrintInfo(
       int m;
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+      {
+         va_end(aq);
          return;
+      }
 
       m = vsnprintf(bigmsg, n+1, formatstr, aq);
       assert(m == n);
@@ -651,7 +660,10 @@ void SCIPmessageVFPrintVerbInfo(
          int m;
          
          if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         {
+            va_end(aq);
             return;
+         }
          
          m = vsnprintf(bigmsg, n+1, formatstr, aq);
          assert(m == n);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.h,v 1.26.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: retcode.h,v 1.26.2.2 2010/03/22 16:05:34 bzfwolte Exp $"
 
 /**@file   retcode.h
  * @brief  internal methods for return codes for SCIP methods
@@ -28,7 +28,9 @@
 
 #include "scip/type_retcode.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** prints error message for return code */
 extern
@@ -37,5 +39,8 @@ void SCIPretcodePrint(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

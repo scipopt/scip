@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.13.2.2 2010/03/02 17:20:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.13.2.3 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_misc.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for miscellaneous datastructures
  * @author Tobias Achterberg
  */
@@ -24,6 +25,11 @@
 #ifndef __SCIP_TYPE_MISC_H__
 #define __SCIP_TYPE_MISC_H__
 
+#include "scip/def.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_PQueue SCIP_PQUEUE;           /**< priority queue */
 typedef struct SCIP_HashTable SCIP_HASHTABLE;     /**< hash table */
@@ -63,9 +69,8 @@ typedef struct SCIP_MpqArray SCIP_MPQARRAY;       /**< dynamic array for storing
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
 
-
-
-#include "scip/def.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

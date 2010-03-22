@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.83.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.83.2.2 2010/03/22 16:05:15 bzfwolte Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -444,6 +444,8 @@ SCIP_RETCODE consdataFreeRows(
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
       SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->nrows);
+      
+      consdata->nrows = 0;
    }
 
    return SCIP_OKAY;
@@ -503,7 +505,7 @@ void consdataPrint(
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
 }
 
 /** adds coefficient to and constraint */
@@ -831,6 +833,7 @@ SCIP_RETCODE applyFixings(
 
    SCIPdebugMessage("after fixings: ");
    SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
 }
@@ -895,27 +898,39 @@ SCIP_RETCODE addRelaxation(
 
    char rowname[SCIP_MAXSTRLEN];
    
+   /* in the root LP we only add the weaker relaxation which contains of two rows:
+    *   - one additional row:             resvar - v1 - ... - vn >= 1-n
+    *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
+    *
+    * during separation we separate the stronger relaxation whcih contains of n+1 row:
+    *   - one additional row:             resvar - v1 - ... - vn >= 1-n
+    *   - for each operator variable vi:  resvar - vi            <= 0
+    */
+   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
    if( consdata->rows == NULL )
    {
+      /* create the n+1 row relaxation */
       SCIP_CALL( createRelaxation(scip, cons) );
    }
    
-   
+   /* create/add/releas the row aggregated row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
    SCIP_CALL( SCIPcreateEmptyRow(scip, &aggrrow, rowname, -SCIPinfinity(scip), 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, aggrrow, consdata->nvars, consdata->vars, -1.0) );
    SCIP_CALL( SCIPaddCut(scip, NULL, aggrrow, FALSE) );
-   
+   SCIP_CALL( SCIPreleaseRow(scip, &aggrrow) );
+
+   /* add additional row */
    if( !SCIProwIsInLP(consdata->rows[0]) )
    {
       SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE) );
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -1858,6 +1873,67 @@ SCIP_RETCODE preprocessConstraintPairs(
 }
 
 
+/* maps a binary variable of source SCIP to corresponding variable in the target SCIP */
+static
+SCIP_RETCODE mapVariable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            repvar,             /**< pointer to store the corresponding variable in the target SCIP */
+   SCIP*                 sourcescip,         /**< SCIP data structure of the source SCIP */
+   SCIP_VAR*             var,                /**< source variable of source SCIP */
+   SCIP_HASHMAP*         varmap,             /**< mapping variables of the source SCIP to corresponding variables of the
+                                              *   target SCIP */
+   SCIP_Bool*            success             /**< pointer to store whether the mapping  was successful or not */
+   )
+{
+   SCIP_Bool negated;
+   
+   assert(scip != NULL);
+   assert(repvar != NULL);
+   assert(sourcescip != NULL);
+   assert(var != NULL);
+   assert(varmap != NULL);
+   assert(success != NULL);
+   assert(*success == TRUE);
+
+   *repvar = NULL;
+
+   SCIP_CALL( SCIPgetBinvarRepresentative(sourcescip, var, &var, &negated) );
+   
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_NEGATED:
+      /* returnsform a negated variable to an active variable */
+      SCIP_CALL( SCIPgetNegatedVar(sourcescip, var, &var) );
+      negated = !negated;
+      /*lint -fallthrough*/
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      /* get corresponding variable in the target SCIP */
+      (*repvar) = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
+      
+      /* if there does not exist a corresponding variable, return */
+      if( (*repvar) == NULL )
+      {
+         (*success) = FALSE;
+         return SCIP_OKAY;
+      }
+      
+      /* if the relationship is negated, get the negated variable */
+      if( negated )
+         SCIP_CALL( SCIPgetNegatedVar(scip, *repvar, repvar) );
+      break;
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* it is not clear how to handle muliaggr variables; therefore, stop copying */
+      (*success) = FALSE;
+      break;
+   default:
+      SCIPerrorMessage("invalid variable status\n");
+      return SCIP_INVALIDDATA;
+   }  /*lint !e788*/
+   
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -2022,8 +2098,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 #define consExitpreAnd NULL
 
 
-#define MAX_INITIALSIZE 10000
-
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolAnd NULL
 
@@ -2175,6 +2249,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
    SCIP_Bool separated;
    SCIP_Bool violated;
    int i;
+
+   separated = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2531,6 +2607,55 @@ SCIP_DECL_CONSPRINT(consPrintAnd)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyAnd)
+{  /*lint --e{715}*/
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** vars;
+   SCIP_VAR* sourceresvar;
+   SCIP_VAR* resvar;
+   int nvars;
+   int v;
+
+   assert(success != NULL);
+
+   (*success) = TRUE;
+   
+   sourceresvar = SCIPgetResultantAnd(sourcescip, sourcecons);
+
+   /* map resultant to active variable of the target SCIP  */
+   SCIP_CALL( mapVariable(scip, &resvar, sourcescip, sourceresvar, varmap, success) );
+   if( !(*success) )
+      return SCIP_OKAY;
+   
+   /* map operand variables to active variables of the target SCIP  */
+   sourcevars = SCIPgetVarsAnd(sourcescip, sourcecons);
+   nvars = SCIPgetNVarsAnd(sourcescip, sourcecons);
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   
+   for( v = 0; v < nvars && (*success); ++v )
+   {
+      SCIP_CALL( mapVariable(scip, &vars[v], sourcescip, sourcevars[v], varmap, success) );
+   }
+   
+   if( *success )
+   {
+      SCIP_CALL( SCIPcreateConsAnd(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+      
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &vars);
+   
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+#define consParseAnd NULL
+
 /*
  * Callback methods of event handler
  */
@@ -2590,7 +2715,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
          consActiveAnd, consDeactiveAnd, 
          consEnableAnd, consDisableAnd,
-         consPrintAnd,
+         consPrintAnd, consCopyAnd, consParseAnd,
          conshdlrdata) );
 
    /* add and constraint handler parameters */

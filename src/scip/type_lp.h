@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lp.h,v 1.13.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_lp.h,v 1.13.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_lp.h
  * @brief  type definitions for LP management
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_LP_H__
 #define __SCIP_TYPE_LP_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** solution status after solving LP */
 enum SCIP_LPSolStat
@@ -69,5 +72,8 @@ typedef struct SCIP_Col SCIP_COL;                 /**< column of an LP */
 typedef struct SCIP_Row SCIP_ROW;                 /**< row of an LP */
 typedef struct SCIP_Lp SCIP_LP;                   /**< current LP data */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

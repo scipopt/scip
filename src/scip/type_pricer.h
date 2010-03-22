@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.17.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.17.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_pricer.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for variable pricers
  * @author Tobias Achterberg
  */
@@ -24,6 +25,13 @@
 #ifndef __SCIP_TYPE_PRICER_H__
 #define __SCIP_TYPE_PRICER_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Pricer SCIP_PRICER;           /**< variable pricer data */
 typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable pricer data */
@@ -88,14 +96,15 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
  *  methods of the constraint handlers to add the necessary variable entries to the constraints.
  *
- *  In the usual case that the pricer either adds a new variable or ensures that there are no further variables with negative dual feasibility,
- *  the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing without creating a new variable, but
- *  there might exist additional variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
- *  In this case, which sometimes is referred to as "early branching", the lp solution will not be used as a lower bound. 
- *  The pricer can, however, store a valid lower bound in the lowerbound pointer.
- *  If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
- *  Otherwise, SCIP will use its default branching rules (which all branch on variables). This
- *  could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
+ *  In the usual case that the pricer either adds a new variable or ensures that there are no further variables with
+ *  negative dual feasibility, the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing
+ *  without creating a new variable, but there might exist additional variables with negative dual feasibility, the
+ *  result pointer should be set to SCIP_DIDNOTRUN.  In this case, which sometimes is referred to as "early branching",
+ *  the lp solution will not be used as a lower bound. The pricer can, however, store a valid lower bound in the
+ *  lowerbound pointer.  If you use your own branching rule (e.g., to branch on constraints), make sure that it is able
+ *  to branch on pseudo solutions. Otherwise, SCIP will use its default branching rules (which all branch on
+ *  variables). This could disturb the pricing problem or branching might not even be possible, e.g., if all yet created
+ *  variables have already been fixed.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -140,11 +149,8 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  */
 #define SCIP_DECL_PRICERFARKAS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif
