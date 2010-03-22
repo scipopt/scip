@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.88 2010/03/22 19:59:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.89 2010/03/22 23:02:02 bzfwinkm Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2619,8 +2619,8 @@ SCIP_RETCODE SCIPwriteLp(
 	 SCIP_CONS** consInd;
 	 int nConsInd;
 
-	 consInd = SCIPconshdlrGetConss(conshdlr);
-	 nConsInd = SCIPconshdlrGetNConss(conshdlr);
+	 consInd = SCIPconshdlrGetConss(conshdlrInd);
+	 nConsInd = SCIPconshdlrGetNConss(conshdlrInd);
 	 SCIPdebugMessage("Number of indicator constraints: %d\n", nConsInd);
 
 	 for (c = 0; c < nConsInd; ++c)
