@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.87 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.88 2010/03/22 19:59:39 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2580,6 +2580,7 @@ SCIP_RETCODE SCIPwriteLp(
    char buffer[LP_MAX_PRINTLEN];
 
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLR* conshdlrInd;
    const char* conshdlrname;
    SCIP_CONS* cons;
    SCIP_CONS** consSOS1;
@@ -2604,58 +2605,60 @@ SCIP_RETCODE SCIPwriteLp(
    assert( scip != NULL );
 
    /* find indicator constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "indicator");
-   assert( conshdlr != NULL );
+   conshdlrInd = SCIPfindConshdlr(scip, "indicator");
 
-   /* create hashtable storing linear constraints that should not be output */
-   SCIP_CALL( SCIPhashmapCreate(&consHidden, SCIPblkmem(scip), 1000) );
-
-   /* loop through indicator constraints (works only in transformed problem) */
-   if ( transformed )
+   /* if indicator constraint handler is present */
+   if ( conshdlrInd != NULL )
    {
-      SCIP_CONS** consInd;
-      int nConsInd;
-      
-      consInd = SCIPconshdlrGetConss(conshdlr);
-      nConsInd = SCIPconshdlrGetNConss(conshdlr);
-      SCIPdebugMessage("Number of indicator constraints: %d\n", nConsInd);
+      /* create hashtable storing linear constraints that should not be output */
+      SCIP_CALL( SCIPhashmapCreate(&consHidden, SCIPblkmem(scip), 1000) );
 
-      for (c = 0; c < nConsInd; ++c)
+      /* loop through indicator constraints (works only in transformed problem) */
+      if ( transformed )
       {
-	 assert( consInd[c] != NULL );
-	 cons = SCIPgetLinearConsIndicator(consInd[c]);
-	 
-	 assert( ! SCIPhashmapExists(consHidden, (void*) cons) );
-	 SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) cons, (void*) TRUE) );
-	 SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(cons));
-      }
-   }
-   else
-   {
-      /* otherwise we have to pass through all constraints */
-      for (c = 0; c < nconss; ++c)
-      {
-	 cons = conss[c];
-	 assert( cons != NULL);
+	 SCIP_CONS** consInd;
+	 int nConsInd;
 
-	 conshdlr = SCIPconsGetHdlr(cons);
-	 assert( conshdlr != NULL );
-	 conshdlrname = SCIPconshdlrGetName(conshdlr);
+	 consInd = SCIPconshdlrGetConss(conshdlr);
+	 nConsInd = SCIPconshdlrGetNConss(conshdlr);
+	 SCIPdebugMessage("Number of indicator constraints: %d\n", nConsInd);
 
-	 if( strcmp(conshdlrname, "indicator") == 0 )
+	 for (c = 0; c < nConsInd; ++c)
 	 {
-	    SCIP_CONS* lincons;
+	    assert( consInd[c] != NULL );
+	    cons = SCIPgetLinearConsIndicator(consInd[c]);
 
-	    lincons = SCIPgetLinearConsIndicator(cons);
-	    assert( lincons != NULL );
+	    assert( ! SCIPhashmapExists(consHidden, (void*) cons) );
+	    SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) cons, (void*) TRUE) );
+	    SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(cons));
+	 }
+      }
+      else
+      {
+	 /* otherwise we have to pass through all constraints */
+	 for (c = 0; c < nconss; ++c)
+	 {
+	    cons = conss[c];
+	    assert( cons != NULL);
 
-	    assert( ! SCIPhashmapExists(consHidden, (void*) lincons) );
-	    SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) lincons, (void*) TRUE) );
-	    SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(lincons));
+	    conshdlr = SCIPconsGetHdlr(cons);
+	    assert( conshdlr != NULL );
+	    conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+	    if( strcmp(conshdlrname, "indicator") == 0 )
+	    {
+	       SCIP_CONS* lincons;
+
+	       lincons = SCIPgetLinearConsIndicator(cons);
+	       assert( lincons != NULL );
+
+	       assert( ! SCIPhashmapExists(consHidden, (void*) lincons) );
+	       SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) lincons, (void*) TRUE) );
+	       SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(lincons));
+	    }
 	 }
       }
    }
-
 
    /* check if the variable names are not to long */
    checkVarnames(scip, vars, nvars);
@@ -2691,8 +2694,8 @@ SCIP_RETCODE SCIPwriteLp(
       if (SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
 
-      if(linecnt == 0 )
-         /* we start a new line; therefore we tab this line */
+      /* we start a new line; therefore we tab this line */
+      if (linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -2720,7 +2723,7 @@ SCIP_RETCODE SCIPwriteLp(
          continue;
 
       /* skip marked constraints in connection with indicator constraints */
-      if ( SCIPhashmapExists(consHidden, (void*) cons) )
+      if ( conshdlrInd != NULL && SCIPhashmapExists(consHidden, (void*) cons) )
       {
 	 assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
 	 continue;
@@ -2822,6 +2825,8 @@ SCIP_RETCODE SCIPwriteLp(
 	 int nLinvars;
 	 int cnt;
 	 int rhs;
+
+	 assert( conshdlrInd != NULL );
 
 	 lincons = SCIPgetLinearConsIndicator(cons);
 	 binvar = SCIPgetBinaryVarIndicator(cons);
@@ -2967,7 +2972,8 @@ SCIP_RETCODE SCIPwriteLp(
    /* free space */
    SCIPfreeBufferArray(scip, &aggregatedVars);
    SCIPhashtableFree(&varAggregated);
-   SCIPhashmapFree(&consHidden);
+   if ( conshdlrInd != NULL )
+      SCIPhashmapFree(&consHidden);
 
    /* print binaries section */
    if ( nbinvars > 0 )
