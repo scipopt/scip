@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.13 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.14 2010/03/24 20:35:19 bzfpfets Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ TSP example using SCIP as a callable library
@@ -119,11 +119,11 @@ SCIP_RETCODE runSCIP(
 
    /* include TSP specific plugins */
    SCIP_CALL( SCIPincludeObjReader(scip, new ReaderTSP(scip), TRUE) );
-   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(), TRUE) ); 
-   SCIP_CALL( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(), TRUE) );
-   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFarthestInsert(), TRUE) );
-   SCIP_CALL( SCIPincludeObjHeur(scip, new Heur2opt(), TRUE) );
-   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFrats(), TRUE) );
+   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(scip), TRUE) ); 
+   SCIP_CALL( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(scip), TRUE) );
+   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFarthestInsert(scip), TRUE) );
+   SCIP_CALL( SCIPincludeObjHeur(scip, new Heur2opt(scip), TRUE) );
+   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFrats(scip), TRUE) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: EventhdlrNewSol.h,v 1.6 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: EventhdlrNewSol.h,v 1.7 2010/03/24 20:35:19 bzfpfets Exp $"
 
 /**@file   EventhdlrNewSol.h
  * @brief  event handler for new solutions in TSP
@@ -35,8 +35,9 @@ class EventhdlrNewSol : public scip::ObjEventhdlr
 public:     
    /** default constructor */
    EventhdlrNewSol(
-           )
-      : ObjEventhdlr("newsol","event handler for new solutions in TSP")
+      SCIP* scip
+      )
+      : ObjEventhdlr(scip, "newsol","event handler for new solutions in TSP")
    {
    }
 

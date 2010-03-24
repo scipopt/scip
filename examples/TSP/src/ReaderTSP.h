@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.h,v 1.10 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.h,v 1.11 2010/03/24 20:35:19 bzfpfets Exp $"
 
 /**@file   ReaderTSP.h
  * @brief  C++ file reader for TSP data files
@@ -42,7 +42,7 @@ public:
   
    /** default constructor */
    ReaderTSP(SCIP* scip)
-      : scip::ObjReader("tspreader", "file reader for TSP files", "tsp")
+      : scip::ObjReader(scip, "tspreader", "file reader for TSP files", "tsp")
    {
       /* add TSP reader parameters */
     SCIPaddBoolParam(scip,
