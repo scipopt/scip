@@ -1,3 +1,5 @@
+#
+# run with bash -e makeall.sh to stop on errors
 for i in Coloring LOP MIPSolver Queens SamplePricer SamplePricer_C TSP VRP
 do
     echo
