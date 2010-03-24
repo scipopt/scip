@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.27 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.28 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -38,6 +38,9 @@ class ObjRelax : public ObjCloneable
 public:
    /*lint --e{1540}*/
 
+   /** SCIP data structure */
+   SCIP* scip_;
+
    /** name of the relaxator */
    char* scip_name_;
    
@@ -52,26 +55,30 @@ public:
 
    /** default constructor */
    ObjRelax(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of relaxator */
       const char*        desc,               /**< description of relaxator */
       int                priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
       int                freq                /**< frequency for calling relaxator */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjRelax()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(0, &scip_name_);
+      SCIPfreeMemoryArray(0, &scip_desc_);
    }
 
    /** destructor of relaxator to free user data (called when SCIP is exiting) */

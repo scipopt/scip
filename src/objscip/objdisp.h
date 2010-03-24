@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.h,v 1.9 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objdisp.h,v 1.10 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objdisp.h
  * @brief  C++ wrapper for display column
@@ -38,6 +38,9 @@ class ObjDisp : public ObjCloneable
 public:
    /*lint --e{1540}*/
    
+   /** SCIP data structure */
+   SCIP* scip_;
+
    /** name of the display column */
    char* scip_name_;
    
@@ -61,6 +64,7 @@ public:
 
    /** default constructor */
    ObjDisp(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of display column */
       const char*        desc,               /**< description of display column */
       const char*        header,             /**< head line of display column */
@@ -69,7 +73,8 @@ public:
       int                position,           /**< relative position of display column */
       SCIP_Bool          stripline           /**< should the column be separated with a line from its right neighbour? */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_header_(0),
         scip_width_(width),
@@ -77,18 +82,20 @@ public:
         scip_position_(position),
         scip_stripline_(stripline)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_header_, header, std::strlen(header)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_desc_, desc, std::strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_header_, header, std::strlen(header)+1) );
    }
 
    /** destructor */
    virtual ~ObjDisp()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
-      SCIPfreeMemoryArray(scip, &scip_header_);
+      SCIPfreeMemoryArray(0, &scip_name_);
+      SCIPfreeMemoryArray(0, &scip_desc_);
+      SCIPfreeMemoryArray(0, &scip_header_);
    }
 
    /** destructor of display column to free user data (called when SCIP is exiting) */

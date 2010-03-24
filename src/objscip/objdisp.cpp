@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.cpp,v 1.6 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objdisp.cpp,v 1.7 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objdisp.cpp
  * @brief  C++ wrapper for display column
@@ -60,11 +60,12 @@ SCIP_DECL_DISPCOPY(dispCopyObj)
    dispdata = SCIPdispGetData(disp);
    assert(dispdata != NULL);
    assert(dispdata->objdisp != NULL);
+   assert(dispdata->objdisp->scip_ != scip);
 
    if( dispdata->objdisp->iscloneable() )
    {
       scip::ObjDisp*  newobjdisp;
-      newobjdisp = (scip::ObjDisp*) dispdata->objdisp->clone();
+      newobjdisp = (scip::ObjDisp*) dispdata->objdisp->clone(scip);
 
       /* call include method of display column object */
       SCIP_CALL( SCIPincludeObjDisp(scip, newobjdisp, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_DISPFREE(dispFreeObj)
    dispdata = SCIPdispGetData(disp);
    assert(dispdata != NULL);
    assert(dispdata->objdisp != NULL);
+   assert(dispdata->objdisp->scip_ == scip);
 
    /* call virtual method of display column object */
    SCIP_CALL( dispdata->objdisp->scip_free(scip, disp) );
@@ -107,6 +109,7 @@ SCIP_DECL_DISPINIT(dispInitObj)
    dispdata = SCIPdispGetData(disp);
    assert(dispdata != NULL);
    assert(dispdata->objdisp != NULL);
+   assert(dispdata->objdisp->scip_ == scip);
 
    /* call virtual method of display column object */
    SCIP_CALL( dispdata->objdisp->scip_init(scip, disp) );

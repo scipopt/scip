@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.26 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.27 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -60,11 +60,12 @@ SCIP_DECL_BRANCHCOPY(branchCopyObj)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
+   assert(branchruledata->objbranchrule->scip_ != scip);
 
    if( branchruledata->objbranchrule->iscloneable() )
    {
       scip::ObjBranchrule*  newobjbranchrule;
-      newobjbranchrule = (scip::ObjBranchrule*) branchruledata->objbranchrule->clone();
+      newobjbranchrule = (scip::ObjBranchrule*) branchruledata->objbranchrule->clone(scip);
 
       /* call include method of branchrule object */
       SCIP_CALL( SCIPincludeObjBranchrule(scip, newobjbranchrule, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_BRANCHFREE(branchFreeObj)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
+   assert(branchruledata->objbranchrule->scip_ == scip);
 
    /* call virtual method of branchrule object */
    SCIP_CALL( branchruledata->objbranchrule->scip_free(scip, branchrule) );
@@ -107,6 +109,7 @@ SCIP_DECL_BRANCHINIT(branchInitObj)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
+   assert(branchruledata->objbranchrule->scip_ == scip);
 
    /* call virtual method of branchrule object */
    SCIP_CALL( branchruledata->objbranchrule->scip_init(scip, branchrule) );

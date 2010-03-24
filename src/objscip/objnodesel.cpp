@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.22 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.23 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -60,11 +60,12 @@ SCIP_DECL_NODESELCOPY(nodeselCopyObj)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
+   assert(nodeseldata->objnodesel->scip_ != scip);
 
    if( nodeseldata->objnodesel->iscloneable() )
    {
-      scip::ObjNodesel*  newobjnodesel;
-      newobjnodesel = (scip::ObjNodesel*) nodeseldata->objnodesel->clone();
+      scip::ObjNodesel* newobjnodesel;
+      newobjnodesel = (scip::ObjNodesel*) nodeseldata->objnodesel->clone(scip);
 
       /* call include method of node selector object */
       SCIP_CALL( SCIPincludeObjNodesel(scip, newobjnodesel, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeObj)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
+   assert(nodeseldata->objnodesel->scip_ == scip);
 
    /* call virtual method of nodesel object */
    SCIP_CALL( nodeseldata->objnodesel->scip_free(scip, nodesel) );
@@ -107,6 +109,7 @@ SCIP_DECL_NODESELINIT(nodeselInitObj)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
+   assert(nodeseldata->objnodesel->scip_ == scip);
 
    /* call virtual method of nodesel object */
    SCIP_CALL( nodeseldata->objnodesel->scip_init(scip, nodesel) );

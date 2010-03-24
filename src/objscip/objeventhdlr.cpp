@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.13 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.14 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers
@@ -60,11 +60,12 @@ SCIP_DECL_EVENTCOPY(eventhdlrCopyObj)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
+   assert(eventhdlrdata->objeventhdlr->scip_ != scip);
 
    if( eventhdlrdata->objeventhdlr->iscloneable() )
    {
       scip::ObjEventhdlr*  newobjeventhdlr;
-      newobjeventhdlr = (scip::ObjEventhdlr*) eventhdlrdata->objeventhdlr->clone();
+      newobjeventhdlr = (scip::ObjEventhdlr*) eventhdlrdata->objeventhdlr->clone(scip);
 
       /* call include method of event handler object */
       SCIP_CALL( SCIPincludeObjEventhdlr(scip, newobjeventhdlr, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_EVENTFREE(eventhdlrFreeObj)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
+   assert(eventhdlrdata->objeventhdlr->scip_ == scip);
 
    /* call virtual method of eventhdlr object */
    SCIP_CALL( eventhdlrdata->objeventhdlr->scip_free(scip, eventhdlr) );
@@ -107,6 +109,7 @@ SCIP_DECL_EVENTINIT(eventhdlrInitObj)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
+   assert(eventhdlrdata->objeventhdlr->scip_ == scip);
 
    /* call virtual method of eventhdlr object */
    SCIP_CALL( eventhdlrdata->objeventhdlr->scip_init(scip, eventhdlr) );

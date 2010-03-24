@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.cpp,v 1.8 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objdialog.cpp,v 1.9 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objdialog.cpp
  * @brief  C++ wrapper for dialogs
@@ -60,11 +60,12 @@ SCIP_DECL_DIALOGCOPY(dialogCopyObj)
    dialogdata = SCIPdialogGetData(dialog);
    assert(dialogdata != NULL);
    assert(dialogdata->objdialog != NULL);
+   assert(dialogdata->objdialog->scip_ != scip);
 
    if( dialogdata->objdialog->iscloneable() )
    {
       scip::ObjDialog*  newobjdialog;
-      newobjdialog = (scip::ObjDialog*) dialogdata->objdialog->clone();
+      newobjdialog = (scip::ObjDialog*) dialogdata->objdialog->clone(scip);
 
       /* call include method of dialog object */
       SCIP_CALL( SCIPincludeObjDialog(scip, newobjdialog, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_DIALOGFREE(dialogFreeObj)
    dialogdata = SCIPdialogGetData(dialog);
    assert(dialogdata != NULL);
    assert(dialogdata->objdialog != NULL);
+   assert(dialogdata->objdialog->scip_ == scip);
 
    /* call virtual method of dialog object */
    SCIP_CALL( dialogdata->objdialog->scip_free(scip, dialog) );
@@ -107,6 +109,7 @@ SCIP_DECL_DIALOGDESC(dialogDescObj)
    dialogdata = SCIPdialogGetData(dialog);
    assert(dialogdata != NULL);
    assert(dialogdata->objdialog != NULL);
+   assert(dialogdata->objdialog->scip_ == scip);
 
    /* call virtual method of dialog object */
    SCIP_CALL( dialogdata->objdialog->scip_desc(scip, dialog) );

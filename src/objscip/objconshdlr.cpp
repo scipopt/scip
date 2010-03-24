@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.44 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.45 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -60,11 +60,12 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyObj)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
+   assert(conshdlrdata->objconshdlr->scip_ != scip);
 
    if( conshdlrdata->objconshdlr->iscloneable() )
    {
-      scip::ObjConshdlr*  newobjconshdlr;
-      newobjconshdlr = (scip::ObjConshdlr*) conshdlrdata->objconshdlr->clone();
+      scip::ObjConshdlr* newobjconshdlr;
+      newobjconshdlr = (scip::ObjConshdlr*) conshdlrdata->objconshdlr->clone(scip);
 
       /* call include method of constraint handler object */
       SCIP_CALL( SCIPincludeObjConshdlr(scip, newobjconshdlr, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_CONSFREE(consFreeObj)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
+   assert(conshdlrdata->objconshdlr->scip_ == scip);
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_free(scip, conshdlr) );
@@ -107,6 +109,7 @@ SCIP_DECL_CONSINIT(consInitObj)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
+   assert(conshdlrdata->objconshdlr->scip_ == scip);
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_init(scip, conshdlr, conss, nconss) );

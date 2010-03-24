@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.28 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.29 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -60,11 +60,12 @@ SCIP_DECL_HEURCOPY(heurCopyObj)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
+   assert(heurdata->objheur->scip_ != scip);
 
    if( heurdata->objheur->iscloneable() )
    {
       scip::ObjHeur*  newobjheur;
-      newobjheur = (scip::ObjHeur*) heurdata->objheur->clone();
+      newobjheur = (scip::ObjHeur*) heurdata->objheur->clone(scip);
 
       /* call include method of primal heuristic object */
       SCIP_CALL( SCIPincludeObjHeur(scip, newobjheur, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_HEURFREE(heurFreeObj)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
+   assert(heurdata->objheur->scip_ == scip);
 
    /* call virtual method of heur object */
    SCIP_CALL( heurdata->objheur->scip_free(scip, heur) );
@@ -107,6 +109,7 @@ SCIP_DECL_HEURINIT(heurInitObj)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
+   assert(heurdata->objheur->scip_ == scip);
 
    /* call virtual method of heur object */
    SCIP_CALL( heurdata->objheur->scip_init(scip, heur) );

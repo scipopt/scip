@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.24 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.25 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -59,11 +59,12 @@ SCIP_DECL_SEPACOPY(sepaCopyObj)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
+   assert(sepadata->objsepa->scip_ != scip);
 
    if( sepadata->objsepa->iscloneable() )
    {
-      scip::ObjSepa*  newobjsepa;
-      newobjsepa = (scip::ObjSepa*) sepadata->objsepa->clone();
+      scip::ObjSepa* newobjsepa;
+      newobjsepa = (scip::ObjSepa*) sepadata->objsepa->clone(scip);
 
       /* call include method of separator object */
       SCIP_CALL( SCIPincludeObjSepa(scip, newobjsepa, TRUE) );
@@ -81,6 +82,7 @@ SCIP_DECL_SEPAFREE(sepaFreeObj)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
+   assert(sepadata->objsepa->scip_ == scip);
 
    /* call virtual method of sepa object */
    SCIP_CALL( sepadata->objsepa->scip_free(scip, sepa) );
@@ -106,6 +108,7 @@ SCIP_DECL_SEPAINIT(sepaInitObj)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
+   assert(sepadata->objsepa->scip_ == scip);
 
    /* call virtual method of sepa object */
    SCIP_CALL( sepadata->objsepa->scip_init(scip, sepa) );

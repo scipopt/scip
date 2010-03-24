@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.18 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.19 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -60,11 +60,12 @@ SCIP_DECL_RELAXCOPY(relaxCopyObj)
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
+   assert(relaxdata->objrelax->scip_ != scip);
 
    if( relaxdata->objrelax->iscloneable() )
    {
-      scip::ObjRelax*  newobjrelax;
-      newobjrelax = (scip::ObjRelax*) relaxdata->objrelax->clone();
+      scip::ObjRelax* newobjrelax;
+      newobjrelax = (scip::ObjRelax*) relaxdata->objrelax->clone(scip);
 
       /* call include method of relaxator object */
       SCIP_CALL( SCIPincludeObjRelax(scip, newobjrelax, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_RELAXFREE(relaxFreeObj)
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
+   assert(relaxdata->objrelax->scip_ == scip);
 
    /* call virtual method of relax object */
    SCIP_CALL( relaxdata->objrelax->scip_free(scip, relax) );
@@ -107,6 +109,7 @@ SCIP_DECL_RELAXINIT(relaxInitObj)
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
+   assert(relaxdata->objrelax->scip_ == scip);
 
    /* call virtual method of relax object */
    SCIP_CALL( relaxdata->objrelax->scip_init(scip, relax) );

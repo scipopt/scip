@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.62 2010/03/24 10:15:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.63 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -39,6 +39,10 @@ class ObjConshdlr : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
+
    /** name of the constraint handler */
    char* scip_name_;
    
@@ -80,6 +84,7 @@ public:
 
    /** default constructor */
    ObjConshdlr(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of constraint handler */
       const char*        desc,               /**< description of constraint handler */
       int                sepapriority,       /**< priority of the constraint handler for separation */
@@ -95,7 +100,8 @@ public:
       SCIP_Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
       SCIP_Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_sepapriority_(sepapriority),
         scip_enfopriority_(enfopriority),
@@ -109,16 +115,18 @@ public:
         scip_delaypresol_(delaypresol),
         scip_needscons_(needscons)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjConshdlr()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(0, &scip_name_);
+      SCIPfreeMemoryArray(0, &scip_desc_);
    }
 
    /** destructor of constraint handler to free user data (called when SCIP is exiting) */

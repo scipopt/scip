@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.22 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.23 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -60,11 +60,12 @@ SCIP_DECL_PRESOLCOPY(presolCopyObj)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
+   assert(presoldata->objpresol->scip_ != scip);
 
    if( presoldata->objpresol->iscloneable() )
    {
-      scip::ObjPresol*  newobjpresol;
-      newobjpresol = (scip::ObjPresol*) presoldata->objpresol->clone();
+      scip::ObjPresol* newobjpresol;
+      newobjpresol = (scip::ObjPresol*) presoldata->objpresol->clone(scip);
 
       /* call include method of presolver object */
       SCIP_CALL( SCIPincludeObjPresol(scip, newobjpresol, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_PRESOLFREE(presolFreeObj)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
+   assert(presoldata->objpresol->scip_ == scip);
 
    /* call virtual method of presol object */
    SCIP_CALL( presoldata->objpresol->scip_free(scip, presol) );
@@ -107,6 +109,7 @@ SCIP_DECL_PRESOLINIT(presolInitObj)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
+   assert(presoldata->objpresol->scip_ == scip);
 
    /* call virtual method of presol object */
    SCIP_CALL( presoldata->objpresol->scip_init(scip, presol) );

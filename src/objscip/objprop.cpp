@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.18 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.19 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -60,11 +60,12 @@ SCIP_DECL_PROPCOPY(propCopyObj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
+   assert(propdata->objprop->scip_ != scip);
 
    if( propdata->objprop->iscloneable() )
    {
-      scip::ObjProp*  newobjprop;
-      newobjprop = (scip::ObjProp*) propdata->objprop->clone();
+      scip::ObjProp* newobjprop;
+      newobjprop = (scip::ObjProp*) propdata->objprop->clone(scip);
 
       /* call include method of propagator object */
       SCIP_CALL( SCIPincludeObjProp(scip, newobjprop, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_PROPFREE(propFreeObj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
+   assert(propdata->objprop->scip_ == scip);
 
    /* call virtual method of prop object */
    SCIP_CALL( propdata->objprop->scip_free(scip, prop) );
@@ -107,6 +109,7 @@ SCIP_DECL_PROPINIT(propInitObj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
+   assert(propdata->objprop->scip_ == scip);
 
    /* call virtual method of prop object */
    SCIP_CALL( propdata->objprop->scip_init(scip, prop) );

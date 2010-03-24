@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.28 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.29 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -38,6 +38,9 @@ class ObjReader : public ObjCloneable
 public:
    /*lint --e{1540}*/
 
+   /** SCIP data structure */
+   SCIP* scip_;
+
    /** name of the file reader */
    char* scip_name_;
    
@@ -49,26 +52,30 @@ public:
 
    /** default constructor */
    ObjReader(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of file reader */
       const char*        desc,               /**< description of file reader */
       const char*        extension           /**< file extension that reader processes */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_extension_(0)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_extension_, extension, std::strlen(extension)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_desc_, desc, std::strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_extension_, extension, std::strlen(extension)+1) );
    }
 
    /** destructor */
    virtual ~ObjReader()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
-      SCIPfreeMemoryArray(scip, &scip_extension_);
+      SCIPfreeMemoryArray(0, &scip_name_);
+      SCIPfreeMemoryArray(0, &scip_desc_);
+      SCIPfreeMemoryArray(0, &scip_extension_);
    }
 
    /** destructor of file reader to free user data (called when SCIP is exiting) */

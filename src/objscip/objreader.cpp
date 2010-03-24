@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.21 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.22 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -60,11 +60,12 @@ SCIP_DECL_READERCOPY(readerCopyObj)
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    assert(readerdata->objreader != NULL);
+   assert(readerdata->objreader->scip_ != scip);
 
    if( readerdata->objreader->iscloneable() )
    {
-      scip::ObjReader*  newobjreader;
-      newobjreader = (scip::ObjReader*) readerdata->objreader->clone();
+      scip::ObjReader* newobjreader;
+      newobjreader = (scip::ObjReader*) readerdata->objreader->clone(scip);
 
       /* call include method of reader object */
       SCIP_CALL( SCIPincludeObjReader(scip, newobjreader, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_READERFREE(readerFreeObj)
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    assert(readerdata->objreader != NULL);
+   assert(readerdata->objreader->scip_ == scip);
 
    /* call virtual method of reader object */
    SCIP_CALL( readerdata->objreader->scip_free(scip, reader) );
@@ -107,6 +109,7 @@ SCIP_DECL_READERREAD(readerReadObj)
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    assert(readerdata->objreader != NULL);
+   assert(readerdata->objreader->scip_ == scip);
 
    /* call virtual method of reader object */
    SCIP_CALL( readerdata->objreader->scip_read(scip, reader, filename, result) );

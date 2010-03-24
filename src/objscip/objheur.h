@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.36 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.37 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -37,6 +37,9 @@ class ObjHeur : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
 
    /** name of the primal heuristic */
    char* scip_name_;
@@ -64,6 +67,7 @@ public:
 
    /** default constructor */
    ObjHeur(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of primal heuristic */
       const char*        desc,               /**< description of primal heuristic */
       char               dispchar,           /**< display character of primal heuristic */
@@ -74,7 +78,8 @@ public:
       unsigned int       timingmask          /**< positions in the node solving loop where heuristic should be executed;
                                               *   see definition of SCIP_HeurTiming for possible values */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_dispchar_(dispchar),
         scip_priority_(priority),
@@ -83,16 +88,18 @@ public:
         scip_maxdepth_(maxdepth),
         scip_timingmask_(timingmask)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjHeur()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(0, &scip_name_);
+      SCIPfreeMemoryArray(0, &scip_desc_);
    }
 
    /** destructor of primal heuristic to free user data (called when SCIP is exiting) */

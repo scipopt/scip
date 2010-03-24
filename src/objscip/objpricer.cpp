@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.25 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.26 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -60,11 +60,12 @@ SCIP_DECL_PRICERCOPY(pricerCopyObj)
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
+   assert(pricerdata->objpricer->scip_ != scip);
 
    if( pricerdata->objpricer->iscloneable() )
    {
-      scip::ObjPricer*  newobjpricer;
-      newobjpricer = (scip::ObjPricer*) pricerdata->objpricer->clone();
+      scip::ObjPricer* newobjpricer;
+      newobjpricer = (scip::ObjPricer*) pricerdata->objpricer->clone(scip);
 
       /* call include method of pricer object */
       SCIP_CALL( SCIPincludeObjPricer(scip, newobjpricer, TRUE) );
@@ -82,6 +83,7 @@ SCIP_DECL_PRICERFREE(pricerFreeObj)
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
+   assert(pricerdata->objpricer->scip_ == scip);
 
    /* call virtual method of pricer object */
    SCIP_CALL( pricerdata->objpricer->scip_free(scip, pricer) );
@@ -107,6 +109,7 @@ SCIP_DECL_PRICERINIT(pricerInitObj)
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
+   assert(pricerdata->objpricer->scip_ == scip);
 
    /* call virtual method of pricer object */
    SCIP_CALL( pricerdata->objpricer->scip_init(scip, pricer) );

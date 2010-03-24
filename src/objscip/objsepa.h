@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.33 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.34 2010/03/24 20:15:10 bzfpfets Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -38,6 +38,9 @@ class ObjSepa : public ObjCloneable
 public:
    /*lint --e{1540}*/
 
+   /** SCIP data structure */
+   SCIP* scip_;
+
    /** name of the cut separator */
    char* scip_name_;
    
@@ -60,6 +63,7 @@ public:
 
    /** default constructor */
    ObjSepa(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of cut separator */
       const char*        desc,               /**< description of cut separator */
       int                priority,           /**< priority of the cut separator */
@@ -68,23 +72,26 @@ public:
                                               *   to best node's dual bound for applying separation */
       SCIP_Bool          delay               /**< should separator be delayed, if other separators found cuts? */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq),
         scip_maxbounddist_(maxbounddist),
         scip_delay_(delay)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjSepa()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(0, &scip_name_);
+      SCIPfreeMemoryArray(0, &scip_desc_);
    }
 
    /** destructor of cut separator to free user data (called when SCIP is exiting) */
