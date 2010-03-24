@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.10 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.11 2010/03/24 20:34:34 bzfpfets Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for p-median pricer example
@@ -142,7 +142,7 @@ SCIP_RETCODE runSCIP(
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include distance pricer */
-   ObjPricerDistance* distance_pricer_ptr = new ObjPricerDistance();
+   ObjPricerDistance* distance_pricer_ptr = new ObjPricerDistance(scip);
    SCIP_CALL(SCIPincludeObjPricer(scip, distance_pricer_ptr, true));
    
    /* include default SCIP plugins */

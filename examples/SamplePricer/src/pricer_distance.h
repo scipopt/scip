@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.12 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.13 2010/03/24 20:34:34 bzfpfets Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -48,8 +48,8 @@ using namespace scip;
 
 class ObjPricerDistance : public ObjPricer {
 public:
-  inline ObjPricerDistance() : 
-    ObjPricer("Distance_Pricer", 
+  inline ObjPricerDistance(SCIP* scip) : 
+     ObjPricer(scip, "Distance_Pricer", 
        "Finds center-customer combinations with negative reduced cost.",
        0,
        TRUE) {}
