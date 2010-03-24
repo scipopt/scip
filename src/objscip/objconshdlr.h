@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.61 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.62 2010/03/24 10:15:58 bzfpfets Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -130,7 +130,7 @@ public:
       return SCIP_OKAY;
    }
    
-   /** initialization method of constraint handler (called after problem was transformed) */
+   /** initialization method of constraint handler (called after problem has been transformed) */
    virtual SCIP_RETCODE scip_init(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
@@ -227,7 +227,7 @@ public:
     *
     *  This method is called before the branch and bound process is freed.
     *  The constraint handler should use this call to clean up its branch and bound data, in particular to release
-    *  all LP rows that he has created or captured.
+    *  all LP rows that it has created or captured.
     */
    virtual SCIP_RETCODE scip_exitsol(
       SCIP*              scip,               /**< SCIP data structure */
@@ -264,7 +264,7 @@ public:
 
    /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
     *
-    *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
+    *  Puts the LP relaxations of all "initial" constraints into the LP. The method should add a canonic LP relaxation
     *  of all given constraints to the LP with calls to SCIPaddCut().
     */
    virtual SCIP_RETCODE scip_initlp(
@@ -282,7 +282,7 @@ public:
     *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
     *  which means that a valid LP solution exists.
     *
-    *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
+    *  The first nusefulconss constraints are the ones that are identified to likely be violated. The separation
     *  method should process only the useful constraints in most runs, and only occasionally the remaining
     *  nconss - nusefulconss constraints.
     *
@@ -437,7 +437,7 @@ public:
     *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
     *  integrality).
     *
-    *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
+    *  In some cases, integrality conditions or rows of the current LP do not have to be checked, because their
     *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
     *  'checklprows' is FALSE.
     *
@@ -704,7 +704,7 @@ public:
 
    /** constraint display method of constraint handler
     *
-    *  The constraint handler should store a representation of the constraint into the given text file.
+    *  The constraint handler should output a representation of the constraint into the given text file.
     */
    virtual SCIP_RETCODE scip_print(
       SCIP*              scip,               /**< SCIP data structure */
@@ -714,15 +714,15 @@ public:
       )
    {  /*lint --e{715}*/
       if ( file == NULL )
-	 fprintf(stdout, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
+	 fprintf(stdout, "constraint handler <%s> does not support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       else
-	 fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
+	 fprintf(file, "constraint handler <%s> does not support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       return SCIP_OKAY;
    }
 
    /** constraint copying method of constraint handler
     *
-    *  The constraint handler can provide a copy method which copy a constraint from one SCIP data structure into a other
+    *  The constraint handler can provide a copy method, which copies a constraint from one SCIP data structure into a other
     *  SCIP data structure.
     */
    virtual SCIP_RETCODE scip_copy(
