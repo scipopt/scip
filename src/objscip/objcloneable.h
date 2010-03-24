@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objcloneable.h,v 1.1 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objcloneable.h,v 1.2 2010/03/24 19:11:10 bzfpfets Exp $"
 
 /**@file   objcloneable.h
  * @author Michael Winkler
@@ -24,13 +24,14 @@
 #define __SCIP_OBJCLONEABLE_H__
 
 #include "scip/def.h"
+#include "scip/scip.h"
 
 /** all C++ wrapper object plugins should extend this class */
 namespace scip
 {
    struct ObjCloneable {
       virtual ~ObjCloneable() {}
-      virtual ObjCloneable* clone() const { return 0; }
+      virtual ObjCloneable* clone(SCIP* scip) const { return 0; }
       virtual SCIP_Bool iscloneable() const { return false; }
    };
 }
