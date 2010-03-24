@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.h,v 1.5 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_vrp.h,v 1.6 2010/03/24 20:35:42 bzfpfets Exp $"
 
 /**@file   
  * @brief  VRP pricer plugin
@@ -41,15 +41,17 @@ class ObjPricerVRP : public ObjPricer
 public:
    
 
-   ObjPricerVRP
-   ( const char*                         p_name,
+   ObjPricerVRP( 
+     SCIP*                               scip,
+     const char*                         p_name,
      const int                           p_num_nodes,
      const int                           p_capacity,
      const vector< int >&                p_demand,
      const vector< vector<int> >&        p_distance,
      const vector< vector<SCIP_VAR*> >&  p_arc_var,
      const vector< vector<SCIP_CONS*> >& p_arc_con,   
-     const vector<SCIP_CONS* >&          p_part_con );
+     const vector<SCIP_CONS* >&          p_part_con 
+     );
    
    virtual ~ObjPricerVRP();
 

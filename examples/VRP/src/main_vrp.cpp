@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: main_vrp.cpp,v 1.6 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: main_vrp.cpp,v 1.7 2010/03/24 20:35:42 bzfpfets Exp $"
 
 /**@file   
  * @brief  main file for VRP pricer example
@@ -418,7 +418,8 @@ int main( int argc, char** argv )
    }
 
    /* include VRP pricer */
-   ObjPricerVRP* vrp_pricer_ptr = new ObjPricerVRP( VRP_PRICER_NAME,
+   ObjPricerVRP* vrp_pricer_ptr = new ObjPricerVRP( scip,
+                                                    VRP_PRICER_NAME,
                                                     num_nodes,
                                                     capacity,
                                                     demand,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.6 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.7 2010/03/24 20:35:42 bzfpfets Exp $"
 
 #include "pricer_vrp.h"
 #include "pqueue.h"
@@ -35,8 +35,9 @@ using namespace scip;
 // Constructs the pricer object with the data needed
 //------------------------------------------------------------
 ObjPricerVRP::
-ObjPricerVRP
-( const char*                         p_name,       // name of the pricer
+ObjPricerVRP(
+  SCIP*                               scip,
+  const char*                         p_name,       // name of the pricer
   const int                           p_num_nodes,  // number of nodes (incl. depot)
   const int                           p_capacity,   // max demand of customers in tour 
   const vector<int>&                  p_demand,     // demand of each customer
@@ -44,7 +45,8 @@ ObjPricerVRP
   const vector< vector<SCIP_VAR*> >&  p_arc_var,    
   const vector< vector<SCIP_CONS*> >& p_arc_con,   
   const vector<SCIP_CONS*>&           p_part_con ):
-   ObjPricer( p_name, 
+   ObjPricer( scip,
+              p_name, 
               "Finds tour with negative reduced cost.",
               0,
               TRUE) ,
