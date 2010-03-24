@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.19 2008/10/20 19:47:16 bzfpfets Exp $
+# $Id: Makefile,v 1.20 2010/03/24 20:35:00 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a very simple pricer
@@ -87,7 +87,11 @@ $(BINDIR):
 
 .PHONY: clean
 clean:
-		-rm -rf $(OBJDIR)/* $(MAINFILE)
+ifneq ($(OBJDIR),)
+		-rm -f $(OBJDIR)/*.o
+		-rmdir -p $(OBJDIR)
+endif
+		-rm -f $(MAINFILE)
 
 .PHONY: depend
 depend:		$(SCIPDIR)
