@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.546 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.547 2010/03/25 11:16:25 bzfhende Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -16035,6 +16035,7 @@ void printSolutionStatistics(
    }
    else
    {
+      SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
       if( scip->primal->nsols == 0 )
          SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
       else
