@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.548 2010/03/25 11:44:23 bzfhende Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.549 2010/03/26 11:04:02 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12072,7 +12072,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
     */
    if( !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
       && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
-         || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+         || (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT && !SCIPlpDivingObjChanged(scip->lp)))
       && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
    {
       SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
