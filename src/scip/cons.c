@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.196 2010/03/26 11:23:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.197 2010/03/26 15:44:47 bzfviger Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4530,8 +4530,8 @@ SCIP_RETCODE SCIPconsCopy(
 }
 
 
-/** parses constrint information (in cip format) out of a string; if the parsing process was successful a constraint is
- *  creates and captures, and inserts it into the conss array of its constraint handler
+/** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
+ *  created and captured, and inserted it into the conss array of its constraint handler
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
@@ -4581,16 +4581,31 @@ SCIP_RETCODE SCIPconsParse(
    /* copy string */
    SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
    
-   /* pasre constraint handler name */
+   /* parse constraint handler name */
    token = SCIPstrtok(copystr, " []", &saveptr);
+   if( token == NULL )
+   {
+      SCIPerrorMessage("error parsing constraint handler name from the following line:\n%s\n", str);
+      return SCIP_PARSEERROR;
+   }
    (void) SCIPsnprintf(conshdlrname, (int) strlen(token)+1, "%s", token);
    
-   /* pasre constraint name */
+   /* parse constraint name */
    token = SCIPstrtok(NULL, " <>", &saveptr);
+   if( token == NULL )
+   {
+      SCIPerrorMessage("error parsing constraint name from the following line:\n%s\n", str);
+      return SCIP_PARSEERROR;
+   }
    (void) SCIPsnprintf(consname, (int) strlen(token) + 1, "%s", token);
 
 
    token = SCIPstrtok(NULL, ":;", &saveptr);
+   if( token == NULL )
+   {
+      SCIPerrorMessage("error parsing constraint from the following line:\n%s\n", str);
+      return SCIP_PARSEERROR;
+   }
    
    /* check if a constraint handler with parsed name exists */
    conshdlr = SCIPsetFindConshdlr(set, conshdlrname);
