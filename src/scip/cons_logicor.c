@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.135 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.136 2010/03/26 13:55:19 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -1599,28 +1599,7 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-static 
-SCIP_DECL_CONSINIT(consInitLogicor)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
-   
-   if( conshdlrdata->conshdlrlinear != NULL )
-   {
-      /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
-      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
-   }
-
-   return SCIP_OKAY;
-}
+#define consInitLogicor NULL
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
@@ -2578,6 +2557,14 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          consEnableLogicor, consDisableLogicor,
          consPrintLogicor, consCopyLogicor, consParseLogicor,
          conshdlrdata) );
+
+   conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
+   
+   if( conshdlrdata->conshdlrlinear != NULL )
+   {
+      /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
 
    /* logic or constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.90 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.91 2010/03/26 13:55:19 bzfwinkm Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -1152,21 +1152,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyVarbound)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-static 
-SCIP_DECL_CONSINIT(consInitVarbound)
-{  /*lint --e{715}*/
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
-
-   if( SCIPfindConshdlr(scip,"linear") != NULL )
-   {
-      /* include the linear constraint to varbound constraint upgrade in the linear constraint handler */
-      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdVarbound, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
-   }
-
-   return SCIP_OKAY;
-}
+#define consInitVarbound NULL
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
@@ -1764,6 +1750,12 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          consEnableVarbound, consDisableVarbound,
          consPrintVarbound, consCopyVarbound, consParseVarbound,
          conshdlrdata) );
+
+   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   {
+      /* include the linear constraint to varbound constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdVarbound, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;

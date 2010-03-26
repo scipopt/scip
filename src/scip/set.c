@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.212 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.213 2010/03/26 13:55:19 bzfwinkm Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -403,11 +403,12 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    /* copy all constraint handler plugins */
    if( copyconshdlrs )
    {
-      if( sourceset->conshdlrs != NULL )
+      if( sourceset->conshdlrs_include != NULL )
       {
-         for( p = sourceset->nconshdlrs - 1; p >= 0; --p )
+         /* copy them in order they were added to the sourcescip */
+         for( p = 0; p < sourceset->nconshdlrs; ++p )
          {
-            SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs[p], targetset) );
+            SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset) );
          }
       }
    }
@@ -576,6 +577,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conshdlrs = NULL;
    (*set)->conshdlrs_sepa = NULL;
    (*set)->conshdlrs_enfo = NULL;
+   (*set)->conshdlrs_include = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
    (*set)->conflicthdlrs = NULL;
@@ -1327,6 +1329,7 @@ SCIP_RETCODE SCIPsetFree(
    BMSfreeMemoryArrayNull(&(*set)->conshdlrs);
    BMSfreeMemoryArrayNull(&(*set)->conshdlrs_sepa);
    BMSfreeMemoryArrayNull(&(*set)->conshdlrs_enfo);
+   BMSfreeMemoryArrayNull(&(*set)->conshdlrs_include);
 
    /* free conflict handlers */
    for( i = 0; i < (*set)->nconflicthdlrs; ++i )
@@ -1894,6 +1897,7 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs, set->conshdlrssize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs_sepa, set->conshdlrssize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs_enfo, set->conshdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs_include, set->conshdlrssize) );
    }
    assert(set->nconshdlrs < set->conshdlrssize);
 
@@ -1920,6 +1924,9 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
       set->conshdlrs_enfo[i] = set->conshdlrs_enfo[i-1];
    }
    set->conshdlrs_enfo[i] = conshdlr;
+
+   /* add constraint handler into conshdlrs_include array sorted by inclusion order */
+   set->conshdlrs_include[set->nconshdlrs] = conshdlr;
 
    set->nconshdlrs++;
 

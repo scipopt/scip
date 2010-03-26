@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.87 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.88 2010/03/26 13:55:19 bzfwinkm Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -63,6 +63,7 @@ struct SCIP_Set
    SCIP_CONSHDLR**       conshdlrs;          /**< constraint handlers (sorted by check priority) */
    SCIP_CONSHDLR**       conshdlrs_sepa;     /**< constraint handlers (sorted by separation priority) */
    SCIP_CONSHDLR**       conshdlrs_enfo;     /**< constraint handlers (sorted by enforcement priority) */
+   SCIP_CONSHDLR**       conshdlrs_include;  /**< constraint handlers (sorted by inclusion order) */
    SCIP_CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
    SCIP_PRESOL**         presols;            /**< presolvers */
    SCIP_RELAX**          relaxs;             /**< relaxators */

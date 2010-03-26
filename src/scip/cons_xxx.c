@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.53 2010/03/18 16:51:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.54 2010/03/26 13:55:19 bzfwinkm Exp $"
 
 /**@file   cons_xxx.c
  * @ingroup CONSHDLRS 
@@ -152,18 +152,12 @@ SCIP_DECL_CONSFREE(consFreeXxx)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
+#if 0
 static
 SCIP_DECL_CONSINIT(consInitXxx)
 {  /*lint --e{715}*/
-
-#ifdef LINCONSUPGD_PRIORITY
-   if( SCIPfindConshdlr(scip,"linear") != NULL )
-   {
-      /* include the linear constraint upgrade in the linear constraint handler */
-      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
-   }
-#endif
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -548,6 +542,14 @@ SCIP_RETCODE SCIPincludeConshdlrXxx(
          consEnableXxx, consDisableXxx,
          consPrintXxx, consCopyXxx, consParseXxx,
          conshdlrdata) );
+
+#ifdef LINCONSUPGD_PRIORITY
+   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   {
+      /* include the linear constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+#endif
 
    /* add xxx constraint handler parameters */
    /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */

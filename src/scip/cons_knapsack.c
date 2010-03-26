@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.189 2010/03/17 17:55:14 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.190 2010/03/26 13:55:19 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -6445,12 +6445,6 @@ SCIP_DECL_CONSINIT(consInitKnapsack)
    BMSclearMemoryArray(conshdlrdata->reals1, nvars);
    conshdlrdata->reals1size = nvars;
 
-   if( SCIPfindConshdlr(scip,"linear") != NULL )
-   {
-      /* include the linear constraint to knapsack constraint upgrade in the linear constraint handler */
-      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -7349,6 +7343,12 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          consEnableKnapsack, consDisableKnapsack,
          consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
          conshdlrdata) );
+
+   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   {
+      /* include the linear constraint to knapsack constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
   
    /* add knapsack constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

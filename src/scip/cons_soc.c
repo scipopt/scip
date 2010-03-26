@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.21 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.22 2010/03/26 13:55:19 bzfwinkm Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2832,21 +2832,12 @@ SCIP_DECL_CONSFREE(consFreeSOC)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
+#if 0
 static
 SCIP_DECL_CONSINIT(consInitSOC)
 {  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-
-#ifdef QUADCONSUPGD_PRIORITY
-   if( SCIPfindConshdlr(scip,"quadratic") != NULL )
-   {
-      /* notify function that upgrades quadratic constraint to SOC's */
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
-   }
-#endif
+   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -3774,6 +3765,14 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          consEnableSOC, consDisableSOC,
          consPrintSOC, consCopySOC, consParseSOC,
          conshdlrdata) );
+
+#ifdef QUADCONSUPGD_PRIORITY
+   if( SCIPfindConshdlr(scip,"quadratic") != NULL )
+   {
+      /* notify function that upgrades quadratic constraint to SOC's */
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+#endif
 
    /* add soc constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",      "whether a constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",          &conshdlrdata->doscaling,        FALSE, TRUE,          NULL, NULL) );
