@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.190 2010/03/26 13:55:19 bzfwinkm Exp $"
-
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.191 2010/03/26 15:12:38 bzfpfets Exp $"
+#define SCIP_DEBUG
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
  * @brief  constraint handler for knapsack constraints
@@ -4163,7 +4163,15 @@ SCIP_RETCODE applyFixings(
 
    SCIPdebugMessage("apply fixings:\n");
    SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
-   
+
+   /* check infeasibility */
+   if ( consdata->onesweightsum > consdata->capacity )
+   {
+      SCIPdebugMessage("apply fixings detected cutoff.\n");
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
    v = 0;
    while( v < consdata->nvars )
    {
