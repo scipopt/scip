@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.349 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.350 2010/03/26 11:21:45 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -1162,13 +1162,13 @@ void consdataInvalidateActivities(
    consdata->glbmaxactivityposinf = -1;
 }
 
-/* Is the new activity reliable or may we have cancellation? */
+/** Is the new activity reliable or may we have cancellation? */
 static
 SCIP_Bool isNewActivityUnreliable(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_Real             newactivity,        /**< new, updated activity */
-      SCIP_Real             reliableactivity    /**< last activity which was computed completly */
-      )
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newactivity,        /**< new, updated activity */
+   SCIP_Real             reliableactivity    /**< last activity which was computed completly */
+   )
 {
    SCIP_Real quotient;
 
@@ -2054,7 +2054,6 @@ void consdataGetReliableResidualActivity(
    
    for( v = 0; v < consdata->nvars; ++v )
    { 
-      
       SCIP_VAR* var;      
       SCIP_Real val;
       SCIP_Real lb;
