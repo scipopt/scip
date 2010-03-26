@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.191 2010/03/26 15:12:38 bzfpfets Exp $"
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.192 2010/03/26 19:50:21 bzfviger Exp $"
+
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
  * @brief  constraint handler for knapsack constraints
