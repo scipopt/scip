@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_glpk.awk,v 1.3 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: check_glpk.awk,v 1.4 2010/03/30 13:01:05 bzfwanie Exp $
 #
 #@file    check_glpk.awk
 #@brief   GLPK Check Report Generator
@@ -398,7 +398,7 @@ BEGIN {
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
       printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
-          shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
+          shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted )
       {
