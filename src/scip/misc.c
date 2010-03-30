@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.64.2.3 2010/03/22 16:05:26 bzfwolte Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.64.2.4 2010/03/30 20:33:27 bzfwolte Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2848,7 +2848,7 @@ SCIP_RETCODE SCIPmpqarraySetVal(
    SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   idx,                /**< array index to set value for */
-   mpq_t                 val                 /**< value to set array index to */
+   const mpq_t           val                 /**< value to set array index to */
    )
 {
 #ifdef SCIP_DEBUG
@@ -2922,7 +2922,7 @@ SCIP_RETCODE SCIPmpqarrayIncVal(
    SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   idx,                /**< array index to increase value for */
-   mpq_t                 incval              /**< value to increase array index */
+   const mpq_t           incval              /**< value to increase array index */
    )
 {
    mpq_t newval;
@@ -4060,7 +4060,7 @@ SCIP_Real SCIPselectSimpleValue(
 
 /** tries to find a value, such that all given values, if scaled with this value become integral */
 SCIP_RETCODE SCIPmpqCalcIntegralScalar(
-   mpq_t*                vals,               /**< values to scale */
+   const mpq_t*          vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
    SCIP_Real             maxscale,           /**< maximal allowed scalar */
    mpq_t                 intscalar,          /**< pointer to store scalar that would make the coefficients integral */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.7 2010/03/02 17:20:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.8 2010/03/30 20:33:27 bzfwolte Exp $"
 //#define SCIP_DEBUG /*?????????????????*/
 
 /**@file   lpiex_qsoex.c
@@ -371,15 +371,17 @@ void* SCIPlpiexGetSolverPointer(
  * @return SCIP_OK on success
  * */
 SCIP_RETCODE SCIPlpiexCreate(
-   SCIP_LPIEX**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_LPIEX**          lpi,                /**< pointer to an LP interface structure */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
    register int i;
+
    /* QSopt_ex only works with bools as integers */
    assert(sizeof (SCIP_Bool) == sizeof (int));
    assert(lpi != NULL);
+   assert(*lpi == NULL);
 
    SCIPdebugMessage("SCIPlpiexCreate()\n");
 
@@ -388,10 +390,10 @@ SCIP_RETCODE SCIPlpiexCreate(
    memset(*lpi, 0, sizeof(struct SCIP_LPiEx));
 
    /* factor work is NULL unless used */
-   (*lpi)->factor =  (mpq_factor_work* ) NULL; 
+   (*lpi)->factor =  (mpq_factor_work*) NULL; 
 
    (*lpi)->prob = mpq_QScreate_prob(name, (int) objsen);
-   if ( (*lpi)->prob == NULL )
+   if( (*lpi)->prob == NULL )
    {
       SCIPerrorMessage("No memory\n");
       return SCIP_LPERROR;
@@ -411,7 +413,7 @@ SCIP_RETCODE SCIPlpiexCreate(
    (*lpi)->tbsz = 1024;
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->itab), 1024) );
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->ibas), 1024) );
-   for (i = 0 ; i < 1024 ; i++)
+   for( i = 0; i < 1024; i++ )
    {
       mpq_init((*lpi)->irhs[i]);
       mpq_init((*lpi)->irng[i]);
@@ -433,7 +435,7 @@ SCIP_RETCODE SCIPlpiexFree(
    SCIPdebugMessage("SCIPlpiexFree()\n");
 
    /* free factor work */   
-   if( (*lpi)->factor != NULL)
+   if( (*lpi)->factor != NULL )
    {
       mpq_ILLfactor_free_factor_work((*lpi)->factor);
       BMSfreeMemoryArray( &((*lpi)->factor) );
@@ -479,18 +481,18 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    SCIP_OBJSEN           objsen,             /**< objective sense */
    int                   ncols,              /**< number of columns */
-   const mpq_t*          obj,                /**< objective function values of columns */
-   const mpq_t*          lb,                 /**< lower bounds of columns */
-   const mpq_t*          ub,                 /**< upper bounds of columns */
+   mpq_t*                obj,                /**< objective function values of columns */
+   mpq_t*                lb,                 /**< lower bounds of columns */
+   mpq_t*                ub,                 /**< upper bounds of columns */
    char**                colnames,           /**< column names, or NULL */
    int                   nrows,              /**< number of rows */
    const mpq_t*          lhs,                /**< left hand sides of rows */
    const mpq_t*          rhs,                /**< right hand sides of rows */
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
-   const int*            beg,                /**< start index of each column in ind- and val-array */
-   const int*            ind,                /**< row indices of constraint matrix entries */
-   const mpq_t*          val                 /**< values of constraint matrix entries */
+   int*                  beg,                /**< start index of each column in ind- and val-array */
+   int*                  ind,                /**< row indices of constraint matrix entries */
+   mpq_t*                val                 /**< values of constraint matrix entries */
    )
 {
    register int i;
@@ -526,7 +528,7 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
    /* now we add the rows */
    rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, 0, 0, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
    QS_CONDRET(rval);
-
+   
    /* ensure column size */
    SCIP_CALL( ensureColMem(lpi, ncols) );
 
@@ -606,14 +608,14 @@ SCIP_RETCODE SCIPlpiexAddCols(
 SCIP_RETCODE SCIPlpiexAddCols(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to be added */
-   const mpq_t*          obj,                /**< objective function values of new columns */
-   const mpq_t*          lb,                 /**< lower bounds of new columns */
-   const mpq_t*          ub,                 /**< upper bounds of new columns */
+   mpq_t*                obj,                /**< objective function values of new columns */
+   mpq_t*                lb,                 /**< lower bounds of new columns */
+   mpq_t*                ub,                 /**< upper bounds of new columns */
    char**                colnames,           /**< column names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*            beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
-   const int*            ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
-   const mpq_t*          val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   int*                  beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
+   int*                  ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
+   mpq_t*                val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    int rval = 0;
@@ -727,10 +729,10 @@ SCIP_RETCODE SCIPlpiexAddRows(
    const mpq_t*          rhs,                /**< right hand sides of new rows */
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*            beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   int*                  beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
    const int*            len,                /**< number of nonzeros of each row in ind- and val-array, or NULL if only nonzeros */
-   const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
-   const mpq_t*          val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   int*                  ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
+   mpq_t*                val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    register int i;
@@ -883,9 +885,9 @@ SCIP_RETCODE SCIPlpiexClear(
 SCIP_RETCODE SCIPlpiexChgBounds(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const mpq_t*          lb,                 /**< values for the new lower bounds, or NULL */
-   const mpq_t*          ub                  /**< values for the new upper bounds, or NULL */
+   int*                  ind,                /**< column indices */
+   mpq_t*                lb,                 /**< values for the new lower bounds, or NULL */
+   mpq_t*                ub                  /**< values for the new upper bounds, or NULL */
    )
 {
    register int i;
@@ -984,7 +986,7 @@ SCIP_RETCODE SCIPlpiexChgCoef(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    int                   row,                /**< row number of coefficient to change */
    int                   col,                /**< column number of coefficient to change */
-   const mpq_t           newval              /**< new value of coefficient */
+   mpq_t                 newval              /**< new value of coefficient */
    )
 {
    int rval = 0;
@@ -1034,7 +1036,7 @@ SCIP_RETCODE SCIPlpiexChgObj(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
    int*                  ind,                /**< column indices to change objective value for */
-   const mpq_t*          obj                 /**< new objective values for columns */
+   mpq_t*                obj                 /**< new objective values for columns */
    )
 {
    register int i;
@@ -2828,7 +2830,7 @@ SCIP_RETCODE SCIPlpiexGetRealpar(
 SCIP_RETCODE SCIPlpiexSetRealpar(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
-   const mpq_t           dval                /**< parameter value */
+   mpq_t                 dval                /**< parameter value */
    )
 {
    int rval = 0;
@@ -2880,7 +2882,7 @@ const mpq_t* SCIPlpiexPosInfinity(
 /** checks if given value is treated as positive infinity in the LP solver */
 SCIP_Bool SCIPlpiexIsPosInfinity(
    SCIP_LPIEX*           lpi,            /**< LP interface structure */
-   mpq_t const           val
+   const mpq_t           val
    )
 {  /*lint --e{715} */
    return (mpq_cmp(val, mpq_ILL_MAXDOUBLE) >= 0);
@@ -2897,7 +2899,7 @@ const mpq_t* SCIPlpiexNegInfinity(
 /** checks if given value is treated as negative infinity in the LP solver */
 SCIP_Bool SCIPlpiexIsNegInfinity(
    SCIP_LPIEX*           lpi,            /**< LP interface structure */
-   mpq_t const           val
+   const mpq_t           val
    )
 {  /*lint --e{715} */
    return (mpq_cmp(val, mpq_ILL_MINDOUBLE) <= 0);

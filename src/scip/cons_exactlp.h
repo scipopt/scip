@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.4 2010/03/22 16:05:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.5 2010/03/30 20:33:26 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -52,14 +52,14 @@ const mpq_t* posInfinity(
 extern
 SCIP_Bool isNegInfinity(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   mpq_t                 val                 /**< value to be compared against infinity */
+   const mpq_t           val                 /**< value to be compared against infinity */
    );
 
 /** checks if value is treated as positive infinite in exactlp constraint handler */
 extern
 SCIP_Bool isPosInfinity(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   mpq_t                 val                 /**< value to be compared against infinity */
+   const mpq_t           val                 /**< value to be compared against infinity */
    );
 
 /** returns whether given rational number can be stored as FP number without roundinf errors */
@@ -75,7 +75,7 @@ SCIP_Bool mpqIsReal(
 extern
 SCIP_Real mpqGetRealRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   mpq_t                 val,                /**< given rational number */
+   const mpq_t           val,                /**< given rational number */
    mp_rnd_t              roundmode           /**< rounding mode to be used for the conversion */
    );
 
@@ -85,7 +85,7 @@ SCIP_Real mpqGetRealRelax(
 extern
 SCIP_Real mpqGetRealApprox(
    SCIP*                 scip,               /**< SCIP data structure */
-   mpq_t                 val                 /**< given rational number */
+   const mpq_t           val                 /**< given rational number */
    );
 
 /** creates the handler for exactlp constraints and includes it in SCIP */
@@ -140,15 +140,17 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    );
 
 /** checks if value is treated as positive infinite in exactlp constraint handler */
+extern
 SCIP_Bool SCIPisPosInfinityExactlp(
    SCIP*                 scip,               /**< SCIP data structure */
-   mpq_t                 val                 /**< value to be compared against infinity */
+   const mpq_t           val                 /**< value to be compared against infinity */
    );
 
 /** checks if value is treated as negative infinite in exactlp constraint handler */
+extern
 SCIP_Bool SCIPisNegInfinityExactlp(
    SCIP*                 scip,               /**< SCIP data structure */
-   mpq_t                 val                 /**< value to be compared against infinity */
+   const mpq_t           val                 /**< value to be compared against infinity */
    );
 
 /** returns a safe external value of the given exact internal objective value, i.e., a lower and an upper approximation 

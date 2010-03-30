@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230.2.7 2010/03/22 16:04:59 bzfwolte Exp $
+# $Id: Makefile,v 1.230.2.8 2010/03/30 20:33:26 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -484,7 +484,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/pricestore.o \
 			scip/pricer.o \
 			scip/primal.o \
-			scip/primalex.o \
 			scip/prob.o \
 			scip/prop.o \
 			scip/reader.o \
@@ -497,7 +496,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepastore.o \
 			scip/set.o \
 			scip/sol.o \
-			scip/solex.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/tree.o \
@@ -607,7 +605,9 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_graph.o
 
 ifeq ($(EXACTSOLVE),true)
-SCIPLIBOBJ	+=	scip/cons_exactlp.o
+SCIPLIBOBJ	+=	scip/cons_exactlp.o \
+			scip/primalex.o \
+			scip/solex.o
 endif
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)

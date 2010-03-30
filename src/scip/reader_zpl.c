@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.9 2010/03/22 16:05:34 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.10 2010/03/30 20:33:27 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -233,29 +233,29 @@ Bool xlp_addcon_term(
          /* currently indicator constraints can only handle "<=" constraints */
          switch( type )
          {
-            case CON_LHS:
-               lhsIndCons = TRUE;
-               break;
-            case CON_RHS:
-               rhsIndCons = TRUE;
-               break;
-            case CON_RANGE:
-            case CON_EQUAL:
-               lhsIndCons = TRUE;
-               rhsIndCons = TRUE;
-               break;
-            case CON_FREE:
-            default:
-               SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
-               readerror_ = TRUE;
-               break;
+         case CON_LHS:
+            lhsIndCons = TRUE;
+            break;
+         case CON_RHS:
+            rhsIndCons = TRUE;
+            break;
+         case CON_RANGE:
+         case CON_EQUAL:
+            lhsIndCons = TRUE;
+            rhsIndCons = TRUE;
+            break;
+         case CON_FREE:
+         default:
+            SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+            readerror_ = TRUE;
+            break;
          }
 
          /* insert lhs form of indicator */
          if ( lhsIndCons )
          {
             SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, -sciplhs,
-               initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+                  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
             SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
             for (i = 0; i < term_get_elements(term); i++)
@@ -289,7 +289,7 @@ Bool xlp_addcon_term(
          if ( rhsIndCons )
          {
             SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, sciprhs,
-               initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+                  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
             SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
             for (i = 0; i < term_get_elements(term); i++)
@@ -322,7 +322,7 @@ Bool xlp_addcon_term(
       else
       {
          SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
          SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
          for (i = 0; i < term_get_elements(term); i++)
@@ -1105,7 +1105,6 @@ Var* xlp_addvar(
    SCIP_CALL_ABORT( SCIPaddVar(scip_, var) );
    SCIP_CALL_ABORT( SCIPchgVarBranchPriority(scip_, var, branchpriority) );
 
-#if 0 /*????? todo: when enabling this (which should actually be done, I think), I get an assert which is caused by the nuses-value of the original variables */
    if( usestartsol )
    {
       if( nstartvals_ >= startvalssize_ )
@@ -1119,10 +1118,9 @@ Var* xlp_addvar(
       startvars_[nstartvals_] = var;
       nstartvals_++;
    }
-#endif
 
 #ifdef READER_OUT /* only for debugging ???????????????? */
-   printf("reader_zpl: added new variable:\n");
+   SCIPdebugMessage("reader_zpl: added new variable:\n");
    SCIPprintVar(scip_, var, NULL);
 #endif
 
@@ -1146,7 +1144,7 @@ Bool xlp_addsos_term(
    const Term*           term                /**< terms indicating sos */
    )
 {
-  /*lint --e{715}*/
+   /*lint --e{715}*/
    SCIP_CONS* cons;
    SCIP_Bool initial;
    SCIP_Bool separate;
@@ -1537,7 +1535,7 @@ void xlp_addtocost(
    scipval = mpqGetRealApprox(scip_, scipvalmpq);
 
 #ifdef READER_OUT
-   printf("reader_zpl: change obj of var: old %g, add %g as approx", SCIPvarGetObj(scipvar), scipval);
+   SCIPdebugMessage("reader_zpl: change obj of var: old %g, add %g as approx", SCIPvarGetObj(scipvar), scipval);
    gmp_printf(" (%Qd as orig mpq_t)\n", scipvalmpq);
 #endif
 
@@ -1756,7 +1754,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( strcmp(paramstr, "-") == 0 )
    {
       /* call ZIMPL parser without arguments */
-#ifdef EXACTZPL
+#ifdef EXACTSOLVE
       if( !zpl_read(filename, FALSE) )
          readerror_ = TRUE;
 #else
@@ -1845,7 +1843,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* call ZIMPL parser with arguments */
-#ifdef EXACTZPL
+#ifdef EXACTSOLVE
       if( !zpl_read_with_args(argv, argc, FALSE) )
          readerror_ = TRUE;
 #else
@@ -1903,7 +1901,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       assert(probindex >= idx);
 
 #ifdef READER_OUT /*????????????????*/
-      printf("i=%d| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>", i, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
+      SCIPdebugMessage("i=%d| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>", i, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
          probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
 #endif
 
@@ -1928,8 +1926,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
          nswitch++;
 #ifdef READER_OUT /*????????????????*/
-         printf(" --> switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
-         probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
+         SCIPdebugMessage(" --> switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
+            probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
 #endif
       }
       /* position of current variable is correct */      
@@ -1939,8 +1937,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
          idx++;
 
 #ifdef READER_OUT /*????????????????*/
-         printf(" --> NO switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx-1, SCIPvarGetName(vars_[idx-1]), SCIPvarGetProbindex(vars_[idx-1]), 
-         probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
+         SCIPdebugMessage(" --> NO switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx-1, SCIPvarGetName(vars_[idx-1]), SCIPvarGetProbindex(vars_[idx-1]), 
+            probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
 #endif
       }
    }
@@ -1985,7 +1983,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    SCIP_CALL_ABORT( SCIPaddCons(scip, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip, &cons) );
 #ifdef READER_OUT
-   printf("readerzpl: released exactlp constraint\n");
+   SCIPdebugMessage("readerzpl: released exactlp constraint\n");
 #endif
 #endif   
 
@@ -1995,14 +1993,16 @@ SCIP_DECL_READERREAD(readerReadZpl)
       SCIP_CALL( SCIPtransformProb(scip) );
 #ifdef EXACTZPL
 #ifdef READER_OUT
-      printf("after transform prob\n");
+      SCIPdebugMessage("   after transform prob (nstartvals=%d)\n", nstartvals_);
 #endif
 #endif
       SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
       for( i = 0; i < nstartvals_; i++ )
       {
          SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
-         SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
+#ifndef EXACTZPL
+         SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) ); /* variables are still needed */
+#endif
       }
    
       success = FALSE;
@@ -2071,6 +2071,12 @@ SCIP_DECL_READERREAD(readerReadZpl)
 #endif
 
    *result = SCIP_SUCCESS;
+
+#ifdef EXACTZPL
+#ifdef READER_OUT
+   SCIPdebugMessage("end of readerreadzpl\n");
+#endif
+#endif
 
    if( readerror_ )
       return SCIP_PARSEERROR;

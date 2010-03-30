@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solex.h,v 1.1.2.2 2010/03/22 16:05:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solex.h,v 1.1.2.3 2010/03/30 20:33:27 bzfwolte Exp $"
 
 /**@file   solex.h
  * @brief  internal methods for storing exact primal CIP solutions
@@ -61,9 +61,9 @@ SCIP_RETCODE SCIPsolexSetVal(
    SCIP_SOLEX*           sol,                /**< exact primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to add to solution */
-   mpq_t                 obj,                /**< objective value of variable */
-   mpq_t                 lb,                 /**< global lower bound of variable */ 
-   mpq_t                 val                 /**< solution value of variable */
+   const mpq_t           obj,                /**< objective value of variable */
+   const mpq_t           lb,                 /**< global lower bound of variable */ 
+   const mpq_t           val                 /**< solution value of variable */
    );
 
 /** returns value of variable in exact primal CIP solution */

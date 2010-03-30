@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solex.c,v 1.1.2.1 2010/03/02 17:20:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solex.c,v 1.1.2.2 2010/03/30 20:33:27 bzfwolte Exp $"
 
 //#define SCIP_DEBUG /* only for debugging ?????????? */
 
@@ -26,20 +26,12 @@
 #include <assert.h>
 #include <gmp.h> 
 
-#include "scip/def.h" /* todo: check whether it is needed. ???????? */
-//#include "scip/message.h" /* todo: check whether it is needed. ???????? */
+#include "scip/def.h" 
 #include "scip/set.h"
-//#include "scip/stat.h" /* todo: check whether it is needed. ???????? */
-//#include "scip/intervalarith.h" /* todo: check whether it is needed. ???????? */
-//#include "scip/clock.h" /* todo: check whether it is needed. ???????? */
 #include "scip/misc.h"
-//#include "scip/lp.h" /* todo: check whether it is needed. ???????? */
 #include "scip/var.h"
-#include "scip/prob.h" /* todo: check whether it is needed. ???????? */
+#include "scip/prob.h" 
 #include "scip/solex.h" 
-//#include "scip/primalex.h" /* todo: check whether it is needed. ???????? */
-//#include "scip/tree.h" /* todo: check whether it is needed. ???????? */
-//#include "scip/cons.h" /* todo: check whether it is needed. ???????? */
 #include "scip/cons_exactlp.h" 
 
 #ifndef NDEBUG
@@ -67,7 +59,7 @@ SCIP_RETCODE solexSetArrayVal(
    SCIP_SOLEX*           sol,                /**< exact primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
-   mpq_t                 val                 /**< value to set variable to */
+   const mpq_t           val                 /**< value to set variable to */
    )
 {
    int idx;
@@ -183,9 +175,9 @@ SCIP_RETCODE SCIPsolexSetVal(
    SCIP_SOLEX*           sol,                /**< exact primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to add to solution */
-   mpq_t                 obj,                /**< objective value of variable */
-   mpq_t                 lb,                 /**< global lower bound of variable */ 
-   mpq_t                 val                 /**< solution value of variable */
+   const mpq_t           obj,                /**< objective value of variable */
+   const mpq_t           lb,                 /**< global lower bound of variable */ 
+   const mpq_t           val                 /**< solution value of variable */
    )
 {
    mpq_t oldval;
