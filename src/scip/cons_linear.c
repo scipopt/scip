@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.350 2010/03/26 11:21:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.351 2010/03/30 17:48:25 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -638,16 +638,37 @@ static
 SCIP_Bool isValueChar(
    char                  c,                  /**< input character */
    char                  nextc,              /**< next input character */
-   SCIP_Bool*            hasdot              /**< pointer to update the dot flag */
+   SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
+   char*                 hasexp              /**< pointer to update the exponent flag */
    )
 {
    assert(hasdot != NULL);
+   assert(hasexp != NULL);
+   assert(*hasexp == 0 || *hasexp == 1 || *hasexp == 2);
+
+   /* hasexp = 0 means, that we did not had an 'e', 'E', 'd', or 'D' yet
+    * hasexp = 1 means, that we just had an 'e', 'E', 'd', or 'D'; in this case, an '-' is allowed to follow
+    * hasexp = 2 means, that we already had an 'e', 'E', 'd', or 'D', but it is more than 1 character away
+    */
+
+   if( *hasexp == 1 )
+   { /* we just had an 'e', 'E', 'd', or 'D', so we set *hasexp to 2
+        this is now the only case where an '-' is allowed */
+      *hasexp = 2;
+      if( (c == '-') && isdigit(nextc) )
+         return TRUE;
+   }
 
    if( isdigit(c) )
       return TRUE;
-   else if( !(*hasdot) && (c == '.') && isdigit(nextc) )
+   else if( !(*hasdot) && !(*hasexp) && (c == '.') && isdigit(nextc) )
    {
       *hasdot = TRUE;
+      return TRUE;
+   }
+   else if( (*hasexp == 0) && (c == 'e' || c == 'E' || c == 'd' || c == 'D') && (isdigit(nextc) || nextc == '-') )
+   {
+      *hasexp = 1;
       return TRUE;
    }
 
@@ -661,6 +682,7 @@ SCIP_Bool getNextToken(
    )
 {
    SCIP_Bool hasdot;
+   char hasexp;
    int tokenlen;
    const char* buf;
    
@@ -681,7 +703,8 @@ SCIP_Bool getNextToken(
 
    /* check if the token is a value */
    hasdot = FALSE;
-   if( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot) )
+   hasexp = 0;
+   if( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot, &hasexp) )
    {
       /* read value token */
       tokenlen = 0;
@@ -693,7 +716,7 @@ SCIP_Bool getNextToken(
          tokenlen++;
          tokenizer->strpos++;
       }
-      while( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot) );
+      while( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot, &hasexp) );
    }
    else
    {
