@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.25 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.26 2010/03/31 08:03:29 bzflehma Exp $"
 
 /**@file   branch_xxx.c
  * @ingroup BRANCHINGRULES
@@ -76,6 +76,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyXxx)
 
    return SCIP_OKAY;
 }
+#else
 #define branchCopyXxx NULL
 #endif
 
