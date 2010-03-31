@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.351 2010/03/30 17:48:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.352 2010/03/31 11:14:18 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9541,13 +9541,13 @@ SCIP_DECL_CONSPARSE(consParseLinear)
          
          if( sense == CIP_SENSE_EQ ) 
          {
-            lhs = coef;
-            rhs = coef;
+            lhs = coefsign * coef;
+            rhs = coefsign * coef;
          }
          else if( sense == CIP_SENSE_LE ) 
-            rhs = coef;
+            rhs = coefsign * coef;
          if( sense == CIP_SENSE_GE ) 
-            lhs = coef;
+            lhs = coefsign * coef;
          
          continue;
       }
