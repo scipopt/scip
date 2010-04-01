@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.52 2010/03/16 19:35:38 bzfpfets Exp $
+# $Id: cmpres.awk,v 1.53 2010/04/01 18:23:30 bzfpfets Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -605,17 +605,17 @@ END {
          }
          else
             countprob = 0;
-         }
-         worsttime = max(worsttime, mintime);
-         worstnodes = max(worstnodes, 1);
-         worstiters = max(worstiters, 0);
+      }
+      worsttime = max(worsttime, mintime);
+      worstnodes = max(worstnodes, 1);
+      worstiters = max(worstiters, 0);
 
-         # check for each solver if it has same path as reference solver -> category
-         for( o = 0; o < nsolver; ++o )
-         {
-            s = printorder[o];
-            pidx = probidx[p,s];
-            processed = (pidx != "");
+      # check for each solver if it has same path as reference solver -> category
+      for( o = 0; o < nsolver; ++o )
+      {
+	 s = printorder[o];
+	 pidx = probidx[p,s];
+	 processed = (pidx != "");
 
          if( !processed )
             continue;
@@ -918,7 +918,7 @@ END {
    }
    printhline(nsolver,short);
 
-   # make sure total time and nodes it not zero
+   # make sure total time and nodes is not zero
    for( s = 0; s < nsolver; ++s )
    {
       for( cat = 0; cat <= 3; cat++ )
