@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230.2.8 2010/03/30 20:33:26 bzfwolte Exp $
+# $Id: Makefile,v 1.230.2.9 2010/04/02 18:40:45 bzfsteff Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -170,6 +170,7 @@ FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact version 
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
 LDFLAGS		+=	-I/nfs/optimi/kombadon/bzfwolte/projects/gmp/gmp-4.3.1/lib/include
 LDFLAGS		+=	-L/nfs/optimi/kombadon/bzfwolte/projects/gmp/gmp-4.3.1/lib/lib
+LIBOBJSUBDIRS	+=	rectlu 
 endif
 
 ifeq ($(EXACTZPL),true)
@@ -607,7 +608,8 @@ SCIPLIBOBJ	=	scip/branch.o \
 ifeq ($(EXACTSOLVE),true)
 SCIPLIBOBJ	+=	scip/cons_exactlp.o \
 			scip/primalex.o \
-			scip/solex.o
+			scip/solex.o \
+			rectlu/rectlu_factor.o
 endif
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)

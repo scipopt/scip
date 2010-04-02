@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.8 2010/03/30 20:33:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.9 2010/04/02 18:40:46 bzfsteff Exp $"
 //#define SCIP_DEBUG /*?????????????????*/
 
 /**@file   lpiex_qsoex.c
@@ -381,7 +381,6 @@ SCIP_RETCODE SCIPlpiexCreate(
    /* QSopt_ex only works with bools as integers */
    assert(sizeof (SCIP_Bool) == sizeof (int));
    assert(lpi != NULL);
-   assert(*lpi == NULL);
 
    SCIPdebugMessage("SCIPlpiexCreate()\n");
 
