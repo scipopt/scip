@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.39 2010/03/12 10:54:09 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.40 2010/04/05 17:49:18 bzfpfets Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -897,7 +897,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 {
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, "debug", "debugging propagator", 99999999, -1, FALSE,
-         NULL, NULL, NULL, NULL, NULL, propExecDebug, NULL, NULL) );
+         NULL, NULL, NULL, NULL, NULL, NULL, propExecDebug, NULL, NULL) );
 
    return SCIP_OKAY;
 }
