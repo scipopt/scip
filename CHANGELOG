@@ -113,6 +113,7 @@ plugins:
 - new separator rapid learning (sepa_rapidlearning.{c,h]) that produces conflicts, global bound changes, primal solutions and initializes inference values for branching
 - added propagator for variable lower and upper bounds (prop_vbound.{c,h}); adjusted cons_varbound.c, var.c, and, implics.c to work correctly with the new propagator
 - added heuristic twoopt (heur_twoopt.{c,h})
+- added Chvatal-Gomory cuts separated with a sub-MIP (sepa_cgmip.{c|h})
 
 parameters: 
 - added parameter <misc/usesmalltables> which results in using smaller tables for names, cliques and cuts and improves the
