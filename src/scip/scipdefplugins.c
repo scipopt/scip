@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.94 2010/02/24 16:12:06 bzfhende Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.95 2010/04/05 17:51:34 bzfpfets Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -122,6 +122,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );
    SCIP_CALL( SCIPincludeSepaClique(scip) );
+   SCIP_CALL( SCIPincludeSepaCGMIP(scip) );
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
    SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
