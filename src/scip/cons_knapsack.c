@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.192 2010/03/26 19:50:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.193 2010/04/05 17:47:55 bzfpfets Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -1031,9 +1031,9 @@ SCIP_Bool checkSolveKnapsack(
 }
 #endif
 
-/** gets a most violated cover C ( sum_{j in C} a_j > a_0 ) for a given knapsack constraint sum_{j in N} a_j x_j <= a_0
- *  taking into consideration the following fixing: j in C, if j in N_1 = {j in N : x*_j = 1} and j in N\C, if j in 
- *  N_0 = {j in N : x*_j = 0}, if one exists 
+/** gets a most violated cover C (\f$\sum_{j \in C} a_j > a_0\f$) for a given knapsack constraint \f$\sum_{j \in N} a_j x_j \leq a_0\f$
+ *  taking into consideration the following fixing: \f$j \in C\f$, if \f$j \in N_1 = \{j \in N : x^*_j = 1\}\f$ and 
+ *  \f$j \in N \setminus C\f$, if \f$j \in N_0 = \{j \in N : x^*_j = 0\}\f$, if one exists.
  */
 static
 SCIP_RETCODE getCover(
@@ -1337,8 +1337,8 @@ SCIP_Bool checkMinweightidx(
 #endif
 
 
-/** gets partition (C_1,C_2) of minimal cover C, i.e. C_1 & C_2 = C and C_1 cap C_2 = emptyset, with C_1 not empty; 
- *  choses partition as follows C_2 = { j in C : x*_j = 1 } and C_1 = C\C_2
+/** gets partition \f$(C_1,C_2)\f$ of minimal cover \f$C\f$, i.e. \f$C_1 \cup C_2 = C\f$ and \f$C_1 \cap C_2 = \emptyset\f$, 
+ *  with \f$C_1\f$ not empty; choses partition as follows \f$C_2 = \{ j \in C : x^*_j = 1 \}\f$ and \f$C_1 = C \setminus C_2\f$
  */
 static
 void getPartitionCovervars(
@@ -1466,8 +1466,9 @@ SCIP_RETCODE changePartitionFeasiblesetvars(
 }
 
 
-/** gets partition (F,R) of N\C where C is a minimal cover, i.e. F & R = N\C and F cap R = emptyset; choses partition as 
- *  follows R = { j in N\C : x*_j = 0 } and F = (N\C)\F
+/** gets partition \f$(F,R)\f$ of \f$N \setminus C\f$ where \f$C\f$ is a minimal cover, i.e. \f$F \cup R = N \setminus C\f$
+ *  and \f$F \cap R = \emptyset\f$; choses partition as follows \f$R = \{ j \in N \setminus C : x^*_j = 0 \}\f$ and 
+ *  \f$F = (N \setminus C) \setminus F\f$
  */
 static
 void getPartitionNoncovervars(
@@ -2028,14 +2029,22 @@ SCIP_RETCODE sequentialUpAndDownLifting(
 }
 
 /** lifts given minimal cover inequality 
- *    sum_{j in C} x_j <= |C| - 1 
+ *  \f[
+ *    \sum_{j \in C} x_j \leq |C| - 1 
+ *  \f]
  *  valid for 
- *    S^0 = { x in {0,1}^|C| : sum_{j in C} a_j x_j <= a_0 } 
+ *  \f[
+ *    S^0 = \{ x \in {0,1}^{|C|} : \sum_{j \in C} a_j x_j \leq a_0 \}
+ *  \f]
  *  to a valid inequality 
- *    sum_{j in C} x_j + sum_{j in N\C} alpha_j x_j <= |C| - 1 
- *  for 
- *    S = { x in {0,1}^|N| : sum_{j in N} a_j x_j <= a_0 }; 
- *  uses superadditive up-lifting for the variables in N\C.
+ *  \f[
+ *    \sum_{j \in C} x_j + \sum_{j \in N \setminus C} \alpha_j x_j \leq |C| - 1
+ *  \f]
+ *  for
+ *  \f[ 
+ *    S = \{ x \in {0,1}^{|N|} : \sum_{j \in N} a_j x_j \leq a_0 \}; 
+ *  \f]
+ *  uses superadditive up-lifting for the variables in \f$N \setminus C\f$.
  */ 
 static
 SCIP_RETCODE superadditiveUpLifting(

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.334 2010/03/02 20:18:15 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.335 2010/04/05 17:47:56 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7148,7 +7148,7 @@ void cleanupMIRRow(
          SCIPdebugMessage("coefficient of <%s> in transformed MIR row is too small: %.12f\n",
             SCIPvarGetName(prob->vars[v]), mircoef[v]);
 
-         /* relax the constraint such that the coefficient becomes exact 0.0 */
+         /* relax the constraint such that the coefficient becomes exactly 0.0 */
          if( SCIPsetIsPositive(set, mircoef[v]) )
          {
             bd = cutislocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]);
@@ -7284,32 +7284,32 @@ void findBestUb(
    }
 }
 
-/** Transform equation \f$ a*x == b, lb <= x <= ub \f$ into standard form
- *    \f$ a^\prime*x^\prime == b, 0 <= x^\prime <= ub' \f$.
+/** Transform equation \f$ a \cdot x = b; lb \leq x \leq ub \f$ into standard form
+ *    \f$ a^\prime \cdot x^\prime = b,\; 0 \leq x^\prime \leq ub' \f$.
  *  
  *  Transform variables (lb or ub):
- * \f[
- * \begin{array}{llll}
- *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \mbox{if lb is used in transformation}\\
- *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \mbox{if ub is used in transformation}
- * \end{array}
- * \f]
- *  and move the constant terms \f$ a_j * lb_j \f$ or \f$ a_j * ub_j \f$ to the rhs.
+ *  \f[
+ *  \begin{array}{llll}
+ *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \mbox{if lb is used in transformation}\\
+ *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \mbox{if ub is used in transformation}
+ *  \end{array}
+ *  \f]
+ *  and move the constant terms \f$ a_j\, lb_j \f$ or \f$ a_j\, ub_j \f$ to the rhs.
  *
  *  Transform variables (vlb or vub):
- * \f[
- * \begin{array}{llll}
- *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),&   x_j == x^\prime_j + (bl_j * zl_j + dl_j),&   a^\prime_j ==  a_j,&   \mbox{if vlb is used in transf.} \\
- *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,&   x_j == (bu_j * zu_j + du_j) - x^\prime_j,&   a^\prime_j == -a_j,&   \mbox{if vub is used in transf.}
- * \end{array}
- * \f]
- *  move the constant terms \f$ a_j * dl_j \f$ or \f$ a_j * du_j \f$ to the rhs, and update the coefficient of the VLB variable:
- * \f[
- * \begin{array}{ll}
- *    a_{zl_j} := a_{zl_j} + a_j * bl_j,& \mbox{or} \\
- *    a_{zu_j} := a_{zu_j} + a_j * bu_j &
- * \end{array}
- * \f]
+ *  \f[
+ *  \begin{array}{llll}
+ *    x^\prime_j := x_j - (bl_j\, zl_j + dl_j),&   x_j = x^\prime_j + (bl_j\, zl_j + dl_j),&   a^\prime_j =  a_j,&   \mbox{if vlb is used in transf.} \\
+ *    x^\prime_j := (bu_j\, zu_j + du_j) - x_j,&   x_j = (bu_j\, zu_j + du_j) - x^\prime_j,&   a^\prime_j = -a_j,&   \mbox{if vub is used in transf.}
+ *  \end{array}
+ *  \f]
+ *  move the constant terms \f$ a_j\, dl_j \f$ or \f$ a_j\, du_j \f$ to the rhs, and update the coefficient of the VLB variable:
+ *  \f[
+ *  \begin{array}{ll}
+ *    a_{zl_j} := a_{zl_j} + a_j\, bl_j,& \mbox{or} \\
+ *    a_{zu_j} := a_{zu_j} + a_j\, bu_j &
+ *  \end{array}
+ *  \f]
  */
 static
 SCIP_RETCODE transformMIRRow(
@@ -7756,30 +7756,30 @@ SCIP_RETCODE transformMIRRow(
    return SCIP_OKAY;
 }
 
-/** Calculate fractionalities \f$ f_0 := b - down(b), f_j := a^\prime_j - down(a^\prime_j) \f$, and derive MIR cut \f$ \tilde{a}*x' <= down(b) \f$
+/** Calculate fractionalities \f$ f_0 := b - down(b), f_j := a^\prime_j - down(a^\prime_j) \f$, and derive MIR cut \f$ \tilde{a} \cdot x' \leq down(b) \f$
  * \f[
  * \begin{array}{rll}
- *  integers :&  \tilde{a}_j = down(a^\prime_j)                      &, if \qquad f_j <= f_0 \\
- *            &  \tilde{a}_j = down(a^\prime_j) + (f_j - f0)/(1 - f0)&, if \qquad f_j >  f_0 \\
- *  continuous:& \tilde{a}_j = 0                                     &, if \qquad a^\prime_j >= 0 \\
- *             & \tilde{a}_j = a^\prime_j/(1 - f0)                   &, if \qquad a^\prime_j <  0
+ *  integers :&  \tilde{a}_j = down(a^\prime_j),                        & if \qquad f_j \leq f_0 \\
+ *            &  \tilde{a}_j = down(a^\prime_j) + (f_j - f_0)/(1 - f_0),& if \qquad f_j >  f_0 \\
+ *  continuous:& \tilde{a}_j = 0,                                       & if \qquad a^\prime_j \geq 0 \\
+ *             & \tilde{a}_j = a^\prime_j/(1 - f_0),                    & if \qquad a^\prime_j <  0
  * \end{array}
  * \f]
  *
- *  Transform inequality back to \f$ \hat{a}*x <= rhs \f$:
+ *  Transform inequality back to \f$ \hat{a} \cdot x \leq rhs \f$:
  *
  *  (lb or ub):
  * \f[
  * \begin{array}{lllll}
- *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
- *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
+ *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
+ *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
  * \end{array}
  * \f]
  *  and move the constant terms
  * \f[
  * \begin{array}{cl}
- *    -\tilde{a}_j * lb_j == -\hat{a}_j * lb_j,& \mbox{or} \\
- *     \tilde{a}_j * ub_j == -\hat{a}_j * ub_j &
+ *    -\tilde{a}_j \cdot lb_j = -\hat{a}_j \cdot lb_j,& \mbox{or} \\
+ *     \tilde{a}_j \cdot ub_j = -\hat{a}_j \cdot ub_j &
  * \end{array}
  * \f]
  *  to the rhs.
@@ -7787,22 +7787,22 @@ SCIP_RETCODE transformMIRRow(
  *  (vlb or vub):
  * \f[
  * \begin{array}{lllll}
- *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),&   x_j == x^\prime_j + (bl_j * zl_j + dl_j),&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{(vlb)} \\
- *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,&   x_j == (bu_j * zu_j + du_j) - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{(vub)}
+ *    x^\prime_j := x_j - (bl_j \cdot zl_j + dl_j),&   x_j = x^\prime_j + (bl_j\, zl_j + dl_j),&   a^\prime_j =  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{(vlb)} \\
+ *    x^\prime_j := (bu_j\, zu_j + du_j) - x_j,&   x_j = (bu_j\, zu_j + du_j) - x^\prime_j,&   a^\prime_j = -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{(vub)}
  * \end{array}
  * \f]
  *  move the constant terms
  * \f[
  * \begin{array}{cl}
- *    -\tilde{a}_j * dl_j == -\hat{a}_j * dl_j,& \mbox{or} \\
- *     \tilde{a}_j * du_j == -\hat{a}_j * du_j &
+ *    -\tilde{a}_j\, dl_j = -\hat{a}_j\, dl_j,& \mbox{or} \\
+ *     \tilde{a}_j\, du_j = -\hat{a}_j\, du_j &
  * \end{array}
  * \f]
  *  to the rhs, and update the VB variable coefficients:
  * \f[
  * \begin{array}{ll}
- *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j * bl_j == \hat{a}_{zl_j} - \hat{a}_j * bl_j,& \mbox{or} \\
- *    \hat{a}_{zu_j} := \hat{a}_{zu_j} + \tilde{a}_j * bu_j == \hat{a}_{zu_j} - \hat{a}_j * bu_j &
+ *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j\, bl_j = \hat{a}_{zl_j} - \hat{a}_j\, bl_j,& \mbox{or} \\
+ *    \hat{a}_{zu_j} := \hat{a}_{zu_j} + \tilde{a}_j\, bu_j = \hat{a}_{zu_j} - \hat{a}_j\, bu_j &
  * \end{array}
  * \f]
  */
@@ -7982,16 +7982,16 @@ void roundMIRRow(
  *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r]. \f$
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
- * \f[
- * \begin{array}{rll}
- *    integers : & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                      &, if \qquad f_r <= f0 \\
- *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + (f_r - f0)/(1 - f0)&, if \qquad f_r >  f0 \\
- *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                     &, if \qquad a^\prime_r >= 0 \\
- *               & \hat{a}_r = \tilde{a}_r = a^\prime_r/(1 - f0)                   &, if \qquad a^\prime_r <  0
- * \end{array}
- * \f]
+ *  \f[
+ *  \begin{array}{rll}
+ *    integers : & \hat{a}_r = \tilde{a}_r = down(a^\prime_r),                      & \mbox{if}\qquad f_r <= f0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + (f_r - f0)/(1 - f0),& \mbox{if}\qquad f_r >  f0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0,                                     & \mbox{if}\qquad a^\prime_r >= 0 \\
+ *               & \hat{a}_r = \tilde{a}_r = a^\prime_r/(1 - f0),                   & \mbox{if}\qquad a^\prime_r <  0
+ *  \end{array}
+ *  \f]
  *
- *  Substitute \f$ \hat{a}_r * s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
+ *  Substitute \f$ \hat{a}_r \cdot s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
  */
 static
 void substituteMIRRow(
