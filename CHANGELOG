@@ -105,6 +105,7 @@ fixed bugs:
 - fixed bug in cons_knapsack.c w.r.t. to items with zero weight
 - fixed bug in lp.c w.r.t. to the number of "active" pricer
 - fixed bug in scip.c w.r.t. to call of conflict analysis for LPs which reached the objective limit in case of diving
+- fixed bug in cutpool.c: the hashkey computation was not constant over time
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
