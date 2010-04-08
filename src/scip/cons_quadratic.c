@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.86 2010/03/16 18:42:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.87 2010/04/08 19:51:30 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7341,14 +7341,14 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
             switch(sense)
             {
             case CIP_SENSE_LE:
-               lhs = coef;
+               lhs = coefsign * coef;
                break;
             case CIP_SENSE_GE:
-               rhs = coef;
+               rhs = coefsign * coef;
                break;
             case CIP_SENSE_EQ:
-               lhs = coef;
-               rhs = coef;
+               lhs = coefsign * coef;
+               rhs = coefsign * coef;
                break;
             default:
                SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected unknown sense <%d>)\n", sense);
@@ -7391,13 +7391,13 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
          
          if( sense == CIP_SENSE_EQ ) 
          {
-            lhs = coef;
-            rhs = coef;
+            lhs = coefsign * coef;
+            rhs = coefsign * coef;
          }
          else if( sense == CIP_SENSE_LE ) 
-            rhs = coef;
+            rhs = coefsign * coef;
          if( sense == CIP_SENSE_GE ) 
-            lhs = coef;
+            lhs = coefsign * coef;
          
          continue;
       }
