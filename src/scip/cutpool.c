@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.60 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.61 2010/04/08 17:33:48 bzfpfets Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -122,7 +122,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    row = (SCIP_ROW*)key;
    assert(row != NULL);
 
-   keyval = (row->nummaxval << 29) + (row->len << 22) + (row->minidx << 11) + row->maxidx; /*lint !e701*/
+   keyval = (row->index << 29) + (row->len << 22) + (row->minidx << 11) + row->maxidx; /*lint !e701*/
 
    return keyval;
 }
