@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.12 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.13 2010/04/08 18:38:50 bzfberth Exp $"
 
 
 /**@file   heur_trivial.c
@@ -87,6 +87,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    if( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
    success = FALSE;
 
@@ -96,7 +99,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    SCIP_CALL( SCIPcreateSol(scip, &zerosol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &locksol, heur) );
 
-   infinity = SCIPceil(scip, SCIPinfinity(scip) / 1000000000.0);
+   infinity = MIN(100000.0, SCIPinfinity(scip));
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
 
