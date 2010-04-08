@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.1 2010/04/05 17:50:54 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.2 2010/04/08 19:47:07 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -1210,11 +1210,9 @@ SCIP_RETCODE computeCut(
 	 val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
 	 assert( ! SCIPisFeasNegative(subscip, val) );
 
-	 if ( SCIPisFeasPositive(scip, val) )
-	 {
-	    assert( SCIPisFeasZero(scip, weight) );
-	    weight = val;  /* not both should be positive */
-	 }
+	 /* in a suboptimal solution both values may be positive - take the larger */
+	 if ( SCIPisFeasGT(scip, val, weight) )
+	    weight = val;
       }
 
       /* add row if weight is nonzero */
