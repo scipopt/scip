@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.337 2010/04/05 17:53:14 bzfpfets Exp $
+# $Id: Makefile,v 1.338 2010/04/09 20:55:01 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -57,10 +57,11 @@ SOFTLINKS	=
 MAKESOFTLINKS	=	true
 READLINE	=	true
 ZLIB		=	true
-GMP             =       auto
+GMP		=	auto
 ZIMPL		=	true
 IPOPT		=	false
-LPSOPT		=	opt
+EXPRINT	=	none
+LPSOPT	=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 
@@ -128,7 +129,7 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique
+LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique nlpi
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -348,7 +349,7 @@ IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
 IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
-FLAGS		+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+FLAGS			+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
 LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
 ifeq ($(LIBEXT),$(STATICLIBEXT))
 LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
@@ -363,6 +364,13 @@ SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHA
 LPIINSTMSG	+=	"\n  -> \"ipoptinc\" is a directory containing the ipopt header files, i.e., \"ipoptinc/IpIpoptApplication.hpp\" should exist.\n"
 LPIINSTMSG	+=	" -> \"libipopt.*\" is the Ipopt library, e.g., \"/client/lib/ipopt-3.7.0/libipopt.a\"\n"
 LPIINSTMSG	+=	" -> \"ipopt_addlibs.*\" is the Ipopt addlibs_cpp file, e.g., \"/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt\"\n"
+endif
+
+ifeq ($(EXPRINT),cppad)
+LINKER		=	CPP
+FLAGS			+=	-I$(LIBDIR) $(CPPAD_FLAGS)
+SOFTLINKS	+=	$(LIBDIR)/cppad
+LPIINSTMSG	+=	" -> \"cppad\" is a directory containing the CppAD header files, i.e., \"cppad/cppad.hpp\" should exist.\n"
 endif
 
 ifeq ($(READLINE),true)
@@ -405,8 +413,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/lp.o \
 			scip/mem.o \
 			scip/misc.o \
-			scip/nlpi.o \
-			scip/nlpi_oracle.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -533,6 +539,14 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
+			
+SCIPLIBOBJ += nlpi/nlpi.o \
+			nlpi/nlpioracle.o \
+			nlpi/expression.o			
+			
+ifeq ($(EXPRINT),none)
+SCIPLIBOBJ += nlpi/exprinterpret_none.o
+endif
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
@@ -542,10 +556,17 @@ SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 
 ifeq ($(IPOPT),true)
-SCIPLIBOBJ += scip/nlpi_ipopt.o
-SCIPLIBOBJFILES += $(LIBOBJDIR)/scip/nlpi_ipopt.o
-SCIPLIBSRC += $(SRCDIR)/scip/nlpi_ipopt.cpp
+SCIPLIBOBJ += nlpi/nlpi_ipopt.o
+SCIPLIBOBJFILES += $(LIBOBJDIR)/nlpi/nlpi_ipopt.o
+SCIPLIBSRC += $(SRCDIR)/nlpi/nlpi_ipopt.cpp
 endif
+
+ifeq ($(EXPRINT),cppad)
+SCIPLIBOBJ += nlpi/exprinterpret_cppad.o
+SCIPLIBOBJFILES += $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o
+SCIPLIBSRC += $(SRCDIR)/nlpi/exprinterpret_cppad.cpp
+endif
+
 
 ALLSRC		+=	$(SCIPLIBSRC)
 
@@ -607,7 +628,7 @@ ALLSRC		+=	$(MAINSRC)
 
 
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(EXPRINT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -892,7 +913,7 @@ links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT)"
+		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) EXPRINT=$(EXPRINT)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."

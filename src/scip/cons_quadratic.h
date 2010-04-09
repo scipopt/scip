@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.16 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.17 2010/04/09 20:55:02 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -31,7 +31,7 @@
 #define __SCIP_CONS_QUADRATIC_H__
 
 #include "scip/scip.h"
-#include "scip/type_nlpi.h"
+#include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -324,7 +324,8 @@ extern
 SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for quadratic constraints */
-   SCIP_NLPI*            nlpi,               /**< NLPI where to add constraints */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< quadratic constraints */
    SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */

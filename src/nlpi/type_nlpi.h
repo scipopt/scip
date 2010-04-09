@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.1 2010/03/11 11:22:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.2 2010/04/09 20:55:02 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -28,12 +28,12 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "nlpi/type_expression.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct SCIP_ExprTree      SCIP_EXPRTREE;      /**< expression tree for general nonlinear functions (maybe in SCIP 1.3) */
 typedef struct SCIP_Nlpi          SCIP_NLPI;          /**< NLP solver interface */
 typedef struct SCIP_NlpiData      SCIP_NLPIDATA;      /**< locally defined NLP solver interface data */
 typedef struct SCIP_NlpiProblem   SCIP_NLPIPROBLEM;   /**< locally defined NLP solver interface data for a specific problem instance */

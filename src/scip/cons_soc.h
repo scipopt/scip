@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.6 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_soc.h,v 1.7 2010/04/09 20:55:02 bzfviger Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints
@@ -33,7 +33,7 @@
 #define __SCIP_CONS_SOC_H__
 
 #include "scip/scip.h"
-#include "scip/type_nlpi.h"
+#include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,7 +88,8 @@ SCIP_RETCODE SCIPcreateConsSOC(
 SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for SOC constraints */
-   SCIP_NLPI*            nlpi,               /**< NLPI where to add constraints */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< SOC constraints */
    SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */

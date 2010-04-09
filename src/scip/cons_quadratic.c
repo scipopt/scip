@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.87 2010/04/08 19:51:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.88 2010/04/09 20:55:02 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -44,7 +44,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/intervalarith.h"
 #include "scip/heur_nlp.h"
-#include "scip/nlpi.h"
+#include "nlpi/nlpi.h"
 
 #ifdef WITH_CONSBRANCHNL
 #include "cons_branchnonlinear.h"
@@ -5427,7 +5427,8 @@ SCIP_RETCODE propagateBounds(
 SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for quadratic constraints */
-   SCIP_NLPI*            nlpi,               /**< NLPI where to add constraints */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< quadratic constraints */
    SCIP_HASHMAP*         scipvar2nlpvar      /**< mapping from SCIP variables to variable indices in NLPI */
@@ -5587,7 +5588,7 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
       SCIPhashmapFree(&var2rowidx);
    }
 
-   SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nconss,
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss,
       lhs, rhs,
       nlininds, lininds, linvals,
       nquadrows, quadrowidx, quadoffset, quadindex, quadcoefs,

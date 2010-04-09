@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.22 2010/03/26 13:55:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.23 2010/04/09 20:55:02 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -30,8 +30,8 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_nlp.h"
-#include "scip/nlpi.h"
 #include "scip/intervalarith.h"
+#include "nlpi/nlpi.h"
 
 
 /* constraint handler properties */
@@ -2595,7 +2595,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for SOC constraints */
-   SCIP_NLPI*            nlpi,               /**< NLPI where to add constraints */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< SOC constraints */
    SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */
@@ -2755,7 +2756,7 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       quadoffset[i][consdata->nvars + 1] = consdata->nvars + 1;
    }
 
-   SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nconss,
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss,
       lhs, rhs,
       nlininds, lininds, linvals,
       nquadrows, quadrowidx, quadoffset, quadindex, quadcoeff,

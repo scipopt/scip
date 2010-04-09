@@ -12,35 +12,28 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.6 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_exprinterpret.h,v 1.1 2010/04/09 20:55:02 bzfviger Exp $"
 
-/**@file    nlpi_ipopt.h
- * @brief   Ipopt NLP interface
- * @ingroup NLPINTERFACES
- * @author  Stefan Vigerske
+/**@file   type_exprinterpret.h
+ * @brief  type definitions for expression interpreter
+ * @author Stefan Vigerske
+ * @author Thorsten Gellermann
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_NLPI_IPOPT_H__
-#define __SCIP_NLPI_IPOPT_H__
-
-#include "scip/type_nlpi.h"
-#include "scip/scip.h"
+#ifndef __SCIP_TYPE_EXPRINTERPRET_H__
+#define __SCIP_TYPE_EXPRINTERPRET_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** create solver interface for Ipopt solver */
-extern
-SCIP_RETCODE SCIPcreateNlpSolverIpopt( 
-   SCIP*                 scip,               /**< central scip datastructure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
-);
+typedef struct SCIP_ExprInt     SCIP_EXPRINT;      /**< an expression interpreter */
+typedef struct SCIP_ExprIntData SCIP_EXPRINTDATA;  /**< data of an expression interpreter */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_NLPI_IPOPT_H__ */
+#endif /* __SCIP_TYPE_EXPRINTERPRET_H__ */
