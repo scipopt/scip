@@ -4160,12 +4160,14 @@
  *  \arg <tt>score</tt>   - N/A
  *
  *  \arg <tt>all</tt>   - All solvers.
+ *  \arg <tt>optimal auto settings</tt> - Theoretical result for a solver that performed 'best of all' for every instance.
  *  \arg <tt>diff</tt>  - Solvers with instances that differ from the reference solver in the number of 
  *       processed nodes or in the total number of simplex iterations.
  *  \arg <tt>equal</tt> - Solvers with instances whose number of processed nodes and total number of
  *       simplex iterations is equal to the reference solver (including a 10% tolerance) and where no timeout
  *       occured.
- *  \arg <tt>optimal auto settings</tt> - Theoretical result for a solver that performed 'best of all' for every instance.
+ *  \arg <tt>all optimal</tt> - Solvers with instances that could be solved to optimiality by
+ *       <em>all</em> solvers; in particular, no timeout occured.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
