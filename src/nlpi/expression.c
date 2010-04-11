@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.1 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.2 2010/04/11 20:40:38 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -410,6 +410,7 @@ SCIP_RETCODE SCIPexprCreate(
          children[0] = va_arg( ap, SCIP_EXPR* );
          children[1] = va_arg( ap, SCIP_EXPR* );
          va_end( ap );
+         opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
          
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 2, children, opdata ) );
          break;
@@ -430,6 +431,7 @@ SCIP_RETCODE SCIPexprCreate(
          va_start(ap, op );
          children[0] = va_arg( ap, SCIP_EXPR* );
          va_end( ap );
+         opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
          
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 1, children, opdata ) );
          break;
