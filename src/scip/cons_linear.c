@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.352 2010/03/31 11:14:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.353 2010/04/11 21:32:15 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5603,10 +5603,6 @@ SCIP_RETCODE convertLongEquality(
       }
    }
 
-   /* do not multi aggregate binary variables */
-   if( bestslacktype == SCIP_VARTYPE_BINARY )
-      return SCIP_OKAY;
-
    /* if all coefficients and variables are integral, the right hand side must also be integral */
    if( coefsintegral && varsintegral && !SCIPisFeasIntegral(scip, consdata->rhs) )
    {
@@ -5633,6 +5629,10 @@ SCIP_RETCODE convertLongEquality(
       SCIP_Real newrhs;
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
+
+      /* do not multi aggregate binary variables */
+      if( bestslacktype == SCIP_VARTYPE_BINARY )
+         return SCIP_OKAY;
 
       /* we found a slack variable that only occurs in at most one other constraint:
        *   a_1*x_1 + ... + a_k*x_k + a'*s == rhs  ->  s == rhs - a_1/a'*x_1 - ... - a_k/a'*x_k
