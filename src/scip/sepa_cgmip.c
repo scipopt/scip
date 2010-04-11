@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.2 2010/04/08 19:47:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.3 2010/04/11 19:17:55 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -470,8 +470,8 @@ SCIP_RETCODE transformColumn(
  *    finite, but the upper bounds are finite, we can complement the variable. If the variables are
  *    free, the above formulation changes as follows: For free continuous variables, we require
  *    \f$\tilde{C}^T y = 0\f$. For a free integer variable \f$x_j\f$ (which rarely occurs in
- *    practice), we require \f$f_j = 0\f$, i.e., we force that \f$\tilde{A}^T y + \overline{z} =
- *    \alpha\f$.
+ *    practice), we require \f$f_j = 0\f$, i.e., we force that \f$(\tilde{A}^T y + \overline{z})_j =
+ *    \alpha_j\f$.
  *
  *  - If \f$x^*_j = 0 = \ell_j\f$ (after the above preprocessing), we drop variable \f$\alpha_j\f$
  *    from the formulation. Let \f$(\alpha^*, \beta^*, y^*, \overline{z}^*)\f$ be an
@@ -602,34 +602,27 @@ SCIP_RETCODE createSubscip(
       if ( ! SCIPcolIsIntegral(col) )
 	 mipdata->colType[j] = colContinuous;
 
-      /* if a variable has a finite nonzero lower bound -> shift */
-      if ( ! SCIPisInfinity(scip, -lb[j]) )
+      /* if integer variable is at its upper bound -> complementing (this also generates a 0 lower bound) */
+      if ( mipdata->colType[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
       {
-	 if ( ! SCIPisZero(scip, lb[j]) )
-	 {
-	    SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-	    assert( SCIPisZero(scip, lb[j]) );
-	    mipdata->isShifted[j] = TRUE;
-	    ++nshifted;
-	 }
-
-	 /* if integer variable is at its lower bound */
-	 if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
-	 {
-	    mipdata->colType[j] = colAtLb;
-	    ++nlbounds;
-	 }
+	 assert( ! SCIPisInfinity(scip, ub[j]) );
+	 SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+	 mipdata->isComplemented[j] = TRUE;
+	 mipdata->colType[j] = colAtUb;
+	 ++nubounds;
       }
       else
       {
-	 /* lower bound is minus-infinity -> check whether upper bound is finite */
-	 if ( ! SCIPisInfinity(scip, ub[j]) )
+	 /* if a variable has a finite nonzero lower bound -> shift */
+	 if ( ! SCIPisInfinity(scip, -lb[j]) )
 	 {
-	    /* complement variable */
-	    SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-	    assert( SCIPisZero(scip, lb[j]) );
-	    mipdata->isComplemented[j] = TRUE;
-	    ++ncomplemented;
+	    if ( ! SCIPisZero(scip, lb[j]) )
+	    {
+	       SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+	       assert( SCIPisZero(scip, lb[j]) );
+	       mipdata->isShifted[j] = TRUE;
+	       ++nshifted;
+	    }
 
 	    /* if integer variable is at its lower bound */
 	    if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
@@ -638,16 +631,25 @@ SCIP_RETCODE createSubscip(
 	       ++nlbounds;
 	    }
 	 }
-      }
+	 else
+	 {
+	    /* lower bound is minus-infinity -> check whether upper bound is finite */
+	    if ( ! SCIPisInfinity(scip, ub[j]) )
+	    {
+	       /* complement variable */
+	       SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+	       assert( SCIPisZero(scip, lb[j]) );
+	       mipdata->isComplemented[j] = TRUE;
+	       ++ncomplemented;
 
-      /* if integer variable is at its upper bound -> complementing */
-      if ( mipdata->colType[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
-      {
-	 assert( ! SCIPisInfinity(scip, ub[j]) );
-	 SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-	 mipdata->isComplemented[j] = TRUE;
-	 mipdata->colType[j] = colAtUb;
-	 ++nubounds;
+	       /* if integer variable is at its lower bound */
+	       if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+	       {
+		  mipdata->colType[j] = colAtLb;
+		  ++nlbounds;
+	       }
+	    }
+	 }
       }
 
       assert( SCIPisFeasLE(scip, lb[j], primsol[j]) );
@@ -1274,11 +1276,10 @@ SCIP_RETCODE computeCut(
 	 val = SCIPgetSolVal(subscip, sol, mipdata->z[j]);
 	 assert( ! SCIPisFeasNegative(subscip, val) );
 
-	 /* if a local upper bound has been used */
+	 /* if a bound has been used */
 	 if ( SCIPisSumPositive(subscip, val) )
 	 {
 	    SCIP_VAR* var;
-	    SCIP_Real ubnd;
 	    int idx;
 
 	    var = SCIPcolGetVar(cols[j]);
@@ -1288,23 +1289,51 @@ SCIP_RETCODE computeCut(
 	    assert( SCIPvarIsIntegral(var) );
 	    assert( SCIPvarGetCol(var) == cols[j] );
 
-	    ubnd = SCIPvarGetUbGlobal(var);
-	    assert( ! SCIPisInfinity(scip, ubnd) );
-	    assert( SCIPisIntegral(scip, ubnd) );
-	    assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(cols[j])) );
-
-	    /* if allowed try to use stronger local bound */
-	    if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
-	    {
-	       ubnd = SCIPvarGetUbLocal(var);
-	       *localboundsused = TRUE;
-	    }
-
 	    idx = SCIPvarGetProbindex(var);
 	    assert( 0 <= idx && idx < nvars );
 
-	    cutcoefs[idx] += val;
-	    *cutrhs += ubnd * val;
+	    /* check whether variable is complemented */
+	    if ( mipdata->isComplemented[j] )
+	    {
+	       SCIP_Real lbnd;
+	       lbnd = SCIPvarGetLbGlobal(var);
+	       assert( ! SCIPisInfinity(scip, -lbnd) );
+	       assert( SCIPisIntegral(scip, lbnd) );
+	       assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(cols[j])) );
+
+	       /* variable should not be free */
+	       assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
+
+	       /* if allowed, try to use stronger local bound */
+	       if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
+	       {
+		  lbnd = SCIPvarGetLbLocal(var);
+		  assert( SCIPisIntegral(scip, lbnd) );
+		  *localboundsused = TRUE;
+	       }
+
+	       cutcoefs[idx] -= val;
+	       *cutrhs -= lbnd * val;
+	    }
+	    else
+	    {
+	       SCIP_Real ubnd;
+	       ubnd = SCIPvarGetUbGlobal(var);
+	       assert( ! SCIPisInfinity(scip, ubnd) );
+	       assert( SCIPisIntegral(scip, ubnd) );
+	       assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(cols[j])) );
+
+	       /* if allowed, try to use stronger local bound */
+	       if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
+	       {
+		  ubnd = SCIPvarGetUbLocal(var);
+		  assert( SCIPisIntegral(scip, ubnd) );
+		  *localboundsused = TRUE;
+	       }
+
+	       cutcoefs[idx] += val;
+	       *cutrhs += ubnd * val;
+	    }
 	 }
       }
    }
@@ -1312,40 +1341,84 @@ SCIP_RETCODE computeCut(
    /* check lower bounds for integral variables */
    for (j = 0; j < nvars; ++j)
    {
-      assert( vars[j] != NULL );
-      if ( SCIPvarIsIntegral(vars[j]) )
+      SCIP_VAR* var;
+      var = vars[j];
+      assert( var != NULL );
+      if ( SCIPvarIsIntegral(var) )
       {
-	 val = cutcoefs[j] - SCIPfloor(scip, cutcoefs[j]);
-	 assert( ! SCIPisFeasNegative(scip, val) );
+	 int pos;
 
-	 /* only if variable needs to be rounded */
-	 if ( SCIPisSumPositive(scip, val) )
+	 pos = SCIPcolGetLPPos(SCIPvarGetCol(var));
+	 assert( 0 <= pos && pos < ncols );
+
+	 /* check whether variable is complemented */
+	 if ( mipdata->isComplemented[pos] )
 	 {
-	    SCIP_VAR* var;
-	    SCIP_Real lbnd;
+	    /* if the variable is complemented, the multiplier for the upper bound arises from the
+	       lower bound multiplier for the transformed problem - because of the minus-sign in the
+	       transformation this yields a round-up operation. */
+	    val = SCIPceil(scip, cutcoefs[j]) - cutcoefs[j];
+	    assert( ! SCIPisFeasNegative(scip, val) );
 
-	    var = vars[j];
-	    lbnd = SCIPvarGetLbGlobal(var);
-	    assert( ! SCIPisInfinity(scip, -lbnd) );
-	    assert( SCIPisIntegral(scip, lbnd) );
-
-	    /* variable should not be free */
-	    assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
-
-	    /* if allowed try to use stronger local bound */
-	    if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
+	    /* only if variable needs to be rounded */
+	    if ( SCIPisSumPositive(scip, val) )
 	    {
-	       lbnd = SCIPvarGetLbLocal(var);
-	       *localboundsused = TRUE;
+	       SCIP_Real ubnd;
+	       ubnd = SCIPvarGetUbGlobal(var);
+	       assert( ! SCIPisInfinity(scip, ubnd) );
+	       assert( SCIPisIntegral(scip, ubnd) );
+
+	       /* variable should not be free */
+	       assert( ! SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || ! SCIPisInfinity(scip, ubnd) );
+
+	       /* if allowed, try to use stronger local bound */
+	       if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
+	       {
+		  ubnd = SCIPvarGetUbLocal(var);
+		  assert( SCIPisIntegral(scip, ubnd) );
+		  *localboundsused = TRUE;
+	       }
+
+	       /* round cut coefficients, i.e., add val to cutcoefs[j] */
+	       cutcoefs[j] = SCIPceil(scip, cutcoefs[j]);
+
+	       /* correct rhs */
+	       if ( ! SCIPisSumZero(scip, ubnd) )
+		  *cutrhs += ubnd * val;
 	    }
-	    assert( SCIPisIntegral(scip, lbnd) );
+	 }
+	 else
+	 {
+	    /* compute multiplier for lower bound: */
+	    val = cutcoefs[j] - SCIPfloor(scip, cutcoefs[j]);
+	    assert( ! SCIPisFeasNegative(scip, val) );
 
-	    /* correct rhs */
-	    if ( ! SCIPisSumZero(scip, lbnd) )
-	       *cutrhs -= lbnd * val;
+	    /* only if variable needs to be rounded */
+	    if ( SCIPisSumPositive(scip, val) )
+	    {
+	       SCIP_Real lbnd;
+	       lbnd = SCIPvarGetLbGlobal(var);
+	       assert( ! SCIPisInfinity(scip, -lbnd) );
+	       assert( SCIPisIntegral(scip, lbnd) );
 
-	    /* round cut coefficients */
-	    cutcoefs[j] = SCIPfloor(scip, cutcoefs[j]);
+	       /* variable should not be free */
+	       assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
+
+	       /* if allowed, try to use stronger local bound */
+	       if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
+	       {
+		  lbnd = SCIPvarGetLbLocal(var);
+		  assert( SCIPisIntegral(scip, lbnd) );
+		  *localboundsused = TRUE;
+	       }
+
+	       /* round cut coefficients, i.e., subtract val from cutcoefs[j] */
+	       cutcoefs[j] = SCIPfloor(scip, cutcoefs[j]);
+
+	       /* correct rhs */
+	       if ( ! SCIPisSumZero(scip, lbnd) )
+		  *cutrhs -= lbnd * val;
+	    }
 	 }
       }
       else
@@ -1453,6 +1526,36 @@ SCIP_RETCODE createCGCutsDirect(
 	 cutact += cutcoefs[k] * varsolvals[k];
 
       SCIPdebugMessage("act=%f, rhs=%f\n", cutact, cutrhs);
+
+#if 0
+#ifdef SCIP_DEBUG
+      {
+	 /* check for correctness of computed values */
+	 SCIP_Real obj = 0.0;
+	 SCIP_Real val;
+	 SCIP_Bool shifted = FALSE;
+	 unsigned int j;
+	 for (j = 0; j < mipdata->ncols; ++j)
+	 {
+	    if ( mipdata->colType[j] == colPresent )
+	    {
+	       assert( mipdata->alpha[j] != NULL );
+	       val = SCIPgetSolVal(subscip, sol, mipdata->alpha[j]);
+	       assert( SCIPisFeasIntegral(subscip, val) );
+	       assert( SCIPisFeasEQ(scip, val, cutcoefs[j]) );
+	       obj += val * SCIPvarGetObj(mipdata->alpha[j]);
+	    }
+	    if ( mipdata->isShifted[j] )
+	       shifted = TRUE;
+	 }
+	 assert( mipdata->beta != NULL );
+	 val = SCIPgetSolVal(subscip, sol, mipdata->beta);
+	 assert( SCIPisFeasIntegral(subscip, val) );
+	 obj += val * SCIPvarGetObj(mipdata->beta);
+	 assert( shifted || SCIPisFeasEQ(scip, obj, cutact - cutrhs) );
+      }
+#endif
+#endif
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if ( SCIPisFeasGT(scip, cutact, cutrhs) )
