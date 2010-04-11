@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.193 2010/04/05 17:47:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.194 2010/04/11 20:36:24 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -631,6 +631,7 @@ void consdataChgWeight(
 #if 0
    consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a weight was changed */
 #else
+   /* recalculate the clique partition after a weight was increased */
    if( oldweight < newweight )
    {
       consdata->cliquesadded = FALSE;
@@ -3496,10 +3497,7 @@ SCIP_RETCODE delCoefPos(
 	 
 	 /* the following if and else cases assure that we have increasing cliquenumbers */
 	 if( ABS(consdata->cliquepartition[pos]) > pos+1 )
-	 {
-	    //         printf("we have to recalculate cliquepartition %d %d\n", consdata->cliquepartition[pos], pos+1);
 	    consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
-	 }
 	 else
 	 {
 	    int i;
@@ -5221,20 +5219,6 @@ SCIP_RETCODE tightenWeights(
 
    SCIP_CALL( mergeMultiples(scip, cons) );
 
-   if( consdata->cliquepartitioned )
-   {
-      int pos;
-      for( pos = 0; pos < consdata->nvars; ++pos )
-         if( consdata->cliquepartition[pos] > pos+1 )
-         {
-            //               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            printf("%d %d\n", consdata->cliquepartition[pos], pos);
-            printf("error in tightening after merging, cliquenum greater number of vars\n");
-            abort();
-         }
-   }
-
-
    /* apply rule (1) */
    do
    {
@@ -5267,19 +5251,6 @@ SCIP_RETCODE tightenWeights(
       }
    }
    while( !consdata->sorted && consdata->weightsum > consdata->capacity );
-
-   if( consdata->cliquepartitioned )
-   {
-      int pos;
-      for( pos = 0; pos < consdata->nvars; ++pos )
-         if( consdata->cliquepartition[pos] > pos+1 )
-         {
-            //               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            printf("%d %d\n", consdata->cliquepartition[pos], pos);
-            printf("error in tightening after rule 1, cliquenum greater number of vars\n");
-            abort();
-         }
-   }
 
    /* check for redundancy */
    if( consdata->weightsum <= consdata->capacity )
@@ -5424,19 +5395,6 @@ SCIP_RETCODE tightenWeights(
                      forceclique = TRUE;
                }
 
-               if( consdata->cliquepartitioned )
-               {
-                  int pos;
-                  for( pos = 0; pos < consdata->nvars; ++pos )
-                     if( consdata->cliquepartition[pos] > pos+1 )
-                     {
-                        //               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-                        printf("%d %d\n", consdata->cliquepartition[pos], pos);
-                        printf("error in tightening in rule 2 before applying changes, cliquenum greater number of vars\n");
-                        abort();
-                     }
-               }
-
                /* check if we really want to apply the change */
                if( conshdlrdata->disaggregation || !forceclique )
                {
@@ -5489,30 +5447,6 @@ SCIP_RETCODE tightenWeights(
                      SCIPfreeBufferArray(scip, &cliquevars);
                   }
                }
-               if( consdata->cliquepartitioned )
-               {
-                  int pos;
-                  for( pos = 0; pos < consdata->nvars; ++pos )
-                     if( consdata->cliquepartition[pos] > pos+1 )
-                     {
-                        //               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-                        printf("%d %d\n", consdata->cliquepartition[pos], pos);
-                        printf("error in tightening in rule 2 after applying changes, cliquenum greater number of vars\n");
-                        abort();
-                     }
-               }
-            }
-            if( consdata->cliquepartitioned )
-            {
-               int pos;
-               for( pos = 0; pos < consdata->nvars; ++pos )
-                  if( consdata->cliquepartition[pos] > pos+1 )
-                  {
-                     //               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-                     printf("%d %d\n", consdata->cliquepartition[pos], pos);
-                     printf("error in tightening in rule 2 after clique %d, cliquenum greater number of vars\n", i);
-                     abort();
-                  }
             }
          }
          if( zeroweights )
@@ -5532,20 +5466,6 @@ SCIP_RETCODE tightenWeights(
       if( consdata->weightsum <= consdata->capacity )
          return SCIP_OKAY;
    }
-
-   if( consdata->cliquepartitioned )
-   {
-      int pos;
-      for( pos = 0; pos < consdata->nvars; ++pos )
-         if( consdata->cliquepartition[pos] > pos+1 )
-         {
-            //               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            printf("%d %d\n", consdata->cliquepartition[pos], pos);
-            printf("error in tightening after rule 2, cliquenum greater number of vars\n");
-            abort();
-         }
-   }
-
 
    /* apply rule (3) */
    SCIP_CALL( tightenWeightsLift(scip, cons, nchgcoefs) );
@@ -6243,6 +6163,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                --v1;
             else
                --v0;
+            ++v;
          }
       }
       if( iscons1incons0contained )
