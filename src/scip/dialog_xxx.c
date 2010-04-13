@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xxx.c,v 1.6 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: dialog_xxx.c,v 1.7 2010/04/13 18:01:36 bzfpfets Exp $"
 
 /**@file   dialog_xxx.c
  * @ingroup DIALOGS
@@ -144,9 +144,9 @@ SCIP_DECL_INCLUDEPLUGIN(SCIPincludeDialogXxx)
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {
-      SCIP_CALL( SCIPcreateDialog(scip, &dialog, 
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
             SCIPincludeDialogXxx,
-            dialogExecXxx, dialogDescXxx, dialogFreeXxx,
+            dialogCopyXxx, dialogExecXxx, dialogDescXxx, dialogFreeXxx,
             DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
