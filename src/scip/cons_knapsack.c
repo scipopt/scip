@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.194 2010/04/11 20:36:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.195 2010/04/13 21:54:26 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -3721,11 +3721,8 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
-   if( !consdata->merged )
-   {
-      SCIP_CALL( mergeMultiples(scip, cons) );
-   }
-   assert(consdata->merged);
+   /* we need a merged constraint cause, without it the negated clique information could be invalid */
+   usenegatedclique = usenegatedclique && consdata->merged;
 
    do
    {
@@ -4032,10 +4029,7 @@ SCIP_RETCODE simplifyInequalities(
 
    *cutoff = FALSE;
 
-   if( !consdata->merged )
-   {
-      SCIP_CALL( mergeMultiples(scip, cons) );
-   }
+   SCIP_CALL( mergeMultiples(scip, cons) );
    assert(consdata->merged);
 
    /* check if capacity is odd */
@@ -6904,6 +6898,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       }
       thisnfixedvars = *nfixedvars;
       thisnchgbds = *nchgbds;
+
+      /* merge constraint, so propagation works better */
+      SCIP_CALL( mergeMultiples(scip, cons) );
 
       /* add cliques in the knapsack to the clique table */
       SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
