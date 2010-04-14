@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.152 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.153 2010/04/14 14:54:41 bzfpfets Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3589,6 +3589,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, nvars) );
+
+   /* if solve for some reason did not produce a dual ray, e.g. because of numerical instabilities, abort conflict analysis */
+   if ( ! SCIPlpiHasDualRay(lpi) )
+      goto TERMINATE;
 
    /* get dual farkas values of rows */
    retcode = SCIPlpiGetDualfarkas(lpi, dualfarkas);
