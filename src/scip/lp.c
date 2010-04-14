@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.335 2010/04/05 17:47:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.336 2010/04/14 18:44:17 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10906,8 +10906,8 @@ SCIP_RETCODE lpSolve(
    /* call simplex */
    SCIP_CALL( lpSolveStable(lp, set, stat, lpalgo, resolve, fastmip, tightfeastol, fromscratch, keepsol, &timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
-   solvedprimal = solvedprimal || (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
-   solveddual = solveddual || (lpalgo == SCIP_LPALGO_DUALSIMPLEX);
+   solvedprimal = solvedprimal || (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
+   solveddual = solveddual || (lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
 
    /* check, if an error occured */
    if( *lperror )
@@ -10963,9 +10963,10 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
    {
-      if( needdualray && !SCIPlpiHasDualRay(lp->lpi) && !solveddual )
+      /* because of numerical instability lpalgo != lp->lastlpalgo might happen - hence, we have to check both */
+      if( needdualray && !SCIPlpiHasDualRay(lp->lpi) && !solveddual && lpalgo != SCIP_LPALGO_DUALSIMPLEX )
       {
-         assert(lpalgo != SCIP_LPALGO_DUALSIMPLEX);
+         assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX);
          lpalgo = SCIP_LPALGO_DUALSIMPLEX;
          goto SOLVEAGAIN;
       }
@@ -10974,9 +10975,10 @@ SCIP_RETCODE lpSolve(
    }
    else if( SCIPlpiExistsPrimalRay(lp->lpi) )
    {
-      if( needprimalray && !SCIPlpiHasPrimalRay(lp->lpi) && !solvedprimal )
+      /* because of numerical instability lpalgo != lp->lastlpalgo might happen - hence, we have to check both */
+      if( needprimalray && !SCIPlpiHasPrimalRay(lp->lpi) && !solvedprimal && lpalgo != SCIP_LPALGO_PRIMALSIMPLEX )
       {
-         assert(lpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
+         assert(lp->lastlpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
          lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
          goto SOLVEAGAIN;
       }
@@ -10993,18 +10995,18 @@ SCIP_RETCODE lpSolve(
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
    }
-   else if( !solveddual )
+   else if( !solveddual && lpalgo != SCIP_LPALGO_DUALSIMPLEX)
    {
-      assert(lpalgo != SCIP_LPALGO_DUALSIMPLEX);
+      assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX);
       lpalgo = SCIP_LPALGO_DUALSIMPLEX;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") solution status of LP %d could not be proven (internal status:%d) -- solve again with %s\n", 
          stat->nnodes, stat->nlps, SCIPlpiGetInternalStatus(lp->lpi), lpalgoName(lpalgo));
       goto SOLVEAGAIN;
    }
-   else if( !solvedprimal )
+   else if( !solvedprimal && lpalgo != SCIP_LPALGO_PRIMALSIMPLEX)
    {
-      assert(lpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
+      assert(lp->lastlpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
       lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") solution status of LP %d could not be proven (internal status:%d) -- solve again with %s\n", 
