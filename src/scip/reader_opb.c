@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.46 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.47 2010/04/15 17:46:44 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -139,6 +139,9 @@ struct OpbInput
    int                  nproblemcoeffs;
    SCIP_HASHTABLE*      hashtable;
    int                  hashtablesize;
+#ifdef SCIP_DEBUG
+   int                  number;
+#endif
 };
 
 typedef struct OpbInput OPBINPUT;
@@ -146,7 +149,6 @@ typedef struct OpbInput OPBINPUT;
 static const char delimchars[] = " \f\n\r\t\v";
 static const char tokenchars[] = "-+:<>=;";
 static const char commentchars[] = "*";
-
 /*
  * Local methods (for reading)
  */
@@ -1185,8 +1187,16 @@ SCIP_RETCODE readConstraints(
    modifiable = FALSE;
    dynamic = dynamicconss;
    removable = dynamicrows;
-   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+   {
+#ifdef SCIP_DEBUG
+      sprintf(name, "c%d", opbinput->number);
+#endif
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+#ifdef SCIP_DEBUG
+      ++(opbinput->number);
+#endif
+   }
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
@@ -1383,7 +1393,10 @@ SCIP_RETCODE readFile(
    opbinput.sconsanddata = 10;
    opbinput.nproblemcoeffs = 0;
    opbinput.maxvarsperand = 10;
-   
+#ifdef SCIP_DEBUG
+   opbinput.number = 0;
+#endif
+
    /* create a hash table for the constraint set */
    opbinput.hashtablesize = SCIPcalcHashtableSize(HASHSIZE_OPBANDCONS);
    SCIP_CALL( SCIPhashtableCreate(&(opbinput.hashtable), SCIPblkmem(scip), opbinput.hashtablesize,
