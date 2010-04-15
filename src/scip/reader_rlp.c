@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.12 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.13 2010/04/15 19:49:03 bzfwinkm Exp $"
 
 /**@file   reader_rlp.c
  * @ingroup FILEREADERS 
@@ -81,12 +81,12 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
       
       if( transformed )
       {
-         SCIPwarningMessage("wirte transformed problem with generic variable and constraint names\n");
+         SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "rlp", TRUE) );
       }
       else
       {
-         SCIPwarningMessage("wirte original problem with generic variable and constraint names\n");
+         SCIPwarningMessage("write original problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "rlp", TRUE) );
       }
       *result = SCIP_SUCCESS;
@@ -99,7 +99,7 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
  * reader specific interface methods
  */
 
-/** includes the lp file reader in SCIP */
+/** includes the rlp file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderRlp(
    SCIP*                 scip                /**< SCIP data structure */
    )
