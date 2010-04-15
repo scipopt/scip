@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.88 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.89 2010/04/15 10:22:57 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2648,6 +2648,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIP_Bool          maxnrvarfull; /* indicates whether we stopped collecting xvars because the maxnrvar limit was reached */
    int                i;
    int                j;
+   SCIP_Real          mincoef;
+   SCIP_Real          maxcoef;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2679,8 +2681,11 @@ SCIP_RETCODE presolveTryAddLinearReform(
          
          nxvars = 0;
          SCIPintervalSet(&xbnds, 0.0);
-         SCIP_CALL( SCIPreallocBufferArray(scip, &xvars,  MIN(maxnrvar, nbilinterms)+2) ); /* add 2 for later use when creating linear constraints */
+         SCIP_CALL( SCIPreallocBufferArray(scip, &xvars, MIN(maxnrvar, nbilinterms)+2) ); /* add 2 for later use when creating linear constraints */
          SCIP_CALL( SCIPreallocBufferArray(scip, &xcoef, MIN(maxnrvar, nbilinterms)+2) );
+         
+         mincoef = SCIPinfinity(scip);
+         maxcoef = 0.0;
          
          /* setup list of variables x_i with coefficients a_i that are multiplied with binary y: y*(sum_i a_i*x_i)
           * and compute range of sum_i a_i*x_i
@@ -2707,6 +2712,11 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIPintervalAdd(SCIPinfinity(scip), &xbnds, xbnds, tmp);
 
                ++nxvars;
+               
+               if( ABS(bitem->coef) < mincoef )
+                  mincoef = ABS(bitem->coef);
+               if( ABS(bitem->coef) > maxcoef )
+                  maxcoef = ABS(bitem->coef);
                
                /* free PRESOLVEBILINITEM structure in bilin map at y; entry from bilin map is removed later */
                SCIPfreeBlockMemory(scip, &bitem);
@@ -2758,6 +2768,19 @@ SCIP_RETCODE presolveTryAddLinearReform(
          }
          else
          { /* product of binary avariable with more than one binary or with continuous variables or with binary and user did not like AND -> replace by auxvar and linear constraints */
+            SCIP_Real scale = 1.0;
+            if( maxcoef < 0.5 )
+               scale = maxcoef;
+            if( mincoef > 2.0 )
+               scale = mincoef;
+            if( scale != 1.0 )
+            {
+               SCIPdebugMessage("binary reformulation using scale %g\n", scale);
+               SCIPintervalDivScalar(SCIPinfinity(scip), &xbnds, xbnds, scale);
+               for( j = 0; j < nxvars; ++j )
+                  xcoef[j] /= scale;
+            }
+            
             /* add auxiliary variable z */
             if( nxvars == 1 )
                (void)SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
@@ -2829,7 +2852,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
 
             /* add z to this constraint */
-            SCIP_CALL( presolveQuadTermAdd(scip, terms, auxvar, 1.0, 0.0, NULL, 0.0) );
+            SCIP_CALL( presolveQuadTermAdd(scip, terms, auxvar, scale, 0.0, NULL, 0.0) );
             
             SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
          }
