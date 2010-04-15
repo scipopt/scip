@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.109 2010/03/12 11:09:45 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.110 2010/04/15 17:55:03 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -358,6 +358,7 @@ SCIP_HASHTABLELIST* hashtablelistFind(
       currentkeyval = hashkeyval(userptr, currentkey);
       if( currentkeyval == keyval && hashkeyeq(userptr, currentkey, key) )
          return hashtablelist;
+      
       hashtablelist = hashtablelist->next;
    }
 
@@ -383,7 +384,16 @@ void* hashtablelistRetrieve(
 
    /* return element */
    if( h != NULL )
+   {
+#ifndef NDBEUG
+      if( hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key) != NULL )
+      {
+         SCIPwarningMessage("hashkey with same value exists multiple times (i.e. duplicate constraint/variable names), so the return value is maybe not correct\n");
+      }
+#endif
+      
       return h->element;
+   }
    else
       return NULL;
 }
@@ -403,9 +413,8 @@ SCIP_RETCODE hashtablelistRemove(
    assert(element != NULL);
 
    while( *hashtablelist != NULL && (*hashtablelist)->element != element )
-   {
       hashtablelist = &(*hashtablelist)->next;
-   }
+
    if( *hashtablelist != NULL )
    {
       nextlist = (*hashtablelist)->next;
@@ -2701,6 +2710,12 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  int
 #include "scip/sorttpl.c"
 
+/* SCIPsortRealIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealIntPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c"
 
 /* SCIPsortRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealPtr
@@ -2992,6 +3007,15 @@ void SCIPsortDown(
 #define SORTTPL_NAMEEXT     DownRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealIntPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 

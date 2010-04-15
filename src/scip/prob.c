@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.111 2010/03/17 14:47:47 bzfwanie Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.112 2010/04/15 17:55:03 bzfwinkm Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1494,8 +1494,9 @@ SCIP_VAR* SCIPprobFindVar(
 
    if( prob->varnames == NULL )
    {
-      SCIPerrorMessage("Cannot find variable if parameter <misc/usevartable> is set to FALSE!\n");
+      SCIPerrorMessage("Cannot find variable if variable-names hashtable was disabled (due to parameter <misc/usevartable>)\n");
       SCIPABORT();
+      return (SCIP_VAR*) NULL;
    }
 
    return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (char*)name));
@@ -1510,10 +1511,11 @@ SCIP_CONS* SCIPprobFindCons(
    assert(prob != NULL);
    assert(name != NULL);
 
-   if( prob->varnames == NULL )
+   if( prob->consnames == NULL )
    {
-      SCIPerrorMessage("Cannot find constraint if parameter <misc/useconstable> is set to FALSE!\n");
+      SCIPerrorMessage("Cannot find constraint if constraint-names hashtable was disabled (due to parameter <misc/useconstable>)\n");
       SCIPABORT();
+      return (SCIP_CONS*) NULL;
    }
 
    return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));
