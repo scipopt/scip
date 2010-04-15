@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.44 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.45 2010/04/15 09:25:41 bzfgleix Exp $"
+
+#define SCIP_DEBUG
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1523,7 +1525,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    /* initializing ppc problem */
    SCIP_CALL( SCIPcreate(&ppcscip) );
-#ifndef NDEBUG
+#if defined(SCIP_DEBUG) || !defined(NDEBUG)
    SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 #else
@@ -1569,7 +1571,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
 #endif
 
-#ifndef NDEBUG
+#if defined(SCIP_DEBUG) || !defined(NDEBUG)
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 #else
