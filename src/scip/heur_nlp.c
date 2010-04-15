@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.52 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.53 2010/04/15 16:39:53 bzfgleix Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -825,7 +825,8 @@ SCIP_RETCODE checkCIPandSetupNLP(
 static
 SCIP_RETCODE applyVarBoundConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_SOL*             refpoint            /**< point to take fixation of discrete variables from */
    )
 {
    SCIP_VAR*             var;
@@ -882,7 +883,7 @@ SCIP_RETCODE applyVarBoundConstraints(
          varlb[varcnt] = SCIPgetLhsVarbound(scip, cons);
          varub[varcnt] = SCIPgetRhsVarbound(scip, cons);
        
-         shift = SCIPgetVbdcoefVarbound(scip, cons) * SCIPgetSolVal(scip, heurdata->startcand, SCIPgetVbdvarVarbound(scip, cons));
+         shift = SCIPgetVbdcoefVarbound(scip, cons) * SCIPgetSolVal(scip, refpoint, SCIPgetVbdvarVarbound(scip, cons));
          if( !SCIPisInfinity(scip, -varlb[varcnt]) )
             varlb[varcnt] -= shift;
          if( !SCIPisInfinity(scip,  varub[varcnt]) )
@@ -901,7 +902,7 @@ SCIP_RETCODE applyVarBoundConstraints(
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g\n",
             SCIPconsGetName(cons), SCIPvarGetName(var), varidx[varcnt],
             varlb[varcnt], varub[varcnt], SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
-            SCIPgetSolVal(scip, heurdata->startcand, SCIPgetVbdvarVarbound(scip, cons)) );
+            SCIPgetSolVal(scip, refpoint, SCIPgetVbdvarVarbound(scip, cons)) );
          
          ++varcnt;
       }
@@ -919,7 +920,7 @@ SCIP_RETCODE applyVarBoundConstraints(
          lhs = SCIPgetLhsVarbound(scip, cons);
          rhs = SCIPgetRhsVarbound(scip, cons);
 
-         shift = SCIPgetVbdcoefVarbound(scip, cons) * SCIPgetSolVal(scip, heurdata->startcand, SCIPgetVbdvarVarbound(scip, cons));
+         shift = SCIPgetVbdcoefVarbound(scip, cons) * SCIPgetSolVal(scip, refpoint, SCIPgetVbdvarVarbound(scip, cons));
          if( !SCIPisInfinity(scip, -lhs) )
             lhs -= shift;
          if( !SCIPisInfinity(scip,  rhs) )
@@ -934,7 +935,7 @@ SCIP_RETCODE applyVarBoundConstraints(
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g  [updated]\n",
             SCIPconsGetName(cons), SCIPvarGetName(var), varidx[idx_],
             varlb[idx_], varub[idx_], SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
-            SCIPgetSolVal(scip, heurdata->startcand, SCIPgetVbdvarVarbound(scip, cons)) );
+            SCIPgetSolVal(scip, refpoint, SCIPgetVbdvarVarbound(scip, cons)) );
       }      
    }
    
@@ -994,7 +995,7 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_RESULT*          result,             /**< result data structure                                          */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
-   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver                                 */
+   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
    SCIP_Longint*         iterused            /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    )
@@ -1079,10 +1080,17 @@ SCIP_RETCODE SCIPapplyNlpHeur(
       SCIPfreeBufferArray(scip, &discrfix);
    }
    /* apply those variable bound constraints that we can apply explicitely */
-   SCIP_CALL( applyVarBoundConstraints(scip, heurdata) );
+   SCIP_CALL( applyVarBoundConstraints(scip, heurdata, refpoint) );
    
    /* set time and iteration limit for NLP solver */
-   SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, (int)itercontingent) );
+   if( itercontingent == -1 )
+      itercontingent = heurdata->nlpiterlimit;
+
+   if( itercontingent > 0 )
+   {
+      SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, (int)itercontingent) );
+   }
+
    SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
 
    /* pass initial guess to NLP solver, if we have one; otherwise clear previous guess and let NLP solver choose */
