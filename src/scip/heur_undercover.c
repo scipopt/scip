@@ -12,9 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.45 2010/04/15 09:25:41 bzfgleix Exp $"
-
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.46 2010/04/15 15:02:56 bzfwinkm Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
