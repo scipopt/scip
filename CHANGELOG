@@ -68,6 +68,7 @@ features:
   indicates a negated clique and positive ones indicates a normal clique
 - SCIP is now able to detect in DEBUG-mode whether a constraint or variables which will be added, was also created in
   the same scip instance, if not an error is thrown
+- added new sorting method SCIPsortRealIntPtr, SCIPsortDownRealIntPtr and all corresponding methods
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
