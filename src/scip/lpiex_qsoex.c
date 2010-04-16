@@ -12,8 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.9 2010/04/02 18:40:46 bzfsteff Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.10 2010/04/16 15:41:14 bzfwolte Exp $"
 //#define SCIP_DEBUG /*?????????????????*/
+//#define SCIP_DEBUG2 /*?????????????????*/
 
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
@@ -2491,7 +2492,7 @@ SCIP_RETCODE SCIPlpiexSetState(
    assert(lpistate->ncols <= ncols);
    assert(lpistate->nrows <= nrows);
 
-   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into QSopt_ex LP with %d cols and %d rows\n", lpistate, lpistate->ncols,
+   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into QSopt_ex LP (%d cols and %d rows)\n", lpistate, lpistate->ncols,
       lpistate->nrows, ncols, nrows);
 
    if (lpistate->ncols == 0 || lpistate->nrows == 0)
@@ -2515,18 +2516,33 @@ SCIP_RETCODE SCIPlpiexSetState(
       lpi->ircnt[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 
    /* convert the loaded basis into QSopt_ex format */
+   SCIPdebugMessage("basis status of SCIP lpistate rows (nrows=%d):\n", lpistate->nrows);
    for (i = 0; i < nrows; ++i)
    {
+      SCIPdebugMessage("row_%d: %d (%s)\n", i, lpi->ircnt[i],  
+         lpi->ircnt[i] == SCIP_BASESTAT_LOWER ? "lower" : lpi->ircnt[i] == SCIP_BASESTAT_BASIC ? "basic" : "upper");
+      
       switch(lpi->ircnt[i])
       {
       case SCIP_BASESTAT_LOWER:
-	 irstat[i] = QS_ROW_BSTAT_LOWER;
+         irstat[i] = QS_ROW_BSTAT_LOWER; 
 	 break;
       case SCIP_BASESTAT_BASIC:
-	 irstat[i] = QS_ROW_BSTAT_BASIC;
+         irstat[i] = QS_ROW_BSTAT_BASIC;
 	 break;
       case SCIP_BASESTAT_UPPER:
-	 irstat[i] = QS_ROW_BSTAT_UPPER;
+         /* sense of inexact LP row is R (ranged row) since this is the only case where the basis status of the 
+          * slack variable is allowed to be UPPER 
+          */
+         if( lpi->isen[i] == 'R' )
+            /* sense of LPEX row is R, too */
+            irstat[i] = QS_ROW_BSTAT_UPPER;
+         else
+            /* sense of LPEX row is L, G or E, thus, basis status must be LOWER/BASIC. we use non-basic status LOWER 
+             * instead of non-basic status UPPER for slack variable in LPEX. this might happen when the inexact LP 
+             * is an FP relaxation of the exact LP  
+             */ 
+            irstat[i] = QS_ROW_BSTAT_LOWER;
 	 break;
       default:
 	 SCIPerrorMessage("Unknown row basic status %d", lpi->ircnt[i]);
@@ -2539,7 +2555,7 @@ SCIP_RETCODE SCIPlpiexSetState(
       switch(lpi->iccnt[i])
       {
       case SCIP_BASESTAT_LOWER:
-	 icstat[i] = QS_COL_BSTAT_LOWER;
+         icstat[i] = QS_COL_BSTAT_LOWER;
 	 break;
       case SCIP_BASESTAT_BASIC:
 	 icstat[i] = QS_COL_BSTAT_BASIC;
