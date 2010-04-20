@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.91 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.92 2010/04/20 12:40:01 bzfwinkm Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -460,15 +460,18 @@ SCIP_RETCODE primalAddSol(
    primal->sols[insertpos] = sol;
    primal->nsolsfound++;
    
-   /* if its the first primal solution, store the relevan statistics */
+   /* if its the first primal solution, store the relevant statistics */
    if(primal->nsolsfound == 1 )
    {
+      SCIP_Real primalsolval;
+
       stat->nnodesbeforefirst = SCIPsolGetNodenum(sol);
       stat->nrunsbeforefirst = SCIPsolGetRunnum(sol);
       stat->firstprimalheur = SCIPsolGetHeur(sol);
       stat->firstprimaltime = SCIPsolGetTime(sol);
       stat->firstprimaldepth = SCIPsolGetDepth(sol);
-      stat->firstprimalbound = SCIPsolGetObj(sol, set, prob);
+      primalsolval = SCIPsolGetObj(sol, set, prob);
+      stat->firstprimalbound = SCIPprobExternObjval(prob, set, primalsolval);
       SCIPdebugMessage("First Solution stored in problem specific statistics.\n");
       SCIPdebugMessage("-> %"SCIP_LONGINT_FORMAT" nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
          stat->firstprimaltime, stat->firstprimaldepth, stat->firstprimalbound);
