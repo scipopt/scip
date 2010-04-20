@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.26 2010/03/16 19:35:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.27 2010/04/20 16:09:02 bzfviger Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -119,14 +119,25 @@ SCIP_RETCODE selectBranchingPoint(
    {
       if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
       { /* if branching point is too close to the bounds, move more into the middle of the interval */
-         if ( branchpoint < (1.0 - mindistbrpointtobound) * lb + mindistbrpointtobound * ub )
-            branchpoint = (1.0 - mindistbrpointtobound) * lb + mindistbrpointtobound * ub;
-         else if( branchpoint > mindistbrpointtobound * lb + (1.0 - mindistbrpointtobound) * ub )
-            branchpoint = mindistbrpointtobound * lb + (1.0 - mindistbrpointtobound) * ub;
-
-         /* for very tiny intervals we set it exactly into the middle */
-         if( SCIPisEQ(scip, lb/2.0, ub/2.0) )
+         if( ub - lb < 2.02*SCIPepsilon(scip) )
+         { /* for very tiny intervals we set it exactly into the middle */
             branchpoint = (lb+ub)/2.0;
+         }
+         else
+         { /* otherwise we project it away from the bounds */
+            SCIP_Real minbrpoint;
+            SCIP_Real maxbrpoint;
+
+            minbrpoint = (1.0 - mindistbrpointtobound) * lb + mindistbrpointtobound * ub;
+            minbrpoint = MAX(lb + 1.01*SCIPepsilon(scip), minbrpoint);
+
+            maxbrpoint = mindistbrpointtobound * lb + (1.0 - mindistbrpointtobound) * ub;
+            maxbrpoint = MIN(ub - 1.01*SCIPepsilon(scip), maxbrpoint);
+
+            branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
+         }
+         assert(SCIPisLT(scip, lb, branchpoint));
+         assert(SCIPisLT(scip, branchpoint, ub));
       }
       else if( !SCIPisLT(scip, lb, branchpoint) )
       { /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere away from the lower bound */
@@ -315,7 +326,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelPscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execrel method of random branching\n");
+   SCIPdebugMessage("Execrel method of pscost branching\n");
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
