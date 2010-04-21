@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.54 2010/04/21 10:37:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.55 2010/04/21 15:16:00 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3456,8 +3456,89 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
 /** constraint copying method of constraint handler */
 #define consCopyIndicator NULL
 
+
 /** constraint parsing method of constraint handler */
-#define consParseIndicator NULL
+static
+SCIP_DECL_CONSPARSE(consParseIndicator)
+{
+   char binvarname[1024];
+   char slackvarname[1024];
+   SCIP_VAR* binvar;
+   SCIP_VAR* slackvar;
+   SCIP_CONS* lincons;
+   int zeroone;
+   int nargs;
+   char* posstr;
+
+   *success = TRUE;
+
+   /* read indicator constraint */
+   nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0", binvarname, &zeroone, slackvarname);
+
+   if ( nargs != 3 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0.\n%s\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   if ( zeroone != 0 && zeroone != 1 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0.\n%s\n", str);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* get binary variable */
+   binvar = SCIPfindVar(scip, binvarname);
+   if ( binvar == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", binvarname);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   /* check whether we need the complemented variable */
+   if ( zeroone == 0 )
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvar) );
+
+   /* get slack variable */
+   slackvar = SCIPfindVar(scip, slackvarname);
+   if ( slackvar == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", slackvarname);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* find matching linear constraint */
+   posstr = strstr(slackvarname, "indslack");
+   if ( posstr == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", binvarname);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* overwrite binvarname */
+   (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
+
+   lincons = SCIPfindCons(scip, binvarname);
+   if ( lincons == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown linear constraint <%s>\n", binvarname);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* create indicator constraint */
+   SCIP_CALL( SCIPcreateConsIndicator(scip, cons, name, binvar, 0, NULL, NULL, SCIPgetRhsLinear(scip, lincons), 
+	 initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+
+   SCIP_CALL( SCIPsetSlackVarIndicator(scip, *cons, slackvar) );
+   SCIP_CALL( SCIPsetLinearConsIndicator(scip, *cons, lincons) );
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint enabling notification method of constraint handler */
@@ -3723,12 +3804,13 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
 /** creates and captures a indicator constraint
  *
- *  We set the constraint to not be modifiable. If the weights are non
- *  NULL, the variables are ordered according to these weights (in
- *  ascending order).
+ *  We set the constraint to not be modifiable. If the weights are non NULL, the variables are
+ *  ordered according to these weights (in ascending order).
  *
  *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
+ *
+ *  Note: if @a nvars is 0, the linear constraint (and slack variable) is not added, but should be supplied later
  */
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3736,8 +3818,8 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    const char*           name,               /**< name of constraint */
    SCIP_VAR*             binvar,             /**< binary indicator variable */
    int                   nvars,              /**< number of variables in the inequality */
-   SCIP_VAR**            vars,               /**< array with variables of inequality */
-   SCIP_Real*            vals,               /**< values of variables in inequality */
+   SCIP_VAR**            vars,               /**< array with variables of inequality (or NULL) */
+   SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
    SCIP_Real             rhs,                /**< rhs of the inequality */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -3802,63 +3884,69 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    consdata->slackvar = NULL;
    consdata->lincons = NULL;
 
-   /* if the problem should be decomposed if only non-integer variables are present */
-   if ( conshdlrdata->noLinconsCont )
-   {
-      SCIP_Bool onlyCont = TRUE;
-      int v;
-
-      /* check whether call variables are non-integer */
-      for (v = 0; v < nvars; ++v)
-      {
-	 SCIP_VARTYPE vartype;
-
-	 vartype = SCIPvarGetType(vars[v]);
-	 if ( vartype != SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_IMPLINT )
-	 {
-	    onlyCont = FALSE;
-	    break;
-	 }
-      }
-
-      if ( onlyCont )
-	 consdata->linconsActive = FALSE;
-   }
-
-   /* create slack variable */
-   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-   SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
-	 NULL, NULL, NULL, NULL) );
-   
-   SCIP_CALL( SCIPaddVar(scip, slackvar) );
-   consdata->slackvar = slackvar;
-   
-   /* mark slack variable not to be multi-aggregated */
-   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
-   
-   /* create linear constraint */
-   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
-   
-   /* if the linear constraint should be activated */
-   if ( consdata->linconsActive )
-   {
-      /* the constraint is inital, enforced, separated, and checked */
-      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
-	    TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   }
+   /* only create linear constraint if there are variables */
+   if ( nvars == 0 )
+      consdata->linconsActive = FALSE;
    else
    {
-      /* the constraint is inital, enforced, separated, and checked */
-      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
-	    FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   }
-
-   /* add slack variable */
-   SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
+      /* if the problem should be decomposed if only non-integer variables are present */
+      if ( conshdlrdata->noLinconsCont )
+      {
+	 SCIP_Bool onlyCont = TRUE;
+	 int v;
+	 
+	 /* check whether call variables are non-integer */
+	 for (v = 0; v < nvars; ++v)
+	 {
+	    SCIP_VARTYPE vartype;
+	    
+	    vartype = SCIPvarGetType(vars[v]);
+	    if ( vartype != SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_IMPLINT )
+	    {
+	       onlyCont = FALSE;
+	       break;
+	    }
+	 }
+	 
+	 if ( onlyCont )
+	    consdata->linconsActive = FALSE;
+      }
+      
+      /* create slack variable */
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
+      SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+	    NULL, NULL, NULL, NULL) );
+      
+      SCIP_CALL( SCIPaddVar(scip, slackvar) );
+      consdata->slackvar = slackvar;
+      
+      /* mark slack variable not to be multi-aggregated */
+      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
    
-   SCIP_CALL( SCIPaddCons(scip, lincons) );
-   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
-   consdata->lincons = lincons;
+      /* create linear constraint */
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
+   
+      /* if the linear constraint should be activated */
+      if ( consdata->linconsActive )
+      {
+	 /* the constraint is inital, enforced, separated, and checked */
+	 SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
+	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      }
+      else
+      {
+	 /* the constraint is inital, enforced, separated, and checked */
+	 SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
+	       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      }
+
+      /* add slack variable */
+      SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
+   
+      SCIP_CALL( SCIPaddCons(scip, lincons) );
+      SCIP_CALL( SCIPcaptureCons(scip, lincons) );
+      consdata->lincons = lincons;
+   }
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -3904,6 +3992,63 @@ SCIP_CONS* SCIPgetLinearConsIndicator(
    assert( consdata != NULL );
 
    return consdata->lincons;
+}
+
+
+/** sets the linear constraint corresponding to the indicator constraint (may be NULL) */
+SCIP_RETCODE SCIPsetLinearConsIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_CONS*            lincons             /**< linear constraint */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;   
+
+   assert( cons != NULL );
+   conshdlr = SCIPconsGetHdlr(cons);
+
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   consdata->lincons = lincons;
+   consdata->linconsActive = TRUE;
+
+   /* if the problem should be decomposed if only non-integer variables are present */
+   if ( conshdlrdata->noLinconsCont )
+   {
+      SCIP_Bool onlyCont = TRUE;
+      int v;
+      int nvars;
+      SCIP_VAR** vars;
+
+      nvars = SCIPgetNVarsLinear(scip, lincons);
+      vars = SCIPgetVarsLinear(scip, lincons);
+      assert( vars != NULL );
+	 
+      /* check whether call variables are non-integer */
+      for (v = 0; v < nvars; ++v)
+      {
+	 SCIP_VARTYPE vartype;
+	 
+	 vartype = SCIPvarGetType(vars[v]);
+	 if ( vartype != SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_IMPLINT )
+	 {
+	    onlyCont = FALSE;
+	    break;
+	 }
+      }
+      
+      if ( onlyCont )
+	 consdata->linconsActive = FALSE;
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -3960,6 +4105,26 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
    assert( consdata != NULL );
 
    return consdata->slackvar;
+}
+
+
+/** sets slack variable corresponding to indicator constraint */
+SCIP_RETCODE SCIPsetSlackVarIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_VAR*             slackvar            /**< slack variable */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   consdata->slackvar = slackvar;
+
+   return SCIP_OKAY;
 }
 
 
