@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.46 2010/04/15 15:02:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.47 2010/04/21 16:53:32 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -239,23 +239,17 @@ SCIP_RETCODE createPpcProblem(
          SCIP_CONS* ppccons;
          SCIP_VAR** andvars;
          SCIP_VAR** ppcconsvars;
+         SCIP_Real* ppcconsvals;
 
          int ntofix;
 
          andcons = SCIPconshdlrGetConss(conshdlr)[i];
          assert(andcons != NULL);
 
-         SCIP_CALL( SCIPallocBufferArray(ppcscip, &ppcconsvars, SCIPgetNVarsAnd(scip, andcons)) );
+         SCIP_CALL( SCIPallocBufferArray(ppcscip, &ppcconsvars, SCIPgetNVarsAnd(scip, andcons) + 1) );
+         SCIP_CALL( SCIPallocBufferArray(ppcscip, &ppcconsvals, SCIPgetNVarsAnd(scip, andcons) + 1) );
          ntofix = 0;
          BMSclearMemoryArray(consmarker, nvars);
-
-         /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
-         if( SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons)) == -1 )
-         {
-            SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(andcons));
-            SCIPfreeBufferArray(ppcscip, &ppcconsvars);
-            goto TERMINATE;
-         }
 
          /* and variables */
          andvars = SCIPgetVarsAnd(scip, andcons);
@@ -271,6 +265,7 @@ SCIP_RETCODE createPpcProblem(
             {
                SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(andcons));
                SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+               SCIPfreeBufferArray(ppcscip, &ppcconsvals);
                goto TERMINATE;
             }
 
@@ -286,7 +281,8 @@ SCIP_RETCODE createPpcProblem(
                   continue;
             }
 
-            SCIP_CALL( SCIPgetNegatedVar(ppcscip, ppcvars[probindex], &ppcconsvars[ntofix]) );
+            ppcconsvars[ntofix] = ppcvars[probindex];
+            ppcconsvals[ntofix] = 1.0;
             ++ntofix;
 
             ++termcounter[probindex];
@@ -294,18 +290,35 @@ SCIP_RETCODE createPpcProblem(
                incConsCounter(conscounter, consmarker, probindex);
          }
 
-         if( ntofix > 0 )
+         if( ntofix >= 2 )
          {
+            /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+            probindex = SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons));
+            if( probindex == -1 )
+            {
+               SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(andcons));
+               SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+               SCIPfreeBufferArray(ppcscip, &ppcconsvals);
+               goto TERMINATE;
+            }
+
+            /* add resultant variable */
+            ppcconsvars[ntofix] = ppcvars[SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons))];
+            ppcconsvals[ntofix] = (SCIP_Real)(ntofix - 1);
+
             /* get name of the original constraint and add the string "_and" */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_and", SCIPconsGetName(andcons));
 
-            SCIP_CALL( SCIPcreateConsSetpack(ppcscip, &ppccons, name, ntofix, ppcconsvars,
+            assert(ntofix <= SCIPgetNVarsAnd(scip, andcons));
+            SCIP_CALL( SCIPcreateConsLinear(ppcscip, &ppccons, name, ntofix + 1, ppcconsvars, ppcconsvals,
+                  (SCIP_Real)(ntofix - 1), SCIPinfinity(ppcscip),
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
 
             if( ppccons == NULL )
             {
-               SCIPdebugMessage("failed to create set packing constraint %s: terminating undercover heuristic\n", name);
+               SCIPdebugMessage("failed to create linear constraint %s: terminating undercover heuristic\n", name);
                SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+               SCIPfreeBufferArray(ppcscip, &ppcconsvals);
                goto TERMINATE;
             }
 
@@ -314,6 +327,7 @@ SCIP_RETCODE createPpcProblem(
          }
 
          SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+         SCIPfreeBufferArray(ppcscip, &ppcconsvals);
       }
    }
 
