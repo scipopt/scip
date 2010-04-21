@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.89 2010/03/22 23:02:02 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.90 2010/04/21 10:30:15 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2852,26 +2852,31 @@ SCIP_RETCODE SCIPwriteLp(
 	 assert( linvars != NULL );
 	 assert( linvals != NULL );
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nLinvars-1) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nLinvars-1) );
-
-	 cnt = 0;
-	 for (v = 0; v < nLinvars; ++v)
+	 if ( nLinvars > 0 && ! SCIPconsIsDeleted(lincons) )
 	 {
-	    var = linvars[v];
-	    if ( var != slackvar )
+	    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nLinvars-1) );
+	    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nLinvars-1) );
+	    
+	    cnt = 0;
+	    for (v = 0; v < nLinvars; ++v)
 	    {
-	       consvars[cnt] = var;
-	       consvals[cnt++] = linvals[v];
+	       var = linvars[v];
+	       if ( var != slackvar )
+	       {
+		  consvars[cnt] = var;
+		  consvals[cnt++] = linvals[v];
+	       }
 	    }
+	    assert( nLinvars == 0 || cnt == nLinvars-1 );
+	    
+	    SCIP_CALL( printLinearCons(scip, file, "", consvars, consvals, cnt, SCIPgetLhsLinear(scip, lincons),
+		  SCIPgetRhsLinear(scip, lincons), transformed) );
+	    
+	    SCIPfreeBufferArray(scip, &consvars);
+	    SCIPfreeBufferArray(scip, &consvals);
 	 }
-	 assert( cnt == nLinvars-1 );
-
-         SCIP_CALL( printLinearCons(scip, file, "", consvars, consvals, cnt, SCIPgetLhsLinear(scip, lincons),
-	       SCIPgetRhsLinear(scip, lincons), transformed) );
-
-         SCIPfreeBufferArray(scip, &consvars);
-         SCIPfreeBufferArray(scip, &consvals);
+	 else
+	    SCIPinfoMessage(scip, file, " 0 <= 0\n");
       }
       else
       {
