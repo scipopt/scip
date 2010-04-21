@@ -69,6 +69,7 @@ features:
 - SCIP is now able to detect in DEBUG-mode whether a constraint or variables which will be added, was also created in
   the same scip instance, if not an error is thrown
 - added new sorting method SCIPsortRealIntPtr, SCIPsortDownRealIntPtr and all corresponding methods
+- the indicator constraint can now decompose the problem, i.e., not add the linear constraint to the problem if all of its variables are continuous
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
@@ -131,6 +132,8 @@ parameters:
   default is TRUE (uses LP rows)
 - added parameter <constraints/knapsack/presolpairwise> that allows pairwise presolving of knapsack constraints, default is TRUE 
 - added parameter <constraints/knapsack/presolusehashing> that allows fast pairwise presolving of knapsack constraints, default is TRUE 
+- added parameter <constraints/indicator/noLinconsCon> which controls whether the linear constraint is not explicitly added to the problem. default is FALSE
+- added parameter <constraints/indicator/enforceCuts> that allows to check for violated cust in enforcement
 
 
 SCIP version 1.2.0
