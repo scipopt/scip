@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.353 2010/04/11 21:32:15 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.354 2010/04/21 16:25:27 bzfhende Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -2907,7 +2907,7 @@ SCIP_RETCODE chgLhs(
       }
    }
 
-   /* set new left hand side */
+   /* new left hand side */
    consdata->lhs = lhs;
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
@@ -7126,7 +7126,6 @@ SCIP_RETCODE detectRedundantConstraints(
 
             lhs = MAX(consdata1->lhs, consdata0->lhs);
             rhs = MIN(consdata1->rhs, consdata0->rhs);
-
          }
          else
          {
@@ -7142,7 +7141,7 @@ SCIP_RETCODE detectRedundantConstraints(
             rhs = MIN(consdata1->rhs, -consdata0->lhs);
          }
 
-         if( SCIPisFeasLT(scip, rhs, lhs) )
+         if( SCIPisLT(scip, rhs, lhs) )
          {
             SCIPdebugMessage("aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
             *cutoff = TRUE;

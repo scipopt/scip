@@ -108,6 +108,7 @@ fixed bugs:
 - fixed bug in lp.c w.r.t. to the number of "active" pricer
 - fixed bug in scip.c w.r.t. to call of conflict analysis for LPs which reached the objective limit in case of diving
 - fixed bug in cutpool.c: the hashkey computation was not constant over time
+- fixed bug in presolving of linear constraint handler: in redundancy detection, two different numerical epsilons were used
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

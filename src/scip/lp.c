@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.336 2010/04/14 18:44:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.337 2010/04/21 16:25:27 bzfhende Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3510,7 +3510,7 @@ SCIP_RETCODE SCIProwCreate(
    assert(stat != NULL);
    assert(len >= 0);
    assert(len == 0 || (cols != NULL && vals != NULL));
-   assert(lhs <= rhs);
+   assert(SCIPsetIsLE(set, lhs, rhs));
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, row) );
 
