@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.55 2010/04/21 15:16:00 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.56 2010/04/21 15:20:44 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2610,6 +2610,20 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL );
    assert( sourcedata->binvar != NULL );
+
+   /* check for slackvar */
+   if ( sourcedata->slackvar == NULL )
+   {
+      SCIPerrorMessage("The indicator constraint <%s> needs a slack variable.\n", SCIPconsGetName(sourcecons));
+      return SCIP_INVALIDDATA;
+   }
+
+   /* check for linear constraint */
+   if ( sourcedata->lincons == NULL )
+   {
+      SCIPerrorMessage("The indicator constraint <%s> needs a linear constraint variable.\n", SCIPconsGetName(sourcecons));
+      return SCIP_INVALIDDATA;
+   }
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
