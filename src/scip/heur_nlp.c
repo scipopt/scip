@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.53 2010/04/15 16:39:53 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.54 2010/04/21 14:21:14 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -87,6 +87,7 @@ struct SCIP_HeurData
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0 for off */
    SCIP_Real             resolvetolfactor;   /**< factor for feasiblity tolerance when resolving NLP due to disagreement of feasibility */
    SCIP_Bool             resolvefromscratch; /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
+   char*                 nlpoptfile;         /**< name of NLP solver specific option file */
                          
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
@@ -493,6 +494,10 @@ SCIP_RETCODE setupNLP(
    if( heurdata->nlptimelimit )
    {
       SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, heurdata->nlptimelimit) );
+   }
+   if( heurdata->nlpoptfile != NULL && *heurdata->nlpoptfile != '\0' )
+   {
+      SCIP_CALL( SCIPnlpiSetStringPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_OPTFILE, heurdata->nlpoptfile) );
    }
 
    /* collect and capture variables, collect discrete variables, collect bounds
@@ -1485,6 +1490,10 @@ SCIP_RETCODE SCIPincludeHeurNlp(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nlptimelimit",
          "time limit of NLP solver; 0 to use solver default",
          &heurdata->nlptimelimit, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpoptfile",
+         "name of an NLP solver specific options file",
+         &heurdata->nlpoptfile, TRUE, "", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",

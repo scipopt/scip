@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.1 2010/03/11 11:22:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -66,6 +66,8 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
    SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
+   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
+   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
 );
 
@@ -360,6 +362,24 @@ SCIP_RETCODE SCIPnlpiSetRealPar(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure, can be NULL only if type == SCIP_NLPPAR_INFINITY */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real             dval                /**< parameter value */
+);
+
+/** gets string parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpiGetStringPar(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char**          sval                /**< pointer to store the parameter value, the user must not modify the string */
+);
+
+/** sets string parameter of NLP */
+extern
+SCIP_RETCODE SCIPnlpiSetStringPar(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char*           sval                /**< parameter value */
 );
 
 /** gets data of an NLPI */

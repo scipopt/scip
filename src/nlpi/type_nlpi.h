@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.2 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.3 2010/04/21 14:21:14 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -49,7 +49,8 @@ enum SCIP_NlpParam
    SCIP_NLPPAR_LOBJLIM        =  4,      /**< lower objective limit (cutoff) (real) */
    SCIP_NLPPAR_INFINITY       =  5,      /**< value for infinity used to decide unbounded sides, unbounded variable and constraint bounds, and upper objective limit (real) */
    SCIP_NLPPAR_ITLIM          =  6,      /**< NLP iteration limit (int) */
-   SCIP_NLPPAR_TILIM          =  7       /**< NLP time limit (real) */
+   SCIP_NLPPAR_TILIM          =  7,      /**< NLP time limit (real) */
+   SCIP_NLPPAR_OPTFILE        =  8       /**< name of a solver specific option file (string) */
 };
 typedef enum SCIP_NlpParam SCIP_NLPPARAM;  /**< NLP solver parameter */
 
@@ -453,6 +454,29 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - dval parameter value
  */
 #define SCIP_DECL_NLPISETREALPAR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, SCIP_Real dval)
+
+/** gets string parameter of NLP
+ * 
+ * input:
+ *  - nlpi NLP interface structure
+ *  - problem datastructure for problem instance
+ *  - type parameter number
+ *  - sval pointer to store the string value, the user must not modify the string
+ * 
+ * output:
+ *  - sval parameter value
+ */
+#define SCIP_DECL_NLPIGETSTRINGPAR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, const char** sval)
+
+/** sets string parameter of NLP
+ * 
+ * input:
+ *  - nlpi NLP interface structure
+ *  - problem datastructure for problem instance
+ *  - type parameter number
+ *  - sval parameter value
+ */
+#define SCIP_DECL_NLPISETSTRINGPAR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, const char* sval)
 
 /**@} */
 #ifdef __cplusplus

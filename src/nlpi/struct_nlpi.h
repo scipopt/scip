@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlpi.h,v 1.1 2010/03/11 11:22:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlpi.h,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
 
 /**@file   struct_nlpi.h
  * @brief  data definitions for an NLP solver interface
@@ -66,6 +66,8 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar));          /**< set value of integer parameter in a problem  */
    SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar));         /**< get value of floating point parameter in a problem  */
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar));         /**< set value of floating point parameter in a problem  */
+   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar));       /**< get value of string parameter in a problem  */
+   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar));       /**< set value of string parameter in a problem  */
    SCIP_NLPIDATA*                  nlpidata;                    /**< NLP interface local data */
 };
 

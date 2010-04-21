@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.1 2010/03/11 11:22:29 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -73,6 +73,7 @@ public:
    
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
+   std::string                 optfile;      /**< name of options file */
    
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
@@ -406,7 +407,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
 
-   (*problem)->ipopt->Initialize(""); // do not read default option file
+   if( (*problem)->ipopt->Initialize((*problem)->optfile) != Solve_Succeeded )
+   {
+      SCIPerrorMessage("Error during initialization of Ipopt using optionfile \"%s\"\n", (*problem)->optfile.c_str());
+      return SCIP_ERROR;
+   }
 
    /* TODO store the problem name somewhere and use in print */
    
@@ -1020,7 +1025,7 @@ SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstatMemoIpopt)
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPIGETINTPAR(nlpiGetIntparIpopt)
+SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
 {
    assert(nlpi != NULL);
    assert(ival != NULL);
@@ -1104,7 +1109,7 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntparIpopt)
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPISETINTPAR(nlpiSetIntparIpopt)
+SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1277,7 +1282,13 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
          problem->ipopt->Options()->GetNumericValue("max_cpu_time", *dval, "");
          break;
       }
-      
+
+      case SCIP_NLPPAR_OPTFILE:
+      {
+         SCIPerrorMessage("option file parameter is of type string.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
       default:
       {
          SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
@@ -1297,7 +1308,7 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
  *  - dval parameter value
  */
 static
-SCIP_DECL_NLPISETREALPAR(nlpiSetRealparIpopt)
+SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 {
    assert(nlpi != NULL);
    assert(type == SCIP_NLPPAR_INFINITY || problem != NULL);
@@ -1395,7 +1406,13 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealparIpopt)
          }
          break;
       }
-      
+
+      case SCIP_NLPPAR_OPTFILE:
+      {
+         SCIPerrorMessage("option file parameter is of type string.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
       default:
       {
          SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
@@ -1403,6 +1420,183 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealparIpopt)
       }
    }
 
+   return SCIP_OKAY;
+}
+
+/** gets string parameter of NLP
+ * 
+ * input:
+ *  - nlpi NLP interface structure
+ *  - problem datastructure for problem instance
+ *  - type parameter number
+ *  - sval pointer to store the string value, the user must not modify the string
+ * 
+ * output:
+ *  - sval parameter value
+ */
+static
+SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParIpopt )
+{
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+
+   switch( type )
+   {
+      case SCIP_NLPPAR_FROMSCRATCH:
+      {
+         SCIPerrorMessage("from scratch parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+         
+      case SCIP_NLPPAR_VERBLEVEL:
+      {
+         SCIPerrorMessage("verbosity level parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_FEASTOL:
+      {
+         SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
+      case SCIP_NLPPAR_RELOBJTOL:
+      {
+         SCIPerrorMessage("objective tolerance parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_LOBJLIM:
+      {
+         SCIPerrorMessage("objective limit parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_INFINITY:
+      {
+         SCIPerrorMessage("infinity parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_ITLIM:
+      {
+         SCIPerrorMessage("iteration limit parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
+      case SCIP_NLPPAR_TILIM:
+      {
+         SCIPerrorMessage("time limit parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_OPTFILE:
+      {
+         if( !problem->optfile.empty() )
+            *sval = problem->optfile.c_str();
+         else
+            *sval = NULL;
+         return SCIP_OKAY;
+      }
+      
+      default:
+      {
+         SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
+         return SCIP_PARAMETERUNKNOWN;
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** sets string parameter of NLP
+ * 
+ * input:
+ *  - nlpi NLP interface structure
+ *  - problem datastructure for problem instance
+ *  - type parameter number
+ *  - sval parameter value
+ */
+static
+SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
+{
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+
+   switch( type )
+   {
+      case SCIP_NLPPAR_FROMSCRATCH:
+      {
+         SCIPerrorMessage("from scratch parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+         
+      case SCIP_NLPPAR_VERBLEVEL:
+      {
+         SCIPerrorMessage("verbosity level parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_FEASTOL:
+      {
+         SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
+      case SCIP_NLPPAR_RELOBJTOL:
+      {
+         SCIPerrorMessage("objective tolerance parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_LOBJLIM:
+      {
+         SCIPerrorMessage("objective limit parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_INFINITY:
+      {
+         SCIPerrorMessage("infinity parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_ITLIM:
+      {
+         SCIPerrorMessage("iteration limit parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
+      case SCIP_NLPPAR_TILIM:
+      {
+         SCIPerrorMessage("time limit parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+      
+      case SCIP_NLPPAR_OPTFILE:
+      {
+         if( sval != NULL )
+            problem->optfile = sval;
+         else
+            problem->optfile.clear();
+         
+         if( problem->ipopt->Initialize(problem->optfile) != Solve_Succeeded )
+         {
+            SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", problem->optfile.c_str());
+            return SCIP_ERROR;
+         }
+         problem->firstrun = TRUE;
+         
+         return SCIP_OKAY;
+      }
+      
+      default:
+      {
+         SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
+         return SCIP_PARAMETERUNKNOWN;
+      }
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -1431,8 +1625,9 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
       nlpiChgNonlinCoefIpopt, nlpiSetInitialGuessIpopt,
       nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetSoltermIpopt, nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
       nlpiGetWarmstatSizeIpopt, nlpiGetWarmstatMemoIpopt,
-      nlpiSetWarmstatMemoIpopt, nlpiGetIntparIpopt,
-      nlpiSetIntparIpopt, nlpiGetRealParIpopt, nlpiSetRealparIpopt, nlpidata) );
+      nlpiSetWarmstatMemoIpopt, nlpiGetIntParIpopt,
+      nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt, nlpiGetStringParIpopt, nlpiSetStringParIpopt,
+      nlpidata) );
 
    return SCIP_OKAY;
 }

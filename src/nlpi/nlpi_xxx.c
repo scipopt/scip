@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.1 2010/03/11 11:22:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
 
 /**@file    nlpi_xxx.cpp
  * @ingroup NLPIS
@@ -553,7 +553,7 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstatMemoXxx )
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPIGETINTPAR( nlpiGetIntparXxx )
+SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -570,7 +570,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntparXxx )
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPISETINTPAR( nlpiSetIntparXxx )
+SCIP_DECL_NLPISETINTPAR( nlpiSetIntParXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -607,7 +607,44 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParXxx )
  *  - dval parameter value
  */
 static
-SCIP_DECL_NLPISETREALPAR( nlpiSetRealparXxx )
+SCIP_DECL_NLPISETREALPAR( nlpiSetRealParXxx )
+{
+   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPABORT();
+   
+   return SCIP_OKAY;
+}
+
+/** gets string parameter of NLP
+ * 
+ * input:
+ *  - nlpi NLP interface structure
+ *  - problem datastructure for problem instance
+ *  - type parameter number
+ *  - sval pointer to store the string value, the user must not modify the string
+ * 
+ * output:
+ *  - sval parameter value
+ */
+static
+SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParXxx )
+{
+   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPABORT();
+   
+   return SCIP_OKAY;
+}
+
+/** sets string parameter of NLP
+ * 
+ * input:
+ *  - nlpi NLP interface structure
+ *  - problem datastructure for problem instance
+ *  - type parameter number
+ *  - sval parameter value
+ */
+static
+SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -645,7 +682,8 @@ SCIP_RETCODE SCIP_createNlpSolverXxx(
       nlpiSetInitialGuessXxx, nlpiSolveXxx, nlpiGetSolstatXxx, nlpiGetSoltermXxx,
       nlpiGetSolutionXxx, nlpiGetStatisticsXxx,
       nlpiGetWarmstatSizeXxx, nlpiGetWarmstatMemoXxx, nlpiSetWarmstatMemoXxx,
-      nlpiGetIntparXxx, nlpiSetIntparXxx, nlpiGetRealParXxx, nlpiSetRealparXxx, nlpidata) );
+      nlpiGetIntParXxx, nlpiSetIntParXxx, nlpiGetRealParXxx, nlpiSetRealParXxx, nlpiGetStringParXxx, nlpiSetStringParXxx,
+      nlpidata) );
 
    return SCIP_OKAY;
 }

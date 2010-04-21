@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.1 2010/03/11 11:22:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -63,6 +63,8 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
    SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
+   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
+   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
 )
 {  /*lint --e{715}*/
@@ -95,6 +97,8 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpisetintpar != NULL);
    assert(nlpigetrealpar != NULL);
    assert(nlpisetrealpar != NULL);
+   assert(nlpigetstringpar != NULL);
+   assert(nlpisetstringpar != NULL);
 
    if( BMSallocMemory(nlpi) == NULL )
       return SCIP_NOMEMORY;
@@ -127,6 +131,8 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpisetintpar = nlpisetintpar;
    (*nlpi)->nlpigetrealpar = nlpigetrealpar;
    (*nlpi)->nlpisetrealpar = nlpisetrealpar;
+   (*nlpi)->nlpigetstringpar = nlpigetstringpar;
+   (*nlpi)->nlpisetstringpar = nlpisetstringpar;
    (*nlpi)->nlpidata = nlpidata;
 
    return SCIP_OKAY;
@@ -608,6 +614,39 @@ SCIP_RETCODE SCIPnlpiSetRealPar(
    assert(problem != NULL);
    
    SCIP_CALL( (*nlpi->nlpisetrealpar)(nlpi, problem, type, dval) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets string parameter of NLP */
+SCIP_RETCODE SCIPnlpiGetStringPar(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char**          sval                /**< pointer to store the parameter value, the user must not modify the string */
+)
+{
+   assert(nlpi    != NULL);
+   assert(problem != NULL);
+   assert(sval    != NULL);
+   
+   SCIP_CALL( (*nlpi->nlpigetstringpar)(nlpi, problem, type, sval) );
+   
+   return SCIP_OKAY;
+}
+
+/** sets string parameter of NLP */
+SCIP_RETCODE SCIPnlpiSetStringPar(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char*           sval                /**< parameter value */
+)
+{
+   assert(nlpi    != NULL);
+   assert(problem != NULL);
+   
+   SCIP_CALL( (*nlpi->nlpisetstringpar)(nlpi, problem, type, sval) );
    
    return SCIP_OKAY;
 }
