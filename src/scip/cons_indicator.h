@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.13 2010/04/21 10:30:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.14 2010/04/21 15:17:02 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -60,8 +60,8 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    const char*           name,               /**< name of constraint */
    SCIP_VAR*             binvar,             /**< binary indicator variable */
    int                   nvars,              /**< number of variables in the inequality */
-   SCIP_VAR**            vars,               /**< array with variables of inequality */
-   SCIP_Real*            vals,               /**< values of variables in inequality */
+   SCIP_VAR**            vars,               /**< array with variables of inequality (or NULL) */
+   SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
    SCIP_Real             rhs,                /**< rhs of the inequality */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -99,6 +99,14 @@ SCIP_CONS* SCIPgetLinearConsIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
    );
 
+/** sets the linear constraint corresponding to the indicator constraint (may be NULL) */
+extern
+SCIP_RETCODE SCIPsetLinearConsIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_CONS*            lincons             /**< linear constraint */
+   );
+
 /** sets binary indicator variable for indicator constraint */
 extern
 SCIP_RETCODE SCIPsetBinaryVarIndicator(
@@ -117,6 +125,14 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
 extern
 SCIP_VAR* SCIPgetSlackVarIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
+   );
+
+/** sets slack variable corresponding to indicator constraint */
+extern
+SCIP_RETCODE SCIPsetSlackVarIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_VAR*             slackvar            /**< slack variable */
    );
 
 /** checks whether indicator constraint is violated w.r.t. sol */
