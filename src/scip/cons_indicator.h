@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.12 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.13 2010/04/21 10:30:39 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -88,42 +88,42 @@ SCIP_RETCODE SCIPcreateConsIndicator(
 extern
 SCIP_RETCODE SCIPaddVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_VAR*             var,                /**< variable to add to the inequality */
    SCIP_Real             val                 /**< value of variable */
    );
 
-/** gets the linear constraint corresponding to the indicator constraint */
+/** gets the linear constraint corresponding to the indicator constraint (may be NULL) */
 extern
 SCIP_CONS* SCIPgetLinearConsIndicator(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< indicator constraint */
    );
 
 /** sets binary indicator variable for indicator constraint */
 extern
 SCIP_RETCODE SCIPsetBinaryVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_VAR*             binvar              /**< binary variable to add to the inequality */
    );
 
 /** gets binary variable corresponding to indicator constraint */
 extern
 SCIP_VAR* SCIPgetBinaryVarIndicator(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< indicator constraint */
    );
 
 /** gets slack variable corresponding to indicator constraint */
 extern
 SCIP_VAR* SCIPgetSlackVarIndicator(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< indicator constraint */
    );
 
 /** checks whether indicator constraint is violated w.r.t. sol */
 extern
 SCIP_Bool SCIPisViolatedIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
@@ -131,7 +131,7 @@ SCIP_Bool SCIPisViolatedIndicator(
 extern
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
