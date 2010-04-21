@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.9 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_nlp.h,v 1.10 2010/04/21 18:23:18 bzfviger Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic
@@ -25,15 +25,45 @@
 #define HEUR_NLP_H_
 
 #include "scip/scip.h"
+#include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/** NLPI initialization method of NLP heuristic
+ * 
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - nlpi            : NLP solver interface
+ *  - problem         : NLP solver problem
+ *  - varmap          : variable mapping SCIP to NLPI
+ */
+#define SCIP_DECL_HEURNLPNLPIINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_HASHMAP* varmap)
+
+/** method to check whether a constraint handler has nonlinear constraints
+ * 
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - fixedint        : should the case be considered where all discrete variable are fixed?
+ *  - result          : buffer to store whether the NLPIINIT routine would add constraints to the NLP
+ */
+#define SCIP_DECL_HEURNLPHAVECONS(x) SCIP_RETCODE x (SCIP* scip, SCIP_Bool fixedint, SCIP_Bool* result)
+
 /** creates the NLP local search primal heuristic and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeHeurNlp(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** includes an NLPI initialization method into the NLP heuristic
+ * can be used by constraint handlers to register a function that inserts their constraints into an NLPI */
+extern
+SCIP_RETCODE SCIPincludeHeurNlpNlpiInit(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_DECL_HEURNLPHAVECONS((*havecons)),     /**< method to call for checking if potential constraints for the NLP are present */
+   SCIP_DECL_HEURNLPNLPIINIT((*nlpiinit)),     /**< method to call for initializing NLP */
+   const char*             conshdlrname        /**< name of the constraint handler */
    );
 
 /** updates the starting point for the NLP heuristic

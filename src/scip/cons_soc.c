@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.23 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.24 2010/04/21 18:23:18 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2582,11 +2582,73 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 }
 #endif
 
-
 /*
  * Callback methods of constraint handler
  */
 
+/** method to call for checking if potential constraints for the NLP are present */
+static
+SCIP_DECL_HEURNLPHAVECONS(haveCons)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   int c, i;
+   
+   assert(scip   != NULL);
+   assert(result != NULL);
+   
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   
+   *result = FALSE;
+
+   /* check each constraint whether it has some nonlinear variable */
+   for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; --c )
+   {
+      consdata = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[c]);
+      assert(consdata != NULL);
+      
+      if( consdata->nvars == 0 )
+         continue;
+
+      /* if fixedint is FALSE, then any quadratic variable will do */
+      if( !fixedint )
+      {
+         *result = TRUE;
+         return SCIP_OKAY;
+      }
+     
+      /* otherwise we have to check whether there is a continuous quadratic variable */
+      for( i = 0; i < consdata->nvars; ++i )
+         if( SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            *result = TRUE;
+            return SCIP_OKAY;
+         }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** adds SOC constraints to an NLPI problem */
+static
+SCIP_DECL_HEURNLPNLPIINIT(initNlpi)
+{
+   SCIP_CONSHDLR* conshdlr;
+   
+   assert(scip != NULL);
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(varmap != NULL);
+   
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   
+   SCIP_CALL( SCIPconsInitNlpiSOC(scip, conshdlr, nlpi, problem,
+      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap) );
+   
+   return SCIP_OKAY;
+}
 
 /** NLPI initialization method of constraint handler
  * 
@@ -2833,12 +2895,14 @@ SCIP_DECL_CONSFREE(consFreeSOC)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSINIT(consInitSOC)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   
+   /** tell NLP heuristic which method to use for adding SOC constraints to NLP */
+   SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
 
    return SCIP_OKAY;
 }

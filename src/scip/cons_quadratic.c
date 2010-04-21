@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.89 2010/04/15 10:22:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.90 2010/04/21 18:23:18 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -245,7 +245,7 @@ SCIP_Bool conshdlrdataHasUpgrade(
       if( conshdlrdata->quadconsupgrades[i]->quadconsupgd == quadconsupgd )
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage("Try to add already known upgrade message %p for constraint handler %s.\n", quadconsupgd, conshdlrname);
+         SCIPwarningMessage("Try to add already known upgrade message %p for constraint handler <%s>.\n", quadconsupgd, conshdlrname);
 #endif
          return TRUE;
       }
@@ -5443,6 +5443,70 @@ SCIP_RETCODE propagateBounds(
    return SCIP_OKAY;
 }
 
+/** method to call for checking if potential constraints for the NLP are present */
+static
+SCIP_DECL_HEURNLPHAVECONS(haveCons)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   int c, i;
+   
+   assert(scip   != NULL);
+   assert(result != NULL);
+   
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   
+   *result = FALSE;
+
+   /* check each constraint whether it has some nonlinear variable */
+   for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; --c )
+   {
+      consdata = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[c]);
+      assert(consdata != NULL);
+      
+      if( consdata->nquadvars == 0 )
+         continue;
+
+      /* if fixedint is FALSE, then any quadratic variable will do */
+      if( !fixedint )
+      {
+         *result = TRUE;
+         return SCIP_OKAY;
+      }
+     
+      /* otherwise we have to check whether there is a continuous quadratic variable */
+      for( i = 0; i < consdata->nquadvars; ++i )
+         if( SCIPvarGetType(consdata->quadvars[i]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(consdata->quadvars[i]) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            *result = TRUE;
+            return SCIP_OKAY;
+         }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** adds quadratic constraints to an NLPI problem */
+static
+SCIP_DECL_HEURNLPNLPIINIT(initNlpi)
+{
+   SCIP_CONSHDLR* conshdlr;
+   
+   assert(scip != NULL);
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(varmap != NULL);
+   
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   
+   SCIP_CALL( SCIPconsInitNlpiQuadratic(scip, conshdlr, nlpi, problem,
+      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap) );
+   
+   return SCIP_OKAY;
+}
+
 /** NLPI initialization method of constraint handler
  * 
  *  The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
@@ -5723,6 +5787,10 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock2) );
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock3) );
 #endif
+   
+   /** tell NLP heuristic which method to use for adding quadratic constraints to NLP */ 
+   SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
+   
    return SCIP_OKAY;
 }
 
@@ -7621,7 +7689,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    assert(quadconsupgd != NULL);
    assert(conshdlrname != NULL );
 
-   /* find the linear constraint handler */
+   /* find the quadratic constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {

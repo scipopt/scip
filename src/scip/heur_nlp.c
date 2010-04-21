@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.54 2010/04/21 14:21:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.55 2010/04/21 18:23:18 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -35,17 +35,6 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_soc.h"
-#ifdef WITH_NL
-#include "cons_nl_C.h"
-#endif
-#ifdef WITH_SIGNPOWER
-#include "cons_signpower.h"
-#endif
-#ifdef WITH_UNIVARDEFINITE
-#include "cons_univardefinite.h"
-#endif
 
 #define HEUR_NAME             "nlp"
 #define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables"
@@ -68,6 +57,10 @@ struct SCIP_HeurData
    SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
    SCIP_Bool             triedsetupnlp;      /**< whether we have tried to setup an NLP */ 
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
+   SCIP_DECL_HEURNLPNLPIINIT((**nlpiinits)); /**< user-given NLPI initialization methods */
+   SCIP_DECL_HEURNLPHAVECONS((**haveconss)); /**< user-given NLPI information methods */
+   int                   nlpiinitssize;      /**< size of nlpiinits array */
+   int                   nnlpiinits;         /**< number of NLPI initialization methods */
    
    int                   nvars;              /**< number of variables in NLP */
    SCIP_VAR**            var_nlp2scip;       /**< mapping variables in NLP to SCIP variables */
@@ -350,114 +343,6 @@ SCIP_RETCODE collectVarBoundConstraints(
    return SCIP_OKAY;
 }
 
-/** adds quadratic constraints to NLP */
-static
-SCIP_RETCODE addQuadraticConstraints(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
-   SCIP_CONSHDLR*        quadconshdlr        /**< constraint handler for quadratic constraints */
-   )
-{   
-   assert(scip != NULL);
-   assert(heurdata != NULL);
-   assert(quadconshdlr != NULL);
-   
-   if( !SCIPconshdlrGetNConss(quadconshdlr) )
-      return SCIP_OKAY;
-
-   /* let the constraint handler for quadratic constraints fill the NLP with its constraints */
-   SCIP_CALL( SCIPconsInitNlpiQuadratic(scip, quadconshdlr, heurdata->nlpi, heurdata->nlpiprob, SCIPconshdlrGetNConss(quadconshdlr), 
-         SCIPconshdlrGetConss(quadconshdlr), heurdata->var_scip2nlp) );
-   
-   return SCIP_OKAY;
-}
-
-/** adds second order cone constraints to NLP */
-static
-SCIP_RETCODE addSOCConstraints(
-   SCIP*          scip,          /**< SCIP data structure */
-   SCIP_HEURDATA* heurdata,      /**< heuristic data structure */
-   SCIP_CONSHDLR* socconshdlr    /**< constraint handler for SOC constraints */
-   )
-{
-   assert(scip        != NULL);
-   assert(heurdata    != NULL);
-   assert(socconshdlr != NULL);
-   
-   if (!SCIPconshdlrGetNConss(socconshdlr))
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPconsInitNlpiSOC(scip, socconshdlr, heurdata->nlpi, heurdata->nlpiprob, SCIPconshdlrGetNConss(socconshdlr), SCIPconshdlrGetConss(socconshdlr), heurdata->var_scip2nlp) );
-   
-   return SCIP_OKAY; 
-}
-
-#ifdef WITH_NL
-/** adds nonlinear constraints to NLP */
-static
-SCIP_RETCODE addNonlinearConstraints(
-   SCIP*          scip,          /**< SCIP data structure */
-   SCIP_HEURDATA* heurdata,      /**< heuristic data structure */
-   SCIP_CONSHDLR* nlconshdlr     /**< constraint handler for nonlinear constraints */
-   )
-{
-   assert(scip       != NULL);
-   assert(heurdata   != NULL);
-   assert(nlconshdlr != NULL);
-
-   if (!SCIPconshdlrGetNConss(nlconshdlr))
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPconsInitnlpiNonlinear(scip, nlconshdlr, heurdata->nlpi, heurdata->nlpiprob, SCIPconshdlrGetNConss(nlconshdlr), SCIPconshdlrGetConss(nlconshdlr), heurdata->var_scip2nlp) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-#ifdef WITH_SIGNPOWER
-/** adds nonlinear constraints to NLP */
-static
-SCIP_RETCODE addSignpowerConstraints(
-   SCIP*          scip,          /**< SCIP data structure */
-   SCIP_HEURDATA* heurdata,      /**< heuristic data structure */
-   SCIP_CONSHDLR* sgnpowconshdlr /**< constraint handler for signpower constraints */
-   )
-{
-   assert(scip           != NULL);
-   assert(heurdata       != NULL);
-   assert(sgnpowconshdlr != NULL);
-
-   if (!SCIPconshdlrGetNConss(sgnpowconshdlr))
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPconsInitNlpiSignpower(scip, sgnpowconshdlr, heurdata->nlpi, heurdata->nlpiprob, SCIPconshdlrGetNConss(sgnpowconshdlr), SCIPconshdlrGetConss(sgnpowconshdlr), heurdata->var_scip2nlp) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-#ifdef WITH_UNIVARDEFINITE
-/** adds univariate definite constraints to NLP */
-static
-SCIP_RETCODE addUnivardefiniteConstraints(
-   SCIP*          scip,          /**< SCIP data structure */
-   SCIP_HEURDATA* heurdata,      /**< heuristic data structure */
-   SCIP_CONSHDLR* univardefiniteconshdlr    /**< constraint handler for univariate definite constraints */
-   )
-{
-   assert(scip        != NULL);
-   assert(heurdata    != NULL);
-   assert(univardefiniteconshdlr != NULL);
-
-   if (!SCIPconshdlrGetNConss(univardefiniteconshdlr))
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPconsInitNlpiUnivardefinite(scip, univardefiniteconshdlr, heurdata->nlpi, heurdata->nlpiprob, SCIPconshdlrGetNConss(univardefiniteconshdlr), SCIPconshdlrGetConss(univardefiniteconshdlr), heurdata->var_scip2nlp) );
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** sets up NLP from constraints in SCIP */
 static
 SCIP_RETCODE setupNLP(
@@ -471,8 +356,7 @@ SCIP_RETCODE setupNLP(
    int*                  objvar;
    int                   i;
    int                   cnt;                /* counter on discrete variables */
-   int                   nconshdlrs;
-   SCIP_CONSHDLR**       conshdlrs;
+   SCIP_CONSHDLR*        conshdlr;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
@@ -555,61 +439,26 @@ SCIP_RETCODE setupNLP(
    SCIPfreeBufferArray(scip, &objvar);
    SCIPfreeBufferArray(scip, &objcoeff);
    
-   /* add all constraints which can be handled */   
-   nconshdlrs = SCIPgetNConshdlrs(scip);
-   conshdlrs  = SCIPgetConshdlrs(scip);
-   for( i = 0; i < nconshdlrs; ++i )
+   /* add linear constraints to NLP solver */
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   if( conshdlr != NULL )
    {
-      assert(SCIPconshdlrGetNConss(conshdlrs[i]) >= 0);
-      if( SCIPconshdlrGetNConss(conshdlrs[i]) == 0 )
-         continue;
-      
-      if( strcmp(SCIPconshdlrGetName(conshdlrs[i]), "linear") == 0 )
-      {
-         SCIP_CALL( addLinearConstraints(scip, heurdata, conshdlrs[i]) );
-      }
-      else if( strcmp(SCIPconshdlrGetName(conshdlrs[i]), "quadratic") == 0 )
-      {
-         SCIP_CALL( addQuadraticConstraints(scip, heurdata, conshdlrs[i]) );
-      }
-      else if( strcmp(SCIPconshdlrGetName(conshdlrs[i]), "varbound") == 0 )
-      {
-         SCIP_CALL( collectVarBoundConstraints(scip, heurdata, conshdlrs[i]) );
-      }
-      else if( strcmp(SCIPconshdlrGetName(conshdlrs[i]), "logicor") == 0 || strcmp(SCIPconshdlrGetName(conshdlrs[i]), "setppc") == 0 
-         || strcmp(SCIPconshdlrGetName(conshdlrs[i]), "knapsack") == 0 )
-      {
-         /* skip combinatorial constraints, since all their variables will be fixed when the NLP is solved */ 
-         SCIPdebugMessage("skip adding logicor, setppc, and knapsack constraints to NLP\n"); 
-      }
-      else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "soc" ) == 0)
-      {
-         SCIP_CALL( addSOCConstraints (scip, heurdata, conshdlrs[i]) );
-      }
-#ifdef WITH_NL
-      else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "nonlinear" ) == 0)
-      {
-         SCIP_CALL( addNonlinearConstraints (scip, heurdata, conshdlrs[i]) );
-      }
-#endif
-#ifdef WITH_SIGNPOWER
-      else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "signpower" ) == 0)
-      {
-         SCIP_CALL( addSignpowerConstraints (scip, heurdata, conshdlrs[i]) );
-      }
-#endif
-#ifdef WITH_UNIVARDEFINITE
-      else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "univardefinite" ) == 0)
-      {
-         SCIP_CALL( addUnivardefiniteConstraints (scip, heurdata, conshdlrs[i]) );
-      }
-#endif
-      else
-      {
-         /* @TODO any other constraints to consider here? */
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "skip addition of %d constraints of type %s to NLP\n", 
-            SCIPconshdlrGetNConss(conshdlrs[i]), SCIPconshdlrGetName(conshdlrs[i])); 
-      }
+      SCIP_CALL( addLinearConstraints(scip, heurdata, conshdlr) );
+   }
+
+   /* add varbound constraints to NLP solver */
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   if( conshdlr != NULL )
+   {
+      SCIP_CALL( collectVarBoundConstraints(scip, heurdata, conshdlr) );
+   }
+   
+   /* @TODO any other constraints to consider here? */
+   
+   /** call user given NLPI initialization functions */
+   for( i = 0; i < heurdata->nnlpiinits; ++i )
+   {
+      SCIP_CALL( (*heurdata->nlpiinits[i])(scip, heurdata->nlpi, heurdata->nlpiprob, heurdata->var_scip2nlp) );
    }
    
    /* initialize data structure for NLP solve statistics */
@@ -668,6 +517,7 @@ SCIP_RETCODE checkCIPandSetupNLP(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_Bool      havenlp;
+   int            i;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -692,121 +542,10 @@ SCIP_RETCODE checkCIPandSetupNLP(
    /* do not build NLP if there are no nonlinear continuous or impl. integer variables */
    if( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
    {
-      /* check if we have nonlinear continuous or impl. integer variables in the quadratic constraints */
-      SCIP_CONSHDLR* conshdlr;
-      
-      conshdlr = SCIPfindConshdlr(scip, "quadratic");
-      if( conshdlr && SCIPconshdlrGetNConss(conshdlr) )
+      for( i = 0; !havenlp && i < heurdata->nnlpiinits; ++i )
       {
-         int i;
-         int j;
-         for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
-         {
-            SCIP_VAR** quadvars;
-            SCIP_CONS* cons;
-            int nquadvars;
-
-            cons = SCIPconshdlrGetConss(conshdlr)[i];
-            assert(cons != NULL);
-            
-            if( SCIPconsIsLocal(cons) )
-               continue;
-
-            nquadvars = SCIPgetNQuadVarsQuadratic(scip, cons);
-            quadvars = SCIPgetQuadVarsQuadratic(scip, cons);
-            assert(nquadvars == 0 || quadvars != NULL);
-
-            for( j = 0; !havenlp && j < nquadvars; ++j )
-               if( SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_CONTINUOUS )
-                  havenlp = TRUE;
-         }
+         SCIP_CALL( (*heurdata->haveconss[i])(scip, TRUE, &havenlp) );
       }
-
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "soc");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-            havenlp = TRUE;  /* @TODO check if some SOC constraint has a continuous variable */
-      }
-
-#ifdef WITH_NL
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-         {
-            SCIP_CONS*     cons;
-            SCIP_EXPRTREE* exprtree;
-            int            i, j;
-            for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i)
-            {
-               cons = SCIPconshdlrGetConss(conshdlr)[i];
-               
-               if( SCIPconsIsLocal(cons) )
-                  continue;
-
-               exprtree = SCIPgetExprtreeNonlinear(cons);
-               if (!exprtree)
-                  continue;
-               for (j = 0; !havenlp && j < SCIPexprtreeGetNVars(exprtree); ++j)
-                  if (SCIPvarGetType(SCIPexprtreeGetVars(exprtree)[j]) > SCIP_VARTYPE_IMPLINT)
-                     havenlp = TRUE;
-            }
-         }
-      }
-#endif
-
-#ifdef WITH_SIGNPOWER
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "signpower");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-         {
-            SCIP_CONS* cons;
-            SCIP_VAR*  x;
-            int        i;
-            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
-            {
-               cons = SCIPconshdlrGetConss(conshdlr)[i];
-               
-               if( SCIPconsIsLocal(cons) )
-                  continue;
-
-               x    = SCIPgetNonlinearVarSignpower(scip, cons);
-               if( x == NULL )
-                  continue;
-               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
-                  havenlp = TRUE;
-            }
-         }
-      }
-#endif
-
-#ifdef WITH_UNIVARDEFINITE
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "univardefinite");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-         {
-            SCIP_CONS* cons;
-            SCIP_VAR*  x;
-            int        i;
-            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
-            {
-               cons = SCIPconshdlrGetConss(conshdlr)[i];
-               
-               if( SCIPconsIsLocal(cons) )
-                  continue;
-
-               x    = SCIPgetNonlinearVarUnivardefinite(scip, cons);
-               if( x == NULL )
-                  continue;
-               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
-                  havenlp = TRUE;
-            }
-         }
-      }
-#endif
    }
    
    if( !havenlp )
@@ -1247,6 +986,9 @@ SCIP_DECL_HEURFREE(heurFreeNlp)
    assert(heurdata->discrvars == NULL);
    assert(heurdata->startcand == NULL);
    
+   SCIPfreeMemoryArrayNull(scip, &heurdata->nlpiinits);
+   SCIPfreeMemoryArrayNull(scip, &heurdata->haveconss);
+
    SCIPfreeMemoryNull(scip, &heurdata);
 
    return SCIP_OKAY;
@@ -1520,6 +1262,66 @@ SCIP_RETCODE SCIPincludeHeurNlp(
          &heurdata->varboundexplicit, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
+}
+
+/** includes an NLPI initialization method into the NLP heuristic
+ * can be used by constraint handlers to register a function that inserts their constraints into an NLPI */
+SCIP_RETCODE SCIPincludeHeurNlpNlpiInit(
+   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP_DECL_HEURNLPHAVECONS((*havecons)),     /**< method to call for checking if potential constraints for the NLP are present */
+   SCIP_DECL_HEURNLPNLPIINIT((*nlpiinit)),     /**< method to call for initializing NLP */
+   const char*             conshdlrname        /**< name of the constraint handler */
+   )
+{
+   SCIP_HEUR*     heur;
+   SCIP_HEURDATA* heurdata;
+   int            i;
+   
+   assert(scip != NULL);
+   assert(havecons != NULL);
+   assert(nlpiinit != NULL);
+   assert(conshdlrname != NULL );
+   
+   /* find the NLP heuristic handler */
+   heur = SCIPfindHeur(scip, HEUR_NAME);
+   if( heur == NULL )
+   {
+      SCIPerrorMessage("NLP heuristic not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   for( i = heurdata->nnlpiinits - 1; i >= 0; --i )
+   {
+      if( heurdata->nlpiinits[i] == nlpiinit )
+      {
+#ifdef SCIP_DEBUG
+         SCIPwarningMessage("Try to add already known initialization method %p for constraint handler <%s>.\n", nlpiinitfunc, conshdlrname);
+#endif
+         return SCIP_OKAY;
+      }
+   }
+
+   /* insert NLPI initialization method into heuristic data */
+   assert(heurdata->nnlpiinits <= heurdata->nlpiinitssize);
+   if( heurdata->nnlpiinits+1 > heurdata->nlpiinitssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, heurdata->nnlpiinits+1);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &heurdata->nlpiinits, newsize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &heurdata->haveconss, newsize) );
+      heurdata->nlpiinitssize = newsize;
+   }
+   assert(heurdata->nnlpiinits+1 <= heurdata->nlpiinitssize);
+   
+   heurdata->nlpiinits[heurdata->nnlpiinits] = nlpiinit;
+   heurdata->haveconss[heurdata->nnlpiinits] = havecons;
+   heurdata->nnlpiinits++;
+
+   return SCIP_OKAY;   
 }
 
 /** updates the starting point for the NLP heuristic
