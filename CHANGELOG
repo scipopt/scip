@@ -109,6 +109,8 @@ fixed bugs:
 - fixed bug in scip.c w.r.t. to call of conflict analysis for LPs which reached the objective limit in case of diving
 - fixed bug in cutpool.c: the hashkey computation was not constant over time
 - fixed bug in presolving of linear constraint handler: in redundancy detection, two different numerical epsilons were used
+- corrected wrong assert in DINS heuristic when called for an empty problem
+- corrected several asserts in linear and quadratic constraint handler concerning parsing of CIP format
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

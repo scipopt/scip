@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.354 2010/04/21 16:25:27 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.355 2010/04/22 10:45:05 bzfgleix Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9457,7 +9457,9 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       if( strncmp(tokenizer.token, "[I]", 3) == 0 && strlen(tokenizer.token) == 3 )
       {
          assert(var != NULL);
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+         /* in can be the case that the variable type is already changed to binary (for example the variable is fixed to
+          * zero in the file); hence, there could be a mismatch between the information of the file and current variable type; */
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
          SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
          continue;
       }

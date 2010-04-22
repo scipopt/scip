@@ -555,11 +555,11 @@ SCIP_DECL_HEUREXEC(heurExecDins)
      return SCIP_OKAY;
 
    /* get required data of the original problem */
-   SCIP_CALL( SCIPgetVarsData( scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL ) );
-   assert( nvars > 0 );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   assert(vars != NULL || nvars == 0);
    
    /* get name of the original problem and add the string "_dinssub" */
-   (void) SCIPsnprintf( probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip) );
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -575,7 +575,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPcreateProb( subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL ) );
    
    /* create variables and rebound them if their bounds differ by more than 0.5 */
-   SCIP_CALL( createReboundedVariables( scip, subscip, vars, subvars, &nvars, &nbinvars, &nintvars ) );
+   SCIP_CALL( createReboundedVariables(scip, subscip, vars, subvars, &nvars, &nbinvars, &nintvars) );
    SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n", 
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip) );
 
@@ -634,10 +634,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); 
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-   
-   /* get variable data of the original problem for MIP solution and LP relaxations */
-   vars = SCIPgetVars(scip);
-   assert( vars != NULL );
    
    /* get the best MIP-solution known so far */
    bestsol = SCIPgetBestSol(scip);

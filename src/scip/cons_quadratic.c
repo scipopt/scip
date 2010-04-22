@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.90 2010/04/21 18:23:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.91 2010/04/22 10:45:05 bzfgleix Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7308,21 +7308,24 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
       if( strncmp(tokenizer.token, "[B]", 3) == 0 && strlen(tokenizer.token) == 3 )
       {
          assert(var1 != NULL);
-         assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarGetType(var2 == NULL ? var1 : var2) == SCIP_VARTYPE_BINARY);
          SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
          continue;
       }
       if( strncmp(tokenizer.token, "[I]", 3) == 0 && strlen(tokenizer.token) == 3 )
       {
          assert(var1 != NULL);
-         assert(SCIPvarGetType(var1) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var1) == SCIP_VARTYPE_IMPLINT);
+         /* in can be the case that the variable type is already changed to binary (for example the variable is fixed to
+          * zero in the file); hence, there could be a mismatch between the information of the file and current variable type; */
+         assert(SCIPvarGetType(var2 == NULL ? var1 : var2) != SCIP_VARTYPE_CONTINUOUS);
          SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
          continue;
       }
       if( strncmp(tokenizer.token, "[C]", 3) == 0 && strlen(tokenizer.token) == 3 )
       {
          assert(var1 != NULL);
-         assert(SCIPvarGetType(var1) == SCIP_VARTYPE_CONTINUOUS);
+         assert(SCIPvarGetType(var2 == NULL ? var1 : var2) == SCIP_VARTYPE_CONTINUOUS || 
+            (SCIPisEQ(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetUbGlobal(var1)) && SCIPisIntegral(scip, SCIPvarGetLbGlobal(var1))) );
          SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
          continue;
       }
