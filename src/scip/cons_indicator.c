@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.56 2010/04/21 15:20:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.57 2010/04/22 09:25:32 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -4030,8 +4030,10 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
+   assert( lincons != NULL );
    consdata->lincons = lincons;
    consdata->linconsActive = TRUE;
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    /* if the problem should be decomposed if only non-integer variables are present */
    if ( conshdlrdata->noLinconsCont )
@@ -4133,10 +4135,12 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
 
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+   assert( slackvar != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    consdata->slackvar = slackvar;
+   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
 
    return SCIP_OKAY;
 }
