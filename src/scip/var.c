@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.271 2010/03/16 16:40:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.272 2010/04/22 13:31:04 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8245,9 +8245,11 @@ SCIP_DECL_SORTPTRCOMP(SCIPvarComp)
    return SCIPvarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
 }
 
-/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a variable
+ *
+ * @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
  *    SCIPvarFlattenAggregationGraph()
- *  gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
+ */
 SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -8285,10 +8287,11 @@ SCIP_VAR* SCIPvarGetProbvar(
    }
 }
 
-/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *  SCIPvarFlattenAggregationGraph()
- *  gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and updates the given
+/** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and updates the given
  *  negation status of each variable
+ *
+ *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *     SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarsGetProbvarBinary(
    SCIP_VAR***           vars,               /**< pointer to binary problem variables */
@@ -8362,10 +8365,11 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
 }
 
 
-/**  @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *    SCIPvarFlattenAggregationGraph()
- * gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
  *  negation status
+ *
+ *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *    SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarGetProbvarBinary(
    SCIP_VAR**            var,                /**< pointer to binary problem variable */
@@ -8420,10 +8424,11 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    return SCIP_INVALIDDATA;
 }
 
-/**  @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *    SCIPvarFlattenAggregationGraph()
- * transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
+/** transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
  *  values
+ *
+ *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *    SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarGetProbvarBound(
    SCIP_VAR**            var,                /**< pointer to problem variable */
@@ -8499,7 +8504,7 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
  *  if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
  *  in "constant"
  *
- *  @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by
+ *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by
  *         SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarGetProbvarSum(
