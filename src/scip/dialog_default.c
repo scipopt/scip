@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.101 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.102 2010/04/22 10:40:38 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -364,7 +364,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
 
          retcode = SCIPwriteImplicationConflictGraph(scip, filename);
          if( retcode == SCIP_FILECREATEERROR )
-            SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
+            SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
          else
          {
             SCIP_CALL( retcode );
@@ -1208,10 +1208,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 
    if( filename[0] != '\0' )
    {
+      SCIP_RETCODE retcode;
+      
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-      SCIP_CALL( SCIPwriteParams(scip, filename, TRUE, FALSE) );
-      SCIPdialogMessage(scip, NULL, "saved parameter file <%s>\n", filename);
+      retcode =  SCIPwriteParams(scip, filename, TRUE, FALSE);
+
+      if( retcode == SCIP_FILECREATEERROR )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file  <%s>\n", filename);
+      }
+      else
+      {
+         SCIP_CALL( retcode );
+         SCIPdialogMessage(scip, NULL, "saved parameter file <%s>\n", filename);
+      }
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1234,10 +1245,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave)
 
    if( filename[0] != '\0' )
    {
+      SCIP_RETCODE retcode;
+      
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+      
+      retcode = SCIPwriteParams(scip, filename, TRUE, TRUE);
 
-      SCIP_CALL( SCIPwriteParams(scip, filename, TRUE, TRUE) );
-      SCIPdialogMessage(scip, NULL, "saved non-default parameter settings to file <%s>\n", filename);
+      if( retcode == SCIP_FILECREATEERROR )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file  <%s>\n", filename);
+      }
+      else
+      {
+         SCIP_CALL( retcode );
+         SCIPdialogMessage(scip, NULL, "saved non-default parameter settings to file <%s>\n", filename);
+      }
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1721,9 +1743,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
    }
    if( filename[0] != '\0' )
    {
+      SCIP_RETCODE retcode;
+
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      SCIP_CALL( SCIPwriteLP(scip, filename) );
-      SCIPdialogMessage(scip, NULL, "written node LP relaxation to file <%s>\n", filename);
+      retcode =  SCIPwriteLP(scip, filename);
+
+      if( retcode == SCIP_FILECREATEERROR )
+      {
+         SCIPdialogMessage(scip, NULL, "error not creating file  <%s>\n", filename);
+      }
+      else
+      {
+         SCIP_CALL( retcode );
+         
+         SCIPdialogMessage(scip, NULL, "written node LP relaxation to file <%s>\n", filename);
+      }
    }
 
    SCIPdialogMessage(scip, NULL, "\n");
