@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.1 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.2 2010/04/22 19:15:12 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -94,6 +94,11 @@ SCIP_Real SCIPexprGetOpReal(
 
 /** gives void* belonging to a complex operand */
 void* SCIPexprGetOpData(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** gives exponent belonging to a SCIP_EXPR_INTPOWER operand */
+int SCIPexprGetIntPowerExponent(
    SCIP_EXPR*            expr                /**< expression */
 );
 

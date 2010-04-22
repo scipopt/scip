@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.1 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.2 2010/04/22 19:15:12 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -67,7 +67,7 @@ class SCIP_ExprIntData
 public:
    /* constructor */
    SCIP_ExprIntData()
-   : need_retape(true), blkmem(NULL), root(NULL)
+   : need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
    { }
 
    /* destructor */
@@ -82,6 +82,7 @@ public:
    double                val;                /**< current function value */
 
    bool                  need_retape;        /**< will retaping be required for the next evaluation? */
+   bool                  need_retape_always; /**< will retaping be always required? */
 
    BMS_BLKMEM*           blkmem;             /**< block memory used to allocate expresstion tree */
    SCIP_EXPR*            root;               /**< copy of expression tree; @todo do we really need to make a copy? */
@@ -189,6 +190,19 @@ SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type
          val = sign(buf[0]);
          break;
 
+      case SCIP_EXPR_SIGNPOWER:
+         if( buf[0] == 0.0 )
+            val = 0.0;
+         else if( buf[0] > 0.0 )
+            val =  pow( buf[0], buf[1]);
+         else
+            val = -pow(-buf[0], buf[1]);
+         break;
+
+      case SCIP_EXPR_INTPOWER:
+         val = pow(buf[0], SCIPexprGetIntPowerExponent(expr));
+         break;
+
       case SCIP_EXPR_SUM:
          val = 0.0;
          for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
@@ -208,6 +222,36 @@ SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type
    BMSfreeMemoryArray(&buf);
 
    return SCIP_OKAY;
+}
+
+/** analysis an expression tree whether it requires retaping on every evaluation
+ * this may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...)
+ */
+bool needAlwaysRetape(SCIP_EXPR* expr)
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetChildren(expr) != NULL || SCIPexprGetNChildren(expr) == 0);
+
+   for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
+   {
+      if( needAlwaysRetape(SCIPexprGetChildren(expr)[i]) )
+         return true;
+   }
+
+   switch( SCIPexprGetOperator(expr) )
+   {
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      case SCIP_EXPR_SIGNPOWER:
+      case SCIP_EXPR_SUM:
+         return true;
+
+      default: ;
+   }
+
+   return false;
 }
 
 /** gets name and version of expression interpreter */
@@ -282,7 +326,9 @@ SCIP_RETCODE SCIPexprintCompile(
    assert( SCIPexprtreeHasVarsAsIndex(tree) );
    
    SCIP_CALL( SCIPexprCopyDeep(exprint->blkmem, &data->root, root) );
-   
+
+   data->need_retape_always = needAlwaysRetape(SCIPexprtreeGetRoot(tree));
+
    data->blkmem = exprint->blkmem;
 
    return SCIP_OKAY;
@@ -343,7 +389,7 @@ SCIP_RETCODE SCIPexprintEval(
 
    int n = SCIPexprtreeGetNVars(tree);
 
-   if( data->need_retape )
+   if( data->need_retape_always || data->need_retape )
    {
       for( int i = 0; i < n; ++i )
       {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.2 2010/04/11 20:40:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.3 2010/04/22 19:15:12 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -61,7 +61,7 @@ static SCIP_DECL_EVAL( SCIPexprevalPushVar )
    assert(result  != NULL);
    assert(varvals != NULL);
    
-   *result = varvals[opdata.idx];
+   *result = varvals[opdata.intval];
    
    return SCIP_OKAY;
 }
@@ -80,7 +80,7 @@ static SCIP_DECL_EVAL( SCIPexprevalPushParameter )
    assert(result    != NULL);
    assert(paramvals != NULL );
    
-   *result = paramvals[opdata.idx];
+   *result = paramvals[opdata.intval];
    
    return SCIP_OKAY;
 }
@@ -275,6 +275,58 @@ SCIP_DECL_EVAL( SCIPexprevalSign )
 }
 
 static
+SCIP_DECL_EVAL( SCIPexprevalSignPower )
+{
+   assert(result  != NULL);
+   assert(argvals != NULL);
+
+   if( argvals[0] > 0 )
+     *result =  pow( argvals[0], argvals[1]);
+   else
+     *result = -pow(-argvals[0], argvals[1]);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_EVAL( SCIPexprevalIntPower )
+{
+   int       n;
+
+   assert(result  != NULL);
+   assert(argvals != NULL);
+
+   n = opdata.intval;
+
+   if( n == 0 )
+   {
+      *result = 1.0;
+      return SCIP_OKAY;
+   }
+
+   if( n > 0 )
+   {
+      if( n == 1 )
+      {
+         *result = 1.0;
+         return SCIP_OKAY;
+      }
+
+      *result = SIGN(argvals[0]) * pow(ABS(argvals[0]), n);
+      return SCIP_OKAY;
+   }
+
+   if( n == -1 )
+   {
+      *result = 1.0 / argvals[0];
+      return SCIP_OKAY;
+   }
+   *result = SIGN(argvals[0]) / pow(ABS(argvals[0]), -n);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_EVAL( SCIPexprevalSum )
 {
    int i;
@@ -335,7 +387,9 @@ struct SCIPexprOpTableElement SCIPexprOpTable[] =
    { "max",               2, SCIPexprevalMax           },
    { "abs",               1, SCIPexprevalAbs           },
    { "sign",              1, SCIPexprevalSign          },
-   {NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},
+   { "signpower",         2, SCIPexprevalSignPower     },
+   { "intpower",          1, SCIPexprevalIntPower      },
+   {NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},
    {NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},
    {NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},
    {NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},{NULL,-1,NULL},
@@ -379,10 +433,10 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_VARIDX:
       case SCIP_EXPR_PARAM:
          va_start( ap, op );
-         opdata.idx = va_arg( ap, int );
+         opdata.intval = va_arg( ap, int );
          va_end( ap );
          
-         assert( opdata.idx >= 0 );
+         assert( opdata.intval >= 0 );
          
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata ) );
          break;
@@ -396,13 +450,14 @@ SCIP_RETCODE SCIPexprCreate(
          break;
 
       /* operands with two children */
-      case SCIP_EXPR_PLUS  :
-      case SCIP_EXPR_MINUS :
-      case SCIP_EXPR_MUL   :
-      case SCIP_EXPR_DIV   :
-      case SCIP_EXPR_POWER :
-      case SCIP_EXPR_MIN   :
-      case SCIP_EXPR_MAX   :
+      case SCIP_EXPR_PLUS     :
+      case SCIP_EXPR_MINUS    :
+      case SCIP_EXPR_MUL      :
+      case SCIP_EXPR_DIV      :
+      case SCIP_EXPR_POWER    :
+      case SCIP_EXPR_MIN      :
+      case SCIP_EXPR_MAX      :
+      case SCIP_EXPR_SIGNPOWER:
          if( BMSallocBlockMemoryArray(blkmem, &children, 2 ) == NULL )
             return SCIP_NOMEMORY;
          
@@ -436,6 +491,18 @@ SCIP_RETCODE SCIPexprCreate(
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 1, children, opdata ) );
          break;
          
+      case SCIP_EXPR_INTPOWER:
+         if( BMSallocBlockMemoryArray(blkmem, &children, 1 ) == NULL )
+            return SCIP_NOMEMORY;
+
+         va_start(ap, op );
+         children[0] = va_arg( ap, SCIP_EXPR* );
+         opdata.intval = va_arg( ap, int);
+         va_end( ap );
+
+         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 1, children, opdata ) );
+         break;
+
       /* complex operands */
       case SCIP_EXPR_SUM      :
       case SCIP_EXPR_PRODUCT  :
@@ -588,7 +655,7 @@ int SCIPexprGetOpIndex(
    assert(expr != NULL);
    assert(expr->op == SCIP_EXPR_VARIDX || expr->op == SCIP_EXPR_PARAM);
    
-   return expr->data.idx;
+   return expr->data.intval;
 }
 
 /** gives real belonging to a SCIP_EXPR_CONST operand */ 
@@ -611,6 +678,17 @@ void* SCIPexprGetOpData(
    assert(expr->op >= 64); /* only complex operands store their data as void* */
    
    return expr->data.data;
+}
+
+/** gives exponent belonging to a SCIP_EXPR_INTPOWER operand */
+int SCIPexprGetIntPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_INTPOWER);
+
+   return expr->data.intval;
 }
 
 /** checks whether expression contains SCIP_EXPR_VARPTR's */
@@ -793,6 +871,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
+      case SCIP_EXPR_SIGNPOWER:
       {
          assert(expr->children[0] != NULL);
          assert(expr->children[1] != NULL);
@@ -802,6 +881,32 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
          /* if any of the operands is not constant, then it is no polynom */
          *maxdegree = (child1 != 0 || child2 != 0) ? 65535 : 0;
+         break;
+      }
+
+      case SCIP_EXPR_INTPOWER:
+      {
+         assert(expr->children[0] != NULL);
+
+         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
+
+         /* constant ^ integer or something ^ 0 has degree 0 */
+         if( child1 == 0 || expr->data.intval == 0 )
+         {
+            *maxdegree = 0;
+            break;
+         }
+
+         /* non-polynomial ^ integer  or  something ^ negative  is not a polynom */
+         if( child1 >= 65535 || expr->data.intval < 0 )
+         {
+            *maxdegree = 65535;
+            break;
+         }
+
+         /* so it is polynomial ^ natural, which gives a polynom again */
+         *maxdegree = child1 * expr->data.intval;
+
          break;
       }
 
@@ -865,7 +970,7 @@ void SCIPexprPrint(
    switch( expr->op )
    {
       case SCIP_EXPR_VARIDX:
-         SCIPmessageFPrintInfo(file, "<var%d>", expr->data.idx );
+         SCIPmessageFPrintInfo(file, "<var%d>", expr->data.intval );
          break;
          
       case SCIP_EXPR_VARPTR:
@@ -874,13 +979,19 @@ void SCIPexprPrint(
          break;
          
       case SCIP_EXPR_PARAM:
-         SCIPmessageFPrintInfo(file, "<param%d>", expr->data.idx );
+         SCIPmessageFPrintInfo(file, "<param%d>", expr->data.intval );
          break;
          
       case SCIP_EXPR_CONST:
          SCIPmessageFPrintInfo(file, "%lf", expr->data.dbl );
          break;
-         
+
+      case SCIP_EXPR_INTPOWER:
+         SCIPmessageFPrintInfo(file, "%s(", SCIPexprOpTable[expr->op].name);
+         SCIPexprPrint(expr->children[0], file);
+         SCIPmessageFPrintInfo(file, ", %d)", expr->data.intval);
+         break;
+
       default:
       {
          int i;

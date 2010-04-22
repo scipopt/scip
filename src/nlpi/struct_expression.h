@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expression.h,v 1.1 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expression.h,v 1.2 2010/04/22 19:15:12 bzfviger Exp $"
 
 /**@file   struct_expression.h
  * @brief  data definitions for expressions and expression trees
@@ -41,8 +41,8 @@ extern "C" {
 /** operator data of an expression */
 union SCIP_ExprOpData {
    SCIP_VAR*             var;                /**< SCIP variable */
-   int                   idx;                /**< index of a variable or parameter */
-   SCIP_Real             dbl;                /**< a constant value */
+   int                   intval;             /**< index of a variable or parameter or a constant integer value */
+   SCIP_Real             dbl;                /**< a constant double value */
    void*                 data;               /**< pointer to some data structure */
 };
 
