@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.57 2010/04/22 09:25:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.58 2010/04/22 13:34:35 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3898,70 +3898,64 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    consdata->slackvar = NULL;
    consdata->lincons = NULL;
 
-   /* only create linear constraint if there are variables */
-   if ( nvars == 0 )
-      consdata->linconsActive = FALSE;
+   /* if the problem should be decomposed if only non-integer variables are present */
+   if ( conshdlrdata->noLinconsCont )
+   {
+      SCIP_Bool onlyCont = TRUE;
+      int v;
+      
+      /* check whether call variables are non-integer */
+      for (v = 0; v < nvars; ++v)
+      {
+	 SCIP_VARTYPE vartype;
+	 
+	 vartype = SCIPvarGetType(vars[v]);
+	 if ( vartype != SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_IMPLINT )
+	 {
+	    onlyCont = FALSE;
+	    break;
+	 }
+      }
+      
+      if ( onlyCont )
+	 consdata->linconsActive = FALSE;
+   }
+      
+   /* create slack variable */
+   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
+   SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+	 NULL, NULL, NULL, NULL) );
+      
+   SCIP_CALL( SCIPaddVar(scip, slackvar) );
+   consdata->slackvar = slackvar;
+      
+   /* mark slack variable not to be multi-aggregated */
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
+   
+   /* create linear constraint */
+   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
+   
+   /* if the linear constraint should be activated */
+   if ( consdata->linconsActive )
+   {
+      /* the constraint is inital, enforced, separated, and checked */
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
+	    TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   }
    else
    {
-      /* if the problem should be decomposed if only non-integer variables are present */
-      if ( conshdlrdata->noLinconsCont )
-      {
-	 SCIP_Bool onlyCont = TRUE;
-	 int v;
-	 
-	 /* check whether call variables are non-integer */
-	 for (v = 0; v < nvars; ++v)
-	 {
-	    SCIP_VARTYPE vartype;
-	    
-	    vartype = SCIPvarGetType(vars[v]);
-	    if ( vartype != SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_IMPLINT )
-	    {
-	       onlyCont = FALSE;
-	       break;
-	    }
-	 }
-	 
-	 if ( onlyCont )
-	    consdata->linconsActive = FALSE;
-      }
-      
-      /* create slack variable */
-      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-      SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
-	    NULL, NULL, NULL, NULL) );
-      
-      SCIP_CALL( SCIPaddVar(scip, slackvar) );
-      consdata->slackvar = slackvar;
-      
-      /* mark slack variable not to be multi-aggregated */
-      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
-   
-      /* create linear constraint */
-      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
-   
-      /* if the linear constraint should be activated */
-      if ( consdata->linconsActive )
-      {
-	 /* the constraint is inital, enforced, separated, and checked */
-	 SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
-	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      }
-      else
-      {
-	 /* the constraint is inital, enforced, separated, and checked */
-	 SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
-	       FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      }
-
-      /* add slack variable */
-      SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
-   
-      SCIP_CALL( SCIPaddCons(scip, lincons) );
-      SCIP_CALL( SCIPcaptureCons(scip, lincons) );
-      consdata->lincons = lincons;
+      /* the constraint is inital, enforced, separated, and checked */
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
+	    FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
 
+   /* add slack variable */
+   SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
+   
+   SCIP_CALL( SCIPaddCons(scip, lincons) );
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
+   consdata->lincons = lincons;
+   
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
 	 local, modifiable, dynamic, removable, stickingatnode) );
@@ -4020,6 +4014,12 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;   
 
+   if ( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("Cannot set linear constraint in SCIP stage <%d>\n", SCIPgetStage(scip) );
+      return SCIP_INVALIDCALL;
+   }
+
    assert( cons != NULL );
    conshdlr = SCIPconsGetHdlr(cons);
 
@@ -4029,6 +4029,11 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
+
+   /* free old linear constraint */
+   assert( consdata->lincons != NULL );
+   SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &(consdata->lincons) ) );
 
    assert( lincons != NULL );
    consdata->lincons = lincons;
@@ -4133,14 +4138,29 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
 {
    SCIP_CONSDATA* consdata;
 
+   if ( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("Cannot set slack variable in SCIP stage <%d>\n", SCIPgetStage(scip) );
+      return SCIP_INVALIDCALL;
+   }
+
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
-   assert( slackvar != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
+
+   /* free old slackvariable */
+   assert( consdata->slackvar != NULL );
+   SCIP_CALL( SCIPdelVar(scip, consdata->slackvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &(consdata->slackvar) ) );
+
+   assert( slackvar != NULL );
    consdata->slackvar = slackvar;
    SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+
+   /* mark slack variable not to be multi-aggregated */
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
 
    return SCIP_OKAY;
 }
@@ -4161,6 +4181,8 @@ SCIP_Bool SCIPisViolatedIndicator(
 
    if ( consdata->linconsActive )
    {
+      assert( consdata->slackvar != NULL );
+      assert( consdata->binvar != NULL );
       return(
 	 SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) &&
 	 SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
