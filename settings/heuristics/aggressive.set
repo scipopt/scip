@@ -996,7 +996,7 @@ heuristics/trivial/priority = 1000
 
 # frequency for calling primal heuristic <trivial> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 0]
-heuristics/trivial/freq = -1
+heuristics/trivial/freq = 0
 
 # frequency offset for calling primal heuristic <trivial>
 # [type: int, range: [0,2147483647], default: 0]
