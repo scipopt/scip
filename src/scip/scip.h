@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.363 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.364 2010/04/22 09:18:32 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2005,7 +2005,7 @@ extern
 SCIP_RETCODE SCIPparseVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to store the problem variable */
-   const char*           str,                 /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
@@ -3200,7 +3200,8 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 /**@{ */
 
 /** creates and captures a constraint of the given constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -3269,9 +3270,10 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    );
 
-/** parses constrint information (in cip format) out of a string; if the parsing process was successful a constraint is
- *  creates and captures;
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
+/** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
+ *  created and captured.
+ *
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution may
  *  be declared feasible even if it violates this particular constraint.  This constellation should only be used, if no
  *  LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due to the variable's
  *  local bounds.
