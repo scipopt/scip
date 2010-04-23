@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.55 2010/04/21 18:23:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.56 2010/04/23 15:53:22 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -35,6 +35,7 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_indicator.h"
 
 #define HEUR_NAME             "nlp"
 #define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables"
@@ -71,6 +72,8 @@ struct SCIP_HeurData
                          
    int                   nvarbndconss;       /**< number of variable bound constraints */
    SCIP_CONS**           varbndconss;        /**< variable bound constraints */
+   
+   SCIP_CONSHDLR*        conshdlrindicator;  /**< constraint handler for indicator constraints */
                          
    SCIP_SOL*             startcand;          /**< candidate for start point for heuristic */
    SCIP_Real             startcandviol;      /**< violation of start point candidate w.r.t. constraint that reported this candidate */
@@ -615,7 +618,7 @@ SCIP_RETCODE applyVarBoundConstraints(
       /* check if we passed already a varbound constraint on variable var */ 
       idx = SCIPhashmapGetImage(varmap, var);
       if( idx == NULL )
-      { 
+      {
          /* variable appeared first time */
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, var));
          varidx[varcnt] = (int)(size_t)SCIPhashmapGetImage(heurdata->var_scip2nlp, var);
@@ -680,7 +683,7 @@ SCIP_RETCODE applyVarBoundConstraints(
             SCIPconsGetName(cons), SCIPvarGetName(var), varidx[idx_],
             varlb[idx_], varub[idx_], SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
             SCIPgetSolVal(scip, refpoint, SCIPgetVbdvarVarbound(scip, cons)) );
-      }      
+      }
    }
    
    /* apply bound changes on variables in varbound constraint to NLP */
@@ -690,6 +693,87 @@ SCIP_RETCODE applyVarBoundConstraints(
    SCIPfreeBufferArray(scip, &varidx);
    SCIPfreeBufferArray(scip, &varub);
    SCIPfreeBufferArray(scip, &varlb);
+
+   return SCIP_OKAY;
+}
+
+/** for a fixation of discrete variables, applies the indicator constraints to the NLP
+ * if binaries of indicator constraints are fixed to 1, fixes the corresponding slack variable to 0 */
+static
+SCIP_RETCODE applyIndicatorConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_SOL*             refpoint            /**< point to take fixation of discrete variables from */
+   )
+{
+   SCIP_CONS* cons;
+   int        nconss;
+   int        c;
+   int        cnt;
+   int*       varidx;
+   SCIP_Real* varlb;
+   SCIP_Real* varub;
+   SCIP_VAR*  var;
+   SCIP_Real  scalar;
+   SCIP_Real  offset;
+   
+   assert(scip     != NULL);
+   assert(heurdata != NULL);
+   
+   if( heurdata->conshdlrindicator == NULL )
+      return SCIP_OKAY;
+   
+   nconss = SCIPconshdlrGetNConss(heurdata->conshdlrindicator);
+   if( nconss == 0 )
+      return SCIP_OKAY;
+   
+   SCIP_CALL( SCIPallocBufferArray(scip, &varidx, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varlb,  nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varub,  nconss) );
+
+   cnt = 0;
+   for( c = 0; c < nconss; ++c )
+   {
+      cons = SCIPconshdlrGetConss(heurdata->conshdlrindicator)[c];
+      assert(cons != NULL);
+      
+      var = SCIPgetSlackVarIndicator(cons);
+      scalar = 1.0;
+      offset = 0.0;
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &offset) );
+
+      varidx[cnt] = (int)(size_t)SCIPhashmapGetImage(heurdata->var_scip2nlp, var);
+      /* if slack variable is multiaggregated or fixed, then we skip this propagation */
+      if( varidx[cnt] < 0 || scalar == 0.0 )
+         continue;
+
+      /* if the binary variable indicates that the slack should be 0.0, set it this way,
+       * otherwise slack is allowed to vary within global bounds (resets possible fixings from previous call to heuristic)
+       */
+      if( SCIPgetSolVal(scip, refpoint, SCIPgetBinaryVarIndicator(cons)) > 0.5 )
+      {
+         varlb[cnt] = -offset / scalar;
+         varub[cnt] = varlb[cnt];
+
+         SCIPdebugMessage("%s: var <%s> at %d now fixed to 0.0 due to <%s> = %g\n",
+            SCIPconsGetName(cons), SCIPvarGetName(SCIPgetSlackVarIndicator(cons)), varidx[cnt],
+            SCIPvarGetName(SCIPgetBinaryVarIndicator(cons)),
+            SCIPgetSolVal(scip, refpoint, SCIPgetBinaryVarIndicator(cons)) );
+      }
+      else
+      {
+         varlb[cnt] = (SCIPvarGetLbGlobal(SCIPgetSlackVarIndicator(cons)) - offset) / scalar;
+         varub[cnt] = (SCIPvarGetUbGlobal(SCIPgetSlackVarIndicator(cons)) - offset) / scalar;
+      }
+      ++cnt;
+   }
+
+   /* apply bound changes on variables in varbound constraint to NLP */
+   SCIP_CALL( SCIPnlpiChgVarBounds(heurdata->nlpi, heurdata->nlpiprob, cnt, varidx, varlb, varub) );
+
+   SCIPfreeBufferArray(scip, &varidx);
+   SCIPfreeBufferArray(scip, &varlb);
+   SCIPfreeBufferArray(scip, &varub);
 
    return SCIP_OKAY;
 }
@@ -825,7 +909,10 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    }
    /* apply those variable bound constraints that we can apply explicitely */
    SCIP_CALL( applyVarBoundConstraints(scip, heurdata, refpoint) );
-   
+
+   /* apply indicator constraints */
+   SCIP_CALL( applyIndicatorConstraints(scip, heurdata, refpoint) );
+
    /* set time and iteration limit for NLP solver */
    if( itercontingent == -1 )
       itercontingent = heurdata->nlpiterlimit;
@@ -996,12 +1083,38 @@ SCIP_DECL_HEURFREE(heurFreeNlp)
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
-#define heurInitNlp NULL
+static
+SCIP_DECL_HEURINIT(heurInitNlp)
+{
+   SCIP_HEURDATA* heurdata;
+   
+   assert(scip != NULL);
+   assert(heur != NULL);
 
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   
+   heurdata->conshdlrindicator = SCIPfindConshdlr(scip, "indicator");
+
+   return SCIP_OKAY;
+}
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitNlp NULL
+static
+SCIP_DECL_HEUREXIT(heurExitNlp)
+{
+   SCIP_HEURDATA* heurdata;
+   
+   assert(scip != NULL);
+   assert(heur != NULL);
 
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   
+   heurdata->conshdlrindicator = NULL;
+
+   return SCIP_OKAY;
+}
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
@@ -1298,7 +1411,7 @@ SCIP_RETCODE SCIPincludeHeurNlpNlpiInit(
       if( heurdata->nlpiinits[i] == nlpiinit )
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage("Try to add already known initialization method %p for constraint handler <%s>.\n", nlpiinitfunc, conshdlrname);
+         SCIPwarningMessage("Try to add already known initialization method %p for constraint handler <%s>.\n", nlpiinit, conshdlrname);
 #endif
          return SCIP_OKAY;
       }
