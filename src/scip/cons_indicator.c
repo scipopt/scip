@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.59 2010/04/23 16:15:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.60 2010/04/23 19:22:56 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3986,7 +3986,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
    
    SCIP_CALL( SCIPaddCons(scip, lincons) );
-   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
    consdata->lincons = lincons;
    
    /* create constraint */
