@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.58 2010/04/22 13:34:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.59 2010/04/23 16:15:06 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -184,6 +184,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_varbound.h"
 #include "scip/heur_trysol.h"
 #include <string.h>
 #include "scip/pub_misc.h"
@@ -214,14 +215,12 @@
 #define DEFAULT_GENLOGICOR         FALSE
 #define DEFAULT_SEPAALTERNATIVELP  FALSE
 #define DEFAULT_ADDCOUPLING        FALSE
+#define DEFAULT_ADDCOUPLINGCONS    FALSE
 #define DEFAULT_UPDATEBOUNDS       FALSE
 #define DEFAULT_TRYSOLUTIONS       TRUE
 #define DEFAULT_NOLINCONSCONT      FALSE
 #define DEFAULT_ENFORCECUTS        TRUE
-
-/* maximal value for coupling inequalities */
-#define maxCouplingValue  1e4
-
+#define DEFAULT_MAXCOUPLINGVALUE   1e4
 
 /** constraint data for indicator constraints */
 struct SCIP_ConsData
@@ -257,10 +256,12 @@ struct SCIP_ConshdlrData
    SCIP_Bool genLogicor;            /**< Generate logicor constraints instead of cuts? */
    SCIP_Bool sepaAlternativeLP;     /**< Separate using the alternative LP? */
    SCIP_Bool addCoupling;           /**< whether the coupling inequalities should be added */
+   SCIP_Bool addCouplingCons;       /**< whether the coupling inequalities should be added as variable bound constraints, if 'addCoupling' is true*/
    SCIP_Bool updateBounds;          /**< whether the bounds of the original variables should be changed for separation */
    SCIP_Bool trySolutions;          /**< Try to make solutions feasible by setting indicator variables? */
    SCIP_Bool noLinconsCont;         /**< decompose problem - do not generate linear constraint if all variables are continuous */
    SCIP_Bool enforceCuts;           /**< in enforcing try to generate cuts (only if sepaAlternativeLP is true) */ 
+   SCIP_Real maxCouplingValue;      /**< maximum coefficient for binary variable in coupling constraint */
    SCIP_Bool implicationsAdded;     /**< whether implications have been added */
    SCIP_HEUR* heurTrySol;           /**< trysol heuristic */
 };
@@ -2451,6 +2452,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       {
 	 SCIP_CALL( SCIPdisableCons(scip, consdata->lincons) );
       }
+      else
 
       /* add constraint to alternative LP if not already done */
       if ( conshdlrdata->sepaAlternativeLP && consdata->colIndex < 0 )
@@ -2922,40 +2924,59 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
-      /* add coupling constraint if required */
+      /* add coupling if required */
       if ( conshdlrdata->addCoupling && consdata->linconsActive )
       {
 	 SCIP_Real ub;
-	 SCIP_ROW* row;
-	 char name[50];
 
 	 /* get upper bound for slack variable in linear constraint */
 	 ub = SCIPvarGetUbGlobal(consdata->slackvar);
 	 assert( ! SCIPisNegative(scip, ub) );
-
+	 
 	 /* insert corresponding row if helpful and coefficient is not too large */
-	 if ( ub < maxCouplingValue )
+	 if ( ub <= conshdlrdata->maxCouplingValue )
 	 {
+	    char name[50];
+
 #ifndef NDEBUG
 	    (void) SCIPsnprintf(name, 50, "couple%d", c);
 #else
 	    name[0] = '\0';
 #endif
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
-	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-	    SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
-	    SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
-	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+	    /* add variable upper bound if required */
+	    if ( conshdlrdata->addCouplingCons )
+	    {
+	       SCIP_CONS* cons;
 
-	    SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
+	       SCIPdebugMessage("Insert coupling varbound constraint for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
+
+	       SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, consdata->slackvar, consdata->binvar, -ub, -SCIPinfinity(scip), 0.0,
+		     TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+	       SCIP_CALL( SCIPaddCons(scip, cons) );
+	       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+	    }
+	    else
+	    {
+	       SCIP_ROW* row;
+
+	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+	       
+	       SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
+	       SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
+	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+	       
+	       SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
 #ifdef SCIP_OUTPUT
-	    SCIProwPrint(row, NULL);
+	       SCIProwPrint(row, NULL);
 #endif
-	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-
-	    SCIP_CALL( SCIPaddPoolCut(scip, row) );
-	    SCIP_CALL( SCIPreleaseRow(scip, &row));
+	       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+	       
+	       SCIP_CALL( SCIPaddPoolCut(scip, row) );
+	       SCIP_CALL( SCIPreleaseRow(scip, &row));
+	    }
 	 }
       }
    }
@@ -3755,6 +3776,8 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->genLogicor = TRUE;
    conshdlrdata->sepaAlternativeLP = TRUE;
    conshdlrdata->implicationsAdded = FALSE;
+   conshdlrdata->addCoupling = FALSE;
+   conshdlrdata->addCouplingCons = FALSE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -3792,6 +3815,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          &conshdlrdata->addCoupling, TRUE, DEFAULT_ADDCOUPLING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/addCouplingCons",
+         "add initial coupling inequalities as linear constraints, if 'addCoupling' is true",
+         &conshdlrdata->addCouplingCons, TRUE, DEFAULT_ADDCOUPLINGCONS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/updateBounds",
          "Update bounds of original variables for separation?",
          &conshdlrdata->updateBounds, TRUE, DEFAULT_UPDATEBOUNDS, NULL, NULL) );
@@ -3810,6 +3838,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/enforceCuts",
          "in enforcing try to generate cuts (only if sepaAlternativeLP is true)",
          &conshdlrdata->enforceCuts, TRUE, DEFAULT_ENFORCECUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/indicator/maxCouplingValue",
+         "maximum coefficient for binary variable in coupling constraint",
+         &conshdlrdata->maxCouplingValue, TRUE, DEFAULT_MAXCOUPLINGVALUE, 0.0, 1e9, NULL, NULL) );
 
    return SCIP_OKAY;
 }
