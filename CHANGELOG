@@ -137,6 +137,8 @@ parameters:
 - added parameter <constraints/knapsack/presolusehashing> that allows fast pairwise presolving of knapsack constraints, default is TRUE 
 - added parameter <constraints/indicator/noLinconsCon> which controls whether the linear constraint is not explicitly added to the problem. default is FALSE
 - added parameter <constraints/indicator/enforceCuts> that allows to check for violated cust in enforcement
+- added parameter <constraints/indicator/addCouplingCons> that allows to add variable upper bounds if addCoupling is true
+- added parameter <constraints/indicator/maxCouplingValue> for the maximal value of the coefficient in a coupling inequality/constraint
 
 
 SCIP version 1.2.0
