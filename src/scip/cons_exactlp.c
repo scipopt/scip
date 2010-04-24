@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.14 2010/04/16 21:14:37 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.15 2010/04/24 16:23:43 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -38,7 +38,8 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
-#include <gmp.h> 
+#include "mpfr.h" /* mpfr.h has to be included before gmp.h */ /* todo: only necessary because of gmp<->fp functions (which maybe move) ?????? */
+#include "gmp.h" 
 
 #include "scip/cons_exactlp.h"
 #include "scip/struct_lp.h" /* only for debugging ??????????*/
@@ -4324,7 +4325,7 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
    mpq_t intscalar;
    int i;
 
-   /*debugMessage("Trans method of exactlp constraints\n");*/
+   SCIPdebugMessage("Trans method of exactlp constraints\n");
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -4516,12 +4517,14 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    if( SCIPuseFPRelaxation(scip) && SCIPdualBoundMethod(scip) == 'n' )
       return SCIP_OKAY;
 
+   /* dual bound will be calculated in enfops methode, as we can not branch here */
+   if( SCIPdualBoundMethod(scip) == 'e' )
+      return SCIP_OKAY;
+   
+   *result = SCIP_DIDNOTFIND;
+
    switch( SCIPdualBoundMethod(scip) )
    {
-   case 'e':
-      /* dual bound will be calculated in enfops methode, as we can not branch here */
-      break;
-
    case 'v':
       /* constructs exact LP of current node */
       SCIP_CALL( constructCurrentLPEX(scip, conshdlrdata, consdata) );
@@ -4598,7 +4601,11 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 #ifdef DETAILED_DEBUG /*????????? */
             if( oldlb < SCIPgetLocalLowerbound(scip) )
             {
-               SCIPdebugMessage("by db method (verify): lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+               char s[SCIP_MAXSTRLEN];
+               
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "by db method (verify): lower bound improved: %.50f --> %.50f (%Qd)\n", oldlb, SCIPgetLocalLowerbound(scip),
+                  dualobjval);
+               SCIPdebugMessage(s);
             }
 #endif
          }
@@ -4636,6 +4643,10 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          if( oldlb < SCIPgetLocalLowerbound(scip) )              
          { 
             SCIPdebugMessage("by db method (project): lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+         }
+         else
+         {
+            SCIPdebugMessage("by pseudosol: lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
          }
 #endif                                                                                                                
  
