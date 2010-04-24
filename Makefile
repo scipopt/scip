@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.338 2010/04/09 20:55:01 bzfviger Exp $
+# $Id: Makefile,v 1.339 2010/04/24 12:58:38 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -302,6 +302,36 @@ ALLSRC		+=	$(LPILIBSRC)
 
 
 #-----------------------------------------------------------------------------
+# NLP Solver Interface
+#-----------------------------------------------------------------------------
+
+NLPILIBSHORTNAME	=	nlpi
+NLPILIBNAME	=	$(NLPILIBSHORTNAME)-$(VERSION)
+NLPILIBCOBJ	  = nlpi/nlpi.o \
+	nlpi/nlpioracle.o	\
+	nlpi/expression.o
+NLPILIBCXXOBJ	=
+
+ifeq ($(EXPRINT),none)
+NLPILIBCOBJ += nlpi/exprinterpret_none.o
+endif
+ifeq ($(EXPRINT),cppad)
+NLPILIBCXXOBJ += nlpi/exprinterpret_cppad.o
+endif
+
+ifeq ($(IPOPT),true)
+NLPILIBCXXOBJ += nlpi/nlpi_ipopt.o
+endif
+
+NLPILIB	=	$(NLPILIBNAME).$(BASE)
+NLPILIBFILE	=	$(LIBDIR)/lib$(NLPILIB).$(LIBEXT)
+NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJDIR)/,$(NLPILIBCXXOBJ))
+NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
+NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib.$(OPT)
+NLPILIBLINK	=	$(LIBDIR)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
+ALLSRC		+=	$(NLPILIBSRC)
+
+#-----------------------------------------------------------------------------
 # External Libraries
 #-----------------------------------------------------------------------------
 
@@ -540,33 +570,12 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
 			
-SCIPLIBOBJ += nlpi/nlpi.o \
-			nlpi/nlpioracle.o \
-			nlpi/expression.o			
-			
-ifeq ($(EXPRINT),none)
-SCIPLIBOBJ += nlpi/exprinterpret_none.o
-endif
-
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
-
-ifeq ($(IPOPT),true)
-SCIPLIBOBJ += nlpi/nlpi_ipopt.o
-SCIPLIBOBJFILES += $(LIBOBJDIR)/nlpi/nlpi_ipopt.o
-SCIPLIBSRC += $(SRCDIR)/nlpi/nlpi_ipopt.cpp
-endif
-
-ifeq ($(EXPRINT),cppad)
-SCIPLIBOBJ += nlpi/exprinterpret_cppad.o
-SCIPLIBOBJFILES += $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o
-SCIPLIBSRC += $(SRCDIR)/nlpi/exprinterpret_cppad.cpp
-endif
-
 
 ALLSRC		+=	$(SCIPLIBSRC)
 
@@ -636,15 +645,16 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK) \
-		$(LPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
+.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
+    $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(NLPILIBLINK) $(MAINLINK) $(MAINSHORTLINK) \
+		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
 .PHONY: all
-all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(NLPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lint
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
 			do \
@@ -728,6 +738,10 @@ $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(LPILIBFILE)) $(notdir $@)
 
+$(NLPILIBLINK):	$(NLPILIBFILE)
+		@rm -f $@
+		cd $(dir $@) && ln -s $(notdir $(NLPILIBFILE)) $(notdir $@)
+
 $(SCIPLIBLINK):	$(SCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(SCIPLIBFILE)) $(notdir $@)
@@ -761,7 +775,7 @@ $(BINDIR):
 .PHONY: clean
 clean:
 ifneq ($(LIBOBJDIR),)
-		@cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS)
+		@-(cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS));
 		@-rmdir $(LIBOBJDIR)
 endif
 ifneq ($(BINOBJDIR),)
@@ -772,8 +786,8 @@ ifneq ($(OBJDIR),)
 		@-rmdir $(OBJDIR)
 endif
 		@echo "-> remove objective files"
-		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) \
-		$(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) \
+		$(LPILIBLINK) $(NLPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
 		@echo "-> remove libraries"
 		@echo "-> remove binary"
 
@@ -790,6 +804,19 @@ ifeq ($(LINKER),CPP)
 		>$(LPILIBDEP)'
 endif
 
+.PHONY: nlpidepend
+nlpidepend:
+ifeq ($(LINKER),C)
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		>$(NLPILIBDEP)'
+endif
+ifeq ($(LINKER),CPP)
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		>$(NLPILIBDEP)'
+endif
+
 .PHONY: maindepend
 maindepend:
 ifeq ($(LINKER),C)
@@ -804,7 +831,7 @@ ifeq ($(LINKER),CPP)
 endif
 
 .PHONY: depend
-depend:		lpidepend maindepend
+depend:		lpidepend nlpidepend maindepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(SCIPLIBDEP)'
@@ -821,6 +848,7 @@ depend:		lpidepend maindepend
 -include	$(SCIPLIBDEP)
 -include	$(OBJSCIPLIBDEP)
 -include 	$(LPILIBDEP)
+-include 	$(NLPILIBDEP)
 
 $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
@@ -835,10 +863,10 @@ ifeq ($(LINKER),CPP)
 		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 
-$(SCIPLIBFILE):	checklpsdefine $(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) 
+$(SCIPLIBFILE):	checklpsdefine $(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) 
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
@@ -855,6 +883,14 @@ $(LPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(LPILIBOBJFILES)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
+
+$(NLPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(NLPILIBOBJFILES)
+		@echo "-> generating library $@"
+		-rm -f $@
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
