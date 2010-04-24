@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.7 2010/03/30 20:33:26 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.8 2010/04/24 16:24:35 bzfwolte Exp $"
 //#define PROVEDBOUNDOUT /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUTSUB /*only for debugging ?????????*/
+//#define PROVEDBOUNDOUTSUB2 /*only for debugging ?????????*/
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -13895,7 +13896,10 @@ SCIP_RETCODE provedBound(
 	  y = -SCIPsetInfinity(set);
 
 #ifdef PROVEDBOUNDOUT /*?????????*/
-      printf("j=%d (usefarkas=%d): y=%g ", j, usefarkas, y); /*???????????????*/
+      if( SCIPsetIsFeasPositive(set, y) || SCIPsetIsFeasNegative(set, y) )
+      {
+         printf("j=%d <%s>(usefarkas=%d): y=%g ", j, SCIProwGetName(row), usefarkas, y); /*???????????????*/
+      }
 #endif
       if( SCIPsetIsFeasPositive(set, y) )
       {
@@ -13918,17 +13922,26 @@ SCIP_RETCODE provedBound(
          SCIPintervalSet(&yinter[j], 0.0);
          SCIPintervalSet(&b, 0.0);
 #ifdef PROVEDBOUNDOUT /*?????????*/
-	 printf("b=0"); /*???????????????*/
+         if( SCIPsetIsFeasPositive(set, y) || SCIPsetIsFeasNegative(set, y) )
+         {
+            printf("b=0"); /*???????????????*/
+         }
 #endif
       }
       
       SCIPintervalMul(SCIPsetInfinity(set), &prod, yinter[j], b);
 #ifdef PROVEDBOUNDOUT /*?????????*/
-      printf(" \tytb_j=[%g,%g]", SCIPintervalGetInf(prod), SCIPintervalGetSup(prod)); /*???????????????*/
+      if( SCIPsetIsFeasPositive(set, y) || SCIPsetIsFeasNegative(set, y) )
+      {
+         printf(" \tytb_j=[%g,%g]", SCIPintervalGetInf(prod), SCIPintervalGetSup(prod)); /*???????????????*/
+      }
 #endif
       SCIPintervalAdd(SCIPsetInfinity(set), &ytb, ytb, prod);
 #ifdef PROVEDBOUNDOUT /*?????????*/
-      printf(" \tytb=[%g,%g]\n", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb)); /*???????????????*/
+      if( SCIPsetIsFeasPositive(set, y) || SCIPsetIsFeasNegative(set, y) )
+      {
+         printf(" \tytb=[%g,%g]\n", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb)); /*???????????????*/
+      }
 #endif
    }
 
@@ -13951,24 +13964,31 @@ SCIP_RETCODE provedBound(
          assert(col->rows[i]->lppos >= 0);
          assert(col->linkpos[i] >= 0);
          SCIPintervalSet(&a, col->vals[i]);
-#ifdef PROVEDBOUNDOUTSUB /*?????????*/
-	 if( usefarkas )
+#ifdef PROVEDBOUNDOUT /*?????????*/
+         if( strcmp(col->var->name,"t_y$x1268") == 0 )
+         {
+            printf("j=%d: col <%s>: nlprows=%d, row[%d]= %f \t <%s> --> y=%f \t --- ", j, col->var->name, col->nlprows, i, col->vals[i], col->rows[i]->name, col->rows[i]->dualsol);
+         }
+#endif
+         
+#ifdef PROVEDBOUNDOUTSUB2 /*?????????*/
+	 if( !usefarkas )
 	 {
 	   printf("j=%d, i=%d(%d) (usefarkas=%d): a_i=[%g,%g] ", j, col->rows[i]->lppos, i, usefarkas, SCIPintervalGetInf(a), SCIPintervalGetSup(a)); /*???????????????*/
 	   printf("y_i=[%g,%g] ", SCIPintervalGetInf(yinter[col->rows[i]->lppos]), SCIPintervalGetSup(yinter[col->rows[i]->lppos])); /*???????????????*/
 	 }
 #endif
          SCIPintervalMul(SCIPsetInfinity(set), &prod, yinter[col->rows[i]->lppos], a);
-#ifdef PROVEDBOUNDOUTSUB /*?????????*/
-	 if( usefarkas )
+#ifdef PROVEDBOUNDOUTSUB2 /*?????????*/
+	 if( !usefarkas )
 	 {
 	   printf(" \taty_i=[%g,%g] ", SCIPintervalGetInf(prod), SCIPintervalGetSup(prod)); /*???????????????*/
 	   printf(" \tc_i=[%g,%g] ", SCIPintervalGetInf(diff), SCIPintervalGetSup(diff)); /*???????????????*/
 	 }
 #endif
          SCIPintervalSub(SCIPsetInfinity(set), &diff, diff, prod);
-#ifdef PROVEDBOUNDOUTSUB /*?????????*/
-	 if( usefarkas )
+#ifdef PROVEDBOUNDOUTSUB2 /*?????????*/
+	 if( !usefarkas )
 	 {
 	   printf(" \tc_i-aty_i=[%g,%g] \n", SCIPintervalGetInf(diff), SCIPintervalGetSup(diff)); /*???????????????*/
 	 }
@@ -13988,31 +14008,31 @@ SCIP_RETCODE provedBound(
 
       SCIPintervalSetBounds(&x, col->lb, col->ub);
 #ifdef PROVEDBOUNDOUTSUB /*?????????*/
-      if( usefarkas )
+      if( !usefarkas && (SCIPintervalGetInf(diff) < 0.0 || SCIPintervalGetInf(diff) > 0.0) && (SCIPintervalGetSup(diff) < 0.0 || SCIPintervalGetSup(diff) > 0.0) )
       {
-	printf("c-aty=[%g,%g] ", SCIPintervalGetInf(diff), SCIPintervalGetSup(diff)); /*???????????????*/
+         printf("j=%d: c-aty=[%g,%g] ", j, SCIPintervalGetInf(diff), SCIPintervalGetSup(diff)); /*???????????????*/
 	printf("\t x=[%g,%g] ", SCIPintervalGetInf(x), SCIPintervalGetSup(x)); /*???????????????*/
       }
 #endif
       SCIPintervalMul(SCIPsetInfinity(set), &diff, diff, x);
 #ifdef PROVEDBOUNDOUTSUB /*?????????*/
-      if( usefarkas )
-      {
-	printf("\t (c-aty)*x=[%g,%g] ", SCIPintervalGetInf(diff), SCIPintervalGetSup(diff)); /*???????????????*/
+      if( !usefarkas && (SCIPintervalGetInf(diff) < 0.0 || SCIPintervalGetInf(diff) > 0.0 || SCIPintervalGetSup(diff) < 0.0 || SCIPintervalGetSup(diff) > 0.0) )
+     {
+	printf("\t j=%d \t (c-aty)*x=[%g,%g] ", j, SCIPintervalGetInf(diff), SCIPintervalGetSup(diff)); /*???????????????*/
 	printf("\t minprod=[%g,%g] ", SCIPintervalGetInf(minprod), SCIPintervalGetSup(minprod)); /*???????????????*/
       }
 #endif
       SCIPintervalAdd(SCIPsetInfinity(set), &minprod, minprod, diff);
 #ifdef PROVEDBOUNDOUTSUB /*?????????*/
-      if( usefarkas )
+      if( !usefarkas && (SCIPintervalGetInf(diff) < 0.0 || SCIPintervalGetInf(diff) > 0.0 || SCIPintervalGetSup(diff) < 0.0 || SCIPintervalGetSup(diff) > 0.0) )
       {
-	printf("minprod+(c-aty)*x=[%g,%g]\n", SCIPintervalGetInf(minprod), SCIPintervalGetSup(minprod)); /*???????????????*/
+	printf("minprod+(c-aty)*x=[%.20f,%.20f]\n", SCIPintervalGetInf(minprod), SCIPintervalGetSup(minprod)); /*???????????????*/
       }
 #endif
    }
 
 #ifdef PROVEDBOUNDOUTSUB /*?????????*/
-   if( usefarkas )
+   if( !usefarkas )
    {
      printf("---> ytb=[%g,%g] ", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb)); /*???????????????*/
      printf("\t (c-aty)*x=[%g,%g]", SCIPintervalGetInf(minprod), SCIPintervalGetSup(minprod)); /*???????????????*/
@@ -14021,7 +14041,7 @@ SCIP_RETCODE provedBound(
    /* add y^Tb */
    SCIPintervalAdd(SCIPsetInfinity(set), &minprod, minprod, ytb);
 #ifdef PROVEDBOUNDOUTSUB /*?????????*/
-   if( usefarkas )
+   if( !usefarkas )
    {
        printf("\t ytb + (c-aty)*x=[%g,%g]", SCIPintervalGetInf(minprod), SCIPintervalGetSup(minprod)); /*???????????????*/
    }
@@ -14033,7 +14053,7 @@ SCIP_RETCODE provedBound(
    *bound = SCIPintervalGetInf(minprod);
 
 #ifdef PROVEDBOUNDOUTSUB /*?????????*/
-   if( usefarkas )
+   if( !usefarkas )
    {
      printf(" PROOFED=%d!!!!\n", *bound > 0.0); /*???????????????*/
    }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.5 2010/03/30 20:33:26 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.6 2010/04/24 16:24:35 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -25,8 +25,8 @@
 #define __SCIP_CONS_EXACTLP_H__
 
 
-#include <mpfr.h> /* mpfr.h has to be included before gmp.h */ /* todo: only necessary because of gmp<->fp functions (which maybe move) ?????? */
-#include <gmp.h>
+#include "mpfr.h" /* mpfr.h has to be included before gmp.h */ /* todo: only necessary because of gmp<->fp functions (which maybe move) ?????? */
+#include "gmp.h"
 #include "scip/scip.h"
 #include "scip/lpiex.h"
 #include "scip/solex.h"

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.10 2010/04/16 15:41:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.11 2010/04/24 16:24:35 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -586,6 +586,9 @@ SCIP_RETCODE updatePseudocost(
        */
       weight = nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0;
       lpgain = (SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound) * weight;
+      /* in exact mode, lower bounds can be -inf if safe dual bounding method fails (e.g., verify); here we use lpgain=0 instead of lpgain=inf */
+      if( set->misc_exactsolve && SCIPsetIsInfinity(set, -tree->focuslpstatefork->lowerbound) )
+         lpgain = 0;
       lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
       {
@@ -618,7 +621,8 @@ SCIP_RETCODE updateEstimate(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_Real             lowerboundapprox    /**< approximation of lower bound or -inf */
    )
 {
    SCIP_NODE* focusnode;
@@ -640,8 +644,10 @@ SCIP_RETCODE updateEstimate(
    /* get the fractional variables */
    SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL) );
 
-   /* calculate the estimate: lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j}) */
-   estimate = SCIPnodeGetLowerbound(focusnode);
+   /* calculate the estimate: lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j});
+    * in exact mode, if lowerbound is -inf because safe verification of approximate LP solution failed, we want to use the given approximate lower bound 
+    */
+   estimate = MAX(SCIPnodeGetLowerbound(focusnode), lowerboundapprox); 
    for( i = 0; i < nlpcands; ++i )
    {
       SCIP_Real pscdown;
@@ -813,8 +819,7 @@ SCIP_RETCODE solveNodeInitialLP(
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
-   // if( !(*lperror) )/* old version which does not work for dbmethod=verify and basis dualinfeasible (i.e., dualbound = -inf) ????????? */
-   if( !(*lperror) && !set->misc_exactsolve )/* new workaround version ?????????? */
+   if( !(*lperror) ) 
    {
       SCIP_EVENT event;
 
@@ -1555,7 +1560,7 @@ SCIP_RETCODE priceAndCutLoop(
                              SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
 
             /* update node estimate */
-            SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+            SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand, SCIPlpGetObjval(lp, set)) );
          }
          else
          {
@@ -1631,9 +1636,10 @@ SCIP_RETCODE priceAndCutLoop(
       if( mustsepa )
       {
          if( !separate
-             || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-             || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
-             || (root && SCIPsolveIsStopped(set, stat, FALSE)) )
+            || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+            || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
+            || (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
+            || (root && SCIPsolveIsStopped(set, stat, FALSE)) )
          {
             mustsepa = FALSE;
             delayedsepa = FALSE;
@@ -1809,7 +1815,7 @@ SCIP_RETCODE priceAndCutLoop(
       SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, lowerboundtype, set, stat, lp) );
 
       /* update node estimate */
-      SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+      SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand, SCIPlpGetObjval(lp, set)) );
 
       /* issue LPSOLVED event */
       if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT )
