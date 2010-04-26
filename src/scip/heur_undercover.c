@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.48 2010/04/26 15:40:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.49 2010/04/26 15:50:34 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -51,7 +51,7 @@
 #include "scip/heur_nlp.h"
 
 #define HEUR_NAME             "undercover"
-#define HEUR_DESC             "solves a linearization of an MIQCP determined by a set covering approach"
+#define HEUR_DESC             "solves a linearization of a CIP determined by a set covering approach"
 #define HEUR_DISPCHAR         'u'
 #define HEUR_PRIORITY         -1110000
 #define HEUR_FREQ             -1
@@ -74,6 +74,7 @@
 #define DEFAULT_BEFORECUTS    TRUE           /**< should undercover called at root node before cut separation?          */
 #define DEFAULT_FIXANDPROP    TRUE           /**< should undercover fix consecutively and propagate fixings?            */
 #define DEFAULT_BACKTRACK     TRUE           /**< use one level of backtracking if infeasibility is encountered?        */
+#define DEFAULT_RECOVER       FALSE          /**< during fix-and-propagate, compute a new cover whenever a variable outside of the cover has been fixed? */
 #define DEFAULT_PPCSTRAT      'u'            /**< strategy for finding a ppc solution                                   */
 #define PPCSTRATS             "bcdlmtuv"     /**< strategies for finding a ppc solution                                 */
 
@@ -101,6 +102,7 @@ struct SCIP_HeurData
    SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation?     */
    SCIP_Bool             fixandprop;         /**< should undercover fix consecutively and propagate fixings?          */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered?      */
+   SCIP_Bool             recover;            /**< during fix-and-propagate, compute a new cover whenever a variable outside of the cover has been fixed? */
    SCIP_Bool             run;                /**< should heuristic run, i.e. are nonlinear constraints present?       */
    char                  ppcstrat;           /**< strategy for finding a ppc solution                                 */
 };
@@ -162,6 +164,7 @@ void  incConsCounter(
    return;
 }
 
+
 /** creates a set covering/packing problem to determine a number of variables to be fixed */
 static
 SCIP_RETCODE createPpcProblem(
@@ -203,12 +206,6 @@ SCIP_RETCODE createPpcProblem(
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
-
-   /* get name of the original problem and add the string "_undercoverppc" */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_undercoverppc", SCIPgetProbName(scip));
-
-   /* create the ppc problem */
-   SCIP_CALL( SCIPcreateProb(ppcscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* allocate and initialize to zero arrays for weighted objectives */
    SCIPallocBufferArray(scip, &consmarker, nvars);
@@ -783,6 +780,119 @@ SCIP_RETCODE createPpcProblem(
    return SCIP_OKAY;
 }
 
+
+/** solve ppc problem */
+static
+SCIP_RETCODE solvePpcProblem(
+   SCIP*                 ppcscip,            /**< SCIP data structure for the ppc problem */
+   SCIP_VAR**            ppcvars,            /**< variables of the ppc problem */
+   SCIP_Real*            ppcsolvals,         /**< best feasible solution values */
+   SCIP_Real             timelimit,          /**< time limit */
+   SCIP_Real             memorylimit,        /**< memory limit */
+   SCIP_Bool*            success             /**< feasible solution found? */
+   )
+{
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
+
+#ifdef SCIP_DEBUG
+   SCIP_Real totalpenalty;
+   int nfixed;
+   int i;
+#endif
+
+   assert(ppcscip != NULL);
+   assert(ppcvars != NULL);
+   assert(ppcsolvals != NULL);
+   assert(timelimit > 0.0);
+   assert(memorylimit > 0.0);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(ppcscip, "misc/catchctrlc", FALSE) );
+ 
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 0) );
+ 
+   /* set limits for the ppc problem */
+   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/memory", memorylimit) );
+
+   /* forbid recursive call of heuristics solving subMIPs */
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/undercover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rens/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/oneopt/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rins/freq", -1) ); 
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/localbranching/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/mutation/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "separating/rapidlearning/freq", -1) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/freq", 100000000) );
+#endif
+
+   /* presolve ppc problem */
+#ifdef NDEBUG
+   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   retstat = SCIPpresolve(ppcscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("error while presolving ppc problem in undercover heuristic: subSCIP terminated with code <%d>\n", retstat);
+      return SCIP_OKAY;
+   }
+#else
+   SCIP_CALL( SCIPpresolve(ppcscip) );
+#endif
+
+   SCIPdebugMessage("undercover presolved ppc problem: %d vars, %d cons\n", SCIPgetNVars(ppcscip), SCIPgetNConss(ppcscip));
+
+   /* solve ppc problem */
+#ifdef NDEBUG
+   retstat = SCIPsolve(ppcscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("error while solving ppc problem in undercover heuristic: subSCIP terminated with code <%d>\n", retstat);
+   }
+#else
+   SCIP_CALL( SCIPsolve(ppcscip) );
+#endif
+
+   /* check, whether a solution was found and save the best in ppcsolvals */
+   if( SCIPgetNSols(ppcscip) == 0 )
+      return SCIP_OKAY;
+
+   assert(SCIPgetBestSol(ppcscip) != NULL);
+
+   SCIP_CALL( SCIPgetSolVals(ppcscip, SCIPgetBestSol(ppcscip), SCIPgetNOrigVars(ppcscip), ppcvars, ppcsolvals) );
+
+#ifdef SCIP_DEBUG
+   nfixed = 0;
+   totalpenalty = 0.0;
+   for( i = 0; i < SCIPgetNOrigVars(ppcscip); ++i )
+   {
+      if( ppcsolvals[i] > 0.5 )
+         ++nfixed;
+      totalpenalty += SCIPvarGetObj(ppcvars[i]);
+   }
+
+   SCIPdebugMessage("undercover found a ppc solution: %d/%d variables fixed, normalized penalty=%f\n",
+      nfixed, SCIPgetNOrigVars(ppcscip), SCIPgetSolOrigObj(ppcscip, SCIPgetBestSol(ppcscip))/totalpenalty);
+#endif
+
+   *success = TRUE;
+   return SCIP_OKAY;
+}
+
+
 static
 /** calculate the reduced bounds of a variable in the subMIQCP */
 void calculateBounds(
@@ -971,10 +1081,16 @@ SCIP_RETCODE createSubProblem(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                              */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                                     */
-   SCIP_Real*            ppcsolvals,         /**< ppcsolvals[i] == 1 if var. i should be fixed/dom.red. in subproblem */
+   SCIP_Real*            timelimit,          /**< time limit                                                     */        
+   SCIP_Real             memorylimit,        /**< memory limit                                                   */
+   char                  ppcstrat,           /**< strategy for finding a ppc solution                            */
+   SCIP_Real             ppcobjquot,         /**< additional penalty factor for fixing continuous variables      */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
+   SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity?   */
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value  */
    SCIP_Bool             fixandprop,         /**< should undercover fix consecutively and propagate fixings?          */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered?      */
+   SCIP_Bool             recover,            /**< during fix-and-propagate, compute a new cover whenever a variable outside of the cover has been fixed? */
    SCIP_Bool             locksrounding,      /**< shall LP values for integer vars be rounded according to locks?     */
    SCIP_Bool             local,              /**< shall local LP rows be copied and local bounds be used?             */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully       */
@@ -983,6 +1099,10 @@ SCIP_RETCODE createSubProblem(
    SCIP_VAR** vars;                          /* original SCIP variables */
    SCIP_HASHMAP* varmap;
 
+   SCIP* ppcscip;
+   SCIP_VAR** ppcvars;                       /* ppc problem's variables */
+   SCIP_Real* ppcsolvals;                    /* solution to ppc problem */
+  
    char name[SCIP_MAXSTRLEN];
    int nvars;
    int fixingcounter;
@@ -994,14 +1114,58 @@ SCIP_RETCODE createSubProblem(
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* get name of the original problem and add the string "_undercoversub" */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_undercoversub", SCIPgetProbName(scip));
-
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-   /* create the variable mapping hash map */
+   /* create variable hashmap */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
+
+   /* creating ppc SCIP instance */
+   SCIP_CALL( SCIPcreate(&ppcscip) );
+#if defined(SCIP_DEBUG) || !defined(NDEBUG)
+   SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+#endif
+
+   /* create array for ppc variables and solution values */
+   SCIP_CALL( SCIPallocBufferArray(scip, &ppcvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ppcsolvals, nvars) );
+
+   /* creating initial ppc problem */
+   SCIPdebugMessage("undercover heuristic creating ppc problem\n");
+   *success = FALSE;
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_undercoverppc_initial", SCIPgetProbName(scip));
+   SCIP_CALL( SCIPcreateProb(ppcscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, !globalbounds, onlyconvexify, success) );
+
+   if( !*success )
+   {
+      SCIPdebugMessage("undercover heuristic terminating: problems creating ppc problem\n");
+      goto TERMINATE;
+   }
+
+   /* solving initial ppc problem; we only need ppcsolvals, so we can immediately free the problem */
+   SCIPdebugMessage("undercover heuristic solving ppc problem\n");
+   SCIP_CALL( solvePpcProblem(ppcscip, ppcvars, ppcsolvals, *timelimit, memorylimit, success) );
+   for( i = nvars-1; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPreleaseVar(ppcscip, &(ppcvars[i])) );
+   }
+   SCIP_CALL( SCIPfreeProb(ppcscip) );
+
+   if( !*success )
+   {  
+      SCIPdebugMessage("undercover heuristic terminating: problems solving ppc problem\n");
+      goto TERMINATE;
+   }
+
+   *success = FALSE;
+   *timelimit -= SCIPgetTotalTime(ppcscip);
+   if( *timelimit < 10.0 )
+   { 
+      SCIPdebugMessage("undercover heuristic terminating: subtimelimit=%f\n", *timelimit);
+      goto TERMINATE;
+   }
 
    /* create the variables of the subproblem */
    fixingcounter = 0;
@@ -1041,6 +1205,7 @@ SCIP_RETCODE createSubProblem(
    /* fix-and-propagate loop */
    if( fixandprop )
    {
+      int nrecovers;
       int nbacktracks;
       int nalternatives;
       SCIP_Real* alternatives;
@@ -1049,6 +1214,7 @@ SCIP_RETCODE createSubProblem(
       SCIP_CALL( SCIPstartProbing(scip) );
       
       /* if we want to use global bounds and are not at the root node, reset bounds */
+      /* isn't that done above already ????????????????? */
       for( i = 0; i < nvars; ++i )
       {
          if( SCIPgetDepth(scip) > 0 && !local )
@@ -1060,7 +1226,8 @@ SCIP_RETCODE createSubProblem(
 
       /* we try at most four alternative values in backtracking */
       SCIP_CALL( SCIPallocBufferArray(scip, &alternatives, 4) );
-    
+
+      nrecovers = 0;
       fixingcounter = 0;
       roundedfixingcounter = 0;
 
@@ -1070,7 +1237,7 @@ SCIP_RETCODE createSubProblem(
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
          /* iff ppcsolvals[i] == 1, variable is fixed/dom.red. in the subproblem */
-         if( SCIPisEQ(scip, ppcsolvals[i], 1.0)  )
+         if( SCIPisEQ(scip, ppcsolvals[i], 1.0) )
          {
             SCIP_Real lb;
             SCIP_Real ub;
@@ -1172,14 +1339,60 @@ SCIP_RETCODE createSubProblem(
             }
             while( backtrack && nbacktracks <= nalternatives );
 
-            ++fixingcounter;         
+            ++fixingcounter;
+
+            /* "recover": if variables outside the cover were fixed, compute a new minimum cover */
+            if( recover && i > 0 && ndomredsfound > 0 )
+            {
+               int v;
+
+               ++nrecovers;
+
+               /* creating recovering ppc problem; we use the local bounds of the probing node in the original SCIP instance */
+               SCIPdebugMessage("undercover heuristic creating ppc problem (recovering no. %d)\n", nrecovers);
+               *success = FALSE;
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_undercoverppc_recover%d", SCIPgetProbName(scip), nrecovers);
+               SCIP_CALL( SCIPcreateProb(ppcscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, TRUE, onlyconvexify, success) );
+
+               if( !*success )
+               {
+                  SCIPdebugMessage("undercover heuristic terminating: problems creating ppc problem\n");
+                  goto TERMINATE;
+               }
+
+               /* solving ppc problem; we only need ppcsolvals, so we can immediately free the problem */
+               SCIPdebugMessage("undercover heuristic solving ppc problem (recovering no %d)\n", nrecovers);
+               SCIP_CALL( solvePpcProblem(ppcscip, ppcvars, ppcsolvals, *timelimit, memorylimit, success) );
+               for( v = nvars-1; v >= 0; --v )
+               {
+                  SCIP_CALL( SCIPreleaseVar(ppcscip, &(ppcvars[v])) );
+               }
+               SCIP_CALL( SCIPfreeProb(ppcscip) );
+
+               if( !*success )
+               {  
+                  SCIPdebugMessage("undercover heuristic terminating: problems solving ppc problem\n");
+                  goto TERMINATE;
+               }
+
+               *success = FALSE;
+               *timelimit -= SCIPgetTotalTime(ppcscip);
+               if( *timelimit < 10.0 )
+               {
+                  SCIPdebugMessage("undercover heuristic terminating: subtimelimit=%f\n", *timelimit);
+                  goto TERMINATE;
+               }
+
+               /* return to last variable in the (new) cover) */
+               i = nvars-1;
+            }
          }
       }
       SCIPfreeBufferArray(scip, &alternatives);
       SCIP_CALL( SCIPendProbing(scip) );
 
       SCIPdebugMessage("undercover heuristic fixed %d variables (%d integer variables to rounded LP value) during probing\n", fixingcounter, roundedfixingcounter);
-
    }
 
    /* abort, if nothing was fixed or all variables were fixed to their current LP value */
@@ -1229,120 +1442,14 @@ SCIP_RETCODE createSubProblem(
    *success = TRUE;
 
  TERMINATE:
+   /* free memory from ppc problem */      
+   SCIPfreeBufferArray(scip, &ppcsolvals);
+   SCIPfreeBufferArray(scip, &ppcvars);
+   SCIPfree(&ppcscip);
+
+   /* free variable hashmap */
    SCIPhashmapFree(&varmap);
 
-   return SCIP_OKAY;
-}
-
-
-/** solve ppc problem */
-static
-SCIP_RETCODE solvePpcProblem(
-   SCIP*                 ppcscip,            /**< SCIP data structure for the ppc problem */
-   SCIP_VAR**            ppcvars,            /**< variables of the ppc problem */
-   SCIP_Real*            ppcsolvals,         /**< best feasible solution values */
-   SCIP_Real             timelimit,          /**< time limit */
-   SCIP_Real             memorylimit,        /**< memory limit */
-   SCIP_Bool*            success             /**< feasible solution found? */
-   )
-{
-#ifdef NDEBUG
-   SCIP_RETCODE retstat;
-#endif
-
-#ifdef SCIP_DEBUG
-   SCIP_Real totalpenalty;
-   int nfixed;
-   int i;
-#endif
-
-   assert(ppcscip != NULL);
-   assert(ppcvars != NULL);
-   assert(ppcsolvals != NULL);
-   assert(timelimit > 0.0);
-   assert(memorylimit > 0.0);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(ppcscip, "misc/catchctrlc", FALSE) );
- 
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 0) );
- 
-   /* set limits for the ppc problem */
-   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/memory", memorylimit) );
-
-   /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/undercover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/oneopt/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "separating/rapidlearning/freq", -1) );
-
-#ifdef SCIP_DEBUG
-   /* for debugging, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/freq", 100000000) );
-#endif
-
-   /* presolve ppc problem */
-#ifdef NDEBUG
-   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   retstat = SCIPpresolve(ppcscip);
-   if( retstat != SCIP_OKAY )
-   { 
-      SCIPwarningMessage("error while presolving ppc problem in undercover heuristic: subSCIP terminated with code <%d>\n", retstat);
-      return SCIP_OKAY;
-   }
-#else
-   SCIP_CALL( SCIPpresolve(ppcscip) );
-#endif
-
-   SCIPdebugMessage("undercover presolved ppc problem: %d vars, %d cons\n", SCIPgetNVars(ppcscip), SCIPgetNConss(ppcscip));
-
-   /* solve ppc problem */
-#ifdef NDEBUG
-   retstat = SCIPsolve(ppcscip);
-   if( retstat != SCIP_OKAY )
-   { 
-      SCIPwarningMessage("error while solving ppc problem in undercover heuristic: subSCIP terminated with code <%d>\n", retstat);
-   }
-#else
-   SCIP_CALL( SCIPsolve(ppcscip) );
-#endif
-
-   /* check, whether a solution was found and save the best in ppcsolvals */
-   if( SCIPgetNSols(ppcscip) == 0 )
-      return SCIP_OKAY;
-
-   assert(SCIPgetBestSol(ppcscip) != NULL);
-
-   SCIP_CALL( SCIPgetSolVals(ppcscip, SCIPgetBestSol(ppcscip), SCIPgetNOrigVars(ppcscip), ppcvars, ppcsolvals) );
-
-#ifdef SCIP_DEBUG
-   nfixed = 0;
-   totalpenalty = 0.0;
-   for( i = 0; i < SCIPgetNOrigVars(ppcscip); ++i )
-   {
-      if( ppcsolvals[i] > 0.5 )
-         ++nfixed;
-      totalpenalty += SCIPvarGetObj(ppcvars[i]);
-   }
-
-   SCIPdebugMessage("undercover found a ppc solution: %d/%d variables fixed, normalized penalty=%f\n",
-      nfixed, SCIPgetNOrigVars(ppcscip), SCIPgetSolOrigObj(ppcscip, SCIPgetBestSol(ppcscip))/totalpenalty);
-#endif
-
-   *success = TRUE;
    return SCIP_OKAY;
 }
 
@@ -1506,6 +1613,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value */
    SCIP_Bool             fixandprop,         /**< should undercover fix consecutively and propagate fixings?          */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered?      */
+   SCIP_Bool             recover,            /**< during fix-and-propagate, compute a new cover whenever a variable outside of the cover has been fixed? */
    SCIP_Bool             locksrounding,      /**< shall LP values for integer vars be rounded according to locks? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity?   */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
@@ -1516,10 +1624,6 @@ SCIP_RETCODE SCIPapplyUndercover(
 {
    SCIP_VAR** vars;                          /* original problem's variables */
 
-   SCIP* ppcscip;
-   SCIP_VAR** ppcvars;                       /* ppc problem's variables */
-   SCIP_Real* ppcsolvals;                    /* solution to ppc problem */
-  
    SCIP* subscip;                            /* SCIP data strucutre for solving subMIQCP */
    SCIP_VAR** subvars;                       /* subMIQCP's variables */
 
@@ -1527,6 +1631,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    int nvars;
    int i;
+   char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1534,46 +1639,6 @@ SCIP_RETCODE SCIPapplyUndercover(
    assert(*result == SCIP_DIDNOTFIND);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* initializing ppc problem */
-   SCIP_CALL( SCIPcreate(&ppcscip) );
-#if defined(SCIP_DEBUG) || !defined(NDEBUG)
-   SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-#else
-   SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-#endif
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &ppcvars, nvars) ); 
-   SCIP_CALL( SCIPallocBufferArray(scip, &ppcsolvals, nvars) ); 
-   /* create ppc problem */
-   SCIPdebugMessage("undercover heuristic creating ppc problem\n");
-   success = FALSE;
-   SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, !globalbounds, onlyconvexify, &success) );
-   
-   if( !success )
-   {
-      SCIPdebugMessage("undercover heuristic terminating: problems creating ppc problem\n");
-      goto TERMINATEPPC;
-   }
-
-   /* solve ppc problem */
-   SCIPdebugMessage("undercover heuristic solving ppc problem\n");
-   SCIP_CALL( solvePpcProblem(ppcscip, ppcvars, ppcsolvals, timelimit, memorylimit, &success) );
-
-   if( !success )
-   {  
-      SCIPdebugMessage("undercover heuristic terminating: problems solving ppc problem\n");
-      goto TERMINATEPPC;
-   }
-
-   timelimit -= SCIPgetTotalTime(ppcscip);
-   if( timelimit < 10.0 )
-   { 
-      SCIPdebugMessage("undercover heuristic terminating: subtimelimit=%f\n", timelimit);
-      goto TERMINATEPPC;
-   }
 
    /* initializing subMIQCP */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -1601,7 +1666,9 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* create subMIQCP */
    SCIPdebugMessage("undercover heuristic creating subMIQCP\n");
    success = FALSE;
-   SCIP_CALL( createSubProblem(scip, subscip, subvars, ppcsolvals, domred, fixandprop, backtrack, locksrounding, !globalbounds, &success) );
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_undercoversub", SCIPgetProbName(scip));
+   SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( createSubProblem(scip, subscip, subvars, &timelimit, memorylimit, ppcstrat, ppcobjquot, globalbounds, onlyconvexify, domred, fixandprop, backtrack, recover, locksrounding, !globalbounds, &success) );
 
    if( !success )
    { 
@@ -1692,23 +1759,13 @@ SCIP_RETCODE SCIPapplyUndercover(
    
    /* free memory from subproblem */
  TERMINATE:
-   for( i = nvars-1; i > 0; --i )
+   for( i = nvars-1; i >= 0; --i )
    {
       SCIP_CALL( SCIPreleaseVar(subscip, &(subvars[i])) );
    }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
 
-   /* free memory from ppc problem */      
- TERMINATEPPC:
-   SCIPfreeBufferArray(scip, &ppcsolvals);
-   for( i = nvars-1; i > 0; --i )
-   {
-      SCIP_CALL( SCIPreleaseVar(ppcscip, &(ppcvars[i])) );
-   }
-   SCIPfreeBufferArray(scip, &ppcvars);
-   SCIP_CALL( SCIPfree(&ppcscip) );
-     
    return SCIP_OKAY;
 }
 
@@ -1940,7 +1997,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    SCIPdebugMessage("calling undercover heuristic for <%s>\n", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPapplyUndercover(scip, heur, result, timelimit, memorylimit, heurdata->maxnodes, heurdata->ppcstrat, 
-         heurdata->ppcobjquot, heurdata->domred, heurdata->fixandprop, heurdata->backtrack, heurdata->locksrounding, heurdata->onlyconvexify, 
+         heurdata->ppcobjquot, heurdata->domred, heurdata->fixandprop, heurdata->backtrack, heurdata->recover, heurdata->locksrounding, heurdata->onlyconvexify, 
          heurdata->globalbounds, heurdata->minimprove, nstallnodes, heurdata->postnlp) );
 
    return SCIP_OKAY;
@@ -2022,10 +2079,15 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          "should undercover fix consecutively and propagate fixings?",
          &heurdata->fixandprop, TRUE, DEFAULT_FIXANDPROP, NULL, NULL) );
 
-SCIP_CALL( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/"HEUR_NAME"/backtrack", 
          "use one level of backtracking if infeasibility is encountered?",
          &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
+ 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/"HEUR_NAME"/recover",
+         "during fix-and-propagate, compute a new cover whenever a variable outside of the cover has been fixed?",
+         &heurdata->recover, FALSE, DEFAULT_RECOVER, NULL, NULL) );
  
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/ppcstrategy",
          "strategy for the ppc problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
