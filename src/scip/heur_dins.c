@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident ""
+#pragma ident "@(#) $Id: heur_dins.c,v 1.19 2010/04/26 15:00:05 bzfwinkm Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
