@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.365 2010/04/26 15:40:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.366 2010/04/26 17:49:07 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -552,6 +552,27 @@ SCIP_RETCODE SCIPresetParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets separating parameters to aggressive values */
+extern 
+SCIP_RETCODE SCIPsetSeparatingAggressive(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+   
+/** sets separating parameters to fast values */
+extern 
+SCIP_RETCODE SCIPsetSeparatingFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** turns off all separation */
+extern 
+SCIP_RETCODE SCIPsetSeparatingOff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
 /** sets heuristic parameters to aggressive values */
 extern 
 SCIP_RETCODE SCIPsetHeuristicsAggressive(
@@ -569,6 +590,27 @@ SCIP_RETCODE SCIPsetHeuristicsFast(
 /** turns off all heuristic */
 extern 
 SCIP_RETCODE SCIPsetHeuristicsOff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** sets presolving parameters to aggressive values */
+extern 
+SCIP_RETCODE SCIPsetPresolvingAggressive(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+   
+/** sets presolving parameters to fast values */
+extern 
+SCIP_RETCODE SCIPsetPresolvingFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** turns off all presolving */
+extern 
+SCIP_RETCODE SCIPsetPresolvingOff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    );

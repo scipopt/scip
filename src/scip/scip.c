@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.552 2010/04/26 15:40:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.553 2010/04/26 17:49:07 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1245,13 +1245,52 @@ SCIP_RETCODE SCIPresetParams(
    return SCIP_OKAY;
 }
 
+/** sets separating parameters to aggressive values */
+SCIP_RETCODE SCIPsetSeparatingAggressive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPsetSetSeparatingAggressive(scip->set, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets separating parameters to fast values */
+SCIP_RETCODE SCIPsetSeparatingFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPsetSetSeparatingFast(scip->set, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns off all separation */
+SCIP_RETCODE SCIPsetSeparatingOff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetSeparatingOff(scip->set, quite) );
+
+   return SCIP_OKAY;
+}
+
 /** sets heuristic parameters to aggressive values */
 SCIP_RETCODE SCIPsetHeuristicsAggressive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetSetHeuristicsAggressive(scip->set, quite) );
 
@@ -1264,7 +1303,7 @@ SCIP_RETCODE SCIPsetHeuristicsFast(
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    SCIP_CALL( SCIPsetSetHeuristicsFast(scip->set, quite) );
    
@@ -1277,9 +1316,48 @@ SCIP_RETCODE SCIPsetHeuristicsOff(
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetSetHeuristicsOff(scip->set, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving parameters to aggressive values */
+SCIP_RETCODE SCIPsetPresolvingAggressive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetPresolvingAggressive(scip->set, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving parameters to fast values */
+SCIP_RETCODE SCIPsetPresolvingFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPsetSetPresolvingFast(scip->set, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns off all presolvers */
+SCIP_RETCODE SCIPsetPresolvingOff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetPresolvingOff(scip->set, quite) );
 
    return SCIP_OKAY;
 }

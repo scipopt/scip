@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.60 2010/04/26 15:40:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.61 2010/04/26 17:49:07 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -278,6 +278,38 @@ SCIP_RETCODE paramWrite(
    return SCIP_OKAY;
 }
 
+/** if a bool parameter exits with the given parameter name it is set to the new value */
+static
+SCIP_RETCODE paramSetBool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           paramname,          /**< parameter name */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_BOOL);
+      SCIP_CALL( SCIPparamSetBool(param, scip, value) );
+      if( !quite )
+      {
+         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+      }
+   }
+#ifndef NDEBUG
+   else
+   {
+      SCIPwarningMessage("unknown hard coded parameter bool <%s>\n", paramname);
+   }
+#endif
+   
+   return SCIP_OKAY;
+}
+
 /** if an integer parameter exits with the given parameter name it is set to the new value */
 static
 SCIP_RETCODE paramSetInt(
@@ -300,6 +332,12 @@ SCIP_RETCODE paramSetInt(
          SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
       }
    }
+#ifndef NDEBUG
+   else
+   {
+      SCIPwarningMessage("unknown hard coded parameter int <%s>\n", paramname);
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -326,6 +364,13 @@ SCIP_RETCODE paramSetLongint(
          SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
       }
    }
+#ifndef NDEBUG
+   else
+   {
+      SCIPwarningMessage("unknown hard coded parameter Longint <%s>\n", paramname);
+   }
+#endif
+
    
    return SCIP_OKAY;
 }
@@ -352,6 +397,12 @@ SCIP_RETCODE paramSetReal(
          SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
       }
    }
+#ifndef NDEBUG
+   else
+   {
+      SCIPwarningMessage("unknown hard coded parameter Real <%s>\n", paramname);
+   }
+#endif
    
    return SCIP_OKAY;
 }
@@ -1430,7 +1481,7 @@ SCIP_RETCODE SCIPparamsetAddInt(
 
    /* create the parameter */
    SCIP_CALL( paramCreateInt(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, maxvalue, 
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    SCIP_CALL( paramsetAdd(paramset, param) );
@@ -1459,7 +1510,7 @@ SCIP_RETCODE SCIPparamsetAddLongint(
 
    /* create the parameter */
    SCIP_CALL( paramCreateLongint(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, maxvalue, 
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    SCIP_CALL( paramsetAdd(paramset, param) );
@@ -1488,7 +1539,7 @@ SCIP_RETCODE SCIPparamsetAddReal(
 
    /* create the parameter */
    SCIP_CALL( paramCreateReal(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, maxvalue, 
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    SCIP_CALL( paramsetAdd(paramset, param) );
@@ -1516,7 +1567,7 @@ SCIP_RETCODE SCIPparamsetAddChar(
 
    /* create the parameter */
    SCIP_CALL( paramCreateChar(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, allowedvalues, 
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    SCIP_CALL( paramsetAdd(paramset, param) );
@@ -2201,6 +2252,192 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
    return SCIP_OKAY;
 }
 
+/** sets separating to aggressive */
+SCIP_RETCODE SCIPparamsetSetToSeparatingAggressive(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_SEPA** sepas;
+   SCIP_PARAM* param;
+   char paramname[SCIP_MAXSTRLEN];
+   int nconshdlrs;
+   int nsepas;
+   int i;
+
+   sepas = SCIPgetSepas(scip);
+   nsepas = SCIPgetNSepas(scip);
+   
+   /* set the frequency of all separators to at least every 20th depths */
+   for( i = 0; i < nsepas; ++i )
+   {
+      const char* sepaname;
+      sepaname = SCIPsepaGetName(sepas[i]);
+
+      /* get frequency parameter of separator */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int deffreq;
+         int newfreq;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         deffreq = SCIPparamGetIntDefault(param);
+         
+         /* change frequnecy to at least every 20th depths */
+         if( deffreq == -1 || deffreq == 0 )
+            newfreq = 20;
+         else
+            newfreq = MIN(deffreq, 20);
+         
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quite) );
+      }
+
+      /* get maximum number of round in root node */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxroundsroot", sepaname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int defrounds;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         defrounds = SCIPparamGetIntDefault(param);
+         
+         /* increase the maximum number of rounds in the root node by factor of 1.5 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defrounds, quite) );
+      }
+
+      /* get maximum number of cuts per separation in root node */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxsepacutsroot", sepaname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int defnumber;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         defnumber = SCIPparamGetIntDefault(param);
+         
+         /* increase the maximum number of cut per separation rounds in the root node by factor of 2 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, 2*defnumber, quite) );
+      }
+   }
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+
+   /* set separating parameters of all constraint handlers */
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      const char* conshdlrname;
+      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+
+      /* get separating frequency parameter of constraint handler */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", conshdlrname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int deffreq;
+         int newfreq;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         deffreq = SCIPparamGetIntDefault(param);
+         
+         /* change frequnecy to at least every 10th depths */
+         if( deffreq == -1 || deffreq == 0 )
+            newfreq = 10;
+         else
+            newfreq = MIN(deffreq, 10);
+         
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quite) );
+      }
+
+      /* get maximal separated cuts in root node  of constraint handler */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxsepacutsroot", conshdlrname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int defnumber;
+         
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         defnumber = SCIPparamGetIntDefault(param);
+         
+         /* change maximal cuts in root node to at least 500 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, MAX(defnumber, 500), quite) );
+      }
+   }
+
+   /* explicitly change general separating parameters */
+   SCIP_CALL( paramSetReal(scip, paramset, "separating/minorthoroot", 0.1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsrootsubrun", 5, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxaddrounds", 5, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxcutsroot", 5000, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/poolfreq", 10, quite) );
+
+   /* explicitly change a separating parameter of the linear constraint handler */
+   SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/separateall", TRUE, quite) );
+   
+   /* explicitly change a separating parameter of cmir separator */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxfailsroot", 200, quite) );
+
+   /* explicitly change a separating parameter of mcf separator */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/maxtestdelta", -1, quite) );
+   SCIP_CALL( paramSetBool(scip, paramset, "separating/mcf/trynegscaling", TRUE, quite) );
+   
+   /* explicitly change a separating parameter of zerohalf separator */
+   SCIP_CALL( paramSetBool(scip, paramset, "separating/zerohalf/preprocessing/decomposeproblem", TRUE, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** sets separating to fast */
+SCIP_RETCODE SCIPparamsetSetToSeparatingFast(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   /* explicitly turn off expensive heuristics */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxbounddist", 0, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/and/sepafreq", 0, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxroundsroot", 5, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxtriesroot", 100, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxaggrsroot", 3, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxsepacutsroot", 200, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/flowcover/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxroundsroot", 20, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxsepacutsroot", 200, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/redcost/maxbounddist", 0, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxroundsroot", 10, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxsepacutsroot", 200, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns all cuts off */
+SCIP_RETCODE SCIPparamsetSetToSeparatingOff(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   /* turn off separation in the root node */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsroot", 0, quite) );
+
+   /* turn off separation in each node */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxrounds", 0, quite) );
+
+   return SCIP_OKAY;
+}
+
 /** sets heuristics to aggressive */
 SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2309,7 +2546,6 @@ SCIP_RETCODE SCIPparamsetSetToHeuristicsOff(
    )
 {
    SCIP_HEUR** heurs;
-   SCIP_PARAM* param;
    char paramname[SCIP_MAXSTRLEN];
    int nheurs;
    int i;
@@ -2324,27 +2560,113 @@ SCIP_RETCODE SCIPparamsetSetToHeuristicsOff(
 
       /* get frequency parameter of heuristic */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
- 
-      if( param != NULL )
-      {
-         int freq;
 
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         freq = SCIPparamGetIntDefault(param);
-
-         /* change frequnecy to half of the default value */
-         if( freq != -1 )
-         {
-            SCIP_CALL( SCIPparamSetInt(param, scip, -1) );
-
-            if( !quite )
-            {
-               SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
-            }
-         }
-      }
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, -1, quite) );
    }
+   
+   return SCIP_OKAY;
+}
+
+/** sets presolving to aggressive */
+SCIP_RETCODE SCIPparamsetSetToPresolvingAggressive(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_PARAM* param;
+   char paramname[SCIP_MAXSTRLEN];
+   
+   /* explicitly change restart parameters */
+   SCIP_CALL( paramSetReal(scip, paramset, "presolving/restartfac", 0.3, quite) );
+   SCIP_CALL( paramSetReal(scip, paramset, "presolving/restartminred", 0.06, quite) );
+
+   /* explicitly change parameters of linear constraint handler */
+   SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/simplifyinequalities", TRUE, quite) );
+   
+   /* explicitly change parameters of knapsack constraint handler */
+   SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/simplifyinequalities", TRUE, quite) );
+   
+   /* explicitly change parameters of quadratic constraint handler */
+   SCIP_CALL( paramSetBool(scip, paramset, "constraints/quadratic/disaggregate", TRUE, quite) );
+   
+   /* explicitly change parameters of presolver boundshift */
+   SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quite) );
+ 
+   /* explicitly change parameters of probing */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/probing/maxuseless");
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      int defvalue;
+    
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+      defvalue = SCIPparamGetIntDefault(param);
+    
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defvalue, quite) );
+   }
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/probing/maxtotaluseless");
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      int defvalue;
+    
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+      defvalue = SCIPparamGetIntDefault(param);
+    
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defvalue, quite) );
+   }
+ 
+   return SCIP_OKAY;
+}
+
+/** sets presolving to fast */
+SCIP_RETCODE SCIPparamsetSetToPresolvingFast(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+   char paramname[SCIP_MAXSTRLEN];
+   int nconshdlrs;
+   int i;
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+
+   /* turn pairwise comparison of each constraint handler */
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      const char* conshdlrname;
+      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+
+      /* get separating frequency parameter of constraint handler */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presolpairwise", conshdlrname);
+      SCIP_CALL( paramSetBool(scip, paramset, paramname, FALSE, quite) );
+   }      
+
+   /* explicitly turn of restarts */
+   SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0, quite) );
+   
+   /* explicitly change parameters of knapsack constraint handler */
+   SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/disaggregation", FALSE, quite) );
+   
+   /* turn off probing */
+   SCIP_CALL( paramSetInt(scip, paramset, "presolving/probing/maxrounds", 0, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns all presolving off */
+SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   /* set maximum üpresolving round to zero (no presolving at all) */
+   SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrounds", 0, quite) );
    
    return SCIP_OKAY;
 }

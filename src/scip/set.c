@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.214 2010/04/26 15:40:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.215 2010/04/26 17:49:07 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -195,7 +195,7 @@
 
 #define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
-#define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
+#define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC     0.05 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
@@ -1098,7 +1098,7 @@ SCIP_RETCODE SCIPsetCreate(
    /* presolving parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "presolving/maxrounds",
-         "maximal number of presolving rounds (-1: unlimited)",
+         "maximal number of presolving rounds (-1: unlimited, 0: off)",
          &(*set)->presol_maxrounds, FALSE, SCIP_DEFAULT_PRESOL_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -1748,6 +1748,39 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
+/** sets separating parameters to aggressive values */
+SCIP_RETCODE SCIPsetSetSeparatingAggressive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSeparatingAggressive(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets separating parameters to fast values */
+SCIP_RETCODE SCIPsetSetSeparatingFast(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSeparatingFast(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** turns off all separation */
+SCIP_RETCODE SCIPsetSetSeparatingOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSeparatingOff(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
 /** sets heuristic parameters to aggressive values */
 SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1777,6 +1810,39 @@ SCIP_RETCODE SCIPsetSetHeuristicsOff(
    )
 {
    SCIP_CALL( SCIPparamsetSetToHeuristicsOff(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving parameters to aggressive values */
+SCIP_RETCODE SCIPsetSetPresolvingAggressive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToPresolvingAggressive(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving parameters to fast values */
+SCIP_RETCODE SCIPsetSetPresolvingFast(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToPresolvingFast(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** turns off all presolving */
+SCIP_RETCODE SCIPsetSetPresolvingOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToPresolvingOff(set->paramset, set->scip, quite) );
 
    return SCIP_OKAY;
 }
