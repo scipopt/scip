@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.551 2010/04/20 12:40:01 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.552 2010/04/26 15:40:28 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1247,12 +1247,39 @@ SCIP_RETCODE SCIPresetParams(
 
 /** sets heuristic parameters to aggressive values */
 SCIP_RETCODE SCIPsetHeuristicsAggressive(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetHeuristicsAggressive(scip->set) );
+   SCIP_CALL( SCIPsetSetHeuristicsAggressive(scip->set, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets heuristic parameters to fast values */
+SCIP_RETCODE SCIPsetHeuristicsFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPsetSetHeuristicsFast(scip->set, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns off all heuristics */
+SCIP_RETCODE SCIPsetHeuristicsOff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetHeuristicsOff(scip->set, quite) );
 
    return SCIP_OKAY;
 }

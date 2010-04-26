@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.107 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.108 2010/04/26 15:40:29 bzfheinz Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -305,7 +305,22 @@ SCIP_RETCODE SCIPsetResetParams(
 /** sets heuristic parameters to aggressive values */
 extern
 SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** sets heuristic parameters to fast values */
+extern
+SCIP_RETCODE SCIPsetSetHeuristicsFast(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** turns off all heuristics */
+extern
+SCIP_RETCODE SCIPsetSetHeuristicsOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    );
 
 /** returns the array of all available SCIP parameters */

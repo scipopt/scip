@@ -25,6 +25,8 @@ interface:
 - added SCIP_DECL_...COPY for all plugins and therefore the copy method in scip.{c,h} SCIPcopyPlugins
 - added SCIP pointer to all C++ objects and constructors
 - added parameter scip to ObjCloneable::clone()
+- new method SCIPsetHeuristicsAggressive() SCIPsetHeuristicsFast(), and SCIPsetHeuristicsOff() which set the 
+  heuristics to aggressive, fast, or off settings, respectively
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -70,6 +72,7 @@ features:
   the same scip instance, if not an error is thrown
 - added new sorting method SCIPsortRealIntPtr, SCIPsortDownRealIntPtr and all corresponding methods
 - the indicator constraint can now decompose the problem, i.e., not add the linear constraint to the problem if all of its variables are continuous
+- added new dialog for setting heuristics to aggressive, fast, or off in interactive shell
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

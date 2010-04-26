@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.102 2010/04/22 10:40:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.103 2010/04/26 15:40:28 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -539,7 +539,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
          SCIPdialogMessage(scip, NULL, "%6s  ", "on");
          break;
       default:
-         SCIPdialogMessage(scip, NULL, "%6s  ", "???");
+         SCIPdialogMessage(scip, NULL, "%6s  ", "?");
          break;
       }
       SCIPdialogMessage(scip, NULL, "%s", SCIPdispGetDesc(disps[i]));
@@ -1656,6 +1656,39 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    /* set new branching priority */
    SCIP_CALL( SCIPchgVarBranchPriority(scip, var, priority) );
    SCIPdialogMessage(scip, NULL, "branching priority of variable <%s> set to %d\n", SCIPvarGetName(var), SCIPvarGetBranchPriority(var));
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set heuristics aggressive command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetHeuristicsAggressive(scip, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set heuristics fast command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetHeuristicsFast(scip, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set heuristics off command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetHeuristicsOff(scip, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -2893,6 +2926,40 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
    }
+
+   /* set heuristics aggressive */
+   if( !SCIPdialogHasEntry(submenu, "aggressive") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetHeuristicsAggressive, NULL, NULL,
+            "aggressive", "sets heuristics <aggressive>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set heuristics off */
+   if( !SCIPdialogHasEntry(submenu, "fast") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetHeuristicsFast, NULL, NULL,
+            "fast", "sets heuristics <fast>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set heuristics off */
+   if( !SCIPdialogHasEntry(submenu, "off") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetHeuristicsOff, NULL, NULL,
+            "off", "turns <off> all heuritics", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
 
    /* set limits */
    if( !SCIPdialogHasEntry(setmenu, "limits") )

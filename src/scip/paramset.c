@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.59 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.60 2010/04/26 15:40:28 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -26,7 +26,6 @@
 #include <string.h>
 
 #include "scip/scip.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/paramset.h"
 
@@ -192,6 +191,168 @@ SCIP_RETCODE paramCheckString(
       }
    }
 
+   return SCIP_OKAY;
+}
+
+/** writes the parameter to a file */
+static
+SCIP_RETCODE paramWrite(
+   SCIP_PARAM*           param,              /**< parameter */
+   FILE*                 file,               /**< file stream to write parameter to, or NULL for stdout  */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   )
+{
+   assert(param != NULL);
+
+   /* write parameters at default values only, if the onlychanged flag is not set */
+   if( onlychanged && SCIPparamIsDefault(param) )
+      return SCIP_OKAY;
+
+   /* write parameter description, bounds, and defaults as comments */
+   if( comments )
+   {
+      SCIPmessageFPrintInfo(file, "# %s\n", param->desc);
+      switch( param->paramtype )
+      {
+      case SCIP_PARAMTYPE_BOOL:
+         SCIPmessageFPrintInfo(file, "# [type: bool, range: {TRUE,FALSE}, default: %s]\n",
+            param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
+         break;
+      case SCIP_PARAMTYPE_INT:
+         SCIPmessageFPrintInfo(file, "# [type: int, range: [%d,%d], default: %d]\n", 
+            param->data.intparam.minvalue, param->data.intparam.maxvalue, param->data.intparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_LONGINT:
+         SCIPmessageFPrintInfo(file, "# [type: longint, range: [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"], default: %"SCIP_LONGINT_FORMAT"]\n", 
+            param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_REAL:
+         SCIPmessageFPrintInfo(file, "# [type: real, range: [%.15g,%.15g], default: %.15g]\n",
+            param->data.realparam.minvalue, param->data.realparam.maxvalue, param->data.realparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_CHAR:
+         SCIPmessageFPrintInfo(file, "# [type: char, range: {%s}, default: %c]\n",
+            param->data.charparam.allowedvalues != NULL ? param->data.charparam.allowedvalues : "all chars",
+            param->data.charparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_STRING:
+         SCIPmessageFPrintInfo(file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
+         break;
+      default:
+         SCIPerrorMessage("unknown parameter type\n");
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   /* write parameter value */
+   SCIPmessageFPrintInfo(file, "%s = ", param->name);
+   switch( param->paramtype )
+   {
+   case SCIP_PARAMTYPE_BOOL:
+      SCIPmessageFPrintInfo(file, "%s\n", SCIPparamGetBool(param) ? "TRUE" : "FALSE");
+      break;
+   case SCIP_PARAMTYPE_INT:
+      SCIPmessageFPrintInfo(file, "%d\n", SCIPparamGetInt(param));
+      break;
+   case SCIP_PARAMTYPE_LONGINT:
+      SCIPmessageFPrintInfo(file, "%"SCIP_LONGINT_FORMAT"\n", SCIPparamGetLongint(param));
+      break;
+   case SCIP_PARAMTYPE_REAL:
+      SCIPmessageFPrintInfo(file, "%.15g\n", SCIPparamGetReal(param));
+      break;
+   case SCIP_PARAMTYPE_CHAR:
+      SCIPmessageFPrintInfo(file, "%c\n", SCIPparamGetChar(param));
+      break;
+   case SCIP_PARAMTYPE_STRING:
+      SCIPmessageFPrintInfo(file, "\"%s\"\n", SCIPparamGetString(param));
+      break;
+   default:
+      SCIPerrorMessage("unknown parameter type\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( comments )
+      SCIPmessageFPrintInfo(file, "\n");
+
+   return SCIP_OKAY;
+}
+
+/** if an integer parameter exits with the given parameter name it is set to the new value */
+static
+SCIP_RETCODE paramSetInt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           paramname,          /**< parameter name */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+      SCIP_CALL( SCIPparamSetInt(param, scip, value) );
+      if( !quite )
+      {
+         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** if a long integer parameter exits with the given parameter name it is set to the new value */
+static
+SCIP_RETCODE paramSetLongint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           paramname,          /**< parameter name */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
+      SCIP_CALL( SCIPparamSetLongint(param, scip, value) );
+      if( !quite )
+      {
+         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** if a real parameter exits with the given parameter name it is set to the new value */
+static
+SCIP_RETCODE paramSetReal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           paramname,          /**< parameter name */
+   SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL);
+      SCIP_CALL( SCIPparamSetReal(param, scip, value) );
+      if( !quite )
+      {
+         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+      }
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -1144,92 +1305,6 @@ SCIP_RETCODE paramParseString(
    return SCIP_OKAY;
 }
 
-/** writes the parameter to a file */
-static
-SCIP_RETCODE paramWrite(
-   SCIP_PARAM*           param,              /**< parameter */
-   FILE*                 file,               /**< file stream to write parameter to, or NULL for stdout  */
-   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
-   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
-   )
-{
-   assert(param != NULL);
-
-   /* write parameters at default values only, if the onlychanged flag is not set */
-   if( onlychanged && SCIPparamIsDefault(param) )
-      return SCIP_OKAY;
-
-   /* write parameter description, bounds, and defaults as comments */
-   if( comments )
-   {
-      SCIPmessageFPrintInfo(file, "# %s\n", param->desc);
-      switch( param->paramtype )
-      {
-      case SCIP_PARAMTYPE_BOOL:
-         SCIPmessageFPrintInfo(file, "# [type: bool, range: {TRUE,FALSE}, default: %s]\n",
-            param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
-         break;
-      case SCIP_PARAMTYPE_INT:
-         SCIPmessageFPrintInfo(file, "# [type: int, range: [%d,%d], default: %d]\n", 
-            param->data.intparam.minvalue, param->data.intparam.maxvalue, param->data.intparam.defaultvalue);
-         break;
-      case SCIP_PARAMTYPE_LONGINT:
-         SCIPmessageFPrintInfo(file, "# [type: longint, range: [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"], default: %"SCIP_LONGINT_FORMAT"]\n", 
-            param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
-         break;
-      case SCIP_PARAMTYPE_REAL:
-         SCIPmessageFPrintInfo(file, "# [type: real, range: [%.15g,%.15g], default: %.15g]\n",
-            param->data.realparam.minvalue, param->data.realparam.maxvalue, param->data.realparam.defaultvalue);
-         break;
-      case SCIP_PARAMTYPE_CHAR:
-         SCIPmessageFPrintInfo(file, "# [type: char, range: {%s}, default: %c]\n",
-            param->data.charparam.allowedvalues != NULL ? param->data.charparam.allowedvalues : "all chars",
-            param->data.charparam.defaultvalue);
-         break;
-      case SCIP_PARAMTYPE_STRING:
-         SCIPmessageFPrintInfo(file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
-         break;
-      default:
-         SCIPerrorMessage("unknown parameter type\n");
-         return SCIP_INVALIDDATA;
-      }
-   }
-
-   /* write parameter value */
-   SCIPmessageFPrintInfo(file, "%s = ", param->name);
-   switch( param->paramtype )
-   {
-   case SCIP_PARAMTYPE_BOOL:
-      SCIPmessageFPrintInfo(file, "%s\n", SCIPparamGetBool(param) ? "TRUE" : "FALSE");
-      break;
-   case SCIP_PARAMTYPE_INT:
-      SCIPmessageFPrintInfo(file, "%d\n", SCIPparamGetInt(param));
-      break;
-   case SCIP_PARAMTYPE_LONGINT:
-      SCIPmessageFPrintInfo(file, "%"SCIP_LONGINT_FORMAT"\n", SCIPparamGetLongint(param));
-      break;
-   case SCIP_PARAMTYPE_REAL:
-      SCIPmessageFPrintInfo(file, "%.15g\n", SCIPparamGetReal(param));
-      break;
-   case SCIP_PARAMTYPE_CHAR:
-      SCIPmessageFPrintInfo(file, "%c\n", SCIPparamGetChar(param));
-      break;
-   case SCIP_PARAMTYPE_STRING:
-      SCIPmessageFPrintInfo(file, "\"%s\"\n", SCIPparamGetString(param));
-      break;
-   default:
-      SCIPerrorMessage("unknown parameter type\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   if( comments )
-      SCIPmessageFPrintInfo(file, "\n");
-
-   return SCIP_OKAY;
-}
-
-
-
 
 /*
  * Parameter set methods
@@ -2093,7 +2168,7 @@ SCIP_RETCODE SCIPparamsetWrite(
       SCIPmessageFPrintInfo(file, "\n");
    }
    
-   /* write the parameters to the file */
+   /* write the parameters to the file */
    for( i = 0; i < paramset->nparams; ++i )
    {
       SCIP_CALL( paramWrite(paramset->params[i], file, comments, onlychanged) );
@@ -2129,7 +2204,108 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 /** sets heuristics to aggressive */
 SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_HEUR** heurs;
+   SCIP_PARAM* param;
+   char paramname[SCIP_MAXSTRLEN];
+   int nheurs;
+   int i;
+
+   heurs = SCIPgetHeurs(scip);
+   nheurs = SCIPgetNHeurs(scip);
+
+   for( i = 0; i < nheurs; ++i )
+   {
+      const char* heurname;
+      heurname = SCIPheurGetName(heurs[i]);
+
+      /* get frequency parameter of heuristic */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int deffreq;
+         int newfreq;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         deffreq = SCIPparamGetIntDefault(param);
+
+         /* change frequnecy to half of the default value */
+         if( deffreq == -1 || deffreq == 0 )
+         {
+            newfreq = (int) SCIPceil(scip, deffreq/2.0);
+            newfreq = MAX(newfreq, 1);
+         }
+         else
+            newfreq = 20;
+
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quite) );
+      }
+
+      /* construct (possible) parameter name for LP iteration offset */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         /* set LP iteration offset to 1.5 time the current value */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*SCIPparamGetIntDefault(param), quite) );
+      }
+      
+      /* construct (possible) parameter name for LP iteration quotient parameter */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         /* set LP iteration quotient to 1.5 time the current value */
+         SCIP_CALL( paramSetReal(scip, paramset, paramname, 1.5*SCIPparamGetRealDefault(param), quite) );
+      }
+   }  
+
+   /* set specific parameters for RENS heuristic */
+   SCIP_CALL( paramSetLongint(scip, paramset, "heuristics/rens/nodesofs", (SCIP_Longint)2000, quite) );
+   SCIP_CALL( paramSetReal(scip, paramset, "heuristics/rens/minfixingrate", 0.3, quite) );
+
+   /* set specific parameters for Crossover heuristic */
+   SCIP_CALL( paramSetLongint(scip, paramset, "heuristics/crossover/nwaitingnodes", (SCIP_Longint)20, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** sets heuristics to fast */
+SCIP_RETCODE SCIPparamsetSetToHeuristicsFast(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   /* explicitly turn off expensive heuristics */
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/coefdiving/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/crossover/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/feaspump/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/fracdiving/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/guideddiving/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/linesearchdiving/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/nlp/freq", 10, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/objpscostdiving/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/pscostdiving", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/rens/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/rootsoldiving/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "heuristics/veclendiving/freq", -1, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns all heuristics off */
+SCIP_RETCODE SCIPparamsetSetToHeuristicsOff(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
    SCIP_HEUR** heurs;
@@ -2152,78 +2328,26 @@ SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
  
       if( param != NULL )
       {
-         int deffreq;
+         int freq;
 
          assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         deffreq = SCIPparamGetIntDefault(param);
+         freq = SCIPparamGetIntDefault(param);
 
          /* change frequnecy to half of the default value */
-         if( deffreq == -1 || deffreq == 0 )
+         if( freq != -1 )
          {
-            int newfreq;
+            SCIP_CALL( SCIPparamSetInt(param, scip, -1) );
 
-            newfreq = (int) SCIPceil(scip, deffreq/2.0);
-            newfreq = MAX(newfreq, 1);
-            SCIP_CALL( SCIPparamSetInt(param, scip, newfreq) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPparamSetInt(param, scip, 20) );
+            if( !quite )
+            {
+               SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+            }
          }
       }
-
-      /* get LP iteration offset parameter of heuristic */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-
-      /* multiply LP iteration offset by 1.5 */
-      if( param != NULL )
-      {
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         SCIP_CALL( SCIPparamSetInt(param, scip, 1.5*SCIPparamGetIntDefault(param)) );
-      }
-
-      /* get LP iteration quotient parameter of heuristic */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-
-      /* multiply LP iteration quotient by 1.5 */
-      if( param != NULL )
-      {
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL);
-         SCIP_CALL( SCIPparamSetReal(param, scip, 1.5*SCIPparamGetRealDefault(param)) );
-      }
-   }  
-
-   /* set specific parameters for RENS heuristic */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/rens/nodesofs");
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-   if( param != NULL )
-   {
-      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
-      SCIP_CALL( SCIPparamSetLongint(param, scip, 2000) );
    }
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/rens/minfixingrate");
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-   if( param != NULL )
-   {
-      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL);
-      SCIP_CALL( SCIPparamSetReal(param, scip, 0.3) );
-   }
-
-   /* set specific parameters for Crossover heuristic */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/crossover/nwaitingnodes");
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-   if( param != NULL )
-   {
-      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
-      SCIP_CALL( SCIPparamSetLongint(param, scip, 20) );
-   }
-
+   
    return SCIP_OKAY;
 }
-
 
 /** returns the array of parameters */
 SCIP_PARAM** SCIPparamsetGetParams(

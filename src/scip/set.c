@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.213 2010/03/26 13:55:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.214 2010/04/26 15:40:29 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1750,10 +1750,33 @@ SCIP_RETCODE SCIPsetResetParams(
 
 /** sets heuristic parameters to aggressive values */
 SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(set->paramset, set->scip) );
+   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets heuristic parameters to fast values */
+SCIP_RETCODE SCIPsetSetHeuristicsFast(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToHeuristicsFast(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** turns off all heuristics */
+SCIP_RETCODE SCIPsetSetHeuristicsOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToHeuristicsOff(set->paramset, set->scip, quite) );
 
    return SCIP_OKAY;
 }

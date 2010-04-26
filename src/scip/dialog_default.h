@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.36 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.37 2010/04/26 15:40:28 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -182,6 +182,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection);
 /** dialog execution method for the set branching priority command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
+
+/** dialog execution method for the set heuristics aggressive command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive);
+
+/** dialog execution method for the set heuristics fast command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast);
+
+/** dialog execution method for the set heuristics off command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff);
 
 /** dialog execution method for the set limits objective command */
 extern

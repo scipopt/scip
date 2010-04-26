@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.29 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.30 2010/04/26 15:40:28 bzfheinz Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -264,6 +264,30 @@ extern
 SCIP_RETCODE SCIPparamsetSetToDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   );
+
+/** sets heuristics to aggressive */
+extern
+SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** sets heuristics to fast */
+extern
+SCIP_RETCODE SCIPparamsetSetToHeuristicsFast(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** turns off all heuristics */
+extern
+SCIP_RETCODE SCIPparamsetSetToHeuristicsOff(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    );
 
 /** returns the array of parameters */
