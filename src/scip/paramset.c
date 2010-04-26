@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.61 2010/04/26 17:49:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.62 2010/04/26 18:16:43 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -303,7 +303,7 @@ SCIP_RETCODE paramSetBool(
 #ifndef NDEBUG
    else
    {
-      SCIPwarningMessage("unknown hard coded parameter bool <%s>\n", paramname);
+      SCIPwarningMessage("unknown hard coded bool parameter <%s>\n", paramname);
    }
 #endif
    
@@ -335,7 +335,7 @@ SCIP_RETCODE paramSetInt(
 #ifndef NDEBUG
    else
    {
-      SCIPwarningMessage("unknown hard coded parameter int <%s>\n", paramname);
+      SCIPwarningMessage("unknown hard coded int parameter <%s>\n", paramname);
    }
 #endif
 
@@ -367,7 +367,7 @@ SCIP_RETCODE paramSetLongint(
 #ifndef NDEBUG
    else
    {
-      SCIPwarningMessage("unknown hard coded parameter Longint <%s>\n", paramname);
+      SCIPwarningMessage("unknown hard coded Longint parameter <%s>\n", paramname);
    }
 #endif
 
@@ -400,7 +400,7 @@ SCIP_RETCODE paramSetReal(
 #ifndef NDEBUG
    else
    {
-      SCIPwarningMessage("unknown hard coded parameter Real <%s>\n", paramname);
+      SCIPwarningMessage("unknown hard coded real parameter <%s>\n", paramname);
    }
 #endif
    
