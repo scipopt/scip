@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.61 2010/04/26 18:13:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.62 2010/04/26 18:23:01 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3807,6 +3807,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->implicationsAdded = FALSE;
    conshdlrdata->addCoupling = FALSE;
    conshdlrdata->addCouplingCons = FALSE;
+   conshdlrdata->heurTrySol = NULL;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
