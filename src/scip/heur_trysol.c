@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.7 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.8 2010/04/26 18:14:29 bzfpfets Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -35,7 +35,7 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
 
 
 
@@ -124,6 +124,9 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Bool stored;
+#ifdef SCIP_DEBUG
+   SCIP_Real obj;
+#endif
 
    assert( heur != NULL );
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
@@ -144,11 +147,19 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
    *result = SCIP_DIDNOTFIND;
 
    /* try solution and free it - check everything, because we are not sure */
+#ifdef SCIP_DEBUG
+   obj = SCIPgetSolOrigObj(scip, heurdata->sol);
+#endif
    SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sol, TRUE, TRUE, TRUE, &stored) );
    assert( heurdata->sol == NULL );
 
    if ( stored )
+   {
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("Found feasible solution of value %g.\n", obj);
+#endif
       *result = SCIP_FOUNDSOL;
+   }
 
    return SCIP_OKAY;
 }
@@ -177,8 +188,7 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, 
-         heurCopyTrySol,
-         heurFreeTrySol, heurInitTrySol, heurExitTrySol,
+         heurCopyTrySol,heurFreeTrySol, heurInitTrySol, heurExitTrySol,
          heurInitsolTrySol, heurExitsolTrySol, heurExecTrySol,
          heurdata) );
 
@@ -207,6 +217,7 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    /* only store solution if we are not within our own SCIPtrySol() call */
    if ( heurdata->sol == NULL )
    {
+      SCIPdebugMessage("Recieved feasible solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
       SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
       SCIPsolSetHeur(heurdata->sol, heur);
    }
