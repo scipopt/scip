@@ -8,15 +8,13 @@ $(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
  lib/clpinc/CoinShallowPackedVector.hpp lib/clpinc/CoinMessageHandler.hpp \
  lib/clpinc/CoinHelperFunctions.hpp lib/clpinc/ClpParameters.hpp \
  lib/clpinc/ClpObjective.hpp lib/clpinc/ClpSolve.hpp \
- lib/clpinc/ClpFactorization.hpp lib/clpinc/CoinFactorization.hpp \
- lib/clpinc/CoinIndexedVector.hpp lib/clpinc/CoinSort.hpp \
- lib/clpinc/CoinDistance.hpp lib/clpinc/CoinDenseFactorization.hpp \
  lib/clpinc/ClpPrimalColumnSteepest.hpp \
  lib/clpinc/ClpPrimalColumnPivot.hpp lib/clpinc/ClpDualRowSteepest.hpp \
  lib/clpinc/ClpDualRowPivot.hpp lib/clpinc/CoinIndexedVector.hpp \
- lib/clpinc/ClpFactorization.hpp lib/clpinc/config_clp.h src/scip/lpi.h \
- src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
- src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
+ lib/clpinc/CoinSort.hpp lib/clpinc/CoinDistance.hpp \
+ lib/clpinc/config_clp.h src/scip/lpi.h src/scip/def.h \
+ src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
+ src/scip/struct_message.h src/scip/pub_message.h \
  src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \

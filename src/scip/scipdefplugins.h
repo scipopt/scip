@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.43 2010/04/05 17:51:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.44 2010/04/26 14:39:08 bzfwinkm Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -114,6 +114,7 @@
 #include "scip/reader_ppm.h"
 #include "scip/reader_rlp.h"
 #include "scip/reader_sol.h"
+#include "scip/reader_wbo.h"
 #include "scip/reader_zpl.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_cgmip.h"

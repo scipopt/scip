@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.47 2010/04/15 17:46:44 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.48 2010/04/26 14:39:08 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -22,18 +22,19 @@
  */
 
 /* http://www.cril.univ-artois.fr/PB07/solver_req.html
+ * http://www.cril.univ-artois.fr/PB10/format.pdf
  *
  * The syntax of the input file format can be described by a simple Backus-Naur
  *  form. <formula> is the start symbol of this grammar.
  *
  *  <formula>::= <sequence_of_comments> 
- *               [<objective>]
+ *               [<objective>] | [<softheader>]
  *               <sequence_of_comments_or_constraints>
  *
  *  <sequence_of_comments>::= <comment> [<sequence_of_comments>]
  *  <comment>::= "*" <any_sequence_of_characters_other_than_EOL> <EOL>
  *  <sequence_of_comments_or_constraints>::=<comment_or_constraint> [<sequence_of_comments_or_constraints>]
- *  <comment_or_constraint>::=<comment>|<constraint>
+ *  <comment_or_constraint>::=<comment>|<constraint> 
  *
  *  <objective>::= "min:" <zeroOrMoreSpace> <sum>  ";"
  *  <constraint>::= <sum> <relational_operator> <zeroOrMoreSpace> <integer> <zeroOrMoreSpace> ";"
@@ -60,7 +61,21 @@
  *  <term>::= <oneOrMoreLiterals>
  *  <oneOrMoreLiterals>::= <literal> | <literal> <oneOrMoreSpace> <oneOrMoreLiterals>
  *  <literal>::= <variablename> | "~"<variablename>
+ *  
+ * For wbo-files are the following additional/changed things possible.
+ *  
+ *  <softheader>::= "soft:" [<unsigned integer>] ";"
+ *  
+ *  <comment_or_constraint>::=<comment>|<constraint>|<softconstraint> 
+ *
+ *  <softconstraint>::= "[" <zeroOrMoreSpace> <unsigned integer> <zeroOrMoreSpace> "]" <contraint>
+ *  
  */
+
+/* Our parser should also be lax by handling variable names and it's possible to read doubles instead of integer and 
+ * possible some more :). */
+
+
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -75,6 +90,7 @@
 
 #include "scip/reader_opb.h"
 #include "scip/cons_and.h"
+#include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
@@ -85,8 +101,8 @@
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
 #define READER_EXTENSION        "opb"
-
-
+#define USEINDICATOR            TRUE
+#define BACKIMPLICATION         FALSE
 /*
  * Data structures
  */
@@ -139,15 +155,18 @@ struct OpbInput
    int                  nproblemcoeffs;
    SCIP_HASHTABLE*      hashtable;
    int                  hashtablesize;
+   SCIP_Bool            wbo;
+   SCIP_Real            topcost;
+   int                  nindvars;
 #ifdef SCIP_DEBUG
-   int                  number;
+   int                  consnumber;
 #endif
 };
 
 typedef struct OpbInput OPBINPUT;
 
 static const char delimchars[] = " \f\n\r\t\v";
-static const char tokenchars[] = "-+:<>=;";
+static const char tokenchars[] = "-+:<>=;[]";
 static const char commentchars[] = "*";
 /*
  * Local methods (for reading)
@@ -611,7 +630,7 @@ SCIP_Bool isSign(
    assert(sign != NULL);
    assert(*sign == +1 || *sign == -1);
 
-   if( opbinput->token[1] == '\0' )
+   if( strlen(opbinput->token) == 1 && opbinput->token[1] == '\0' )
    {
       if( *opbinput->token == '+' )
          return TRUE;
@@ -650,7 +669,7 @@ SCIP_Bool isValue(
       if( endptr != opbinput->token && *endptr == '\0' )
       {
          *value = val;
-         if (strlen(opbinput->token)>18)
+         if( strlen(opbinput->token) > 18 )
             opbinput->nproblemcoeffs++;
          return TRUE;
       }
@@ -686,6 +705,38 @@ SCIP_Bool isSense(
          *sense = OPB_SENSE_EQ;
       return TRUE;
    }
+
+   return FALSE;
+}
+
+/** returns whether the current token is a value */
+static
+SCIP_Bool isStartingSoftConstraintWeight(
+   SCIP*                 scip,               /**< SCIP data structure */
+   OPBINPUT*             opbinput            /**< OPB reading data */
+   )
+{
+   assert(scip != NULL);
+   assert(opbinput != NULL);
+
+   if( strcmp(opbinput->token, "[") == 0 )
+      return TRUE;
+
+   return FALSE;
+}
+
+/** returns whether the current token is a value */
+static
+SCIP_Bool isEndingSoftConstraintWeight(
+   SCIP*                 scip,               /**< SCIP data structure */
+   OPBINPUT*             opbinput            /**< OPB reading data */
+   )
+{
+   assert(scip != NULL);
+   assert(opbinput != NULL);
+
+   if( strcmp(opbinput->token, "]") == 0 )
+      return TRUE;
 
    return FALSE;
 }
@@ -876,11 +927,15 @@ SCIP_RETCODE readCoefficients(
    SCIP_Real**           coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
    int*                  ncoefs,             /**< pointer to store the number of coefficients */
    SCIP_Bool*            newsection,         /**< pointer to store whether a new section was encountered */
-   SCIP_Bool*            isNonlinear         /**< pointer to store if we have an nonlinear constraint */
+   SCIP_Bool*            isNonlinear,        /**< pointer to store if we have an nonlinear constraint */
+   SCIP_Bool*            issoftcons,         /**< pointer to store whether it is a soft constraint (for wbo files) */
+   SCIP_Real*            weight              /**< pointer to store the weight of the softconstraint */
    )
 {
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
+   SCIP_Bool haveweightstart;
+   SCIP_Bool haveweightend;
    SCIP_Bool isAndResultant;
    SCIP_Real coef;
    int coefsign;
@@ -899,6 +954,7 @@ SCIP_RETCODE readCoefficients(
    *ncoefs = 0;
    *newsection = FALSE;
    *isNonlinear = FALSE;
+   *issoftcons = FALSE;
 
    SCIPdebugMessage("read coefficients\n");
 
@@ -917,6 +973,13 @@ SCIP_RETCODE readCoefficients(
             (void)strncpy(name, opbinput->tokenbuf, SCIP_MAXSTRLEN);
             name[SCIP_MAXSTRLEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
+
+            /* all but the first coefficient need a sign */
+            if( strcmp(name, "soft") == 0 && (SCIPgetNVars(scip) > 0 || SCIPgetNConss(scip) > 0) )
+            {
+               syntaxError(scip, opbinput, "Soft top cost line needs to be the first non-comment line, and without any objective function.\n");
+               return SCIP_OKAY;
+            }
          }
          else
          {
@@ -949,6 +1012,8 @@ SCIP_RETCODE readCoefficients(
    coef = 1.0;
    havesign = FALSE;
    havevalue = FALSE;
+   haveweightstart = FALSE;
+   haveweightend = FALSE;
    *ncoefs = 0;
    while( getNextToken(opbinput) && !hasError(opbinput) )
    {
@@ -959,7 +1024,7 @@ SCIP_RETCODE readCoefficients(
          *newsection = TRUE;
          return SCIP_OKAY;
       }
-      
+
       /* check if we reached an equation sense */
       if( isSense(opbinput, NULL) )
       {
@@ -993,7 +1058,58 @@ SCIP_RETCODE readCoefficients(
             return SCIP_OKAY;
          }
          havevalue = TRUE;
+
+         /* if we read a wbo file */
+         if( strcmp(name, "soft") == 0 )
+         {
+            assert(*ncoefs == 0);
+            
+            (*coefs)[*ncoefs] = coefsign * coef;
+            ++(*ncoefs);
+         }
+
          continue;
+      }
+
+      /* check if we are reading a soft constraint line */
+      if( *ncoefs == 0 && !havesign && !havevalue && strcmp(name, "soft") != 0 && isStartingSoftConstraintWeight(scip, opbinput) )
+      {
+         if( !opbinput->wbo )
+         {
+            SCIPwarningMessage("Found in line %d a soft constraint, without having read a starting top-cost line.\n", opbinput->linenumber);
+         }
+         haveweightstart = TRUE;
+
+         continue;
+      }
+      if( *ncoefs == 0 && havevalue && haveweightstart && isEndingSoftConstraintWeight(scip, opbinput) )
+      {
+         *weight = coefsign * coef;
+
+         SCIPdebugMessage("(line %d) found soft constraint weight: %g\n", opbinput->linenumber, *weight);
+
+         coefsign = +1;
+         havesign = FALSE;
+         havevalue = FALSE;
+         haveweightend = TRUE;
+         *issoftcons = TRUE;
+
+         continue;
+      }
+
+      /* if we read a '[' we should already read a ']', which indicates that we read a soft constraint, 
+       * we have a parsing error */
+      if( haveweightstart != haveweightend )
+      {
+         syntaxError(scip, opbinput, "Wrong soft constraint.");
+         return SCIP_OKAY;
+      }
+
+      /* if we read the first non-comment line of a wbo file we should never be here */
+      if( strcmp(name, "soft") == 0 )
+      {
+         syntaxError(scip, opbinput, "Wrong soft top cost line.");
+         return SCIP_OKAY;
       }
 
       /* the token is a variable name: get the corresponding variable (or create a new one) */
@@ -1094,20 +1210,42 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool isNonlinear;
    int ncoefs;
    int sidesign;
+   SCIP_Bool issoftcons;
+   SCIP_Real weight;
 
    assert(opbinput != NULL);
+   
+   weight = -SCIPinfinity(scip);
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficients(scip, opbinput, name, &vars, &coefs, &ncoefs, &newsection, &isNonlinear) );
+   SCIP_CALL( readCoefficients(scip, opbinput, name, &vars, &coefs, &ncoefs, &newsection, &isNonlinear, &issoftcons, &weight) );
 
    if( hasError(opbinput) || opbinput->eof )
       goto TERMINATE;
    if( newsection )
    {
-      if ( strcmp(name, "min") == 0 || strcmp(name, "max") == 0 )
+      if( strcmp(name, "min") == 0 || strcmp(name, "max") == 0 )
       {
+         if( opbinput->wbo )
+         {
+            syntaxError(scip, opbinput, "Cannot have an objective function when having soft constraints.\n");
+            goto TERMINATE;
+         }
+
          /* set objective function  */
          SCIP_CALL( setObjective(scip, opbinput, name, vars, coefs, ncoefs) );
+      }
+      else if( strcmp(name, "soft") == 0 )
+      {
+         /* we have a "weighted boolean optimization"-file(wbo) */
+         opbinput->wbo = TRUE;
+         if( ncoefs == 0 )
+            opbinput->topcost = SCIPinfinity(scip);
+         else
+         {
+            assert(ncoefs == 1);
+            opbinput->topcost = coefs[0];
+         } SCIPdebugMessage("Weighted Boolean Optimization problem has topcost of %g\n", opbinput->topcost);
       }
       else if( ncoefs > 0 )
          syntaxError(scip, opbinput, "expected constraint sense '=' or '>='");
@@ -1187,16 +1325,231 @@ SCIP_RETCODE readConstraints(
    modifiable = FALSE;
    dynamic = dynamicconss;
    removable = dynamicrows;
-   {
+   
 #ifdef SCIP_DEBUG
-      sprintf(name, "c%d", opbinput->number);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+   /* create corresponding constraint */
+   if( issoftcons )
+   {
+      SCIP_VAR* indvar;
+      SCIP_VAR* negindvar;
+      SCIP_Bool created;
+      int v;
+      char indname[SCIP_MAXSTRLEN];
+#if USEINDICATOR == FALSE
+      SCIP_Real maxact;
+      SCIP_Real minact;
+      SCIP_Real lb;
+      SCIP_Real ub;
+#endif
+      (void) SCIPsnprintf(indname, SCIP_MAXSTRLEN, "indicatorvar%d", opbinput->nindvars);
+      ++(opbinput->nindvars);
+      SCIP_CALL( createVariable(scip, &indvar, indname) );
+
+      assert(!SCIPisInfinity(scip, -weight));
+      SCIP_CALL( SCIPchgVarObj(scip, indvar, weight) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, indvar, &negindvar) );
+
+#if USEINDICATOR == FALSE
+      /* @todo check whether it's better to set the initial flag to false */         
+      initial = FALSE;
+      
+      maxact = 0.0;
+      minact = 0.0;
+      for( v = ncoefs - 1; v >= 0; --v )
+         if( coefs[v] > 0 )
+            maxact += coefs[v];
+         else
+            minact += coefs[v];
+
+      if( SCIPisInfinity(scip, maxact) )
+      {
+         SCIPwarningMessage("maxactivity = %g exceed infinity value.\n", maxact);
+      }
+      if( SCIPisInfinity(scip, -minact) )
+      {
+         SCIPwarningMessage("minactivity = %g exceed -infinity value.\n", minact);
+      }
+
+      /* first soft constraints for lhs */
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         /* first we are modelling the feasibility of the soft contraint by adding a slack variable */
+         /* we ensure that if indvar == 1 => (a^T*x + ub*indvar >= lhs) */
+         ub = lhs - minact;
+
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, SCIPinfinity(scip),
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, indvar, ub) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         created = TRUE;
+
 #ifdef SCIP_DEBUG
-      ++(opbinput->number);
+         ++(opbinput->consnumber);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
+#endif
+         if( isNonlinear )
+            (*nNonlinearConss)++;
+
+         /* second we are modelling the implication that if the slack variable is on( negation is off), the constraint
+          * is disabled, so only the cost arise if the slack variable is necessary */
+         /* indvar == 1 => (a^T*x (+ ub * negindvar) <= lhs - 1) */
+         ub = lhs - maxact - 1;
+         
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, -SCIPinfinity(scip), lhs - 1,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, negindvar, ub) );
+      }
+
+      /* second soft constraints for rhs */
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         if( created )
+         {
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+#ifdef SCIP_DEBUG
+            ++(opbinput->consnumber);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
+#endif
+            if( isNonlinear )
+               (*nNonlinearConss)++;
+         }
+
+         /* first we are modelling the feasibility of the soft-constraint by adding a slack variable */
+         /* indvar == 1 => (a^T*x + lb * indvar <= rhs) */
+         lb = rhs - maxact;
+
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, -SCIPinfinity(scip), rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, indvar, lb) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+#ifdef SCIP_DEBUG
+         ++(opbinput->consnumber);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
+#endif
+         if( isNonlinear )
+            (*nNonlinearConss)++;
+
+         /* second we are modelling the implication that if the slack variable is on( negation is off), the constraint
+          * is disabled, so only the cost arise if the slack variable is necessary */
+         /* indvar == 1 => (a^T*x (+ lb * negindvar) >= rhs + 1) */
+         lb = rhs - minact + 1;
+         
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, rhs + 1, SCIPinfinity(scip),
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, cons, negindvar, lb) );
+      }
+#else // with indicator
+      created = FALSE;
+
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         /* first we are modelling the implication that if the negation of the indicator variable is on, the constraint
+          * is enabled */
+         /* indvar == 0 => a^T*x <= rhs */
+         SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, negindvar, ncoefs, vars, coefs, rhs,
+               initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         created = TRUE;
+
+#if BACKIMPLICATION == TRUE
+         {
+            SCIP_Real* tmpcoefs;
+
+#ifdef SCIP_DEBUG
+            ++(opbinput->consnumber);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
+#endif
+            if( isNonlinear )
+               (*nNonlinearConss)++;
+
+            /* allocate temporary memory */
+            SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpcoefs, coefs, ncoefs) );
+
+            /* second we are modelling the implication that if the indicator variable is on, the constraint is disabled */
+            /* indvar == 1 =>  a^T*x >= rhs + 1 */
+            /* change the a^T*x >= rhs + 1 to -a^Tx<= -rhs -1, for indicator constraint */
+            for( v = ncoefs - 1; v >= 0; --v )
+               tmpcoefs[v] *= -1;
+
+            SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, indvar, ncoefs, vars, tmpcoefs, -rhs - 1,
+                  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+            /* free temporary memory */
+            SCIPfreeBufferArray(scip, & tmpcoefs);
+         }
+#endif // BACKIMPLICATION == TRUE
+      }
+
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         if( created )
+         {
+            /* we have already created one indicator constraint with the same indicator variable */
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+#ifdef SCIP_DEBUG
+            ++(opbinput->consnumber);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
+#endif
+            if( isNonlinear )
+               (*nNonlinearConss)++;
+         }
+
+#if BACKIMPLICATION == TRUE
+         /* first we are modelling the implication that if the indicator variable is on, the constraint is disabled */
+         /* indvar == 1 => a^T*x <= lhs - 1 */
+         SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, indvar, ncoefs, vars, coefs, lhs - 1,
+               initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+#ifdef SCIP_DEBUG
+         ++(opbinput->consnumber);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
+#endif
+         if( isNonlinear )
+            (*nNonlinearConss)++;
+#endif //BACKIMPLICATION == TRUE
+
+         /* second we are modelling the implication that if the negation of the indicator variable is on, the constraint
+          * is enabled */
+         /* change the a^T*x >= lhs to -a^Tx<= -lhs, for indicator constraint */
+         for( v = ncoefs - 1; v >= 0; --v )
+            coefs[v] *= -1;
+         /* @todo check whether it's better to set the initial flag to false */         
+         SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, negindvar, ncoefs, vars, coefs, -lhs,
+               initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+      }
 #endif
    }
+   else
+   {
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+   }
+#ifdef SCIP_DEBUG
+   ++(opbinput->consnumber);
+#endif
+   
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
@@ -1329,7 +1682,7 @@ SCIP_RETCODE readOPBFile(
    BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
    
    SCIP_CALL( SCIPallocMemoryArray(scip, &(opbinput->consanddata), opbinput->sconsanddata ) );
-   
+
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
 
@@ -1339,6 +1692,50 @@ SCIP_RETCODE readOPBFile(
    {
       SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss) );
    }
+
+   /* if we read a wbo file we need to make sure thta the top cost won't be exceeded */
+   if( opbinput->wbo )
+   {
+      SCIP_VAR** topcostvars;
+      SCIP_Real* topcosts;
+      SCIP_VAR** vars;
+      int nvars;
+      int ntopcostvars;
+      SCIP_Longint topcostrhs;
+      SCIP_CONS* topcostcons;
+
+      nvars = SCIPgetNVars(scip);
+      vars = SCIPgetVars(scip);
+      assert(nvars > 0 || vars != NULL);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &topcostvars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &topcosts, nvars) );
+
+      ntopcostvars = 0;
+      for( i = nvars - 1; i >= 0; --i )
+         if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+         {
+            topcostvars[ntopcostvars] = vars[i];
+            topcosts[ntopcostvars] = SCIPvarGetObj(vars[i]);
+            ++ntopcostvars;
+         }
+
+      if( SCIPisIntegral(scip, opbinput->topcost) )
+         topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost - 1);
+      else
+         topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost);
+
+      SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, "topcost", ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip), topcostrhs,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, topcostcons) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, topcostcons, NULL) ) );
+      SCIP_CALL( SCIPreleaseCons(scip, &topcostcons) );
+
+      SCIPfreeBufferArray(scip, &topcosts);
+      SCIPfreeBufferArray(scip, &topcostvars);
+   }
+
+   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
 
    for( i = opbinput->nconsanddata - 1; i >= 0; --i )
    {
@@ -1351,85 +1748,6 @@ SCIP_RETCODE readOPBFile(
 
    /* close file */
    SCIPfclose(opbinput->file);
-
-   return SCIP_OKAY;
-}
-
-
-/* reads problem from file */
-static
-SCIP_RETCODE readFile(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader,             /**< the file reader itself */
-   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
-   )
-{  /*lint --e{715}*/
-   OPBINPUT opbinput;
-   int i;
-
-   /* initialize OPB input data */
-   opbinput.file = NULL;
-   opbinput.linebuf[0] = '\0';
-   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
-   opbinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
-   opbinput.tokenbuf[0] = '\0';
-   for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.pushedtokens[i], OPB_MAX_LINELEN) );
-   }
-
-   opbinput.npushedtokens = 0;
-   opbinput.linenumber = 1;
-   opbinput.bufpos = 0;
-   opbinput.linepos = 0;
-   opbinput.objsense = SCIP_OBJSENSE_MINIMIZE;
-   opbinput.endline = FALSE;
-   opbinput.eof = FALSE;
-   opbinput.haserror = FALSE;
-   opbinput.consanddata = NULL;
-   opbinput.nconsanddata = 0;
-   opbinput.sconsanddata = 10;
-   opbinput.nproblemcoeffs = 0;
-   opbinput.maxvarsperand = 10;
-#ifdef SCIP_DEBUG
-   opbinput.number = 0;
-#endif
-
-   /* create a hash table for the constraint set */
-   opbinput.hashtablesize = SCIPcalcHashtableSize(HASHSIZE_OPBANDCONS);
-   SCIP_CALL( SCIPhashtableCreate(&(opbinput.hashtable), SCIPblkmem(scip), opbinput.hashtablesize,
-         hashGetKeyOpbAndcons, hashKeyEqOpbAndcons, hashKeyValOpbAndcons, (void*) scip) );
-
-   /* read the file */
-   SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
-
-   /* free hash table */
-   SCIPhashtableFree(&(opbinput.hashtable));
-   
-   /* free dynamically allocated memory */
-   SCIPfreeBufferArrayNull(scip, &opbinput.token);
-   SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
-   for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
-   {
-      SCIPfreeBufferArrayNull(scip, &opbinput.pushedtokens[i]);
-   }
-
-   if( opbinput.nproblemcoeffs > 0 )
-   {
-      SCIPwarningMessage("there might be <%d> coefficients out of range!\n", opbinput.nproblemcoeffs); 
-   }
-
-   /* evaluate the result */
-   if( opbinput.haserror )
-      return SCIP_PARSEERROR;
-   else
-   {
-      /* set objective sense */
-      SCIP_CALL( SCIPsetObjsense(scip, opbinput.objsense) );
-      *result = SCIP_SUCCESS;
-   }
 
    return SCIP_OKAY;
 }
@@ -2708,44 +3026,114 @@ SCIP_RETCODE writeOpb(
    return  SCIP_OKAY;
 }
 
+
 /*
- * Callback methods of reader
+ * extern methods
  */
 
-/** copy method for reader plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_READERCOPY(readerCopyOpb)
+/* reads problem from file */
+SCIP_RETCODE SCIPreadOpb(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_READER*       reader,             /**< the file reader itself */
+   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   )
 {  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   OPBINPUT opbinput;
+   int i;
 
-   /* call inclusion method of reader */
-   SCIP_CALL( SCIPincludeReaderOpb(scip) );
- 
+   /* initialize OPB input data */
+   opbinput.file = NULL;
+   opbinput.linebuf[0] = '\0';
+   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
+   opbinput.token[0] = '\0';
+   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
+   opbinput.tokenbuf[0] = '\0';
+   for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.pushedtokens[i], OPB_MAX_LINELEN) );
+   }
+
+   opbinput.npushedtokens = 0;
+   opbinput.linenumber = 1;
+   opbinput.bufpos = 0;
+   opbinput.linepos = 0;
+   opbinput.objsense = SCIP_OBJSENSE_MINIMIZE;
+   opbinput.endline = FALSE;
+   opbinput.eof = FALSE;
+   opbinput.haserror = FALSE;
+   opbinput.consanddata = NULL;
+   opbinput.nconsanddata = 0;
+   opbinput.sconsanddata = 10;
+   opbinput.nproblemcoeffs = 0;
+   opbinput.maxvarsperand = 10;
+   opbinput.wbo = FALSE;
+   opbinput.topcost = -SCIPinfinity(scip);
+   opbinput.nindvars = 0;
+#ifdef SCIP_DEBUG
+   opbinput.consnumber = 0;
+#endif
+
+   /* create a hash table for the constraint set */
+   opbinput.hashtablesize = SCIPcalcHashtableSize(HASHSIZE_OPBANDCONS);
+   SCIP_CALL( SCIPhashtableCreate(&(opbinput.hashtable), SCIPblkmem(scip), opbinput.hashtablesize,
+         hashGetKeyOpbAndcons, hashKeyEqOpbAndcons, hashKeyValOpbAndcons, (void*) scip) );
+
+   /* read the file */
+   SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
+
+   /* free hash table */
+   SCIPhashtableFree(&(opbinput.hashtable));
+   
+   /* free dynamically allocated memory */
+   SCIPfreeBufferArrayNull(scip, &opbinput.token);
+   SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
+   for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
+   {
+      SCIPfreeBufferArrayNull(scip, &opbinput.pushedtokens[i]);
+   }
+
+   if( opbinput.nproblemcoeffs > 0 )
+   {
+      SCIPwarningMessage("there might be <%d> coefficients or weight out of range!\n", opbinput.nproblemcoeffs); 
+   }
+
+   /* evaluate the result */
+   if( opbinput.haserror )
+      return SCIP_PARSEERROR;
+   else
+   {
+      /* set objective sense */
+      SCIP_CALL( SCIPsetObjsense(scip, opbinput.objsense) );
+      *result = SCIP_SUCCESS;
+   }
+
    return SCIP_OKAY;
 }
 
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeOpb NULL
-
-
-/** problem reading method of reader */
-static
-SCIP_DECL_READERREAD(readerReadOpb)
-{  /*lint --e{715}*/
-
-   SCIP_CALL( readFile(scip, reader, filename, result) );
-
-   return SCIP_OKAY;
-}
-
-
-/** problem writing method of reader */
-static
-SCIP_DECL_READERWRITE(readerWriteOpb)
-{  /*lint --e{715}*/
+/* writes problem to file */
+SCIP_RETCODE SCIPwriteOpb(
+   SCIP*              scip,               /**< SCIP data structure */
+   FILE*              file,               /**< output file, or NULL if standard output should be used */
+   const char*        name,               /**< problem name */
+   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE      objsense,           /**< objective sense */
+   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
+					     extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                nvars,              /**< number of mutable variables in the problem */
+   int                nbinvars,           /**< number of binary variables */
+   int                nintvars,           /**< number of general integer variables */
+   int                nimplvars,          /**< number of implicit integer variables */
+   int                ncontvars,          /**< number of continuous variables */
+   int                nfixedvars,         /**< number of fixed and aggregated variables in the problem */
+   SCIP_CONS**        conss,              /**< array with constraints of the problem */
+   int                nconss,             /**< number of constraints in the problem */
+   SCIP_Bool          genericnames,       /**< should generic variable and constraint names be used */
+   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   )
+{
    if( nvars != nbinvars )
    {
       SCIPwarningMessage("OPB format is only capable for binary problems.\n");
@@ -2883,6 +3271,51 @@ SCIP_DECL_READERWRITE(readerWriteOpb)
       *result = SCIP_SUCCESS;
    }
    
+   return SCIP_OKAY;
+}
+
+/*
+ * Callback methods of reader
+ */
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyOpb)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderOpb(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
+/** destructor of reader to free user data (called when SCIP is exiting) */
+#define readerFreeOpb NULL
+
+
+/** problem reading method of reader */
+static
+SCIP_DECL_READERREAD(readerReadOpb)
+{  /*lint --e{715}*/
+
+   SCIP_CALL( SCIPreadOpb(scip, reader, filename, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** problem writing method of reader */
+static
+SCIP_DECL_READERWRITE(readerWriteOpb)
+{  /*lint --e{715}*/
+
+   SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, nfixedvars, conss, nconss, genericnames, result) );
+
    return SCIP_OKAY;
 }
 
