@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.115 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.116 2010/04/26 19:44:55 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -28,6 +28,7 @@
 
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
 #include "scip/pub_misc.h"
 
 
@@ -1135,6 +1136,10 @@ SCIP_RETCODE analyzeConflictZero(
  *   (2) r   = TRUE                                   =>  v_i = TRUE for all i
  *   (3) v_i = TRUE for all i                         =>  r   = TRUE
  *   (4) r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE
+ *
+ *  additional if the resultant is fixed to zero during presolving or in the root node (globally), then the "and"
+ *  constraint is collapsed to a linear (logicor) constraint of the form 
+ *  -> sum_{i=0}^{n-1} ~v_i >= 1
  */
 static
 SCIP_RETCODE propagateCons(
@@ -1332,31 +1337,72 @@ SCIP_RETCODE propagateCons(
    /* if resultant is fixed to FALSE, and only one operator variable is not fixed to TRUE, this operator variable
     * can be fixed to FALSE (rule (4))
     */
-   if( SCIPvarGetUbLocal(resvar) < 0.5 && watchedvar2 == -1 )
+   if( SCIPvarGetUbLocal(resvar) < 0.5 )
    {
-      assert(watchedvar1 != -1);
-      
-      SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
-         SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
-      SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], FALSE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
-      if( infeasible )
+      if( watchedvar2 == -1 )
       {
-         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
-         SCIP_CALL( analyzeConflictZero(scip, cons) );
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         *cutoff = TRUE;
-      }
-      else
-      {
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-         if( tightened )
+         assert(watchedvar1 != -1);
+         
+         SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
+            SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
+         SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], FALSE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
+         if( infeasible )
          {
+            /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
+            SCIP_CALL( analyzeConflictZero(scip, cons) );
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
-            (*nfixedvars)++;
+            *cutoff = TRUE;
          }
+         else
+         {
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            if( tightened )
+            {
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               (*nfixedvars)++;
+            }
+         }
+         
+         return SCIP_OKAY;
       }
+      else if( SCIPgetDepth(scip) <= 0 )
+      {
+         /* since the resultant variable is globally fixed to zero the and constraint collapses to linear constraint of
+          * the form 
+          * -> \sum_{i=0}^{n-1} v_i <= n-1
+          *
+          * this can be transformed into a logicor constraint of the form
+          * -> \sum_{i=0}^{n-1} ~v_i >= 1
+          *
+          * create, add, and release the logicor constraint and remove the and constraint globally 
+          */
+         
+         SCIP_VAR** consvars;
+         SCIP_CONS* lincons;
+         
+         assert(SCIPvarGetUbGlobal(resvar) < 0.5);
+         
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+         
+         /* collect negated variables */
+         for( i = 0; i < nvars; ++i )
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &consvars[i]) );
+         }
 
-      return SCIP_OKAY;
+         /* create, add, and release the logicor constraint */
+         SCIP_CALL( SCIPcreateConsLogicor(scip, &lincons, SCIPconsGetName(cons), nvars, consvars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+               SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         SCIP_CALL( SCIPaddCons(scip, lincons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+         /* remove the "and" constraint globally */
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         SCIPfreeBufferArray(scip, &lincons);
+      }
    }
 
    /* switch to the new watched variables */
