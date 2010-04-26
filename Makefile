@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.340 2010/04/26 14:39:07 bzfwinkm Exp $
+# $Id: Makefile,v 1.341 2010/04/26 19:32:46 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -305,11 +305,11 @@ ALLSRC		+=	$(LPILIBSRC)
 # NLP Solver Interface
 #-----------------------------------------------------------------------------
 
-NLPILIBSHORTNAME	=	nlpi
+NLPILIBSHORTNAME=	nlpi
 NLPILIBNAME	=	$(NLPILIBSHORTNAME)-$(VERSION)
-NLPILIBCOBJ	  = nlpi/nlpi.o \
-	nlpi/nlpioracle.o	\
-	nlpi/expression.o
+NLPILIBCOBJ	= 	nlpi/nlpi.o \
+			nlpi/nlpioracle.o \
+			nlpi/expression.o
 NLPILIBCXXOBJ	=
 
 ifeq ($(EXPRINT),none)
@@ -323,7 +323,7 @@ ifeq ($(IPOPT),true)
 NLPILIBCXXOBJ += nlpi/nlpi_ipopt.o
 endif
 
-NLPILIB	=	$(NLPILIBNAME).$(BASE)
+NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(LIBDIR)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJDIR)/,$(NLPILIBCXXOBJ))
 NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
@@ -570,7 +570,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
-			
+
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
@@ -647,7 +647,7 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 ifeq ($(VERBOSE),false)
 .SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
-    $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(NLPILIBLINK) $(MAINLINK) $(MAINSHORTLINK) \
+		$(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(NLPILIBLINK) $(MAINLINK) $(MAINSHORTLINK) \
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
