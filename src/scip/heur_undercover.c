@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.50 2010/04/26 16:26:59 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.51 2010/04/26 21:53:09 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1523,8 +1523,6 @@ SCIP_RETCODE solveSubProblem(
 
    SCIPdebugMessage("undercover presolved subMIQCP: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
-   /* TODO: activate again, if linearization of AND constraint after fixing resultant is implemented */
-#if 0
 #ifndef NDEBUG
    /* check for nonlinear constraints */
    if( SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE && checklinear )
@@ -1551,7 +1549,6 @@ SCIP_RETCODE solveSubProblem(
 
       assert(islinear);
    }
-#endif
 #endif
 
    /* solve subproblem */
