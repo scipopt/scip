@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.60 2010/04/23 19:22:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.61 2010/04/26 18:13:27 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -211,10 +211,10 @@
 #define EVENTHDLR_DESC         "bound change event handler for indicator constraints"
 
 /* default values for parameters */
-#define DEFAULT_BRANCHINDICATORS   TRUE
+#define DEFAULT_BRANCHINDICATORS   FALSE
 #define DEFAULT_GENLOGICOR         FALSE
 #define DEFAULT_SEPAALTERNATIVELP  FALSE
-#define DEFAULT_ADDCOUPLING        FALSE
+#define DEFAULT_ADDCOUPLING        TRUE
 #define DEFAULT_ADDCOUPLINGCONS    FALSE
 #define DEFAULT_UPDATEBOUNDS       FALSE
 #define DEFAULT_TRYSOLUTIONS       TRUE
@@ -2352,6 +2352,31 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIndicator)
 }
 
 
+/** initialization method of constraint handler (called after problem was transformed) */
+static
+SCIP_DECL_CONSINIT(consInitIndicator)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+   assert( conshdlrdata->heurTrySol == NULL );
+
+   /* find trysol heuristic */
+   if ( conshdlrdata->trySolutions )
+   {
+      conshdlrdata->heurTrySol = SCIPfindHeur(scip, "trysol");
+      assert( conshdlrdata->heurTrySol != NULL );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeIndicator)
@@ -2390,10 +2415,6 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->slackHash == NULL );
-
-   /* find trysol heuristic */
-   conshdlrdata->heurTrySol = SCIPfindHeur(scip, "trysol");
-   assert( conshdlrdata->heurTrySol != NULL );
 
    if ( conshdlrdata->sepaAlternativeLP )
    {
@@ -3139,6 +3160,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    SCIP_SOL* trysol = NULL;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool someLinconsNotActive;
+   SCIP_Bool changedSol;
       
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -3152,7 +3174,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    assert( conshdlrdata != NULL );
 
    /* copy solution if it makes sense */
-   if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && conshdlrdata->trySolutions )
+   if ( SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trySolutions )
    {
       assert( conshdlrdata->heurTrySol != NULL );
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
@@ -3162,6 +3184,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 
    /* check each constraint */
    *result = SCIP_FEASIBLE;
+   changedSol = FALSE;
    someLinconsNotActive = FALSE;
    for (c = 0; c < nconss; ++c)
    {
@@ -3198,12 +3221,23 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 	 /* try to make solution feasible if it makes sense - otherwise exit */
 	 if ( trysol != NULL )
          {
-	    SCIP_CALL( SCIPmakeIndicatorFeasible(scip, conss[c], trysol) );
+	    SCIP_Bool changed;
+	    SCIP_CALL( SCIPmakeIndicatorFeasible(scip, conss[c], trysol, &changed) );
+	    changedSol = changedSol || changed;
          }
 	 else
 	 {
 	    SCIPdebugMessage("Indicator constraints are not feasible.\n");
 	    return SCIP_OKAY;
+	 }
+      }
+      else
+      {
+	 if ( trysol != NULL )
+	 {
+	    SCIP_Bool changed;
+	    SCIP_CALL( SCIPmakeIndicatorFeasible(scip, conss[c], trysol, &changed) );
+	    changedSol = changedSol || changed;
 	 }
       }
    }
@@ -3282,11 +3316,9 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    }
    else
    {
-      if ( trysol != NULL )
-      {
-	 if ( *result == SCIP_INFEASIBLE )
-	    SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurTrySol, trysol) );
-      }
+      /* tell heur_trysol about solution - it will pass it to SCIP */
+      if ( trysol != NULL && changedSol )
+	 SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurTrySol, trysol) );
    }
 
    if ( trysol != NULL )
@@ -3648,9 +3680,6 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 /** constraint deactivation notification method of constraint handler */
 #define consDeactiveIndicator NULL
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitIndicator NULL
-
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitIndicator NULL
 
@@ -3973,7 +4002,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    {
       /* the constraint is inital, enforced, separated, and checked */
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
-	    TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+	    initial, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
    {
@@ -4229,7 +4258,8 @@ SCIP_Bool SCIPisViolatedIndicator(
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
-   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_Bool*            changed             /**< whether the solution has been changed */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4246,8 +4276,12 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
    assert( sol != NULL );
+   assert( changed != NULL );
 
-   if ( ! SCIPconsIsActive(cons) )
+   *changed = FALSE;
+
+   /* avoid delete indicator constraints, e.g., due to preprocessing */
+   if ( SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
    assert( cons != NULL );
@@ -4267,8 +4301,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
    sum = 0.0;
 
-   /* if linear constraint is not active, e.g., due to preprocessing */
-   if ( SCIPconsIsActive(lincons) )
+   /* avoid non-active linear constraints, e.g., due to preprocessing */
+   if ( SCIPconsIsActive(lincons) || SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING)
    {
       nlinvars = SCIPgetNVarsLinear(scip, lincons);
       linvars = SCIPgetVarsLinear(scip, lincons);
@@ -4299,17 +4333,41 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    if ( SCIPisFeasPositive(scip, sum) )
    {
       /* the original constraint is violated */
-      SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, sum) );
-      SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+      if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), sum) )
+      {
+	 SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, sum) );
+	 *changed = TRUE;
+      }
+      if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+      {
+	 SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+	 *changed = TRUE;
+      }
    }
    else
    {
       /* the original constraint is satisfied */
-      SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
+      if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), 0.0) )
+      {
+	 SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
+	 *changed = TRUE;
+      }
       if ( SCIPvarGetObj(binvar) <= 0 )
-	 SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+      {
+	 if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+	 {
+	    SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+	    *changed = TRUE;
+	 }
+      }
       else
-	 SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+      {
+	 if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+	 {
+	    SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+	    *changed = FALSE;
+	 }
+      }
    }
 
    return SCIP_OKAY;
