@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.49 2010/04/26 15:50:34 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.50 2010/04/26 16:26:59 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -300,8 +300,12 @@ SCIP_RETCODE createPpcProblem(
             }
 
             /* add resultant variable */
-            ppcconsvars[ntofix] = ppcvars[SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons))];
+            ppcconsvars[ntofix] = ppcvars[probindex];
             ppcconsvals[ntofix] = (SCIP_Real)(ntofix - 1);
+
+            ++termcounter[probindex];
+            if( !consmarker[probindex] )
+               incConsCounter(conscounter, consmarker, probindex);
 
             /* get name of the original constraint and add the string "_and" */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_and", SCIPconsGetName(andcons));
@@ -1519,6 +1523,8 @@ SCIP_RETCODE solveSubProblem(
 
    SCIPdebugMessage("undercover presolved subMIQCP: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
+   /* TODO: activate again, if linearization of AND constraint after fixing resultant is implemented */
+#if 0
 #ifndef NDEBUG
    /* check for nonlinear constraints */
    if( SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE && checklinear )
@@ -1545,6 +1551,7 @@ SCIP_RETCODE solveSubProblem(
 
       assert(islinear);
    }
+#endif
 #endif
 
    /* solve subproblem */
