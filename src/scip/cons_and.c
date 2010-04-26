@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.116 2010/04/26 19:44:55 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.117 2010/04/26 21:52:08 bzfgleix Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -1401,7 +1401,7 @@ SCIP_RETCODE propagateCons(
          /* remove the "and" constraint globally */
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
-         SCIPfreeBufferArray(scip, &lincons);
+         SCIPfreeBufferArray(scip, &consvars);
       }
    }
 
