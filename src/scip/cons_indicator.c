@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.62 2010/04/26 18:23:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.63 2010/04/27 08:54:45 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2364,10 +2364,9 @@ SCIP_DECL_CONSINIT(consInitIndicator)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
-   assert( conshdlrdata->heurTrySol == NULL );
 
    /* find trysol heuristic */
-   if ( conshdlrdata->trySolutions )
+   if ( conshdlrdata->trySolutions && conshdlrdata->heurTrySol == NULL )
    {
       conshdlrdata->heurTrySol = SCIPfindHeur(scip, "trysol");
       assert( conshdlrdata->heurTrySol != NULL );
