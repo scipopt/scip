@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86_64.gnu.opt-gcc42,v 1.6 2009/08/03 15:36:54 bzfwinkm Exp $
+#--- $Id: make.linux.x86_64.gnu.opt-gcc42,v 1.7 2010/04/27 14:29:01 bzfwinkm Exp $
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
-OFLAGS		+=	-O3 -m64 -march=native -mtune=native -fomit-frame-pointer #-msse4.1 # -malign-double -mcpu=pentium4 -g
+OFLAGS		+=	-O3 -m64 -mtune=native -fomit-frame-pointer #-msse4.1 # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-missing-prototypes -Wno-missing-declarations 
 CXXFLAGS	+=	$(GXXWARN) # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
