@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.48 2010/04/26 14:39:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.49 2010/04/27 10:25:20 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1085,7 +1085,9 @@ SCIP_RETCODE readCoefficients(
       if( *ncoefs == 0 && havevalue && haveweightstart && isEndingSoftConstraintWeight(scip, opbinput) )
       {
          *weight = coefsign * coef;
-
+#if (USEINDICATOR == TRUE && BACKIMPLICATION == FALSE)
+         assert(*weight > 0);
+#endif
          SCIPdebugMessage("(line %d) found soft constraint weight: %g\n", opbinput->linenumber, *weight);
 
          coefsign = +1;
@@ -1354,7 +1356,8 @@ SCIP_RETCODE readConstraints(
 #if USEINDICATOR == FALSE
       /* @todo check whether it's better to set the initial flag to false */         
       initial = FALSE;
-      
+      created = FALSE;
+
       maxact = 0.0;
       minact = 0.0;
       for( v = ncoefs - 1; v >= 0; --v )
@@ -1451,6 +1454,8 @@ SCIP_RETCODE readConstraints(
          SCIP_CALL( SCIPaddCoefLinear(scip, cons, negindvar, lb) );
       }
 #else // with indicator
+      /* @todo check whether it's better to set the initial flag to false */         
+      initial = FALSE;
       created = FALSE;
 
       if( !SCIPisInfinity(scip, rhs) )
@@ -1535,7 +1540,6 @@ SCIP_RETCODE readConstraints(
          /* change the a^T*x >= lhs to -a^Tx<= -lhs, for indicator constraint */
          for( v = ncoefs - 1; v >= 0; --v )
             coefs[v] *= -1;
-         /* @todo check whether it's better to set the initial flag to false */         
          SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, negindvar, ncoefs, vars, coefs, -lhs,
                initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       }
@@ -1734,8 +1738,6 @@ SCIP_RETCODE readOPBFile(
       SCIPfreeBufferArray(scip, &topcosts);
       SCIPfreeBufferArray(scip, &topcostvars);
    }
-
-   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
 
    for( i = opbinput->nconsanddata - 1; i >= 0; --i )
    {
