@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.366 2010/04/26 17:49:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.367 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2928,12 +2928,30 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
    SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    );
 
+/** gets the variable's pseudo cost value for the given change of the variable's LP value */
+extern
+SCIP_Real SCIPgetVarPseudocostVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the variable's pseudo cost value for the given change of the variable's LP value,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+SCIP_Real SCIPgetVarPseudocostValCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
 /** gets the variable's pseudo cost value for the given direction */
 extern
 SCIP_Real SCIPgetVarPseudocost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** gets the variable's pseudo cost value for the given direction,
@@ -2943,7 +2961,7 @@ extern
 SCIP_Real SCIPgetVarPseudocostCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
@@ -2982,14 +3000,30 @@ SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
    SCIP_Real             solval              /**< variable's LP solution value */
    );
 
-/** returns the variable's average inference score value */
+/** returns the variable's conflict score value */
+extern
+SCIP_Real SCIPgetVarVSIDS(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the variable's conflict score value only using conflicts of the current run */
+extern
+SCIP_Real SCIPgetVarVSIDSCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the variable's conflict score value */
 extern
 SCIP_Real SCIPgetVarConflictScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the variable's average inference score value only using inferences of the current run */
+/** returns the variable's conflict score value only using conflicts of the current run */
 extern
 SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3062,13 +3096,23 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** increases the number of inferences counter of the variable by a certain value*/
+/** initializes the upwards and downards pseudocosts, conflict scores, conflict lengths, inference scores, cutoff scores
+ *  of a variable to the given values 
+ */
 extern
-SCIP_RETCODE SCIPsetVarNInferencesInitial(
+SCIP_RETCODE SCIPinitVarBranchStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which should be initialized */
-   SCIP_Longint          downval,            /**< value to which inference counter for downwards branching should be initialized */
-   SCIP_Longint          upval               /**< value to which inference counter for upwards branching should be initialized */
+   SCIP_Real             downpscost,         /**< value to which pseudocosts for downwards branching should be initialized */
+   SCIP_Real             uppscost,           /**< value to which pseudocosts for upwards branching should be initialized */
+   SCIP_Real             downconf,           /**< value to which conflict score for downwards branching should be initialized */
+   SCIP_Real             upconf,             /**< value to which conflict score for upwards branching should be initialized */
+   SCIP_Real             downconflen,        /**< value to which conflict length score for downwards branching should be initialized */
+   SCIP_Real             upconflen,          /**< value to which conflict length score for upwards branching should be initialized */
+   SCIP_Real             downinfer,          /**< value to which inference counter for downwards branching should be initialized */
+   SCIP_Real             upinfer,            /**< value to which inference counter for upwards branching should be initialized */
+   SCIP_Real             downcutoff,         /**< value to which cutoff counter for downwards branching should be initialized */
+   SCIP_Real             upcutoff            /**< value to which cutoff counter for upwards branching should be initialized */
    );
 
 /** returns the average number of cutoffs found after branching on the variable in given direction;

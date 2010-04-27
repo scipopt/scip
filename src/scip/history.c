@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.33 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.34 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -73,18 +73,18 @@ void SCIPhistoryReset(
    history->pscostcount[1] = 0.0;
    history->pscostsum[0] = 0.0;
    history->pscostsum[1] = 0.0;
-   history->conflictscore[0] = 0.0;
-   history->conflictscore[1] = 0.0;
-   history->nactiveconflicts[0] = 0; /* ??????? */
-   history->nactiveconflicts[1] = 0; /* ??????? */
-   history->conflengthsum[0] = 0; /* ??????? */
-   history->conflengthsum[1] = 0; /* ??????? */
+   history->vsids[0] = 0.0;
+   history->vsids[1] = 0.0;
+   history->conflengthsum[0] = 0.0;
+   history->conflengthsum[1] = 0.0;
+   history->inferencesum[0] = 0.0;
+   history->inferencesum[1] = 0.0;
+   history->cutoffsum[0] = 0.0;
+   history->cutoffsum[1] = 0.0;
+   history->nactiveconflicts[0] = 0;
+   history->nactiveconflicts[1] = 0;
    history->nbranchings[0] = 0;
    history->nbranchings[1] = 0;
-   history->ninferences[0] = 0;
-   history->ninferences[1] = 0;
-   history->ncutoffs[0] = 0;
-   history->ncutoffs[1] = 0;
    history->branchdepthsum[0] = 0;
    history->branchdepthsum[1] = 0;
 }
@@ -107,18 +107,18 @@ void SCIPhistoryUnite(
    history->pscostcount[1] += addhistory->pscostcount[1-d];
    history->pscostsum[0] += addhistory->pscostsum[d];
    history->pscostsum[1] += addhistory->pscostsum[1-d];
-   history->conflictscore[0] += addhistory->conflictscore[d];
-   history->conflictscore[1] += addhistory->conflictscore[1-d];
-   history->nactiveconflicts[0] += addhistory->nactiveconflicts[d]; /* ???????? */
-   history->nactiveconflicts[1] += addhistory->nactiveconflicts[1-d]; /* ???????? */
-   history->conflengthsum[0] += addhistory->conflengthsum[d]; /* ???????? */
-   history->conflengthsum[1] += addhistory->conflengthsum[1-d]; /* ???????? */
+   history->vsids[0] += addhistory->vsids[d];
+   history->vsids[1] += addhistory->vsids[1-d];
+   history->conflengthsum[0] += addhistory->conflengthsum[d];
+   history->conflengthsum[1] += addhistory->conflengthsum[1-d];
+   history->inferencesum[0] += addhistory->inferencesum[d];
+   history->inferencesum[1] += addhistory->inferencesum[1-d];
+   history->cutoffsum[0] += addhistory->cutoffsum[d];
+   history->cutoffsum[1] += addhistory->cutoffsum[1-d];
+   history->nactiveconflicts[0] += addhistory->nactiveconflicts[d];
+   history->nactiveconflicts[1] += addhistory->nactiveconflicts[1-d];
    history->nbranchings[0] += addhistory->nbranchings[d];
    history->nbranchings[1] += addhistory->nbranchings[1-d];
-   history->ninferences[0] += addhistory->ninferences[d];
-   history->ninferences[1] += addhistory->ninferences[1-d];
-   history->ncutoffs[0] += addhistory->ncutoffs[d];
-   history->ncutoffs[1] += addhistory->ncutoffs[1-d];
    history->branchdepthsum[0] += addhistory->branchdepthsum[d];
    history->branchdepthsum[1] += addhistory->branchdepthsum[1-d];
 }
@@ -199,22 +199,19 @@ void SCIPhistoryUpdatePseudocost(
 #undef SCIPhistoryGetPseudocost
 #undef SCIPhistoryGetPseudocostCount
 #undef SCIPhistoryIsPseudocostEmpty
-#undef SCIPhistoryIncConflictScore
-#undef SCIPhistoryScaleConflictScores
-#undef SCIPhistoryGetConflictScore
-/* begin ???????? */
+#undef SCIPhistoryIncVSIDS
+#undef SCIPhistoryScaleVSIDS
+#undef SCIPhistoryGetVSIDS
 #undef SCIPhistoryIncNActiveConflicts
 #undef SCIPhistoryGetNActiveConflicts
 #undef SCIPhistoryGetAvgConflictlength
-/* end ???????? */
 #undef SCIPhistoryIncNBranchings
-#undef SCIPhistoryIncNInferences
-#undef SCIPhistoryIncNInferencesVal
-#undef SCIPhistoryIncNCutoffs
+#undef SCIPhistoryIncInferenceSum
+#undef SCIPhistoryIncCutoffSum
 #undef SCIPhistoryGetNBranchings
-#undef SCIPhistoryGetNInferences
+#undef SCIPhistoryGetInferenceSum
 #undef SCIPhistoryGetAvgInferences
-#undef SCIPhistoryGetNCutoffs
+#undef SCIPhistoryGetCutoffSum
 #undef SCIPhistoryGetAvgCutoffs
 #undef SCIPhistoryGetAvgBranchdepth
 
@@ -270,7 +267,7 @@ SCIP_Bool SCIPhistoryIsPseudocostEmpty(
 }
 
 /** increases the conflict score of the history entry by the given weight */
-void SCIPhistoryIncConflictScore(
+void SCIPhistoryIncVSIDS(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             weight              /**< weight of this update in conflict score */
@@ -280,23 +277,23 @@ void SCIPhistoryIncConflictScore(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   history->conflictscore[dir] += weight;
+   history->vsids[dir] += weight;
 }
 
 /** scales the conflict score values with the given scalar */
-void SCIPhistoryScaleConflictScores(
+void SCIPhistoryScaleVSIDS(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    )
 {
    assert(history != NULL);
-
-   history->conflictscore[0] *= scalar;
-   history->conflictscore[1] *= scalar;
+   
+   history->vsids[0] *= scalar;
+   history->vsids[1] *= scalar;
 }
 
 /** gets the conflict score of the history entry */
-SCIP_Real SCIPhistoryGetConflictScore(
+SCIP_Real SCIPhistoryGetVSIDS(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction */
    )
@@ -305,21 +302,20 @@ SCIP_Real SCIPhistoryGetConflictScore(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   return history->conflictscore[dir];
+   return history->vsids[dir];
 }
-
-/* begin ???????? */
 
 /** increases the number of active conflicts by one and the overall length of the history entry by the given weight */
 void SCIPhistoryIncNActiveConflicts(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
-   int                   length              /**< length of the conflict */
+   SCIP_Real             length              /**< length of the conflict */
    )
 {
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
-   assert((int)dir == 0 || (int)dir == 1); assert(length >= 1);
+   assert((int)dir == 0 || (int)dir == 1); 
+   assert(length >= 0.0);
    
    history->nactiveconflicts[dir]++;
    history->conflengthsum[dir] += length;
@@ -348,9 +344,8 @@ SCIP_Real SCIPhistoryGetAvgConflictlength(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   return history->conflengthsum[dir] > 0 ? (SCIP_Real)history->nactiveconflicts[dir]/(SCIP_Real)history->conflengthsum[dir] : 0.0;
+   return history->conflengthsum[dir] > 0.0 ? (SCIP_Real)history->nactiveconflicts[dir]/(SCIP_Real)history->conflengthsum[dir] : 0.0;
 }
-/* end ???????? */
 
 /** increases the number of branchings counter */
 void SCIPhistoryIncNBranchings(
@@ -368,49 +363,37 @@ void SCIPhistoryIncNBranchings(
    history->branchdepthsum[dir] += depth;
 }
 
-/** increases the number of inferences counter */
-void SCIPhistoryIncNInferences(
-   SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
-   )
-{
-   assert(history != NULL);
-   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
-   assert((int)dir == 0 || (int)dir == 1);
-   assert(history->nbranchings[dir] >= 1);
-
-   history->ninferences[dir]++;
-}
-
-/** increases the number of inferences counter by a certian value */
+/** increases the number of inferences counter by a certain value */
 extern
-void SCIPhistoryIncNInferencesVal(
+void SCIPhistoryIncInferenceSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
-   int                   val                 /**< value by which the counter should be increased */
+   SCIP_Real             weight              /**< weight of this update in inference score */
    ) 
 {
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
    assert(history->nbranchings[dir] >= 1);
-   assert(val >= 0);
+   assert(weight >= 0.0);
 
-   history->ninferences[dir] += val;
+   history->inferencesum[dir] += weight;
 } 
 
 /** increases the number of cutoffs counter */
-void SCIPhistoryIncNCutoffs(
+void SCIPhistoryIncCutoffSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Real             weight              /**< weight of this update in cutoff score */
    )
 {
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
    assert(history->nbranchings[dir] >= 1);
+   assert(weight >= 0.0);
 
-   history->ncutoffs[dir]++;
+   history->cutoffsum[dir] += weight;
 }
 
 /** get number of branchings counter */
@@ -427,7 +410,7 @@ SCIP_Longint SCIPhistoryGetNBranchings(
 }
 
 /** get number of inferences counter */
-SCIP_Longint SCIPhistoryGetNInferences(
+SCIP_Longint SCIPhistoryGetInferenceSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
@@ -436,7 +419,7 @@ SCIP_Longint SCIPhistoryGetNInferences(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   return history->ninferences[dir];
+   return history->inferencesum[dir];
 }
 
 /** returns the average number of inferences per branching */
@@ -449,11 +432,11 @@ SCIP_Real SCIPhistoryGetAvgInferences(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   return history->nbranchings[dir] > 0 ? (SCIP_Real)history->ninferences[dir]/(SCIP_Real)history->nbranchings[dir] : 0.0;
+   return history->nbranchings[dir] > 0 ? (SCIP_Real)history->inferencesum[dir]/(SCIP_Real)history->nbranchings[dir] : 0.0;
 }
 
 /** get number of cutoffs counter */
-SCIP_Longint SCIPhistoryGetNCutoffs(
+SCIP_Longint SCIPhistoryGetCutoffSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
@@ -462,7 +445,7 @@ SCIP_Longint SCIPhistoryGetNCutoffs(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   return history->ncutoffs[dir];
+   return history->cutoffsum[dir];
 }
 
 /** returns the average number of cutoffs per branching */
@@ -475,7 +458,7 @@ SCIP_Real SCIPhistoryGetAvgCutoffs(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    assert((int)dir == 0 || (int)dir == 1);
 
-   return history->nbranchings[dir] > 0 ? (SCIP_Real)history->ncutoffs[dir]/(SCIP_Real)history->nbranchings[dir] : 0.0;
+   return history->nbranchings[dir] > 0 ? (SCIP_Real)history->cutoffsum[dir]/(SCIP_Real)history->nbranchings[dir] : 0.0;
 }
 
 /** returns the average depth of bound changes due to branching */

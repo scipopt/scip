@@ -15,7 +15,6 @@ interface:
 - added to the callback method SCIP_DECL_PROBEXITSOL(x) (type_prob.h) the parameter restart; 
   this parameter is set to TRUE if the exit solve call was triggered by a restart?
 - new method SCIPswapPointers()
-- new method SCIPsetVarNInferencesInitial() to initialize the inference values of a variable
 - new method SCIPexecRelpscostBranching() in branch_relpscots.{c,h}; this method allows of calling the reliability pseudo cost branching algorithm 
   for given set of branching candidates from the outside
 - added SCIPsortRealRealRealPtr() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
@@ -25,11 +24,20 @@ interface:
 - added SCIP_DECL_...COPY for all plugins and therefore the copy method in scip.{c,h} SCIPcopyPlugins
 - added SCIP pointer to all C++ objects and constructors
 - added parameter scip to ObjCloneable::clone()
-- new method SCIPsetHeuristicsAggressive() SCIPsetHeuristicsFast(), and SCIPsetHeuristicsOff() which set the 
+- method SCIPgetVarPseudocost() now returns the pseudocost value of one branching direction, scaled to a unit interval. 
+  The old method is now called SCIPgetVarPseudocostVal()
+- method SCIPgetVarPseudocostCurrentRun() now returns the pseudocost value of one branching direction, scaled to a unit interval, 
+  old method now called SCIPgetVarPseudocostValCurrentRun()
+- methods SCIPgetVarConflictScore and SCIPgetVarConflictScoreCurrentRun() now called SCIPgetVarVSIDS() and SCIPgetVarVSIDSCurrentRun(), resp.
+- methods SCIPvarGetNInferences(), SCIPvarGetNInferencesCurrentRun(), SCIPvarGetNCutoffs(), and SCIPvarGetNCutoffsCurrentRun() now called
+  SCIPvarGetInferenceSum(), SCIPvarGetInferenceSumCurrentRun(), SCIPvarGetCutoffSum(), and SCIPvarGetCutoffSumCurrentRun(), resp., 
+  return SCIP_Real values instead of SCIP_Longint
+- new method SCIPinitVarBranchStats() to initialize the branching statistics (such as pseudo costs, VSIDS, inference values) of a variable
+- new methods SCIPsetHeuristicsAggressive() SCIPsetHeuristicsFast(), and SCIPsetHeuristicsOff() which set the 
   heuristics to aggressive, fast, or off settings, respectively
-- new method SCIPsetSeparatingAggressive() SCIPsetSeparatingFast(), and SCIPsetSeparatingOff() which set
+- new methods SCIPsetSeparatingAggressive() SCIPsetSeparatingFast(), and SCIPsetSeparatingOff() which set
   separation to aggressive, fast, or off settings, respectively
-- new method SCIPsetPresolvingAggressive() SCIPsetPresolvingFast(), and SCIPsetPresolvingOff() which set
+- new methods SCIPsetPresolvingAggressive() SCIPsetPresolvingFast(), and SCIPsetPresolvingOff() which set
   separation to aggressive, fast, or off settings, respectively
 
 features:
@@ -118,6 +126,8 @@ fixed bugs:
 - fixed bug in presolving of linear constraint handler: in redundancy detection, two different numerical epsilons were used
 - corrected wrong assert in DINS heuristic when called for an empty problem
 - corrected several asserts in linear and quadratic constraint handler concerning parsing of CIP format
+- fixed bug in rapid learning with wrong ordering of dual and primal bound update, primal bound is now updated inside rapid learning
+- fixed potential bug in rapid learning with dual reductions
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

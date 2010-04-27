@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.553 2010/04/26 17:49:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.554 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9182,16 +9182,43 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
    return SCIP_OKAY;
 }
 
-/** gets the variable's pseudo cost value for the given direction */
-SCIP_Real SCIPgetVarPseudocost(
+/** gets the variable's pseudo cost value for the given change of the LP value */
+SCIP_Real SCIPgetVarPseudocostVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
+}
+
+/** gets the variable's pseudo cost value for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+SCIP_Real SCIPgetVarPseudocostValCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostValCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+ 
+   return SCIPvarGetPseudocostCurrentRun(var, scip->stat, solvaldelta);
+}
+
+/** gets the variable's pseudo cost value for the given direction */
+SCIP_Real SCIPgetVarPseudocost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPvarGetPseudocost(var, scip->stat, dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
 }
 
 /** gets the variable's pseudo cost value for the given direction,
@@ -9200,12 +9227,13 @@ SCIP_Real SCIPgetVarPseudocost(
 SCIP_Real SCIPgetVarPseudocostCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
-
-   return SCIPvarGetPseudocostCurrentRun(var, scip->stat, solvaldelta);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   
+   return SCIPvarGetPseudocostCurrentRun(var, scip->stat, dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
 }
 
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
@@ -9216,6 +9244,7 @@ SCIP_Real SCIPgetVarPseudocostCount(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPvarGetPseudocostCount(var, dir);
 }
@@ -9230,6 +9259,7 @@ SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPvarGetPseudocostCountCurrentRun(var, dir);
 }
@@ -9280,7 +9310,33 @@ SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
 }
 
-/** returns the variable's average inference score value */
+/** returns the variable's conflict score value */
+extern
+SCIP_Real SCIPgetVarVSIDS(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarVSIDS", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   
+   return SCIPvarGetVSIDS(var, scip->stat, dir);
+}
+
+/** returns the variable's conflict score value only using conflicts of the current run */
+extern
+SCIP_Real SCIPgetVarVSIDSCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarVSIDSCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetVSIDSCurrentRun(var, scip->stat, dir);
+}
+
+/** returns the variable's conflict score value */
 SCIP_Real SCIPgetVarConflictScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -9291,13 +9347,13 @@ SCIP_Real SCIPgetVarConflictScore(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   downscore = SCIPvarGetConflictScore(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
-   upscore = SCIPvarGetConflictScore(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+   downscore = SCIPvarGetVSIDS(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetVSIDS(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, downscore, upscore);
 }
 
-/** returns the variable's average inference score value only using inferences of the current run */
+/** returns the variable's conflict score value only using conflicts of the current run */
 SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -9308,8 +9364,8 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   downscore = SCIPvarGetConflictScoreCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
-   upscore = SCIPvarGetConflictScoreCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+   downscore = SCIPvarGetVSIDSCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetVSIDSCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, downscore, upscore);
 }
@@ -9436,26 +9492,60 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
 }
 
-/** increases the number of inferences counter of the variable by a certain value*/
-SCIP_RETCODE SCIPsetVarNInferencesInitial(
+/** initializes the upwards and downards pseudocosts, conflict scores, conflict lengths, inference scores, cutoff scores
+ *  of a variable to the given values 
+ */
+SCIP_RETCODE SCIPinitVarBranchStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which should be initialized */
-   SCIP_Longint          downval,            /**< value to which inference counter for downwards branching should be initialized */
-   SCIP_Longint          upval               /**< value to which inference counter for upwards branching should be initialized */
+   SCIP_Real             downpscost,         /**< value to which pseudocosts for downwards branching should be initialized */
+   SCIP_Real             uppscost,           /**< value to which pseudocosts for upwards branching should be initialized */
+   SCIP_Real             downvsids,          /**< value to which VSIDS score for downwards branching should be initialized */
+   SCIP_Real             upvsids,            /**< value to which VSIDS score for upwards branching should be initialized */
+   SCIP_Real             downconflen,        /**< value to which conflict length score for downwards branching should be initialized */
+   SCIP_Real             upconflen,          /**< value to which conflict length score for upwards branching should be initialized */
+   SCIP_Real             downinfer,          /**< value to which inference counter for downwards branching should be initialized */
+   SCIP_Real             upinfer,            /**< value to which inference counter for upwards branching should be initialized */
+   SCIP_Real             downcutoff,         /**< value to which cutoff counter for downwards branching should be initialized */
+   SCIP_Real             upcutoff            /**< value to which cutoff counter for upwards branching should be initialized */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetVarNInferencesInitial", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPinitVarBranchStats", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( downval > 0 )
+   assert(downpscost >= 0.0 && uppscost >= 0.0);
+   assert(downvsids >= 0.0 && upvsids >= 0.0);
+   assert(downconflen >= 0.0 && upconflen >= 0.0);
+   assert(downinfer >= 0.0 && upinfer >= 0.0);
+   assert(downcutoff >= 0.0 && upcutoff >= 0.0);
+   
+   if( !SCIPisFeasZero(scip, downpscost) || !SCIPisFeasZero(scip, downvsids)
+      || !SCIPisFeasZero(scip, downinfer) || !SCIPisFeasZero(scip, downcutoff) )
    {
       SCIP_CALL( SCIPvarIncNBranchings(var, scip->stat, 1, SCIP_BRANCHDIR_DOWNWARDS) );
-      SCIP_CALL( SCIPvarIncNInferencesVal(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downval) );  
+      SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, -1.0, downpscost, 1.0) );  
+      SCIP_CALL( SCIPvarIncInferenceSum(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downinfer) );  
+      SCIP_CALL( SCIPvarIncVSIDS(var, SCIP_BRANCHDIR_DOWNWARDS, downvsids) ); 
+      SCIP_CALL( SCIPvarIncCutoffSum(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downcutoff) ); 
+   }
+   
+   if( !SCIPisFeasZero(scip, downconflen) )
+   {
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var, SCIP_BRANCHDIR_DOWNWARDS, downconflen) );
    }
 
-   if( upval > 0 )
+   if( !SCIPisFeasZero(scip, uppscost) || !SCIPisFeasZero(scip, upvsids)
+      || !SCIPisFeasZero(scip, upinfer) || !SCIPisFeasZero(scip, upcutoff) )
    {
       SCIP_CALL( SCIPvarIncNBranchings(var, scip->stat, 1, SCIP_BRANCHDIR_UPWARDS) );
-      SCIP_CALL( SCIPvarIncNInferencesVal(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upval) );
+      SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, 1.0, uppscost, 1.0) );  
+      SCIP_CALL( SCIPvarIncInferenceSum(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upinfer) );
+      SCIP_CALL( SCIPvarIncVSIDS(var, SCIP_BRANCHDIR_UPWARDS, upvsids) );     
+      SCIP_CALL( SCIPvarIncCutoffSum(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upcutoff) );   
+   }
+   
+   if( !SCIPisFeasZero(scip, upconflen) )
+   {
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var, SCIP_BRANCHDIR_UPWARDS, upconflen) );
    }
 
    return SCIP_OKAY;
@@ -15323,9 +15413,9 @@ SCIP_Real SCIPgetAvgConflictScore(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgConflictScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   scale = scip->transprob->nvars * scip->stat->conflictscoreweight;
-   conflictscoredown = SCIPhistoryGetConflictScore(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) / scale;
-   conflictscoreup = SCIPhistoryGetConflictScore(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) / scale;
+   scale = scip->transprob->nvars * scip->stat->vsidsweight;
+   conflictscoredown = SCIPhistoryGetVSIDS(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) / scale;
+   conflictscoreup = SCIPhistoryGetVSIDS(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) / scale;
 
    return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
 }
@@ -15341,9 +15431,9 @@ SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgConflictScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   scale = scip->transprob->nvars * scip->stat->conflictscoreweight;
-   conflictscoredown = SCIPhistoryGetConflictScore(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS) / scale;
-   conflictscoreup = SCIPhistoryGetConflictScore(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS) / scale;
+   scale = scip->transprob->nvars * scip->stat->vsidsweight;
+   conflictscoredown = SCIPhistoryGetVSIDS(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS) / scale;
+   conflictscoreup = SCIPhistoryGetVSIDS(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS) / scale;
 
    return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
 }
@@ -16336,16 +16426,16 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
          SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS),
          totalnstrongbranchs,
          SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) > 0
-         ? (SCIP_Real)SCIPhistoryGetNInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)
+         ? (SCIP_Real)SCIPhistoryGetInferenceSum(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)
          / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) : 0.0,
          SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) > 0
-         ? (SCIP_Real)SCIPhistoryGetNInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)
+         ? (SCIP_Real)SCIPhistoryGetInferenceSum(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)
          / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) : 0.0,
          SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) > 0
-         ? (SCIP_Real)SCIPhistoryGetNCutoffs(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)
+         ? SCIPhistoryGetCutoffSum(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)
          / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) : 0.0,
          SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) > 0
-         ? (SCIP_Real)SCIPhistoryGetNCutoffs(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)
+         ? SCIPhistoryGetCutoffSum(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)
          / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) : 0.0,
          SCIPhistoryGetPseudocost(scip->stat->glbhistory, -1.0),
          SCIPhistoryGetPseudocost(scip->stat->glbhistory, +1.0));

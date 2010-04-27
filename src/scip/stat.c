@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.85 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.86 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -152,7 +152,7 @@ void SCIPstatReset(
 
    SCIPhistoryReset(stat->glbhistory);
 
-   stat->conflictscoreweight = 1.0;
+   stat->vsidsweight = 1.0;
    stat->nlpiterations = 0;
    stat->nrootlpiterations = 0;
    stat->nprimallpiterations = 0;

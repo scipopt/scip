@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.27 2010/04/20 16:09:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.28 2010/04/27 12:11:13 bzfberth Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -422,8 +422,8 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelPscost)
       }
       else
       {
-         pscostdown = SCIPgetVarPseudocost(scip, cand, -deltaminus);
-         pscostup   = SCIPgetVarPseudocost(scip, cand,  deltaplus);
+         pscostdown = SCIPgetVarPseudocostVal(scip, cand, -deltaminus);
+         pscostup   = SCIPgetVarPseudocostVal(scip, cand,  deltaplus);
          brscore    = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
       }
       SCIPdebugMessage("branching score variable <%s> = %g; \tscore = %g; \ttype=%d  bestbrscore=%g\n", SCIPvarGetName(cand), brscore, 0.1 * scoresum + 0.8 * scoremin + 1.3 * scoremax, SCIPvarGetType(cand), bestbrscore);

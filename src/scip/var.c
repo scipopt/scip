@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.272 2010/04/22 13:31:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.273 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -591,7 +591,7 @@ SCIP_RETCODE SCIPboundchgApply(
       else if( stat->lastbranchvar != NULL )
       {
          /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
-         SCIP_CALL( SCIPvarIncNInferences(stat->lastbranchvar, stat, stat->lastbranchdir) );
+         SCIP_CALL( SCIPvarIncInferenceSum(stat->lastbranchvar, stat, stat->lastbranchdir, 1.0) );
       }
       boundchg->applied = TRUE;
    }
@@ -9775,11 +9775,11 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    }
 }
 
-/** increases the conflict score of the variable by the given weight */
-SCIP_RETCODE SCIPvarIncConflictScore(
+/** increases VSIDS of the variable by the given weight */
+SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
-   SCIP_Real             weight              /**< weight of this update in conflict score */
+   SCIP_Real             weight              /**< weight of this update in VSIDS */
    )
 {
    assert(var != NULL);
@@ -9790,40 +9790,40 @@ SCIP_RETCODE SCIPvarIncConflictScore(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
       {
-         SCIPerrorMessage("cannot update conflict score of original untransformed variable\n");
+         SCIPerrorMessage("cannot update VSIDS of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarIncConflictScore(var->data.original.transvar, dir, weight) );
+      SCIP_CALL( SCIPvarIncVSIDS(var->data.original.transvar, dir, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      SCIPhistoryIncConflictScore(var->history, dir, weight);
-      SCIPhistoryIncConflictScore(var->historycrun, dir, weight);
+      SCIPhistoryIncVSIDS(var->history, dir, weight);
+      SCIPhistoryIncVSIDS(var->historycrun, dir, weight);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      SCIPerrorMessage("cannot update conflict score of a fixed variable\n");
+      SCIPerrorMessage("cannot update VSIDS of a fixed variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         SCIP_CALL( SCIPvarIncConflictScore(var->data.aggregate.var, dir, weight) );
+         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, dir, weight) );
       }
       else
       {
          assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncConflictScore(var->data.aggregate.var, SCIPbranchdirOpposite(dir), weight) );
+         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, SCIPbranchdirOpposite(dir), weight) );
       }
       return SCIP_OKAY;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPerrorMessage("cannot update conflict score of a multi-aggregated variable\n");
+      SCIPerrorMessage("cannot update VSIDS of a multi-aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncConflictScore(var->negatedvar, SCIPbranchdirOpposite(dir), weight) );
+      SCIP_CALL( SCIPvarIncVSIDS(var->negatedvar, SCIPbranchdirOpposite(dir), weight) );
       return SCIP_OKAY;
       
    default:
@@ -9832,10 +9832,10 @@ SCIP_RETCODE SCIPvarIncConflictScore(
    }
 }
 
-/** increases the conflict score of the variable by the given weight */
-SCIP_RETCODE SCIPvarScaleConflictScores(
+/** scales the VSIDS of the variable by the given scalar */
+SCIP_RETCODE SCIPvarScaleVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
+   SCIP_Real             scalar              /**< scalar to multiply the VSIDSs with */
    )
 {
    assert(var != NULL);
@@ -9845,32 +9845,32 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
       {
-         SCIPerrorMessage("cannot update conflict score of original untransformed variable\n");
+         SCIPerrorMessage("cannot update VSIDS of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarScaleConflictScores(var->data.original.transvar, scalar) );
+      SCIP_CALL( SCIPvarScaleVSIDS(var->data.original.transvar, scalar) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      SCIPhistoryScaleConflictScores(var->history, scalar);
-      SCIPhistoryScaleConflictScores(var->historycrun, scalar);
+      SCIPhistoryScaleVSIDS(var->history, scalar);
+      SCIPhistoryScaleVSIDS(var->historycrun, scalar);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      SCIPerrorMessage("cannot update conflict score of a fixed variable\n");
+      SCIPerrorMessage("cannot update VSIDS of a fixed variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      SCIP_CALL( SCIPvarScaleConflictScores(var->data.aggregate.var, scalar) );
+      SCIP_CALL( SCIPvarScaleVSIDS(var->data.aggregate.var, scalar) );
       return SCIP_OKAY;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPerrorMessage("cannot update conflict score of a multi-aggregated variable\n");
+      SCIPerrorMessage("cannot update VSIDS of a multi-aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarScaleConflictScores(var->negatedvar, scalar) );
+      SCIP_CALL( SCIPvarScaleVSIDS(var->negatedvar, scalar) );
       return SCIP_OKAY;
       
    default:
@@ -9883,7 +9883,7 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
-   int                   length              /**< length of the conflict */
+   SCIP_Real             length              /**< length of the conflict */
    )
 {
    assert(var != NULL);
@@ -10176,11 +10176,12 @@ SCIP_RETCODE SCIPvarIncNBranchings(
    }
 }
 
-/** increases the number of inferences counter of the variable */
-SCIP_RETCODE SCIPvarIncNInferences(
+/** increases the inference sum of the variable by the given weight */
+SCIP_RETCODE SCIPvarIncInferenceSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Real             weight              /**< weight of this update in inference sum */
    )
 {
    assert(var != NULL);
@@ -10195,15 +10196,15 @@ SCIP_RETCODE SCIPvarIncNInferences(
          SCIPerrorMessage("cannot update inference counter of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarIncNInferences(var->data.original.transvar, stat, dir) );
+      SCIP_CALL( SCIPvarIncInferenceSum(var->data.original.transvar, stat, dir, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      SCIPhistoryIncNInferences(var->history, dir);
-      SCIPhistoryIncNInferences(var->historycrun, dir);
-      SCIPhistoryIncNInferences(stat->glbhistory, dir);
-      SCIPhistoryIncNInferences(stat->glbhistorycrun, dir);
+      SCIPhistoryIncInferenceSum(var->history, dir, weight);
+      SCIPhistoryIncInferenceSum(var->historycrun, dir, weight);
+      SCIPhistoryIncInferenceSum(stat->glbhistory, dir, weight);
+      SCIPhistoryIncInferenceSum(stat->glbhistorycrun, dir, weight);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -10213,12 +10214,12 @@ SCIP_RETCODE SCIPvarIncNInferences(
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         SCIP_CALL( SCIPvarIncNInferences(var->data.aggregate.var, stat, dir) );
+         SCIP_CALL( SCIPvarIncInferenceSum(var->data.aggregate.var, stat, dir, weight) );
       }
       else
       {
          assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncNInferences(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir)) );
+         SCIP_CALL( SCIPvarIncInferenceSum(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), weight) );
       }
       return SCIP_OKAY;
       
@@ -10227,7 +10228,7 @@ SCIP_RETCODE SCIPvarIncNInferences(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncNInferences(var->negatedvar, stat, SCIPbranchdirOpposite(dir)) );
+      SCIP_CALL( SCIPvarIncInferenceSum(var->negatedvar, stat, SCIPbranchdirOpposite(dir), weight) );
       return SCIP_OKAY;
       
    default:
@@ -10236,72 +10237,12 @@ SCIP_RETCODE SCIPvarIncNInferences(
    }
 }
 
-/** increases the number of inferences counter of the variable by a certain value*/
-SCIP_RETCODE SCIPvarIncNInferencesVal(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_STAT*            stat,               /**< problem statistics */   
-   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
-   int                   val                 /**< value by which the number of inferences counter is increased */
-   )
-{
-   assert(var != NULL);
-   assert(stat != NULL);
-   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
-
-   switch( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar == NULL )
-      {
-         SCIPerrorMessage("cannot initialize inference counter of original untransformed variable\n");
-         return SCIP_INVALIDDATA;
-      }
-      SCIP_CALL( SCIPvarIncNInferencesVal(var->data.original.transvar, stat, dir, val) );
-      return SCIP_OKAY;
-
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-      SCIPhistoryIncNInferencesVal(var->history, dir, val);
-      SCIPhistoryIncNInferencesVal(var->historycrun, dir, val);
-      SCIPhistoryIncNInferencesVal(stat->glbhistory, dir, val);
-      SCIPhistoryIncNInferencesVal(stat->glbhistorycrun, dir, val);
-      return SCIP_OKAY;
-
-   case SCIP_VARSTATUS_FIXED:
-      SCIPerrorMessage("cannot initialize inference counter of a fixed variable\n");
-      return SCIP_INVALIDDATA;
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      if( var->data.aggregate.scalar > 0.0 )
-      {
-         SCIP_CALL( SCIPvarIncNInferencesVal(var->data.aggregate.var, stat, dir, val) );
-      }
-      else
-      {
-         assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncNInferencesVal(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), val) );
-      }
-      return SCIP_OKAY;
-      
-   case SCIP_VARSTATUS_MULTAGGR:
-      SCIPerrorMessage("cannot initialize inference counter of a multi-aggregated variable\n");
-      return SCIP_INVALIDDATA;
-
-   case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncNInferencesVal(var->negatedvar, stat, SCIPbranchdirOpposite(dir), val) );
-      return SCIP_OKAY;
-      
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      return SCIP_INVALIDDATA;
-   }
-}
-
-/** increases the number of cutoffs counter of the variable */
-SCIP_RETCODE SCIPvarIncNCutoffs(
+/** increases the cutoff sum of the variable by the given weight */
+SCIP_RETCODE SCIPvarIncCutoffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Real             weight              /**< weight of this update in cutoff sum */
    )
 {
    assert(var != NULL);
@@ -10313,42 +10254,42 @@ SCIP_RETCODE SCIPvarIncNCutoffs(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
       {
-         SCIPerrorMessage("cannot update cutoff counter of original untransformed variable\n");
+         SCIPerrorMessage("cannot update cutoff sum of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarIncNCutoffs(var->data.original.transvar, stat, dir) );
+      SCIP_CALL( SCIPvarIncCutoffSum(var->data.original.transvar, stat, dir, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      SCIPhistoryIncNCutoffs(var->history, dir);
-      SCIPhistoryIncNCutoffs(var->historycrun, dir);
-      SCIPhistoryIncNCutoffs(stat->glbhistory, dir);
-      SCIPhistoryIncNCutoffs(stat->glbhistorycrun, dir);
+      SCIPhistoryIncCutoffSum(var->history, dir, weight);
+      SCIPhistoryIncCutoffSum(var->historycrun, dir, weight);
+      SCIPhistoryIncCutoffSum(stat->glbhistory, dir, weight);
+      SCIPhistoryIncCutoffSum(stat->glbhistorycrun, dir, weight);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      SCIPerrorMessage("cannot update cutoff counter of a fixed variable\n");
+      SCIPerrorMessage("cannot update cutoff sum of a fixed variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         SCIP_CALL( SCIPvarIncNCutoffs(var->data.aggregate.var, stat, dir) );
+         SCIP_CALL( SCIPvarIncCutoffSum(var->data.aggregate.var, stat, dir, weight) );
       }
       else
       {
          assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncNCutoffs(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir)) );
+         SCIP_CALL( SCIPvarIncCutoffSum(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), weight) );
       }
       return SCIP_OKAY;
       
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPerrorMessage("cannot update cutoff counter of a multi-aggregated variable\n");
+      SCIPerrorMessage("cannot update cutoff sum of a multi-aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncNCutoffs(var->negatedvar, stat, SCIPbranchdirOpposite(dir)) );
+      SCIP_CALL( SCIPvarIncCutoffSum(var->negatedvar, stat, SCIPbranchdirOpposite(dir), weight) );
       return SCIP_OKAY;
       
    default:
@@ -10534,7 +10475,7 @@ SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
 }
 
 /** returns the average number of inferences found after branching on the variable in given direction */
-SCIP_Real SCIPvarGetConflictScore_rec(
+SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -10545,7 +10486,7 @@ SCIP_Real SCIPvarGetConflictScore_rec(
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPvarGetConflictScore(var->data.original.transvar, stat, dir);
+      return SCIPvarGetVSIDS(var->data.original.transvar, stat, dir);
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -10553,26 +10494,26 @@ SCIP_Real SCIPvarGetConflictScore_rec(
       if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetConflictScore(var->data.original.transvar, stat, dir);
+         return SCIPvarGetVSIDS(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetConflictScore(var->history, dir)/stat->conflictscoreweight;
+      return SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight;
 
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetConflictScore(var->data.aggregate.var, stat, dir);
+         return SCIPvarGetVSIDS(var->data.aggregate.var, stat, dir);
       else
-         return SCIPvarGetConflictScore(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetVSIDS(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetConflictScore(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetVSIDS(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -10584,7 +10525,7 @@ SCIP_Real SCIPvarGetConflictScore_rec(
 /** returns the average number of inferences found after branching on the variable in given direction
  *  in the current run
  */
-SCIP_Real SCIPvarGetConflictScoreCurrentRun(
+SCIP_Real SCIPvarGetVSIDSCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -10600,26 +10541,26 @@ SCIP_Real SCIPvarGetConflictScoreCurrentRun(
       if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetConflictScoreCurrentRun(var->data.original.transvar, stat, dir);
+         return SCIPvarGetVSIDSCurrentRun(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetConflictScore(var->historycrun, dir)/stat->conflictscoreweight;
+      return SCIPhistoryGetVSIDS(var->historycrun, dir)/stat->vsidsweight;
 
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetConflictScoreCurrentRun(var->data.aggregate.var, stat, dir);
+         return SCIPvarGetVSIDSCurrentRun(var->data.aggregate.var, stat, dir);
       else
-         return SCIPvarGetConflictScoreCurrentRun(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetVSIDSCurrentRun(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetConflictScoreCurrentRun(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetVSIDSCurrentRun(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -10629,7 +10570,7 @@ SCIP_Real SCIPvarGetConflictScoreCurrentRun(
 }
 
 /** returns the number of inferences branching on this variable in given direction triggered */
-SCIP_Longint SCIPvarGetNInferences(
+SCIP_Real SCIPvarGetInferenceSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
@@ -10641,40 +10582,40 @@ SCIP_Longint SCIPvarGetNInferences(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
-         return 0;
+         return 0.0;
       else
-         return SCIPvarGetNInferences(var->data.original.transvar, dir);
+         return SCIPvarGetInferenceSum(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetNInferences(var->history, dir);
+      return SCIPhistoryGetInferenceSum(var->history, dir);
 
    case SCIP_VARSTATUS_FIXED:
-      return 0;
+      return 0.0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNInferences(var->data.aggregate.var, dir);
+         return SCIPvarGetInferenceSum(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetNInferences(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetInferenceSum(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
-      return 0;
+      return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNInferences(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetInferenceSum(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0; /*lint !e527*/
+      return 0.0; /*lint !e527*/
    }
 }
 
 /** returns the number of inferences branching on this variable in given direction triggered
  *  in the current run
  */
-SCIP_Longint SCIPvarGetNInferencesCurrentRun(
+SCIP_Real SCIPvarGetInferenceSumCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
@@ -10686,33 +10627,33 @@ SCIP_Longint SCIPvarGetNInferencesCurrentRun(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
-         return 0;
+         return 0.0;
       else
-         return SCIPvarGetNInferencesCurrentRun(var->data.original.transvar, dir);
+         return SCIPvarGetInferenceSumCurrentRun(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetNInferences(var->historycrun, dir);
+      return SCIPhistoryGetInferenceSum(var->historycrun, dir);
 
    case SCIP_VARSTATUS_FIXED:
-      return 0;
+      return 0.0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNInferencesCurrentRun(var->data.aggregate.var, dir);
+         return SCIPvarGetInferenceSumCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetNInferencesCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetInferenceSumCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
-      return 0;
+      return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNInferencesCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetInferenceSumCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0; /*lint !e527*/
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -10829,7 +10770,7 @@ SCIP_Real SCIPvarGetAvgInferencesCurrentRun(
 }
 
 /** returns the number of cutoffs branching on this variable in given direction produced */
-SCIP_Longint SCIPvarGetNCutoffs(
+SCIP_Real SCIPvarGetCutoffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
@@ -10843,26 +10784,26 @@ SCIP_Longint SCIPvarGetNCutoffs(
       if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNCutoffs(var->data.original.transvar, dir);
+         return SCIPvarGetCutoffSum(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetNCutoffs(var->history, dir);
+      return SCIPhistoryGetCutoffSum(var->history, dir);
 
    case SCIP_VARSTATUS_FIXED:
       return 0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNCutoffs(var->data.aggregate.var, dir);
+         return SCIPvarGetCutoffSum(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetNCutoffs(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetCutoffSum(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNCutoffs(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetCutoffSum(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -10872,7 +10813,7 @@ SCIP_Longint SCIPvarGetNCutoffs(
 }
 
 /** returns the number of cutoffs branching on this variable in given direction produced in the current run */
-SCIP_Longint SCIPvarGetNCutoffsCurrentRun(
+SCIP_Real SCIPvarGetCutoffSumCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
@@ -10886,26 +10827,26 @@ SCIP_Longint SCIPvarGetNCutoffsCurrentRun(
       if( var->data.original.transvar == NULL )
          return 0;
       else
-         return SCIPvarGetNCutoffsCurrentRun(var->data.original.transvar, dir);
+         return SCIPvarGetCutoffSumCurrentRun(var->data.original.transvar, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetNCutoffs(var->historycrun, dir);
+      return SCIPhistoryGetCutoffSum(var->historycrun, dir);
 
    case SCIP_VARSTATUS_FIXED:
       return 0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetNCutoffsCurrentRun(var->data.aggregate.var, dir);
+         return SCIPvarGetCutoffSumCurrentRun(var->data.aggregate.var, dir);
       else
-         return SCIPvarGetNCutoffsCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetCutoffSumCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNCutoffsCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetCutoffSumCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -11646,7 +11587,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetPseudoSol
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
-#undef SCIPvarGetConflictScore
+#undef SCIPvarGetVSIDS
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
 #undef SCIPbdchginfoGetOldbound
@@ -12449,7 +12390,7 @@ SCIP_Real SCIPvarGetPseudoSol(
 }
 
 /** gets primal LP solution value of variable */
-SCIP_Real SCIPvarGetConflictScore(
+SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -12458,9 +12399,9 @@ SCIP_Real SCIPvarGetConflictScore(
    assert(var != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPhistoryGetConflictScore(var->history, dir)/stat->conflictscoreweight;
+      return SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight;
    else
-      return SCIPvarGetConflictScore_rec(var, stat, dir);
+      return SCIPvarGetVSIDS_rec(var, stat, dir);
 }
 
 /** includes event handler with given data in variable's event filter */

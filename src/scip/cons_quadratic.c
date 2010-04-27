@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.91 2010/04/22 10:45:05 bzfgleix Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.92 2010/04/27 12:11:13 bzfberth Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -689,8 +689,8 @@ SCIP_RETCODE selectBranchingVariable(
             score = SCIPinfinity(scip);
          else
          {
-            pscostdown = SCIPgetVarPseudocost(scip, cand, -deltaminus);
-            pscostup = SCIPgetVarPseudocost(scip, cand,  deltaplus);
+            pscostdown = SCIPgetVarPseudocostVal(scip, cand, -deltaminus);
+            pscostup = SCIPgetVarPseudocostVal(scip, cand,  deltaplus);
             score = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
          }
          SCIPdebugMessage("branching score variable %s = %g; \tinfeas = %g; \ttype=%d  bestscore=%g\n", 

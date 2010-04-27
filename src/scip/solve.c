@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.291 2010/01/30 15:30:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.292 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -3226,7 +3226,7 @@ SCIP_RETCODE SCIPsolveCIP(
                /* increase the cutoff counter of the branching variable */
                if( stat->lastbranchvar != NULL )
                {
-                  SCIP_CALL( SCIPvarIncNCutoffs(stat->lastbranchvar, stat, stat->lastbranchdir) );
+                  SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, stat, stat->lastbranchdir, 1.0) );
                }
                /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
             }

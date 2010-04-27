@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.131 2010/02/22 20:56:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.132 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -1039,15 +1039,15 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 
 /** increases the conflict score of the variable by the given weight */
 extern
-SCIP_RETCODE SCIPvarIncConflictScore(
+SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             weight              /**< weight of this update in conflict score */
    );
 
-/** increases the conflict score of the variable by the given weight */
+/** scales the VSIDS of the variable by the given scalar */
 extern
-SCIP_RETCODE SCIPvarScaleConflictScores(
+SCIP_RETCODE SCIPvarScaleVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    );
@@ -1056,7 +1056,7 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
-   int                   length              /**< length of the conflict */
+   SCIP_Real             length              /**< length of the conflict */
    );
 
 /**  gets the number of active conflicts containing this variable in given direction */
@@ -1098,34 +1098,27 @@ SCIP_RETCODE SCIPvarIncNBranchings(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
-/** increases the number of inferences counter of the variable */
+/** increases the inference score of the variable by the given weight */
 extern
-SCIP_RETCODE SCIPvarIncNInferences(
+SCIP_RETCODE SCIPvarIncInferenceSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
-   );
-
-/** increases the number of inferences counter of the variable by a certain value*/
-extern
-SCIP_RETCODE SCIPvarIncNInferencesVal(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_STAT*            stat,               /**< problem statistics */   
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
-   int                   val                 /**< value by which the number of inferences counter is increased */
+   SCIP_Real             weight              /**< weight of this update in inference score */
    );
 
-/** increases the number of cutoffs counter of the variable */
+/** increases the cutoff score of the variable by the given weight */
 extern
-SCIP_RETCODE SCIPvarIncNCutoffs(
+SCIP_RETCODE SCIPvarIncCutoffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Real             weight              /**< weight of this update in cutoff score */
    );
 
 /** returns the average number of inferences found after branching on the variable in given direction */
 extern
-SCIP_Real SCIPvarGetConflictScore_rec(
+SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1135,7 +1128,7 @@ SCIP_Real SCIPvarGetConflictScore_rec(
  *  in the current run
  */
 extern
-SCIP_Real SCIPvarGetConflictScoreCurrentRun(
+SCIP_Real SCIPvarGetVSIDSCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1216,7 +1209,7 @@ SCIP_RETCODE SCIPvarDropEvent(
 
 /** returns the average number of inferences found after branching on the variable in given direction */
 extern
-SCIP_Real SCIPvarGetConflictScore(
+SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1232,8 +1225,8 @@ SCIP_Real SCIPvarGetConflictScore(
    SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
 #define SCIPvarDropEvent(var, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) \
    SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
-#define SCIPvarGetConflictScore(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
-      SCIPhistoryGetConflictScore(var->history, dir)/stat->conflictscoreweight : SCIPvarGetConflictScore_rec(var, stat, dir))
+#define SCIPvarGetVSIDS(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
+      SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
 
 #endif
 

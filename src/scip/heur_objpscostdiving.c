@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.46 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.47 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -101,8 +101,8 @@ void calcPscostQuot(
    frac = MIN(frac, 0.9);
    
    /* get pseudo cost quotient */
-   pscostdown = SCIPgetVarPseudocost(scip, var, 0.0-frac);
-   pscostup = SCIPgetVarPseudocost(scip, var, 1.0-frac);
+   pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0-frac);
+   pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0-frac);
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
    
    /* choose rounding direction */

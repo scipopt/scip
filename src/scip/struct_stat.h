@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.57 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.58 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -77,7 +77,7 @@ struct SCIP_Stat
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
-   SCIP_Real             conflictscoreweight;/**< current weight to use for updating conflict scores in history */
+   SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
    SCIP_Real             firstprimalbound;   /**< objective value of first primal solution */
    SCIP_Real             firstprimaltime;    /**< time (in seconds) needed for first primal solution */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */

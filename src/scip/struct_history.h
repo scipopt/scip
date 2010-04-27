@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.21 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_history.h,v 1.22 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   struct_history.h
  * @brief  datastructures for branching and inference history
@@ -37,12 +37,12 @@ struct SCIP_History
 {
    SCIP_Real             pscostcount[2];     /**< nr of (partial) summands in down/upwards pseudo costs (may be fractional) */
    SCIP_Real             pscostsum[2];       /**< sum of (partial) pseudo cost values for down/upwards branching */
-   SCIP_Real             conflictscore[2];   /**< degree of how often the variable was reason for a conflict */
-   SCIP_Longint          nactiveconflicts[2];/**< number of active conflicts for which the variable gave reason ?????? */
-   SCIP_Longint          conflengthsum[2];   /** overall length of all active conflicts for which the variable gave reason ?????? */
+   SCIP_Real             vsids[2];           /**< degree of how often the variable was reason for a conflict */
+   SCIP_Real             conflengthsum[2];   /**< overall length of all active conflicts for which the variable gave reason */
+   SCIP_Real             inferencesum[2];    /**< degree of how often branching on the variable lead to inference of another bound */
+   SCIP_Real             cutoffsum[2];       /**< degree of how often branching on the variable lead to an infeasible sub problem */
+   SCIP_Longint          nactiveconflicts[2];/**< number of active conflicts for which the variable gave reason */
    SCIP_Longint          nbranchings[2];     /**< nr of times, the variable changed its bounds due to branching */
-   SCIP_Longint          ninferences[2];     /**< nr of times, branching on the variable lead to inference of another bound */
-   SCIP_Longint          ncutoffs[2];        /**< nr of times, branching on the variable lead to an infeasible sub problem */
    SCIP_Longint          branchdepthsum[2];  /**< sum of depth levels, at which the branching bound changes took place */
 };
 

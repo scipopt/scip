@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.78 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.79 2010/04/27 12:11:14 bzfberth Exp $"
 
 /**@file   pub_var.h
  * @ingroup PUBLICMETHODS
@@ -188,7 +188,7 @@ SCIP_Longint SCIPvarGetNBranchingsCurrentRun(
 
 /** returns the number of inferences branching on this variable in given direction triggered */
 extern
-SCIP_Longint SCIPvarGetNInferences(
+SCIP_Real SCIPvarGetInferenceSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
@@ -197,21 +197,21 @@ SCIP_Longint SCIPvarGetNInferences(
  *  in the current run
  */
 extern
-SCIP_Longint SCIPvarGetNInferencesCurrentRun(
+SCIP_Real SCIPvarGetInferenceSumCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of cutoffs branching on this variable in given direction produced */
 extern
-SCIP_Longint SCIPvarGetNCutoffs(
+SCIP_Real SCIPvarGetCutoffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** returns the number of cutoffs branching on this variable in given direction produced in the current run */
 extern
-SCIP_Longint SCIPvarGetNCutoffsCurrentRun(
+SCIP_Real SCIPvarGetCutoffSumCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
