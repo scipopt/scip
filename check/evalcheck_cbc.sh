@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cbc.sh,v 1.8 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: evalcheck_cbc.sh,v 1.9 2010/04/28 15:06:21 bzfwanie Exp $
 
 export LANG=C
 
@@ -39,7 +39,7 @@ do
     TMPFILE=$NAME.tmp
 
     echo $NAME >$TMPFILE
-    TSTNAME=`sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g' $TMPFILE`
+    TSTNAME=`sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g' $TMPFILE`
     rm $TMPFILE
 
     if test -f $TSTNAME.solu

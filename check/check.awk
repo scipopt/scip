@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.83 2010/04/21 10:21:23 bzfwanie Exp $
+# $Id: check.awk,v 1.84 2010/04/28 15:06:21 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -44,6 +44,8 @@ BEGIN {
    onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   writesolufile = 0;   # should a solution file be created from the results
+   NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
@@ -595,6 +597,23 @@ BEGIN {
          }
          else
             status = "unknown";
+      }
+
+      if( writesolufile )
+      {
+         if( pb == +infty && db == +infty )
+            printf("=inf= ")>NEWSOLUFILE;
+         else if( pb == db )
+            printf("=opt= ")>NEWSOLUFILE;
+         else if ( pb < +infty )
+            printf("=best= ")>NEWSOLUFILE;
+         else
+            printf("=unkn= ")>NEWSOLUFILE;
+
+         if( pb < +infty || pb == db )
+            printf("%s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else
+            printf("%s ?\n",prob)>NEWSOLUFILE;
       }
 
       if( !onlypresolvereductions || origcons > cons || origvars > vars )

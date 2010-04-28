@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.43 2010/03/30 13:01:05 bzfwanie Exp $
+# $Id: check_cplex.awk,v 1.44 2010/04/28 15:06:21 bzfwanie Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -34,6 +34,8 @@ BEGIN {
    nodegeomshift = 1000.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   writesolufile = 0;   # should a solution file be created from the results
+   NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
@@ -521,6 +523,23 @@ BEGIN {
          }
          else
             printf("unknown\n");
+      }
+      
+      if( writesolufile )
+      {
+         if( pb == +infty && db == +infty )
+            printf("=inf= ")>NEWSOLUFILE;
+         else if( pb == db )
+            printf("=opt= ")>NEWSOLUFILE;
+         else if ( pb < +infty )
+            printf("=best= ")>NEWSOLUFILE;
+         else
+            printf("=unkn= ")>NEWSOLUFILE;
+
+         if( pb < +infty || pb == db )
+            printf("%s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else
+            printf("%s ?\n",prob)>NEWSOLUFILE;
       }
    
       sbab     += bbnodes;
