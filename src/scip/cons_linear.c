@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.355 2010/04/22 10:45:05 bzfgleix Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.356 2010/04/28 13:12:59 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -760,6 +760,55 @@ SCIP_Bool getNextToken(
 
    return TRUE;
 }
+
+/** for a given name of a negated variable (i.e., "<original name>_neg"), tries to find the corresponding negated variable
+ * returns NULL in *negvar if a variable under name <original name> does not exits
+ * creates negated variable if not existing yet
+ */
+static
+SCIP_RETCODE findNegatedVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 name,               /**< name of negated variable */
+   SCIP_VAR**            negvar              /**< buffer to store pointer to negated variable (created if not yet existing) */
+)
+{
+   char      buf[SCIP_MAXSTRLEN];
+   int       namelen;
+   SCIP_VAR* var;
+   
+   assert(scip   != NULL);
+   assert(name   != NULL);
+   assert(negvar != NULL);
+   
+   *negvar = NULL;
+   
+   namelen = strlen(name);
+   /* if name is too short, then it cannot be the one of a negated variable */
+   if( namelen <= 4 )
+      return SCIP_OKAY;
+      
+   /* if name does not end by _neg, then it cannot be the one of a negated variable */
+   if( strcmp(&buf[namelen-4], "_neg") != 0 )
+      return SCIP_OKAY;
+   
+   assert(namelen <= SCIP_MAXSTRLEN);
+
+   /* create name of original variable by removing '_neg' */
+   strncpy(buf, name, namelen-4);
+   buf[namelen-4] = '\0';
+   
+   var = SCIPfindVar(scip, buf);
+   if( var == NULL )
+   {
+      SCIPdebugMessage("could not find original variable <%s> for negated variable <%s>\n", buf, name);
+      return SCIP_OKAY;
+   }
+   
+   SCIP_CALL( SCIPgetNegatedVar(scip, var, negvar) );
+   
+   return SCIP_OKAY;
+}
+   
 
 /*
  * local methods
@@ -9555,6 +9604,11 @@ SCIP_DECL_CONSPARSE(consParseLinear)
 
       /* the token is a variable name: get the corresponding variable (or create a new one) */
       var = SCIPfindVar(scip, tokenizer.token);
+      /* if a variable under this name could not be found, then maybe because it was a negated variable */
+      if( var == NULL )
+      {
+         SCIP_CALL( findNegatedVar(scip, tokenizer.token, &var) );
+      }
       
       if( var == NULL )
       {
