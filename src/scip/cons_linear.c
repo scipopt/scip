@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.356 2010/04/28 13:12:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.357 2010/04/28 17:44:57 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -788,7 +788,7 @@ SCIP_RETCODE findNegatedVar(
       return SCIP_OKAY;
       
    /* if name does not end by _neg, then it cannot be the one of a negated variable */
-   if( strcmp(&buf[namelen-4], "_neg") != 0 )
+   if( strcmp(&name[namelen-4], "_neg") != 0 )
       return SCIP_OKAY;
    
    assert(namelen <= SCIP_MAXSTRLEN);
@@ -9612,7 +9612,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", tokenizer.token);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s> in linear constraint <%s>\n", tokenizer.token, name);
          (*success) = FALSE;
       }
       
