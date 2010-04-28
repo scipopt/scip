@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.341 2010/04/26 19:32:46 bzfpfets Exp $
+# $Id: Makefile,v 1.342 2010/04/28 09:45:42 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -652,7 +652,7 @@ ifeq ($(VERBOSE),false)
 endif
 
 .PHONY: all
-all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(NLPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+all: checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -664,6 +664,9 @@ lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
+.PHONY: nlpilib
+nlpilib:	$(NLPILIBLINK)
+
 .PHONY: doc
 doc:		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy
@@ -672,7 +675,7 @@ doc:
 check:		test
 
 .PHONY: test
-test:		
+test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
@@ -848,8 +851,8 @@ depend:		lpidepend nlpidepend maindepend
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
 -include	$(OBJSCIPLIBDEP)
--include 	$(LPILIBDEP)
--include 	$(NLPILIBDEP)
+-include	$(LPILIBDEP)
+-include	$(NLPILIBDEP)
 
 $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
