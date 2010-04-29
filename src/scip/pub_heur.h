@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.22 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.23 2010/04/29 13:05:03 bzfshina Exp $"
 
 /**@file   pub_heur.h
  * @ingroup PUBLICMETHODS
@@ -92,6 +92,13 @@ int SCIPheurGetPriority(
 extern
 int SCIPheurGetFreq(
    SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** sets frequency of primal heuristic */
+extern
+void SCIPheurSetFreq(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   int                   freq                /**< new frequency of heuristic */
    );
 
 /** gets frequency offset of primal heuristic */

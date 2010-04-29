@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.75 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.76 2010/04/29 13:05:03 bzfshina Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -543,6 +543,17 @@ int SCIPheurGetFreq(
    assert(heur != NULL);
 
    return heur->freq;
+}
+
+/** sets frequency of primal heuristic */
+void SCIPheurSetFreq(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   int                   freq                /**< new frequency of heuristic */
+   )
+{
+   assert(heur != NULL);
+   
+   heur->freq = freq;
 }
 
 /** gets frequency offset of primal heuristic */

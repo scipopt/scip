@@ -39,6 +39,7 @@ interface:
   separation to aggressive, fast, or off settings, respectively
 - new methods SCIPsetPresolvingAggressive() SCIPsetPresolvingFast(), and SCIPsetPresolvingOff() which set
   separation to aggressive, fast, or off settings, respectively
+- new method for heuristics SCIPheurSetFreq() to change the frequency of the heuristic (pub_heur.h, heur.c)
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
