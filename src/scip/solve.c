@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.292 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.293 2010/04/30 12:43:35 bzfwinkm Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -334,16 +334,16 @@ SCIP_RETCODE propagationRound(
       }
    }
 
-    /* call primal heuristics that are applicable during propagation loop, 
-     * if the heuristics find a new incumbent solution, propagate again.
-     */
-    if( !(*cutoff) && !SCIPtreeProbing(tree))
-    {
-       assert(result != SCIP_CUTOFF);
-       foundsol = FALSE;
-       SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_DURINGPROPLOOP, &foundsol) );
-       *propagain = *propagain || foundsol;
-    }
+   /* call primal heuristics that are applicable during propagation loop, 
+    * if the heuristics find a new incumbent solution, propagate again.
+    */
+   if( !(*cutoff) && !SCIPtreeProbing(tree))
+   {
+      assert(result != SCIP_CUTOFF);
+      foundsol = FALSE;
+      SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_DURINGPROPLOOP, &foundsol) );
+      *propagain = *propagain || foundsol;
+   }
 
    return SCIP_OKAY;
 }
@@ -1878,7 +1878,6 @@ SCIP_RETCODE solveNodeLP(
       SCIP_CALL( priceAndCutLoop(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, cutpool,
             branchcand, conflict, eventfilter, eventqueue, initiallpsolved, cutoff, unbounded, lperror, pricingaborted) );
    }
-
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
    /* If pricing was aborted while solving the LP of the node and the node can not be cut off due to the lower bound computed by the pricer,
@@ -1911,9 +1910,7 @@ SCIP_RETCODE solveNodeLP(
       {
          *cutoff = TRUE;
       }
-
    }
-
    assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || (*cutoff));
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
