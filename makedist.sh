@@ -36,6 +36,7 @@ $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
+$NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
