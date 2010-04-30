@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.4 2010/04/13 18:00:40 bzfpfets Exp $"
-
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.5 2010/04/30 21:10:59 bzfpfets Exp $"
+#define SCIP_DEBUG
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
@@ -315,8 +315,8 @@ SCIP_RETCODE transformColumn(
 
    colrows = SCIPcolGetRows(col);
    colvals = SCIPcolGetVals(col);
-   assert( colrows != NULL );
-   assert( colvals != NULL );
+   assert( SCIPcolGetNLPNonz(col) == 0 || colrows != NULL );
+   assert( SCIPcolGetNLPNonz(col) == 0 || colvals != NULL );
    assert( ! SCIPisZero(scip, sigma) );
 
    /* loop through rows that contain column */
@@ -570,9 +570,18 @@ SCIP_RETCODE createSubscip(
    /* store lhs/rhs for complementing (see below) */
    for (i = 0; i < nrows; ++i)
    {
+      SCIP_Real val;
       assert( rows[i] != NULL );
-      lhs[i] = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
-      rhs[i] = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
+
+      val = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      if ( SCIProwIsIntegral(rows[i]) )
+	 val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
+      lhs[i] = val;
+
+      val = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      if ( SCIProwIsIntegral(rows[i]) )
+	 val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
+      rhs[i] = val;
    }
 
    /* store lb/ub for complementing and perform preprocessing */
@@ -1132,7 +1141,14 @@ SCIP_RETCODE subscipSetParams(
 }
 
 
-/** Computes cut from the given multipliers */
+/** Computes cut from the given multipliers 
+ *
+ *  Note that the cut computed here in general will not be the same as the one computed with the
+ *  sub-MIP, because of numerical differences. Here, we only combine rows whose corresponding
+ *  multiplier is positive w.r.t. the feasibility tolerance. In the sub-MIP, however, the rows are
+ *  combined in any case. This makes a difference, if the coefficients in the matrix are large and
+ *  hence yield a value that is larger than the tolerance.
+ */
 static
 SCIP_RETCODE computeCut(
    SCIP*           scip,                /**< original scip */
@@ -1212,8 +1228,8 @@ SCIP_RETCODE computeCut(
 	 val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
 	 assert( ! SCIPisFeasNegative(subscip, val) );
 
-	 /* in a suboptimal solution both values may be positive - take the larger */
-	 if ( SCIPisFeasGT(scip, val, weight) )
+	 /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+	 if ( SCIPisFeasGT(scip, val, ABS(weight)) )
 	    weight = val;
       }
 
@@ -1257,7 +1273,7 @@ SCIP_RETCODE computeCut(
 	    assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
 	    val = SCIProwGetRhs(row) - SCIProwGetConstant(row);
 	    if ( SCIProwIsIntegral(row) )
-	       val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side up */
+	       val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
 	 }
 	 (*cutrhs) += weight * val;
 
@@ -1357,7 +1373,7 @@ SCIP_RETCODE computeCut(
 	    /* if the variable is complemented, the multiplier for the upper bound arises from the
 	       lower bound multiplier for the transformed problem - because of the minus-sign in the
 	       transformation this yields a round-up operation. */
-	    val = SCIPceil(scip, cutcoefs[j]) - cutcoefs[j];
+	    val = SCIPfeasCeil(scip, cutcoefs[j]) - cutcoefs[j];
 	    assert( ! SCIPisFeasNegative(scip, val) );
 
 	    /* only if variable needs to be rounded */
@@ -1380,7 +1396,7 @@ SCIP_RETCODE computeCut(
 	       }
 
 	       /* round cut coefficients, i.e., add val to cutcoefs[j] */
-	       cutcoefs[j] = SCIPceil(scip, cutcoefs[j]);
+	       cutcoefs[j] = SCIPfeasCeil(scip, cutcoefs[j]);
 
 	       /* correct rhs */
 	       if ( ! SCIPisSumZero(scip, ubnd) )
@@ -1390,7 +1406,7 @@ SCIP_RETCODE computeCut(
 	 else
 	 {
 	    /* compute multiplier for lower bound: */
-	    val = cutcoefs[j] - SCIPfloor(scip, cutcoefs[j]);
+	    val = cutcoefs[j] - SCIPfeasFloor(scip, cutcoefs[j]);
 	    assert( ! SCIPisFeasNegative(scip, val) );
 
 	    /* only if variable needs to be rounded */
@@ -1413,7 +1429,7 @@ SCIP_RETCODE computeCut(
 	       }
 
 	       /* round cut coefficients, i.e., subtract val from cutcoefs[j] */
-	       cutcoefs[j] = SCIPfloor(scip, cutcoefs[j]);
+	       cutcoefs[j] = SCIPfeasFloor(scip, cutcoefs[j]);
 
 	       /* correct rhs */
 	       if ( ! SCIPisSumZero(scip, lbnd) )
@@ -1429,7 +1445,7 @@ SCIP_RETCODE computeCut(
       }
    }
    /* round rhs */
-   *cutrhs = SCIPfloor(scip, *cutrhs);
+   *cutrhs = SCIPfeasFloor(scip, *cutrhs);
 
    return SCIP_OKAY;
 }
@@ -1527,14 +1543,18 @@ SCIP_RETCODE createCGCutsDirect(
 
       SCIPdebugMessage("act=%f, rhs=%f\n", cutact, cutrhs);
 
+      /* the following test should be treated with care because of numerical differences - see computeCut() */ 
 #if 0
-#ifdef SCIP_DEBUG
       {
 	 /* check for correctness of computed values */
 	 SCIP_Real obj = 0.0;
 	 SCIP_Real val;
 	 SCIP_Bool shifted = FALSE;
 	 unsigned int j;
+	 SCIP_COL** cols;
+	 int ncols;
+
+	 SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 	 for (j = 0; j < mipdata->ncols; ++j)
 	 {
 	    if ( mipdata->colType[j] == colPresent )
@@ -1555,7 +1575,7 @@ SCIP_RETCODE createCGCutsDirect(
 	 assert( shifted || SCIPisFeasEQ(scip, obj, cutact - cutrhs) );
       }
 #endif
-#endif
+
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if ( SCIPisFeasGT(scip, cutact, cutrhs) )
