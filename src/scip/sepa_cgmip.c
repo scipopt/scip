@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.5 2010/04/30 21:10:59 bzfpfets Exp $"
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.6 2010/05/02 22:24:29 bzfpfets Exp $"
+
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
@@ -63,11 +63,13 @@
 #define DEFAULT_USECMIR           FALSE /**< use CMIR-generator (otherwise add cut directly) */
 #define DEFAULT_ALLOWLOCAL        FALSE /**< allow to generate local cuts */
 #define DEFAULT_ONLYINTVARS       FALSE /**< generate cuts for problems with only integer variables? */
+#define DEFAULT_ONLYACTIVEROWS     TRUE /**< use only active rows to generate cuts? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
 
 #define EPSILONVALUE              1e-03 /**< epsilon value needed to model strict-inequalities */
+#define BETAEPSILONVALUE          1e-02 /**< epsilon value for fracbeta - is larger than EPSILONVALUE for numerical stability */
 #define CUTCOEFBND                 1000 /**< bounds on the values of the coefficients in the CG-cut */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
@@ -99,6 +101,7 @@ struct SCIP_SepaData
    SCIP_Bool             usecmir;            /**< use CMIR-generator (otherwise add cut directly) */
    SCIP_Bool             allowlocal;         /**< allow local cuts */
    SCIP_Bool             onlyintvars;        /**< generate cuts for problems with only integer variables? */
+   SCIP_Bool             onlyActiveRows;     /**< use only active rows to generate cuts? */
 };
 
 
@@ -592,16 +595,36 @@ SCIP_RETCODE createSubscip(
    for (j = 0; j < ncols; ++j)
    {
       SCIP_COL* col;
+      SCIP_VAR* var;
 
       col = cols[j];
       assert( col != NULL );
+      var = SCIPcolGetVar(col);
+      assert( var != NULL );
 
       primsol[j] = SCIPcolGetPrimsol(col);
       assert( SCIPcolGetVar(col) != NULL );
-      assert( SCIPgetVarSol(scip, SCIPcolGetVar(col)) == primsol[j] );
+      assert( SCIPgetVarSol(scip, var) == primsol[j] );
 
-      lb[j] = SCIPcolGetLb(col);
-      ub[j] = SCIPcolGetUb(col);
+      lb[j] = SCIPvarGetLbGlobal(var);
+      assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(col)) );
+
+      /* if allowed, try to use stronger local bound */
+      if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lb[j] )
+      {
+	 lb[j] = SCIPvarGetLbLocal(var);
+	 assert( SCIPisIntegral(scip, lb[j]) );
+      }
+
+      ub[j] = SCIPvarGetUbGlobal(var);
+      assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(col)) );
+
+      /* if allowed, try to use stronger local bound */
+      if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ub[j] )
+      {
+	 ub[j] = SCIPvarGetUbLocal(var);
+	 assert( SCIPisIntegral(scip, ub[j]) );
+      }
 
       mipdata->colType[j] = colPresent;
       mipdata->isComplemented[j] = FALSE;
@@ -683,23 +706,32 @@ SCIP_RETCODE createSubscip(
       {
 	 assert( ! SCIPisInfinity(scip, rhs[i]) );
 
-	 /* create two variables for each equation */
-	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
-	 SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-	       -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
-	 SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
-	 ++cnt;
-
-	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
-	 SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-	       -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
-	 SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
-	 ++cnt;
+	 if ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
+	 {
+	    /* create two variables for each equation */
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
+	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
+		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+	    SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
+	    ++cnt;
+	    
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
+	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
+		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+	    SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
+	    ++cnt;
+	 }
+	 else
+	 {
+	    mipdata->ylhs[i] = NULL;
+	    mipdata->yrhs[i] = NULL;
+	 }
       }
       else
       {
 	 /* create variable for lhs of row if necessary */
-	 if ( ! SCIPisInfinity(scip, -lhs[i]) )
+	 if ( ! SCIPisInfinity(scip, -lhs[i]) && 
+	    ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row))) )
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ylhs_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
@@ -711,7 +743,8 @@ SCIP_RETCODE createSubscip(
 	    mipdata->ylhs[i] = NULL;
 
 	 /* create variable for rhs of row if necessary */
-	 if ( ! SCIPisInfinity(scip, rhs[i]) )
+	 if ( ! SCIPisInfinity(scip, rhs[i]) && 
+	    ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row))) )
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yrhs_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
@@ -781,7 +814,7 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPaddVar(subscip, mipdata->beta) );
 
    /* create fractional variable for the rhs */
-   SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracbeta), "fracbeta", 0.0, 1.0-EPSILONVALUE, 0.0,
+   SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracbeta), "fracbeta", 0.0, 1.0-BETAEPSILONVALUE, 0.0,
 	 SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(subscip, mipdata->fracbeta) );
    mipdata->n += cnt + ucnt + 2;
@@ -1148,6 +1181,27 @@ SCIP_RETCODE subscipSetParams(
  *  multiplier is positive w.r.t. the feasibility tolerance. In the sub-MIP, however, the rows are
  *  combined in any case. This makes a difference, if the coefficients in the matrix are large and
  *  hence yield a value that is larger than the tolerance.
+ *
+ *  Because of the transformations we have the following:
+ * 
+ *  If variable \f$x_j\f$ was complemented, we have \f$x'_j = u_j - x_j\f$. If in the transformed
+ *  system the lower bound is used, its corresponding multiplier is \f$y^T A'_j - \lfloor y^T A'_j
+ *  \rfloor\f$, which corresponds to 
+ *  \f[
+ *      y^T A'_j - \lfloor y^T A'_j \rfloor = - y^T A_j - \lfloor - y^T A_j \rfloor = - y^T A_j + \lceil y^T A_j \rceil
+ *  \f]
+ *  in the original system.
+ *
+ *  If such a variable was at its upper bound before the transformation, it is at its lower bound
+ *  afterwards. Hence, its contribution to the cut is 0.
+ *
+ *  Note that if the original LP-solution does not satisfy some of the rows with equality the
+ *  violation of the cut might be smaller than what is computed with the reduced sub-MIP.
+ *
+ *  Furthermore, note that if continuous variables have been shifted, the computed violated may be
+ *  different as well, because the necessary changes in the lhs/rhs are not used here anymore.
+ *
+ *  @todo check if cut is correct if continuous variables have been shifted.
  */
 static
 SCIP_RETCODE computeCut(
@@ -1257,6 +1311,7 @@ SCIP_RETCODE computeCut(
 
 	    idx = SCIPvarGetProbindex(var);
 	    assert( 0 <= idx && idx < nvars );
+
 	    cutcoefs[idx] += weight * rowvals[j];
 	 }
 
@@ -1370,6 +1425,7 @@ SCIP_RETCODE computeCut(
 	 /* check whether variable is complemented */
 	 if ( mipdata->isComplemented[pos] )
 	 {
+	    assert( ! mipdata->isShifted[pos] );
 	    /* if the variable is complemented, the multiplier for the upper bound arises from the
 	       lower bound multiplier for the transformed problem - because of the minus-sign in the
 	       transformation this yields a round-up operation. */
@@ -1444,6 +1500,7 @@ SCIP_RETCODE computeCut(
 	 cutcoefs[j] = 0.0;
       }
    }
+
    /* round rhs */
    *cutrhs = SCIPfeasFloor(scip, *cutrhs);
 
@@ -1549,30 +1606,37 @@ SCIP_RETCODE createCGCutsDirect(
 	 /* check for correctness of computed values */
 	 SCIP_Real obj = 0.0;
 	 SCIP_Real val;
-	 SCIP_Bool shifted = FALSE;
+	 SCIP_Bool contVarShifted = FALSE;
 	 unsigned int j;
 	 SCIP_COL** cols;
 	 int ncols;
+
+	 SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) );
 
 	 SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 	 for (j = 0; j < mipdata->ncols; ++j)
 	 {
 	    if ( mipdata->colType[j] == colPresent )
 	    {
+	       int idx;
 	       assert( mipdata->alpha[j] != NULL );
 	       val = SCIPgetSolVal(subscip, sol, mipdata->alpha[j]);
 	       assert( SCIPisFeasIntegral(subscip, val) );
-	       assert( SCIPisFeasEQ(scip, val, cutcoefs[j]) );
+	       idx = SCIPvarGetProbindex(SCIPcolGetVar(cols[j]));
+	       assert( SCIPisFeasEQ(scip, val, cutcoefs[idx]) );
 	       obj += val * SCIPvarGetObj(mipdata->alpha[j]);
 	    }
-	    if ( mipdata->isShifted[j] )
-	       shifted = TRUE;
+	    else
+	    {
+	       if ( mipdata->colType[j] == colContinuous && mipdata->isShifted[j] )
+		  contVarShifted = TRUE;
+	    }
 	 }
 	 assert( mipdata->beta != NULL );
 	 val = SCIPgetSolVal(subscip, sol, mipdata->beta);
 	 assert( SCIPisFeasIntegral(subscip, val) );
 	 obj += val * SCIPvarGetObj(mipdata->beta);
-	 assert( shifted || SCIPisFeasEQ(scip, obj, cutact - cutrhs) );
+	 assert( contVarShifted || SCIPisFeasEQ(scip, obj, cutact - cutrhs) );
       }
 #endif
 
@@ -2113,6 +2177,10 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/onlyintvars",
          "generate cuts for problems with only integer variables?",
          &sepadata->onlyintvars, FALSE, DEFAULT_ONLYINTVARS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/onlyActiveRows",
+         "use only active rows to generate cuts?",
+         &sepadata->onlyActiveRows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
