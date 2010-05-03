@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.35 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.36 2010/05/03 14:18:16 bzfwinkm Exp $"
 
 /**@file   presol_dualfix.c
  * @ingroup PRESOLVERS
@@ -82,6 +82,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real bound;
+   SCIP_Real roundbound;
    SCIP_Real obj;
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
@@ -101,7 +102,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
    /* look for fixable variables
     * loop backwards, since a variable fixing can change the current and the subsequent slots in the vars array
     */
-   for( v = nvars-1; v >= 0; --v )
+   for( v = nvars - 1; v >= 0; --v )
    {
       /* don't perform dual presolving operations on deleted variables */
       if( SCIPvarIsDeleted(vars[v]) )
@@ -119,8 +120,24 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
 	    if( SCIPisLE(scip, 0.0, SCIPvarGetUbGlobal(vars[v])) )
 	       bound = 0.0;
 	    else
-	       bound = SCIPvarGetUbGlobal(vars[v]);
+            {
+               /* try to take an integer value, only for polishing */
+               roundbound = SCIPfloor(scip, SCIPvarGetUbGlobal(vars[v]));
+               
+	       if( roundbound < bound )
+                  bound = SCIPvarGetUbGlobal(vars[v]);
+               else
+                  bound = roundbound;
+            }
 	 }
+         else
+         {
+            /* try to take an integer value, only for polishing */
+            roundbound = SCIPceil(scip, bound);
+
+            if( roundbound < SCIPvarGetUbGlobal(vars[v]) )
+               bound = roundbound;
+         }
          SCIPdebugMessage("variable <%s> with objective 0 fixed to %g\n",
             SCIPvarGetName(vars[v]), bound);
       }
