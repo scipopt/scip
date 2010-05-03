@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.13 2010/04/20 16:09:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.14 2010/05/03 14:52:12 bzfheinz Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -52,16 +52,17 @@ struct SCIP_BranchruleData
 /** determines branching point for a variable */
 static
 SCIP_RETCODE selectBranchingPoint(
-   SCIP*             scip,           /**< SCIP data structure */
-   SCIP_VAR*         var,            /**< branching variable */
-   SCIP_Real         suggestion,     /**< suggestion for branching point, or SCIP_INVALID if no suggestion */
-   SCIP_Real         mindistbrpointtobound, /**< minimal relative distance of branching point from variable bounds */
-   SCIP_Real*        leftub,         /**< buffer to store new upper bound of variable in left  branch */
-   SCIP_Real*        rightlb         /**< buffer to store new lower bound of variable in right branch */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< branching variable */
+   SCIP_Real             suggestion,         /**< suggestion for branching point, or SCIP_INVALID if no suggestion */
+   SCIP_Real             mindistbrpointtobound, /**< minimal relative distance of branching point from variable bounds */
+   SCIP_Real*            leftub,             /**< buffer to store new upper bound of variable in left  branch */
+   SCIP_Real*            rightlb             /**< buffer to store new lower bound of variable in right branch */
    )
 {
    SCIP_Real branchpoint;
-   SCIP_Real lb, ub;
+   SCIP_Real lb;
+   SCIP_Real  ub;
 
    assert(scip != NULL);
    assert(var  != NULL);
@@ -71,12 +72,16 @@ SCIP_RETCODE selectBranchingPoint(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
 
-   if( suggestion != SCIP_INVALID && !SCIPisInfinity(scip, ABS(suggestion)) )
-   { /* user suggested branching point */
+   if( !SCIPisInfinity(scip, REALABS(suggestion)) )
+   { 
+      /* use user suggested branching point */
+
       /* first, project it onto the current domain */
       branchpoint = MAX(lb, MIN(suggestion, ub));
+      
       if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-      { /* if it is a discrete variable, then round it down and up and accept this choice */
+      { 
+         /* if it is a discrete variable, then round it down and up and accept this choice */
          if( SCIPisEQ(scip, branchpoint, ub) )
          {
             *leftub  = SCIPfloor(scip, branchpoint) - 1.0;
@@ -90,19 +95,24 @@ SCIP_RETCODE selectBranchingPoint(
          return SCIP_OKAY;
       }
       else if( (SCIPisInfinity(scip, -lb) || SCIPisGT(scip, branchpoint, lb)) && (SCIPisInfinity(scip, ub) || SCIPisLT(scip, branchpoint, ub)) )
-      { /* if it is continuous and inside the box, then accept it */ 
-         *leftub = *rightlb = branchpoint;
+      { 
+         /* if it is continuous and inside the box, then accept it */ 
+         (*leftub) = (*rightlb);
+         (*rightlb) = branchpoint;
          return SCIP_OKAY;
       }
    }
    else
-   { /* try the LP or pseudo LP solution */
+   { 
+      /* try the LP or pseudo LP solution */
       branchpoint = SCIPgetVarSol(scip, var);
    }
 
    /* if value is at +/- infty, then choose some value a bit off from bounds or 0.0 */
    if( SCIPisInfinity(scip, branchpoint) )
-   { /* if value is at +infty, then the upper bound should be at infinity; choose 0.0 or something above lower bound if lower bound > 0 */
+   { 
+      /* if value is at +infty, then the upper bound should be at infinity; choose 0.0 or something above lower bound if
+       * lower bound > 0 */
       assert(SCIPisInfinity(scip, ub));
       if( SCIPisPositive(scip, lb) )
          branchpoint = lb + 1000.0;
@@ -110,7 +120,9 @@ SCIP_RETCODE selectBranchingPoint(
          branchpoint = 0.0;
    }
    else if( SCIPisInfinity(scip, -branchpoint) )
-   { /* if value is at -infty, then the lower bound should be at -infinity; choose 0.0 or something below upper bound if upper bound < 0 */
+   { 
+      /* if value is at -infty, then the lower bound should be at -infinity; choose 0.0 or something below upper bound
+       * if upper bound < 0 */
       assert(SCIPisInfinity(scip, -lb));
       if( SCIPisNegative(scip, ub) )
          branchpoint = ub - 1000.0;
@@ -121,13 +133,16 @@ SCIP_RETCODE selectBranchingPoint(
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
-      { /* if branching point is too close to the bounds, move more into the middle of the interval */
+      { 
+         /* if branching point is too close to the bounds, move more into the middle of the interval */
          if( ub - lb < 2.02*SCIPepsilon(scip) )
-         { /* for very tiny intervals we set it exactly into the middle */
+         { 
+            /* for very tiny intervals we set it exactly into the middle */
             branchpoint = (lb+ub)/2.0;
          }
          else
-         { /* otherwise we project it away from the bounds */
+         { 
+            /* otherwise we project it away from the bounds */
             SCIP_Real minbrpoint;
             SCIP_Real maxbrpoint;
 
@@ -143,42 +158,51 @@ SCIP_RETCODE selectBranchingPoint(
          assert(SCIPisLT(scip, branchpoint, ub));
       }
       else if( !SCIPisLT(scip, lb, branchpoint) )
-      { /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere away from the lower bound */
+      { 
+         /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere
+          * away from the lower bound */
          assert(SCIPisInfinity(scip,  ub));
-         branchpoint = lb + MAX(0.5*ABS(lb), 1000);
+         branchpoint = lb + MAX(0.5*REALABS(lb), 1000);
       }
       else if( !SCIPisGT(scip, ub, branchpoint) )
-      { /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound */
+      { 
+         /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere
+          * away from the upper bound */
          assert(SCIPisInfinity(scip, -lb));
-         branchpoint = ub - MAX(0.5*ABS(ub), 1000);
+         branchpoint = ub - MAX(0.5*REALABS(ub), 1000);
       }
 
       *leftub = *rightlb = branchpoint;
    }
    else
-   { /* integer variables */
+   { 
+      /* integer variables */
       assert(SCIPisInfinity(scip,  ub) || SCIPisLE(scip, branchpoint, ub));
       assert(SCIPisInfinity(scip, -lb) || SCIPisGE(scip, branchpoint, lb));
       if( SCIPisEQ(scip, branchpoint, lb) )
-      { /* if branchpoint is on lower bound, create one branch with x = lb and one with x >= lb+1 */
-         *leftub  = lb;
-         *rightlb = lb + 1.0;
+      { 
+         /* if branchpoint is on lower bound, create one branch with x = lb and one with x >= lb+1 */
+         (*leftub)  = lb;
+         (*rightlb) = lb + 1.0;
       }
       else if( SCIPisEQ(scip, branchpoint, ub) )
-      { /* if branchpoint is on upper bound, create one branch with x = ub and one with x <= ub-1 */
-         *leftub  = ub - 1.0;
-         *rightlb = ub;
+      { 
+         /* if branchpoint is on upper bound, create one branch with x = ub and one with x <= ub-1 */
+         (*leftub)  = ub - 1.0;
+         (*rightlb) = ub;
       }
       else if( SCIPisIntegral(scip, branchpoint) )
-      { /* if branchpoint is integral, create one branch with x <= x'-1 and one with x >= x'
-           TODO: could in the same way be x <= x' and x >= x'+1; is there some easy way to know which is better? */
-         *leftub  = branchpoint - 1.0;
-         *rightlb = branchpoint;
+      { 
+         /* if branchpoint is integral, create one branch with x <= x'-1 and one with x >= x'
+            TODO: could in the same way be x <= x' and x >= x'+1; is there some easy way to know which is better? */
+         (*leftub)  = branchpoint - 1.0;
+         (*rightlb) = branchpoint;
       }
       else
-      { /* branchpoint is somewhere between bounds and not fractional, so just round down and up */
-         *leftub  = SCIPfloor(scip, branchpoint);
-         *rightlb = SCIPceil(scip, branchpoint);
+      { 
+         /* branchpoint is somewhere between bounds and not fractional, so just round down and up */
+         (*leftub)  = SCIPfloor(scip, branchpoint);
+         (*rightlb) = SCIPceil(scip, branchpoint);
       }
    }
 
@@ -310,7 +334,9 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
    assert(npriorelaxcands > 0);
 
    /* get random branching candidate
-    * since variables can occur several times in the list of candidates, variables that have been added more often have a higher probability to be chosen for branching
+    *
+    * since variables can occur several times in the list of candidates, variables that have been added more often have
+    * a higher probability to be chosen for branching
     */
    bestcand = SCIPgetRandomInt(0, npriorelaxcands-1, &branchruledata->randseed);
    assert(bestcand >= 0);
