@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.51 2010/04/26 21:53:09 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.52 2010/05/03 09:45:16 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -916,11 +916,13 @@ void calculateBounds(
    lpsolval = SCIPvarGetLPSol(var);
 
    /* fix integer variables to rounded lpsolval */
-   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisFeasIntegral(scip, lpsolval) )
    {
-      if( SCIPisFeasIntegral(scip, lpsolval) )
-         ++roundedfixingcounter;
-      else if( locksrounding )
+      SCIP_Real oldlpsolval;
+
+      oldlpsolval = lpsolval;
+      ++(*roundedfixingcounter);
+      if( locksrounding )
       {
          if( SCIPvarGetNLocksDown(var) < SCIPvarGetNLocksUp(var) ) 
             lpsolval = SCIPfeasFloor(scip, lpsolval);
@@ -941,6 +943,8 @@ void calculateBounds(
 
       assert(SCIPisFeasIntegral(scip, lpsolval));
       assert(SCIPvarGetLbGlobal(var) <= lpsolval && lpsolval <= SCIPvarGetUbGlobal(var));
+
+      SCIPdebugMessage("rounded fixing value of variable <%s> from %g to %g\n", SCIPvarGetName(var), oldlpsolval, lpsolval);
    }
 
    /* get the current domain size */
