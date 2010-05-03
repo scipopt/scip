@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.4 2010/05/03 16:50:34 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -31,6 +31,7 @@
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
 #include "scip/interrupt.h"
+#include "scip/pub_misc.h"
 
 #include <new>      /* for std::bad_alloc */
 
@@ -57,6 +58,8 @@ using namespace Ipopt;
 #define DEFAULT_PRINTLEVEL J_STRONGWARNING   /**< default print level of Ipopt */
 #endif
 #define DEFAULT_MAXITER    3000              /**< default iteration limit for Ipopt */
+
+#define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
 
 class ScipNLP;
 
@@ -1750,17 +1753,21 @@ bool ScipNLP::get_starting_point(
       else
       {
          SCIP_Real lb, ub;
+         unsigned int perturbseed;
+
          SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+
+         perturbseed = 1;
          for( int i = 0; i < n; ++i )
          {
             lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
             ub = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle)[i];
             if( lb > 0.0 )
-               x[i] = lb;
+               x[i] = SCIPgetRandomReal(lb, lb + MAXPERTURB*MIN(1.0, ub-lb), &perturbseed);
             else if( ub < 0.0 )
-               x[i] = ub;
+               x[i] = SCIPgetRandomReal(ub - MAXPERTURB*MIN(1.0, ub-lb), ub, &perturbseed);
             else
-               x[i] = 0.0;
+               x[i] = SCIPgetRandomReal(MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)), &perturbseed);
          }
       }
    }
