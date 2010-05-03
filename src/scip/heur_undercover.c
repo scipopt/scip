@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.52 2010/05/03 09:45:16 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.53 2010/05/03 15:18:12 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1483,8 +1483,12 @@ SCIP_RETCODE solveSubProblem(
 
    SCIP_CALL( SCIPsetHeuristicsAggressive(subscip, TRUE) );
 #ifndef WITH_UNIVARDEFINITE
-   SCIP_CALL( SCIPreadParams(subscip, "settings/emphasis/feasibility.set") );
-   SCIP_CALL( SCIPreadParams(subscip, "settings/presolving/fast.set") );
+   /* set the parameters of the subscip such that good solutions are found fast */
+   SCIP_CALL( SCIPsetEmphasisFeasibility(subscip, TRUE) );
+   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
+
+   /* stop the solution process of the subscip if the last improvement of the primal solution value was over 100 nodes
+    * ago */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100) );
 #else
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
