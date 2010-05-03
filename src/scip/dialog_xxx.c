@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xxx.c,v 1.7 2010/04/13 18:01:36 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_xxx.c,v 1.8 2010/05/03 09:24:06 bzfviger Exp $"
 
 /**@file   dialog_xxx.c
  * @ingroup DIALOGS
@@ -126,7 +126,9 @@ SCIP_DECL_DIALOGEXEC(dialogExecXxx)
  */
 
 /** creates the xxx dialog and includes it in SCIP */
-SCIP_DECL_INCLUDEPLUGIN(SCIPincludeDialogXxx)
+SCIP_RETCODE SCIPincludeDialogXxx(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
 {
    SCIP_DIALOGDATA* dialogdata;
    SCIP_DIALOG* dialog;
@@ -145,7 +147,6 @@ SCIP_DECL_INCLUDEPLUGIN(SCIPincludeDialogXxx)
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
-            SCIPincludeDialogXxx,
             dialogCopyXxx, dialogExecXxx, dialogDescXxx, dialogFreeXxx,
             DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
