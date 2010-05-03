@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.62 2010/04/26 18:16:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.63 2010/05/03 15:12:36 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2252,189 +2252,23 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
    return SCIP_OKAY;
 }
 
-/** sets separating to aggressive */
-SCIP_RETCODE SCIPparamsetSetToSeparatingAggressive(
+/** sets parameters to detect feasibility fast */
+SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
-   SCIP_CONSHDLR** conshdlrs;
-   SCIP_SEPA** sepas;
-   SCIP_PARAM* param;
-   char paramname[SCIP_MAXSTRLEN];
-   int nconshdlrs;
-   int nsepas;
-   int i;
+   /* set heuristics aggressive */
+   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(paramset, scip, quite) );
 
-   sepas = SCIPgetSepas(scip);
-   nsepas = SCIPgetNSepas(scip);
+   /* set cuts fast */
+   SCIP_CALL( SCIPparamsetSetToSeparatingFast(paramset, scip, quite) );
    
-   /* set the frequency of all separators to at least every 20th depths */
-   for( i = 0; i < nsepas; ++i )
-   {
-      const char* sepaname;
-      sepaname = SCIPsepaGetName(sepas[i]);
-
-      /* get frequency parameter of separator */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      
-      if( param != NULL )
-      {
-         int deffreq;
-         int newfreq;
-
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         deffreq = SCIPparamGetIntDefault(param);
-         
-         /* change frequnecy to at least every 20th depths */
-         if( deffreq == -1 || deffreq == 0 )
-            newfreq = 20;
-         else
-            newfreq = MIN(deffreq, 20);
-         
-         SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quite) );
-      }
-
-      /* get maximum number of round in root node */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxroundsroot", sepaname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      
-      if( param != NULL )
-      {
-         int defrounds;
-
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         defrounds = SCIPparamGetIntDefault(param);
-         
-         /* increase the maximum number of rounds in the root node by factor of 1.5 */
-         SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defrounds, quite) );
-      }
-
-      /* get maximum number of cuts per separation in root node */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxsepacutsroot", sepaname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      
-      if( param != NULL )
-      {
-         int defnumber;
-
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         defnumber = SCIPparamGetIntDefault(param);
-         
-         /* increase the maximum number of cut per separation rounds in the root node by factor of 2 */
-         SCIP_CALL( paramSetInt(scip, paramset, paramname, 2*defnumber, quite) );
-      }
-   }
-
-   conshdlrs = SCIPgetConshdlrs(scip);
-   nconshdlrs = SCIPgetNConshdlrs(scip);
-
-   /* set separating parameters of all constraint handlers */
-   for( i = 0; i < nconshdlrs; ++i )
-   {
-      const char* conshdlrname;
-      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
-
-      /* get separating frequency parameter of constraint handler */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", conshdlrname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      
-      if( param != NULL )
-      {
-         int deffreq;
-         int newfreq;
-
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         deffreq = SCIPparamGetIntDefault(param);
-         
-         /* change frequnecy to at least every 10th depths */
-         if( deffreq == -1 || deffreq == 0 )
-            newfreq = 10;
-         else
-            newfreq = MIN(deffreq, 10);
-         
-         SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quite) );
-      }
-
-      /* get maximal separated cuts in root node  of constraint handler */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxsepacutsroot", conshdlrname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      
-      if( param != NULL )
-      {
-         int defnumber;
-         
-         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-         defnumber = SCIPparamGetIntDefault(param);
-         
-         /* change maximal cuts in root node to at least 500 */
-         SCIP_CALL( paramSetInt(scip, paramset, paramname, MAX(defnumber, 500), quite) );
-      }
-   }
-
-   /* explicitly change general separating parameters */
-   SCIP_CALL( paramSetReal(scip, paramset, "separating/minorthoroot", 0.1, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsrootsubrun", 5, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxaddrounds", 5, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxcutsroot", 5000, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/poolfreq", 10, quite) );
-
-   /* explicitly change a separating parameter of the linear constraint handler */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/separateall", TRUE, quite) );
+   /* set priority for node selection "restartdfs" to be higher as the current used one */
+   SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/restartdfs/stdpriority", 
+         SCIPnodeselGetStdPriority(SCIPgetNodesel(scip)) + 10, quite) );
    
-   /* explicitly change a separating parameter of cmir separator */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxfailsroot", 200, quite) );
-
-   /* explicitly change a separating parameter of mcf separator */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/maxtestdelta", -1, quite) );
-   SCIP_CALL( paramSetBool(scip, paramset, "separating/mcf/trynegscaling", TRUE, quite) );
-   
-   /* explicitly change a separating parameter of zerohalf separator */
-   SCIP_CALL( paramSetBool(scip, paramset, "separating/zerohalf/preprocessing/decomposeproblem", TRUE, quite) );
-   
-   return SCIP_OKAY;
-}
-
-/** sets separating to fast */
-SCIP_RETCODE SCIPparamsetSetToSeparatingFast(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   )
-{
-   /* explicitly turn off expensive heuristics */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxbounddist", 0, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "constraints/and/sepafreq", 0, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxroundsroot", 5, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxtriesroot", 100, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxaggrsroot", 3, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxsepacutsroot", 200, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/flowcover/freq", -1, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxroundsroot", 20, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxsepacutsroot", 200, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/freq", -1, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/redcost/maxbounddist", 0, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxroundsroot", 10, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxsepacutsroot", 200, quite) );
-   
-   return SCIP_OKAY;
-}
-
-/** turns all cuts off */
-SCIP_RETCODE SCIPparamsetSetToSeparatingOff(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   )
-{
-   /* turn off separation in the root node */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsroot", 0, quite) );
-
-   /* turn off separation in each node */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxrounds", 0, quite) );
-
    return SCIP_OKAY;
 }
 
@@ -2668,6 +2502,192 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
    /* set maximum üpresolving round to zero (no presolving at all) */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrounds", 0, quite) );
    
+   return SCIP_OKAY;
+}
+
+/** sets separating to aggressive */
+SCIP_RETCODE SCIPparamsetSetToSeparatingAggressive(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_SEPA** sepas;
+   SCIP_PARAM* param;
+   char paramname[SCIP_MAXSTRLEN];
+   int nconshdlrs;
+   int nsepas;
+   int i;
+
+   sepas = SCIPgetSepas(scip);
+   nsepas = SCIPgetNSepas(scip);
+   
+   /* set the frequency of all separators to at least every 20th depths */
+   for( i = 0; i < nsepas; ++i )
+   {
+      const char* sepaname;
+      sepaname = SCIPsepaGetName(sepas[i]);
+
+      /* get frequency parameter of separator */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int deffreq;
+         int newfreq;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         deffreq = SCIPparamGetIntDefault(param);
+         
+         /* change frequnecy to at least every 20th depths */
+         if( deffreq == -1 || deffreq == 0 )
+            newfreq = 20;
+         else
+            newfreq = MIN(deffreq, 20);
+         
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quite) );
+      }
+
+      /* get maximum number of round in root node */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxroundsroot", sepaname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int defrounds;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         defrounds = SCIPparamGetIntDefault(param);
+         
+         /* increase the maximum number of rounds in the root node by factor of 1.5 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defrounds, quite) );
+      }
+
+      /* get maximum number of cuts per separation in root node */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxsepacutsroot", sepaname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int defnumber;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         defnumber = SCIPparamGetIntDefault(param);
+         
+         /* increase the maximum number of cut per separation rounds in the root node by factor of 2 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, 2*defnumber, quite) );
+      }
+   }
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+
+   /* set separating parameters of all constraint handlers */
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      const char* conshdlrname;
+      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+
+      /* get separating frequency parameter of constraint handler */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", conshdlrname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int deffreq;
+         int newfreq;
+
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         deffreq = SCIPparamGetIntDefault(param);
+         
+         /* change frequnecy to at least every 10th depths */
+         if( deffreq == -1 || deffreq == 0 )
+            newfreq = 10;
+         else
+            newfreq = MIN(deffreq, 10);
+         
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quite) );
+      }
+
+      /* get maximal separated cuts in root node  of constraint handler */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxsepacutsroot", conshdlrname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      
+      if( param != NULL )
+      {
+         int defnumber;
+         
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+         defnumber = SCIPparamGetIntDefault(param);
+         
+         /* change maximal cuts in root node to at least 500 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, MAX(defnumber, 500), quite) );
+      }
+   }
+
+   /* explicitly change general separating parameters */
+   SCIP_CALL( paramSetReal(scip, paramset, "separating/minorthoroot", 0.1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsrootsubrun", 5, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxaddrounds", 5, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxcutsroot", 5000, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/poolfreq", 10, quite) );
+
+   /* explicitly change a separating parameter of the linear constraint handler */
+   SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/separateall", TRUE, quite) );
+   
+   /* explicitly change a separating parameter of cmir separator */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxfailsroot", 200, quite) );
+
+   /* explicitly change a separating parameter of mcf separator */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/maxtestdelta", -1, quite) );
+   SCIP_CALL( paramSetBool(scip, paramset, "separating/mcf/trynegscaling", TRUE, quite) );
+   
+   /* explicitly change a separating parameter of zerohalf separator */
+   SCIP_CALL( paramSetBool(scip, paramset, "separating/zerohalf/preprocessing/decomposeproblem", TRUE, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** sets separating to fast */
+SCIP_RETCODE SCIPparamsetSetToSeparatingFast(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   /* explicitly turn off expensive heuristics */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxbounddist", 0, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/and/sepafreq", 0, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxroundsroot", 5, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxtriesroot", 100, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxaggrsroot", 3, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxsepacutsroot", 200, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/flowcover/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxroundsroot", 20, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxsepacutsroot", 200, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/freq", -1, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/redcost/maxbounddist", 0, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxroundsroot", 10, quite) );
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxsepacutsroot", 200, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns all cuts off */
+SCIP_RETCODE SCIPparamsetSetToSeparatingOff(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   /* turn off separation in the root node */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsroot", 0, quite) );
+
+   /* turn off separation in each node */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxrounds", 0, quite) );
+
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.109 2010/04/26 17:49:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.110 2010/05/03 15:12:37 bzfheinz Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -302,23 +302,9 @@ SCIP_RETCODE SCIPsetResetParams(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** sets separating parameters to aggressive values */
+/** sets parameters to detect feasibility fast */
 extern
-SCIP_RETCODE SCIPsetSetSeparatingAggressive(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   );
-
-/** sets separating parameters to fast values */
-extern
-SCIP_RETCODE SCIPsetSetSeparatingFast(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   );
-
-/** turns off all separation */
-extern
-SCIP_RETCODE SCIPsetSetSeparatingOff(
+SCIP_RETCODE SCIPsetSetEmphasisFeasibility(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    );
@@ -361,6 +347,27 @@ SCIP_RETCODE SCIPsetSetPresolvingFast(
 /** turns off all presolving */
 extern
 SCIP_RETCODE SCIPsetSetPresolvingOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** sets separating parameters to aggressive values */
+extern
+SCIP_RETCODE SCIPsetSetSeparatingAggressive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** sets separating parameters to fast values */
+extern
+SCIP_RETCODE SCIPsetSetSeparatingFast(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   );
+
+/** turns off all separation */
+extern
+SCIP_RETCODE SCIPsetSetSeparatingOff(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    );

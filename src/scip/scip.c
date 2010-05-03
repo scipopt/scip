@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.554 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.555 2010/05/03 15:12:37 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1245,42 +1245,16 @@ SCIP_RETCODE SCIPresetParams(
    return SCIP_OKAY;
 }
 
-/** sets separating parameters to aggressive values */
-SCIP_RETCODE SCIPsetSeparatingAggressive(
+/** sets parameters to detect feasibility fast */
+SCIP_RETCODE SCIPsetEmphasisFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetEmphasisFeasibility", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetEmphasisFeasibility(scip->set, quite) );
    
-   SCIP_CALL( SCIPsetSetSeparatingAggressive(scip->set, quite) );
-
-   return SCIP_OKAY;
-}
-
-/** sets separating parameters to fast values */
-SCIP_RETCODE SCIPsetSeparatingFast(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
-   SCIP_CALL( SCIPsetSetSeparatingFast(scip->set, quite) );
-   
-   return SCIP_OKAY;
-}
-
-/** turns off all separation */
-SCIP_RETCODE SCIPsetSeparatingOff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetSeparatingOff(scip->set, quite) );
-
    return SCIP_OKAY;
 }
 
@@ -1358,6 +1332,45 @@ SCIP_RETCODE SCIPsetPresolvingOff(
    SCIP_CALL( checkStage(scip, "SCIPsetPresolvingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetSetPresolvingOff(scip->set, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets separating parameters to aggressive values */
+SCIP_RETCODE SCIPsetSeparatingAggressive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPsetSetSeparatingAggressive(scip->set, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets separating parameters to fast values */
+SCIP_RETCODE SCIPsetSeparatingFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPsetSetSeparatingFast(scip->set, quite) );
+   
+   return SCIP_OKAY;
+}
+
+/** turns off all separation */
+SCIP_RETCODE SCIPsetSeparatingOff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetSeparatingOff(scip->set, quite) );
 
    return SCIP_OKAY;
 }
@@ -7524,7 +7537,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
 
    if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
-
+   
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:

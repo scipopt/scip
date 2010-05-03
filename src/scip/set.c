@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.215 2010/04/26 17:49:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.216 2010/05/03 15:12:37 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1748,36 +1748,14 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
-/** sets separating parameters to aggressive values */
-SCIP_RETCODE SCIPsetSetSeparatingAggressive(
+/** sets parameters to detect feasibility fast */
+SCIP_RETCODE SCIPsetSetEmphasisFeasibility(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToSeparatingAggressive(set->paramset, set->scip, quite) );
-
-   return SCIP_OKAY;
-}
-
-/** sets separating parameters to fast values */
-SCIP_RETCODE SCIPsetSetSeparatingFast(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToSeparatingFast(set->paramset, set->scip, quite) );
-
-   return SCIP_OKAY;
-}
-
-/** turns off all separation */
-SCIP_RETCODE SCIPsetSetSeparatingOff(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToSeparatingOff(set->paramset, set->scip, quite) );
-
+   SCIP_CALL( SCIPparamsetSetToEmphasisFeasibility(set->paramset, set->scip, quite) );
+   
    return SCIP_OKAY;
 }
 
@@ -1843,6 +1821,39 @@ SCIP_RETCODE SCIPsetSetPresolvingOff(
    )
 {
    SCIP_CALL( SCIPparamsetSetToPresolvingOff(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets separating parameters to aggressive values */
+SCIP_RETCODE SCIPsetSetSeparatingAggressive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSeparatingAggressive(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** sets separating parameters to fast values */
+SCIP_RETCODE SCIPsetSetSeparatingFast(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSeparatingFast(set->paramset, set->scip, quite) );
+
+   return SCIP_OKAY;
+}
+
+/** turns off all separation */
+SCIP_RETCODE SCIPsetSetSeparatingOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSeparatingOff(set->paramset, set->scip, quite) );
 
    return SCIP_OKAY;
 }
@@ -2454,11 +2465,9 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
 
    nodeselstdprio = SCIPnodeselGetStdPriority(nodesel);
 
-   for( i = set->nnodesels; i > 0 && nodeselstdprio > SCIPnodeselGetStdPriority(set->nodesels[i-1]);
-        --i )
-   {
+   for( i = set->nnodesels; i > 0 && nodeselstdprio > SCIPnodeselGetStdPriority(set->nodesels[i-1]); --i )
       set->nodesels[i] = set->nodesels[i-1];
-   }
+   
    set->nodesels[i] = nodesel;
    set->nnodesels++;
 
