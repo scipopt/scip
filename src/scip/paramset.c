@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.63 2010/05/03 15:12:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.64 2010/05/03 16:16:29 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2658,7 +2658,7 @@ SCIP_RETCODE SCIPparamsetSetToSeparatingFast(
    )
 {
    /* explicitly turn off expensive heuristics */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxbounddist", 0, quite) );
+   SCIP_CALL( paramSetReal(scip, paramset, "separating/maxbounddist", 0.0, quite) );
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/and/sepafreq", 0, quite) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxroundsroot", 5, quite) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/cmir/maxtriesroot", 100, quite) );
@@ -2668,7 +2668,7 @@ SCIP_RETCODE SCIPparamsetSetToSeparatingFast(
    SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxroundsroot", 20, quite) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/gomory/maxsepacutsroot", 200, quite) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/freq", -1, quite) );
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/redcost/maxbounddist", 0, quite) );
+   SCIP_CALL( paramSetReal(scip, paramset, "separating/redcost/maxbounddist", 0.0, quite) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxroundsroot", 10, quite) );
    SCIP_CALL( paramSetInt(scip, paramset, "separating/strongcg/maxsepacutsroot", 200, quite) );
    
