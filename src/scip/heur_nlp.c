@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.56 2010/04/23 15:53:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.57 2010/05/03 10:26:21 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -377,7 +377,6 @@ SCIP_RETCODE setupNLP(
    SCIP_CALL( SCIPnlpiCreateProblem(heurdata->nlpi, &heurdata->nlpiprob, "subnlp") );
    
    /* set some parameters of NLP solver */ 
-   SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
    if( heurdata->nlptimelimit )
    {
       SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, heurdata->nlptimelimit) );
@@ -812,7 +811,25 @@ SCIP_RETCODE destroyNLP(
    
    SCIPnlpStatisticsFree(&heurdata->nlpstatistics);
    assert(heurdata->nlpstatistics == NULL);
+
+   if( heurdata->nvarbndconss )
+   {
+      assert(heurdata->varbndconss != NULL);
+      for( i = 0; i < heurdata->nvarbndconss; ++i )
+      {
+         assert(heurdata->varbndconss[i] != NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &heurdata->varbndconss[i]) );
+      }
+
+      SCIPfreeMemoryArray(scip, &heurdata->varbndconss);
+      heurdata->nvarbndconss = 0;
+   }
    
+   if( heurdata->startcand )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -880,6 +897,11 @@ SCIP_RETCODE SCIPapplyNlpHeur(
             {
                SCIPdebugMessage("skip NLP heuristic because start candidate not integer feasible: var %d is %g\n", i, discrfix[i]);
                SCIPfreeBufferArray(scip, &startpoint);
+               if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+               {
+                  SCIP_CALL( destroyNLP(scip, heurdata) );
+                  heurdata->triedsetupnlp = FALSE;
+               }
                *result = SCIP_DIDNOTRUN;
                return SCIP_OKAY;
             }
@@ -924,8 +946,10 @@ SCIP_RETCODE SCIPapplyNlpHeur(
 
    SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
 
+   SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
+
    /* pass initial guess to NLP solver, if we have one; otherwise clear previous guess and let NLP solver choose */
-   if( refpoint || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   if( refpoint || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL) )
    {
       SCIP_CALL( SCIPnlpiSetInitialGuess(heurdata->nlpi, heurdata->nlpiprob, startpoint) );
    }
@@ -935,6 +959,8 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    }
    
    SCIPfreeBufferArray(scip, &startpoint);
+
+   *result = SCIP_DIDNOTFIND;
 
    /* let the NLP solver do its magic */
    SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
@@ -1032,7 +1058,14 @@ SCIP_RETCODE SCIPapplyNlpHeur(
 
       SCIP_CALL( SCIPfreeSol(scip, &sol) );
    }
-   
+
+   /* if the heuristic was applied before solving has started, then destroy NLP, since EXITSOL may not be called */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( destroyNLP(scip, heurdata) );
+      heurdata->triedsetupnlp = FALSE;
+   }
+
    /* TODO: reset time and iterlimit in nlp solver? */
 
    return SCIP_OKAY;   
@@ -1129,12 +1162,14 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    if( SCIPheurGetFreq(heur) < 0 )
       return SCIP_OKAY;
 
-   /* try to setup NLP; fails if there are no nonlinear continuous variables or there is no NLP solver */
-   SCIP_CALL( checkCIPandSetupNLP(scip, heur) );
-
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   assert(heurdata->nlpi == NULL);
+
+   /* try to setup NLP */
+   SCIP_CALL( checkCIPandSetupNLP(scip, heur) );
    
+   /* it's ok if NLP was not setup (e.g., because there are no nonlinear continuous variables or there is no NLP solver) */
    if( heurdata->nlpi == NULL )
       return SCIP_OKAY;
    
@@ -1163,26 +1198,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolNlp)
       SCIP_CALL( destroyNLP(scip, heurdata) );
    }
    
-   if( heurdata->nvarbndconss )
-   {
-      int i;
-
-      assert(heurdata->varbndconss != NULL);
-      for( i = 0; i < heurdata->nvarbndconss; ++i )
-      {
-         assert(heurdata->varbndconss[i] != NULL);
-         SCIP_CALL( SCIPreleaseCons(scip, &heurdata->varbndconss[i]) );
-      }
-
-      SCIPfreeMemoryArray(scip, &heurdata->varbndconss);
-      heurdata->nvarbndconss = 0;
-   }
-   
-   if( heurdata->startcand )
-   {
-      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
-   }
-
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
    
    heurdata->triedsetupnlp = FALSE;
