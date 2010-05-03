@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.15 2010/05/03 15:37:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.16 2010/05/03 16:21:12 bzfviger Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -62,7 +62,7 @@ SCIP_RETCODE selectBranchingPoint(
 {
    SCIP_Real branchpoint;
    SCIP_Real lb;
-   SCIP_Real  ub;
+   SCIP_Real ub;
 
    assert(scip != NULL);
    assert(var  != NULL);
@@ -97,8 +97,7 @@ SCIP_RETCODE selectBranchingPoint(
       else if( (SCIPisInfinity(scip, -lb) || SCIPisGT(scip, branchpoint, lb)) && (SCIPisInfinity(scip, ub) || SCIPisLT(scip, branchpoint, ub)) )
       { 
          /* if it is continuous and inside the box, then accept it */ 
-         (*leftub) = (*rightlb);
-         (*rightlb) = branchpoint;
+         (*leftub) = (*rightlb) = branchpoint;
          return SCIP_OKAY;
       }
    }
@@ -345,9 +344,6 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
    brvar = relaxcands[bestcand];
    assert(brvar != NULL);
    
-   leftub = 0.0;
-   rightlb = 0.0;
-
    SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> with solution value %g\n",
       npriorelaxcands, bestcand, SCIPvarGetName(brvar), relaxcandssol[bestcand]);
 
