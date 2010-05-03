@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.14 2010/05/03 14:52:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.15 2010/05/03 15:37:18 bzfheinz Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -317,7 +317,8 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
    int npriorelaxcands;
    int bestcand;
    SCIP_VAR* brvar;
-   SCIP_Real leftub, rightlb;
+   SCIP_Real leftub;
+   SCIP_Real rightlb;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -344,6 +345,9 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
    brvar = relaxcands[bestcand];
    assert(brvar != NULL);
    
+   leftub = 0.0;
+   rightlb = 0.0;
+
    SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> with solution value %g\n",
       npriorelaxcands, bestcand, SCIPvarGetName(brvar), relaxcandssol[bestcand]);
 
