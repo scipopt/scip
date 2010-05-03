@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.110 2010/05/03 15:12:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.111 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -76,7 +76,8 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
-   SCIP_Bool             copydialogs         /**< should the dialogs be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis           /**< should the NLP interfaces be copied */
    );
 
 /** creates global SCIP settings */
@@ -633,6 +634,34 @@ extern
 SCIP_Bool SCIPsetExistsDialog(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIALOG*          dialog              /**< dialog */
+   );
+
+/** inserts NLPI in NLPI list */
+extern
+SCIP_RETCODE SCIPsetIncludeNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi                /**< NLPI */
+   );
+
+/** returns the NLPI of the given name, or NULL if not existing */
+extern
+SCIP_NLPI* SCIPsetFindNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of NLPI */
+   );
+
+/** sorts NLPIs by priorities */
+extern
+void SCIPsetSortNlpis(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** set priority of an NLPI */
+extern
+void SCIPsetSetPriorityNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< NLPI */
+   int                   priority            /**< new priority of NLPI */
    );
 
 /** calls init methods of all plugins */

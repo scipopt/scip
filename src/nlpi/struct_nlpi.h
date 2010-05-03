@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlpi.h,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlpi.h,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   struct_nlpi.h
  * @brief  data definitions for an NLP solver interface
@@ -38,6 +38,7 @@ struct SCIP_Nlpi
    char*                           name;                        /**< name of NLP solver */
    char*                           description;                 /**< description of NLP solver */
    int                             priority;                    /**< priority of NLP interface */
+   SCIP_DECL_NLPICOPY              ((*nlpicopy));               /**< copy an NLPI */
    SCIP_DECL_NLPIFREE              ((*nlpifree));               /**< free NLPI user data */
    SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer));   /**< get solver pointer */
    SCIP_DECL_NLPICREATEPROBLEM     ((*nlpicreateproblem));      /**< create a new problem instance */

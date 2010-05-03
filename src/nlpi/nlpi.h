@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -26,10 +26,14 @@
 #define __SCIP_NLPI_H__
 
 #include "nlpi/type_nlpi.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** compares two NLPIs w.r.t. their priority */
+SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp);
 
 /** creates an NLP solver interface */
 extern
@@ -38,6 +42,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    const char*                     name,                        /**< name of NLP interface */
    const char*                     description,                 /**< description of NLP interface */
    int                             priority,                    /**< priority of NLP interface */
+   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying an NLPI */
    SCIP_DECL_NLPIFREE              ((*nlpifree)),               /**< free NLPI user data */
    SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer */
    SCIP_DECL_NLPICREATEPROBLEM     ((*nlpicreateproblem)),      /**< create a new problem instance */
@@ -69,6 +74,13 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
+);
+
+/** copies an NLPI */
+extern
+SCIP_RETCODE SCIPnlpiCopy(
+   SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
+   SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
 );
 
 /** frees NLPI user data */
@@ -390,6 +402,22 @@ SCIP_NLPIDATA* SCIPnlpiGetData(
 /** gets NLP solver name */
 const char* SCIPnlpiGetName(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
+);
+
+/** gets NLP solver descriptions */
+const char* SCIPnlpiGetDesc(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+);
+
+/** gets NLP solver priority */
+int SCIPnlpiGetPriority(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+);
+
+/** sets NLP solver priority */
+void SCIPnlpiSetPriority(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   int                   priority            /**< new priority of NLPI */
 );
 
 /** creates an NLP statistics structure */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.216 2010/05/03 15:12:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.217 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -47,6 +47,7 @@
 #include "scip/relax.h"
 #include "scip/sepa.h"
 #include "scip/prop.h"
+#include "nlpi/nlpi.h"
 
 
 
@@ -364,7 +365,8 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
-   SCIP_Bool             copydialogs         /**< should the dialogs be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis           /**< should the NLP interfaces be copied */
    )
 {
    int p;
@@ -545,6 +547,19 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   if( copynlpis )
+   {
+      if( sourceset->nlpis != NULL )
+      {
+         SCIP_NLPI* nlpicopy;
+         for( p = sourceset->nnlpis - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPnlpiCopy(sourceset->nlpis[p], &nlpicopy) );
+            SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
+         }
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -621,6 +636,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->dialogs = NULL;
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
+   (*set)->nlpis = NULL;
+   (*set)->nnlpis = 0;
+   (*set)->nlpissize = 0;
    (*set)->vbc_filename = NULL;
 
    /* branching parameters */
@@ -1403,6 +1421,13 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free dialogs */
    BMSfreeMemoryArrayNull(&(*set)->dialogs);
+
+   /* free NLPIs */
+   for( i = 0; i < (*set)->nnlpis; ++i )
+   {
+      SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i]) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->nlpis);
 
    BMSfreeMemory(set);
 
@@ -2684,6 +2709,77 @@ SCIP_Bool SCIPsetExistsDialog(
    }
 
    return FALSE;
+}
+
+/** inserts NLPI in NLPI list */
+SCIP_RETCODE SCIPsetIncludeNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi                /**< NLPI */
+   )
+{
+   assert(set != NULL);
+   assert(nlpi != NULL);
+
+   if( set->nnlpis >= set->nlpissize )
+   {
+      set->nlpissize = SCIPsetCalcMemGrowSize(set, set->nnlpis+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->nlpis, set->nlpissize) );
+   }
+   assert(set->nnlpis < set->nlpissize);
+
+   set->nlpis[set->nnlpis] = nlpi;
+   set->nnlpis++;
+   set->nlpissorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the NLPI of the given name, or NULL if not existing */
+SCIP_NLPI* SCIPsetFindNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of NLPI */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nnlpis; ++i )
+   {
+      if( strcmp(SCIPnlpiGetName(set->nlpis[i]), name) == 0 )
+         return set->nlpis[i];
+   }
+
+   return NULL;
+}
+
+/** sorts NLPIs by priorities */
+void SCIPsetSortNlpis(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->nlpissorted )
+   {
+      SCIPsortPtr((void**)set->nlpis, SCIPnlpiComp, set->nnlpis);
+      set->nlpissorted = TRUE;
+   }
+}
+
+/** set priority of an NLPI */
+void SCIPsetSetPriorityNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< NLPI */
+   int                   priority            /**< new priority of NLPI */
+   )
+{
+   assert(set != NULL);
+   assert(nlpi != NULL);
+
+   SCIPnlpiSetPriority(nlpi, priority);
+   set->nlpissorted = FALSE;
 }
 
 /** calls init methods of all plugins */

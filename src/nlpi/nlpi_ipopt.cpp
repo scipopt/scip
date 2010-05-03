@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -46,7 +46,7 @@ namespace Ipopt
 
 using namespace Ipopt;
 
-#define NLPI_NAME          "Ipopt"           /**< short concise name of solver */
+#define NLPI_NAME          "ipopt"           /**< short concise name of solver */
 #define NLPI_DESC          "Ipopt interface" /**< description of solver */
 #define NLPI_TYPE          "IP"              /**< solver type */
 #define NLPI_PRIORITY      0                 /**< priority */
@@ -294,6 +294,31 @@ void SCIPnlpiIpoptInvalidateSolution(
    BMSfreeMemoryArrayNull(&problem->lastsol);
    problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+}
+
+/** copy method of NLP interface (called when SCIP copies plugins)
+ *
+ * input:
+ *  - sourcenlpi the NLP interface to copy
+ *  - targetnlpi buffer to store pointer to copy of NLP interface
+ */
+static
+SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
+{
+   SCIP_NLPIDATA* sourcedata;
+
+   assert(sourcenlpi != NULL);
+   assert(targetnlpi != NULL);
+
+   sourcedata = SCIPnlpiGetData(sourcenlpi);
+   assert(sourcedata != NULL);
+
+   SCIP_CALL( SCIPcreateNlpSolverIpopt(sourcedata->blkmem, targetnlpi) );
+   assert(*targetnlpi != NULL);
+
+   SCIP_CALL( SCIPnlpiSetRealPar((*targetnlpi), NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
+
+   return SCIP_OKAY;
 }
 
 /** destructor of NLP interface to free nlpi data
@@ -1618,7 +1643,8 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    
    SCIP_CALL( SCIPnlpiCreate(nlpi,
       NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-      nlpiFreeIpopt, nlpiGetSolverPointerIpopt, nlpiCreateProblemIpopt, nlpiFreeProblemIpopt, nlpiGetProblemPointerIpopt,
+      nlpiCopyIpopt, nlpiFreeIpopt, nlpiGetSolverPointerIpopt,
+      nlpiCreateProblemIpopt, nlpiFreeProblemIpopt, nlpiGetProblemPointerIpopt,
       nlpiAddVarsIpopt, nlpiAddConstraintsIpopt, nlpiSetObjectiveIpopt, 
       nlpiChgVarBoundsIpopt, nlpiChgConsBoundsIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
       nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.555 2010/05/03 15:12:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.556 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -70,6 +70,7 @@
 #include "scip/relax.h"
 #include "scip/sepa.h"
 #include "scip/prop.h"
+#include "nlpi/nlpi.h"
 #include "scip/debug.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -506,7 +507,8 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
-   SCIP_Bool             copydialogs         /**< should the dialogs be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis           /**< should the NLPIs be copied */
    )
 {
    assert(sourcescip != NULL);
@@ -517,7 +519,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copynlpis) );
 
    return SCIP_OKAY;
 }
@@ -2612,6 +2614,102 @@ SCIP_RETCODE SCIPautoselectDisps(
    return SCIP_OKAY;
 }
 
+/** method to call, when the priority of an NLPI was changed */
+static
+SCIP_DECL_PARAMCHGD(paramChgdNlpiPriority)
+{  /*lint --e{715}*/
+   SCIP_PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetSetPriorityNlpi() to mark the nlpis unsorted */
+   SCIPsetNlpiPriority(scip, (SCIP_NLPI*)paramdata, SCIPparamGetInt(param));
+
+   return SCIP_OKAY;
+}
+
+/** includes an NLPI in SCIP */
+SCIP_RETCODE SCIPincludeNlpi(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi                /**< NLPI data structure */
+   )
+{
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(nlpi != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeNlpi", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether NLPI is already present */
+   if( SCIPfindNlpi(scip, SCIPnlpiGetName(nlpi)) != NULL )
+   {
+      SCIPerrorMessage("NLPI <%s> already included.\n", SCIPnlpiGetName(nlpi));
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPsetIncludeNlpi(scip->set, nlpi) );
+
+   /* add parameters */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nlpi/%s/priority", SCIPnlpiGetName(nlpi));
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of NLPI <%s>", SCIPnlpiGetName(nlpi));
+   SCIP_CALL( SCIPaddIntParam(scip, paramname, paramdesc,
+         NULL, FALSE, SCIPnlpiGetPriority(nlpi), INT_MIN/4, INT_MAX/4,
+         paramChgdNlpiPriority, (SCIP_PARAMDATA*)nlpi) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
+/** returns the NLPI of the given name, or NULL if not existing */
+SCIP_NLPI* SCIPfindNlpi(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of NLPI */
+   )
+{
+   assert(name != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPfindNlpi", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindNlpi(scip->set, name);
+}
+
+/** returns the array of currently available NLPIs (sorted by priority) */
+SCIP_NLPI** SCIPgetNlpis(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNlpis", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSortNlpis(scip->set);
+
+   return scip->set->nlpis;
+}
+
+/** returns the number of currently available NLPIs */
+int SCIPgetNNlpis(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNNlpis", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nnlpis;
+}
+
+/** sets the priority of an NLPI */
+SCIP_RETCODE SCIPsetNlpiPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< NLPI */
+   int                   priority            /**< new priority of the NLPI */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNlpiPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSetPriorityNlpi(scip->set, nlpi, priority);
+
+   return SCIP_OKAY;
+}
 
 
 

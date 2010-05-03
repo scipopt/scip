@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.96 2010/04/26 14:39:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.97 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -24,6 +24,9 @@
 #include "scip/scipdefplugins.h"
 #include "scip/debug.h"
 
+#ifdef WITH_IPOPT
+#include "nlpi/nlpi_ipopt.h"
+#endif
 
 
 /** includes default SCIP plugins into SCIP */
@@ -135,6 +138,15 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
+
+#ifdef WITH_IPOPT
+   {
+      SCIP_NLPI* nlpiipopt;
+      SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpiipopt) );
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpiipopt) );
+   }
+#endif
+
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/

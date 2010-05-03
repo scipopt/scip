@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.53 2010/05/03 15:18:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.54 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1129,10 +1129,10 @@ SCIP_RETCODE createSubProblem(
    SCIP_CALL( SCIPcreate(&ppcscip) );
 #if defined(SCIP_DEBUG) || !defined(NDEBUG)
    SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 #endif
 
    /* create array for ppc variables and solution values */
@@ -1662,10 +1662,10 @@ SCIP_RETCODE SCIPapplyUndercover(
 
 #if defined(SCIP_DEBUG) || !defined(NDEBUG)
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 #endif
 
 #ifdef WITH_UNIVARDEFINITE

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.368 2010/05/03 15:12:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.369 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -59,6 +59,7 @@
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
+#include "nlpi/type_nlpi.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
 #include "scip/pub_branch.h"
@@ -182,7 +183,8 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
-   SCIP_Bool             copydialogs         /**< should the dialogs be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis           /**< should the NLPIs be copied */
    );
 
 /** creates and initializes SCIP data structures */
@@ -664,7 +666,7 @@ SCIP_RETCODE SCIPincludeReader(
 extern
 SCIP_READER* SCIPfindReader(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of constraint handler */
+   const char*           name                /**< name of reader */
    );
 
 /** returns the array of currently available readers */
@@ -1164,7 +1166,7 @@ SCIP_RETCODE SCIPincludeNodesel(
 extern
 SCIP_NODESEL* SCIPfindNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of node selector */
    );
 
 /** returns the array of currently available node selectors */
@@ -1228,7 +1230,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
 extern
 SCIP_BRANCHRULE* SCIPfindBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of branching rule */
    );
 
 /** returns the array of currently available branching rules */
@@ -1293,7 +1295,7 @@ SCIP_RETCODE SCIPincludeDisp(
 extern
 SCIP_DISP* SCIPfindDisp(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of display column */
    );
 
 /** returns the array of currently available display columns */
@@ -1312,6 +1314,40 @@ int SCIPgetNDisps(
 extern
 SCIP_RETCODE SCIPautoselectDisps(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** includes an NLPI in SCIP */
+extern
+SCIP_RETCODE SCIPincludeNlpi(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi                /**< NLPI data structure */
+   );
+
+/** returns the NLPI of the given name, or NULL if not existing */
+extern
+SCIP_NLPI* SCIPfindNlpi(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of NLPI */
+   );
+
+/** returns the array of currently available NLPIs (sorted by priority) */
+extern
+SCIP_NLPI** SCIPgetNlpis(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available NLPIs */
+extern
+int SCIPgetNNlpis(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of an NLPI */
+extern
+SCIP_RETCODE SCIPsetNlpiPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< NLPI */
+   int                   priority            /**< new priority of the NLPI */
    );
 
 /**@} */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -24,10 +24,17 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 #include "nlpi/nlpi.h"
 #include "nlpi/struct_nlpi.h"
 #include "blockmemshell/memory.h"
+
+/** compares two NLPIs w.r.t. their priority */
+SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp)
+{  /*lint --e{715}*/
+   return ((SCIP_NLPI*)elem2)->priority - ((SCIP_NLPI*)elem1)->priority;
+}
 
 /** creates an NLP solver interface */
 SCIP_RETCODE SCIPnlpiCreate(
@@ -35,6 +42,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    const char*                     name,                        /**< name of NLP interface */
    const char*                     description,                 /**< description of NLP interface */
    int                             priority,                    /**< priority of NLP interface */
+   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying an NLPI */
    SCIP_DECL_NLPIFREE              ((*nlpifree)),               /**< free NLPI user data */
    SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer */
    SCIP_DECL_NLPICREATEPROBLEM     ((*nlpicreateproblem)),      /**< create a new problem instance */
@@ -70,6 +78,9 @@ SCIP_RETCODE SCIPnlpiCreate(
 {  /*lint --e{715}*/
    assert(nlpi != NULL);
 
+   assert(name != NULL);
+   assert(description != NULL);
+   assert(nlpicopy != NULL);
    assert(nlpifree != NULL);
    assert(nlpigetsolverpointer != NULL);
    assert(nlpicreateproblem != NULL);
@@ -103,6 +114,10 @@ SCIP_RETCODE SCIPnlpiCreate(
    if( BMSallocMemory(nlpi) == NULL )
       return SCIP_NOMEMORY;
    
+   (*nlpi)->name = strdup(name);
+   (*nlpi)->description = strdup(description);
+   (*nlpi)->priority = priority;
+   (*nlpi)->nlpicopy = nlpicopy;
    (*nlpi)->nlpifree = nlpifree;
    (*nlpi)->nlpigetsolverpointer = nlpigetsolverpointer;
    (*nlpi)->nlpicreateproblem = nlpicreateproblem;
@@ -138,6 +153,20 @@ SCIP_RETCODE SCIPnlpiCreate(
    return SCIP_OKAY;
 }
 
+/** copies an NLPI */
+SCIP_RETCODE SCIPnlpiCopy(
+   SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
+   SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
+)
+{
+   assert(sourcenlpi != NULL);
+   assert(targetnlpi != NULL);
+
+   SCIP_CALL( (*sourcenlpi->nlpicopy)(sourcenlpi, targetnlpi) );
+
+   return SCIP_OKAY;
+}
+
 /** frees NLPI user data */
 SCIP_RETCODE SCIPnlpiFree(
    SCIP_NLPI**           nlpi                /**< pointer to NLPI data structure */
@@ -147,6 +176,8 @@ SCIP_RETCODE SCIPnlpiFree(
    assert(*nlpi != NULL);
 
    SCIP_CALL( (*(*nlpi)->nlpifree)((*nlpi)) );
+   free((*nlpi)->name);
+   free((*nlpi)->description);
    BMSfreeMemory(nlpi);
    
    assert(*nlpi == NULL);
@@ -611,7 +642,7 @@ SCIP_RETCODE SCIPnlpiSetRealPar(
    )
 {
    assert(nlpi    != NULL);
-   assert(problem != NULL);
+   assert(problem != NULL || type == SCIP_NLPPAR_INFINITY);
    
    SCIP_CALL( (*nlpi->nlpisetrealpar)(nlpi, problem, type, dval) );
    
@@ -669,6 +700,37 @@ const char* SCIPnlpiGetName(
    assert(nlpi != NULL);
    
    return nlpi->name;
+}
+
+/** gets NLP solver descriptions */
+const char* SCIPnlpiGetDesc(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+)
+{
+   assert(nlpi != NULL);
+
+   return nlpi->description;
+}
+
+/** gets NLP solver priority */
+int SCIPnlpiGetPriority(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+)
+{
+   assert(nlpi != NULL);
+
+   return nlpi->priority;
+}
+
+/** sets NLP solver priority */
+void SCIPnlpiSetPriority(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   int                   priority            /**< new priority of NLPI */
+)
+{
+   assert(nlpi != NULL);
+
+   nlpi->priority = priority;
 }
 
 /** creates an NLP statistics structure */

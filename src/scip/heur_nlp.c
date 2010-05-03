@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.57 2010/05/03 10:26:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.58 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -29,9 +29,6 @@
 
 #include "scip/heur_nlp.h"
 #include "nlpi/nlpi.h"
-#ifdef WITH_IPOPT
-#include "nlpi/nlpi_ipopt.h"
-#endif
 
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
@@ -83,6 +80,7 @@ struct SCIP_HeurData
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0 for off */
    SCIP_Real             resolvetolfactor;   /**< factor for feasiblity tolerance when resolving NLP due to disagreement of feasibility */
    SCIP_Bool             resolvefromscratch; /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
+   char*                 nlpsolver;          /**< name of NLP solver to use */
    char*                 nlpoptfile;         /**< name of NLP solver specific option file */
                          
    SCIP_Longint          iterused;           /**< number of iterations used so far */
@@ -98,7 +96,6 @@ struct SCIP_HeurData
  * Local methods
  */
 
-#ifdef WITH_IPOPT
 /** adds linear constraints to NLP */
 static
 SCIP_RETCODE addLinearConstraints(
@@ -367,13 +364,29 @@ SCIP_RETCODE setupNLP(
    assert(heurdata->var_nlp2scip == NULL);
    assert(heurdata->var_scip2nlp == NULL);
 
-   /* create an instance of our NLP solver; so far we have only IPOPT */
-#ifdef WITH_IPOPT
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &heurdata->nlpi) );
-#else
-   SCIPerrorMessage("No NLP solver available. Cannot setup NLP.\n");
-   return SCIP_ERROR;
-#endif
+   if( SCIPgetNNlpis(scip) == 0 )
+   {
+      SCIPerrorMessage("No NLP solver available. Cannot setup NLP.\n");
+      return SCIP_ERROR;
+   }
+
+   /* select an NLP solver; default selection is to take the solver with highest priority */
+   assert(heurdata->nlpsolver != NULL);
+   if( heurdata->nlpsolver[0] == '\0' )
+   {
+      heurdata->nlpi = SCIPgetNlpis(scip)[SCIPgetNNlpis(scip)-1];
+   }
+   else
+   {
+      heurdata->nlpi = SCIPfindNlpi(scip, heurdata->nlpsolver);
+      if( heurdata->nlpi == NULL )
+      {
+         SCIPerrorMessage("NLP solver <%s> not found.\n", heurdata->nlpsolver);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+   }
+
+   /* create an NLPI problem */
    SCIP_CALL( SCIPnlpiCreateProblem(heurdata->nlpi, &heurdata->nlpiprob, "subnlp") );
    
    /* set some parameters of NLP solver */ 
@@ -385,6 +398,7 @@ SCIP_RETCODE setupNLP(
    {
       SCIP_CALL( SCIPnlpiSetStringPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_OPTFILE, heurdata->nlpoptfile) );
    }
+   SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_INFINITY, SCIPinfinity(scip)) );
 
    /* collect and capture variables, collect discrete variables, collect bounds
     * assign variable indices to variables */
@@ -474,7 +488,6 @@ SCIP_RETCODE setupNLP(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** process variable global bound change event */
 static
@@ -557,12 +570,15 @@ SCIP_RETCODE checkCIPandSetupNLP(
    }
 
    /* setup NLP (if NLP solver available) */
-#ifdef WITH_IPOPT
-   SCIP_CALL( setupNLP(scip, heurdata) );
-#else
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
-   havenlp = FALSE;
-#endif
+   if( SCIPgetNNlpis(scip) > 0 )
+   {
+      SCIP_CALL( setupNLP(scip, heurdata) );
+   }
+   else
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
+      havenlp = FALSE;
+   }
    
    return SCIP_OKAY;   
 }
@@ -806,8 +822,7 @@ SCIP_RETCODE destroyNLP(
    SCIP_CALL( SCIPnlpiFreeProblem(heurdata->nlpi, &heurdata->nlpiprob) );
    assert(heurdata->nlpiprob == NULL);
 
-   SCIP_CALL( SCIPnlpiFree(&heurdata->nlpi) );
-   assert(heurdata->nlpi == NULL);
+   heurdata->nlpi = NULL;
    
    SCIPnlpStatisticsFree(&heurdata->nlpstatistics);
    assert(heurdata->nlpstatistics == NULL);
@@ -1364,6 +1379,10 @@ SCIP_RETCODE SCIPincludeHeurNlp(
    SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpoptfile",
          "name of an NLP solver specific options file",
          &heurdata->nlpoptfile, TRUE, "", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpsolver",
+         "name of an NLP solver to use (empty value means to use solver with highest priority)",
+         &heurdata->nlpsolver, FALSE, "", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",

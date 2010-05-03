@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.2 2010/04/21 14:21:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file    nlpi_xxx.cpp
  * @ingroup NLPIS
@@ -61,6 +61,21 @@ struct SCIP_NlpiProblem
 /* TODO: Implement all necessary NLP interface methods. The methods with an #if 0 ... #else #define ... are optional
  * (currently, all methods are required) */
 
+/** copy method of NLP interface (called when SCIP copies plugins)
+ *
+ * input:
+ *  - sourcenlpi the NLP interface to copy
+ *  - targetnlpi buffer to store pointer to copy of NLP interface
+ */
+static
+SCIP_DECL_NLPICOPY( nlpiCopyXxx )
+{
+   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;
+}
+
 /** destructor of NLP interface to free nlpi data
  * 
  * input:
@@ -85,7 +100,7 @@ SCIP_DECL_NLPIFREE( nlpiFreeXxx )
  * return: void pointer to solver
  */
 static
-SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerIpopt)
+SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXxx)
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -101,7 +116,7 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerIpopt)
  *  - name name of problem, can be NULL
  */
 static
-SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
+SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemXxx)
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -116,7 +131,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
  *  - problem pointer where problem data is stored 
  */
 static
-SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
+SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXxx)
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -134,7 +149,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
  *  
  * return: void pointer to problem instance
  */
-SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
+SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXxx)
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -674,7 +689,7 @@ SCIP_RETCODE SCIP_createNlpSolverXxx(
    /* create solver interface */
    SCIP_CALL( SCIPnlpiCreate(nlpi,
       NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-      nlpiFreeXxx, nlpiGetSolverPointerXxx,
+      nlpiCopyXxx, nlpiFreeXxx, nlpiGetSolverPointerXxx,
       nlpiCreateProblemXxx, nlpiFreeProblemXxx, nlpiGetProblemPointerXxx,
       nlpiAddVarsXxx, nlpiAddConstraintsXxx, nlpiSetObjectiveXxx, 
       nlpiChgVarBoundsXxx, nlpiChgConsBoundsXxx, nlpiDelVarSetXxx, nlpiDelConstraintSetXxx,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.6 2010/05/02 22:24:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.7 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -544,10 +544,10 @@ SCIP_RETCODE createSubscip(
    subscip = mipdata->subscip;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 #endif
 
    SCIP_CALL( SCIPcreateProb(subscip, "sepa_cgmip separating MIP", NULL , NULL , NULL , NULL , NULL , NULL) );

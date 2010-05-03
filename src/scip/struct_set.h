@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.88 2010/03/26 13:55:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.89 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -46,6 +46,7 @@
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
+#include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,6 +77,7 @@ struct SCIP_Set
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
+   SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    int                   nreaders;           /**< number of file readers */
    int                   readerssize;        /**< size of readers array */
    int                   npricers;           /**< number of variable pricers */
@@ -105,6 +107,8 @@ struct SCIP_Set
    int                   dispssize;          /**< size of disps array */
    int                   ndialogs;           /**< number of dialogs */
    int                   dialogssize;        /**< size of dialogs array */
+   int                   nnlpis;             /**< number of NLPIs */
+   int                   nlpissize;          /**< size of NLPIs array */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    SCIP_Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
    SCIP_Bool             presolssorted;      /**< are the presolvers sorted by priority? */
@@ -113,6 +117,7 @@ struct SCIP_Set
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
+   SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */

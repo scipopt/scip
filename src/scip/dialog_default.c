@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.103 2010/04/26 15:40:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.104 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "scip/dialog_default.h"
+#include "nlpi/nlpi.h"
 
 
 
@@ -595,6 +596,54 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory)
    SCIPdialogMessage(scip, NULL, "\n");
    SCIPprintMemoryDiagnostic(scip);
    SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display nlpi command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNlpi)
+{  /*lint --e{715}*/
+   SCIP_NLPI** nlpis;
+   SCIP_NLPI** sorted;
+   int nnlpis;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   nlpis  = SCIPgetNlpis(scip);
+   nnlpis = SCIPgetNNlpis(scip);
+
+   /* copy nlpis array into temporary memory for sorting */
+   if( nnlpis != 0 )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, nlpis, nnlpis) );
+   }
+
+   /* sort the branching rules */
+   SCIPsortPtr((void**)sorted, SCIPnlpiComp, nnlpis);
+
+   /* display sorted list of branching rules */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " NLP interface        priority description\n");
+   SCIPdialogMessage(scip, NULL, " -------------        -------- -----------\n");
+   for( i = 0; i < nnlpis; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPnlpiGetName(sorted[i]));
+      if( strlen(SCIPnlpiGetName(sorted[i])) > 20 )
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPnlpiGetPriority(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPnlpiGetDesc(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   /* free temporary memory */
+   if( nnlpis != 0 )
+   {
+      SCIPfreeBufferArray(scip, &sorted);
+   }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -2190,6 +2239,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* display nlpi */
+   if( !SCIPdialogHasEntry(submenu, "nlpi") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayNlpi, NULL, NULL,
+            "nlpi", "display NLP solver interfaces", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* display nodeselectors */
    if( !SCIPdialogHasEntry(submenu, "nodeselectors") )
    {
@@ -2660,6 +2720,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    SCIP_CONSHDLR** conshdlrs;
    SCIP_DISP** disps;
    SCIP_HEUR** heurs;
+   SCIP_NLPI** nlpis;
    SCIP_NODESEL** nodesels;
    SCIP_PRESOL** presols;
    SCIP_PRICER** pricers;
@@ -2670,6 +2731,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nconshdlrs;
    int ndisps;
    int nheurs;
+   int nnlpis;
    int nnodesels;
    int npresols;
    int npricers;
@@ -3011,6 +3073,38 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
             "misc", "change parameters for miscellaneous stuff", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* set nlpi */
+   if( !SCIPdialogHasEntry(setmenu, "nlpi") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "nlpi", "change parameters for NLP interfaces", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(setmenu, "nlpi", &submenu) != 1 )
+   {
+      SCIPerrorMessage("nlpi sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nnlpis = SCIPgetNNlpis(scip);
+   nlpis = SCIPgetNlpis(scip);
+
+   for( i = 0; i < nnlpis; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPnlpiGetName(nlpis[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPnlpiGetName(nlpis[i]), SCIPnlpiGetDesc(nlpis[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
    }
 
    /* set nodeselection */

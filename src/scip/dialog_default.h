@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.37 2010/04/26 15:40:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.38 2010/05/03 15:23:57 bzfviger Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -74,6 +74,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
 /** dialog execution method for the display nodeselectors command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors);
+
+/** dialog execution method for the display nlpi command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNlpi);
 
 /** dialog execution method for the display parameters command */
 extern
