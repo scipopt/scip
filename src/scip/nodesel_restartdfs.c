@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.34 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.35 2010/05/03 15:01:33 bzfheinz Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @ingroup NODESELECTORS
  * @brief  node selector for depth first search with periodical selection of the best node
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,7 +41,7 @@
  * Default parameter settings
  */
 
-#define SELECTBESTFREQ             1000 /**< frequency for selecting the best node instead of the deepest one */
+#define SELECTBESTFREQ                0 /**< frequency for selecting the best node instead of the deepest one */
 
 
 
@@ -137,7 +138,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
       assert(nodeseldata != NULL);
 
       nnodes = SCIPgetNNodes(scip);
-      if( nodeseldata->selectbestfreq >= 1 && nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq )
+      if( nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq )
       {
          nodeseldata->lastrestart = nnodes;
          *selnode = SCIPgetBestboundNode(scip);
@@ -146,9 +147,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
       {
          *selnode = SCIPgetPrioSibling(scip);
          if( *selnode == NULL )
-         {
             *selnode = SCIPgetBestLeaf(scip);
-         }
       }
    }
 
@@ -162,9 +161,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompRestartdfs)
 {  /*lint --e{715}*/
    return (int)(SCIPnodeGetNumber(node2) - SCIPnodeGetNumber(node1));
 }
-
-
-
 
 
 /*
@@ -191,10 +187,10 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-                  "nodeselection/restartdfs/selectbestfreq",
-                  "frequency for selecting the best node instead of the deepest one (0: never)",
+         "nodeselection/restartdfs/selectbestfreq",
+         "frequency for selecting the best node instead of the deepest one",
          &nodeseldata->selectbestfreq, FALSE, SELECTBESTFREQ, 0, INT_MAX, NULL, NULL) );
-
+   
    return SCIP_OKAY;
 }
 
