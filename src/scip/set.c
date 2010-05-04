@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.217 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.218 2010/05/04 14:45:54 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -639,6 +639,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpis = NULL;
    (*set)->nnlpis = 0;
    (*set)->nlpissize = 0;
+   (*set)->nlpissorted = FALSE;
    (*set)->vbc_filename = NULL;
 
    /* branching parameters */
