@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.274 2010/05/04 15:14:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.275 2010/05/04 15:27:06 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2794,7 +2794,7 @@ SCIP_RETCODE SCIPvarGetTransformed(
          SCIP_CALL( SCIPvarNegate(origvar->negatedvar->data.original.transvar, blkmem, set, stat, transvar) );
       }
    }
-   else
+   else 
       *transvar = origvar->data.original.transvar;
 
    return SCIP_OKAY;
@@ -3673,9 +3673,12 @@ SCIP_RETCODE SCIPvarAggregate(
 
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
-      return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant,
-         infeasible, aggregated);
-
+   {
+      SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, 
+            infeasible, aggregated) );
+      return SCIP_OKAY;
+   }
+   
    /* don't perform the aggregation if the aggregation variable is multi-aggregated itself */
    if( SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_MULTAGGR )
       return SCIP_OKAY;
@@ -3944,11 +3947,18 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
    /* check, if we are in one of the simple cases */
    if( naggvars == 0 )
-      return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, 
-         infeasible, aggregated);
-   else if( naggvars == 1)
-      return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
-         aggvars[0], scalars[0], constant, infeasible, aggregated);
+   {
+      SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, 
+            infeasible, aggregated) );
+      return SCIP_OKAY;
+   }
+   else if( naggvars == 1 )
+   {
+      SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
+            aggvars[0], scalars[0], constant, infeasible, aggregated) );
+      return SCIP_OKAY;
+   }
+
    SCIPdebugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
 
    *infeasible = FALSE;
@@ -4032,11 +4042,17 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
          /* check, if we are in one of the simple cases */
          if( ntmpvars == 0 )
-            return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, tmpconstant, 
-               infeasible, aggregated);
-         else if( ntmpvars == 1)
-            return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
-               tmpvars[0], tmpscalars[0], tmpconstant, infeasible, aggregated);
+         {
+            SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, tmpconstant, 
+                  infeasible, aggregated) );
+            return SCIP_OKAY;
+         }
+         else if( ntmpvars == 1 )
+         {
+            SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
+                  tmpvars[0], tmpscalars[0], tmpconstant, infeasible, aggregated) );
+            return SCIP_OKAY;
+         }
       }
 
       /* if the variable to be multiaggregated has implications or variable bounds (i.e. is the implied variable or
@@ -5191,9 +5207,6 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
-      newbound = 0.0;
-
    if( SCIPsetIsEQ(set, var->glbdom.lb, newbound) )
       return SCIP_OKAY;
 
@@ -5311,9 +5324,6 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    SCIPvarAdjustUb(var, set, &newbound);
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
-
-   if( SCIPsetIsZero(set, newbound) )
-      newbound = 0.0;
 
    if( SCIPsetIsEQ(set, var->glbdom.ub, newbound) )
       return SCIP_OKAY;
@@ -5808,9 +5818,6 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
-      newbound = 0.0;
-
    if( SCIPsetIsEQ(set, var->locdom.lb, newbound) )
       return SCIP_OKAY;
 
@@ -5924,9 +5931,6 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
-      newbound = 0.0;
-   
    if( SCIPsetIsEQ(set, var->locdom.ub, newbound) )
       return SCIP_OKAY;
 
@@ -6061,9 +6065,6 @@ SCIP_RETCODE SCIPvarChgLbDive(
 
    SCIPdebugMessage("changing lower bound of <%s> to %g in current dive\n", var->name, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
-      newbound = 0.0;
-
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
    {
@@ -6152,9 +6153,6 @@ SCIP_RETCODE SCIPvarChgUbDive(
    SCIPvarAdjustUb(var, set, &newbound);
 
    SCIPdebugMessage("changing upper bound of <%s> to %g in current dive\n", var->name, newbound);
-
-   if( SCIPsetIsZero(set, newbound) )
-      newbound = 0.0;
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
