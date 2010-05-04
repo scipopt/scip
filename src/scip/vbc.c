@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.33 2010/01/04 20:35:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.34 2010/05/04 10:23:41 bzfheinz Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -35,25 +35,32 @@
 #include "scip/struct_vbc.h"
 
 
-
-
 /** returns the branching variable of the node, or NULL */
 static
-SCIP_VAR* getBranchVar(
-   SCIP_NODE*            node                /**< node */
+void getBranchInfo(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_VAR**            var,                /**< pointer to store the branching variable */
+   SCIP_BOUNDTYPE*       boundtype,          /**< pointer to store the branching type: lower or upper bound */
+   SCIP_Real*            bound               /**< pointer to store the new bound of the branching variable */
    )
 {
    SCIP_DOMCHGBOUND* domchgbound;
 
+   (*var) = NULL;
+   (*bound) = 0.0;
+   (*boundtype) = SCIP_BOUNDTYPE_LOWER;
+
    assert(node != NULL);
    if( node->domchg == NULL )
-      return NULL;
-   
+      return;
+
    domchgbound = &node->domchg->domchgbound;
    if( domchgbound->nboundchgs == 0 )
-      return NULL;
+      return;
 
-   return domchgbound->boundchgs[0].var;
+   (*var) = domchgbound->boundchgs[0].var;
+   (*bound) = domchgbound->boundchgs[0].newbound;
+   (*boundtype) = domchgbound->boundchgs[0].boundtype;
 }
 
 /** creates VBC Tool data structure */
@@ -192,6 +199,8 @@ SCIP_RETCODE SCIPvbcNewChild(
    )
 {
    SCIP_VAR* branchvar;
+   SCIP_BOUNDTYPE branchtype;
+   SCIP_Real branchbound;
    size_t parentnodenum;
    size_t nodenum;
 
@@ -218,16 +227,25 @@ SCIP_RETCODE SCIPvbcNewChild(
    parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(vbc->nodenum, node->parent) : 0);
    assert(node->parent == NULL || parentnodenum > 0);
 
-   /* get branching variable */
-   branchvar = getBranchVar(node);
-
+   /* get branching information */
+   getBranchInfo(node, &branchvar, &branchtype, &branchbound);
+   
    printTime(vbc, stat);
    SCIPmessageFPrintInfo(vbc->file, "N %d %d %d\n", (int)parentnodenum, (int)nodenum, SCIP_VBCCOLOR_UNSOLVED);
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\n",
-      (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
-      branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node));
-
+   if( branchvar != NULL )
+   {
+      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s %s %f\\nbound:\\t%f\n", 
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+         branchvar == NULL ? "-" : SCIPvarGetName(branchvar),  
+         branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node));
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n", 
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -264,6 +282,8 @@ void SCIPvbcSolvedNode(
    )
 {
    SCIP_VAR* branchvar;
+   SCIP_BOUNDTYPE branchtype;
+   SCIP_Real branchbound;
    size_t nodenum;
 
    assert(vbc != NULL);
@@ -278,14 +298,24 @@ void SCIPvbcSolvedNode(
    nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
    assert(nodenum > 0);
 
-   /* get branching variable */
-   branchvar = getBranchVar(node);
-
+   /* get branching information */
+   getBranchInfo(node, &branchvar, &branchtype, &branchbound);
+   
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
-      (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
-      branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node), stat->nnodes);
 
+   if( branchvar != NULL )
+   {
+      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+         branchvar == NULL ? "-" : SCIPvarGetName(branchvar),  
+         branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node), stat->nnodes);
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node), stat->nnodes);
+   }
+   
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLVED);
 }
 
