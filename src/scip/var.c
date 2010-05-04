@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.273 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.274 2010/05/04 15:14:22 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8649,11 +8649,20 @@ SCIP_Bool SCIPvarIsTransformedOrigvar(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
+   SCIP_VAR* parentvar;
    assert(var != NULL);
 
-   /* the corresponding original variable is always the first parent variable of the transformed variable */
-   return (SCIPvarIsTransformed(var)
-      && var->nparentvars >= 1 && SCIPvarGetStatus(var->parentvars[0]) == SCIP_VARSTATUS_ORIGINAL);
+   if ( ! SCIPvarIsTransformed(var) || var->nparentvars < 1 )
+      return FALSE;
+
+   parentvar = var->parentvars[0];
+
+   /* we follow the aggregation tree to the root; then the corresponding original variable is the first variable */
+   while ( parentvar->nparentvars >= 1 )
+      parentvar = parentvar->parentvars[0];
+   assert( parentvar != NULL );
+
+   return ( SCIPvarGetStatus(parentvar) == SCIP_VARSTATUS_ORIGINAL );
 }
 
 /** gets objective value of variable in current SCIP_LP; the value can be different from the bound stored in the variable's own
