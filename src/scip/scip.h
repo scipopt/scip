@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.370 2010/05/04 09:24:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.371 2010/05/04 12:41:25 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -1506,7 +1506,6 @@ extern
 SCIP_RETCODE SCIPpermuteProb(
    SCIP*                 scip,              /**< SCIP data structure */
    unsigned int          randseed,          /**< seed value for random generator */
-   SCIP_Bool             permuteconshdlrs,  /**< should the list of constraint handlers be permuted? */
    SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
    SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
    SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */

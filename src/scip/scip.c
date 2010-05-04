@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.557 2010/05/04 09:24:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.558 2010/05/04 12:41:25 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3154,7 +3154,6 @@ SCIP_RETCODE SCIPfreeProb(
 SCIP_RETCODE SCIPpermuteProb(
    SCIP*                 scip,              /**< SCIP data structure */
    unsigned int          randseed,          /**< seed value for random generator */
-   SCIP_Bool             permuteconshdlrs,  /**< should the list of constraint handlers be permuted? */
    SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
    SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
    SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
@@ -3182,10 +3181,13 @@ SCIP_RETCODE SCIPpermuteProb(
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
    assert(nconshdlrs == 0 || conshdlrs != NULL);
-
-   /* permute constraint handlers */
-   if( permuteconshdlrs )
-      SCIPpermuteArray((void**)conshdlrs, 0, nconshdlrs, &randseed);
+   
+   /*@note the constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
+    *      that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
+    *      subscips and contains the dependencies between the constraint handlers; for example the linear constraint
+    *      handler stays in front of all constraint handler which can upgrade a linear constraint (such as logicor,
+    *      setppc, and knapsack)
+    */
 
    /* for each constraint handler, permute its constraints */
    if( permuteconss )
