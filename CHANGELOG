@@ -89,6 +89,7 @@ features:
 - the indicator constraint can now decompose the problem, i.e., not add the linear constraint to the problem if all of its variables are continuous
 - added new dialog for setting heuristics to aggressive, fast, or off in interactive shell
 - the vbc visualization adds the branching type (lower or upper bound change) and the new bound to the node information 
+- following methods SCIPinferVarUbProp, SCIPinferVarLbProp, SCIPinferVarLbCons, SCIPinferVarUbCons have a new 6th parameter "SCIP_Bool force" which allows bound tightening even if the difference to the newbound is below bound strengthening tolerance
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
@@ -134,6 +135,8 @@ fixed bugs:
 - corrected several asserts in linear and quadratic constraint handler concerning parsing of CIP format
 - fixed bug in rapid learning with wrong ordering of dual and primal bound update, primal bound is now updated inside rapid learning
 - fixed potential bug in rapid learning with dual reductions
+- fixed bug in sepastore.c in sepastoreApplyLb/Ub being to hard on feasibility decisions
+- fixed bug in presolving while not applying a bound change on a variable in a single-variable constraint (e.g. x1 = 0.03) in cons_linear which is too small, that lead to another bound change in presol_trivial which is not allowed, so now this bound change will be forced
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

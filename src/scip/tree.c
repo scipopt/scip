@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.233 2010/03/17 14:47:47 bzfwanie Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.234 2010/05/04 13:28:33 bzfwinkm Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1618,7 +1618,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       oldlb = SCIPvarGetLbLocal(var);
       oldub = SCIPvarGetUbLocal(var);
    }
-   assert(SCIPsetIsLT(set, oldlb, oldub));
+   assert(SCIPsetIsLE(set, oldlb, oldub));
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {

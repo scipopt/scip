@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.64 2010/04/29 19:27:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.65 2010/05/04 13:28:32 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -1874,7 +1874,7 @@ SCIP_RETCODE propIndicator(
 	 /* if variable is not multi-aggregated */
 	 if ( SCIPvarGetStatus(consdata->slackvar) != SCIP_VARSTATUS_MULTAGGR )
 	 {
-	    SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, 0.0, cons, 0, &infeasible, &tightened) );
+	    SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, 0.0, cons, 0, FALSE, &infeasible, &tightened) );
 	    assert( ! infeasible );
 	    if ( tightened )
 	       ++(*nGen);
@@ -1888,7 +1888,7 @@ SCIP_RETCODE propIndicator(
 	    SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
 
 	 /* fix binary variable to 0 */
-	 SCIP_CALL( SCIPinferVarUbCons(scip, consdata->binvar, 0.0, cons, 1, &infeasible, &tightened) );
+	 SCIP_CALL( SCIPinferVarUbCons(scip, consdata->binvar, 0.0, cons, 1, FALSE, &infeasible, &tightened) );
 	 assert( ! infeasible );
 	 if ( tightened )
 	    ++(*nGen);

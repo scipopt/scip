@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.91 2010/03/26 13:55:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.92 2010/05/04 13:28:33 bzfwinkm Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -399,7 +399,8 @@ SCIP_RETCODE propagateCons(
             {
                SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
                   SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, FALSE,
+                     &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                if( tightened )
                {
@@ -422,7 +423,7 @@ SCIP_RETCODE propagateCons(
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2,
+                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2, FALSE,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
                   if( tightened )
@@ -440,7 +441,7 @@ SCIP_RETCODE propagateCons(
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2,
+                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2, FALSE,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
                   if( tightened )
@@ -481,7 +482,8 @@ SCIP_RETCODE propagateCons(
             {
                SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
                   SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, &infeasible, &tightened) );
+               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, FALSE,
+                     &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                if( tightened )
                {
@@ -504,7 +506,7 @@ SCIP_RETCODE propagateCons(
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4,
+                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4, FALSE,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
                   if( tightened )
@@ -522,7 +524,7 @@ SCIP_RETCODE propagateCons(
                {
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4,
+                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4, FALSE,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
                   if( tightened )

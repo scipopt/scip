@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.31 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.32 2010/05/04 13:28:33 bzfwinkm Exp $"
 
 /**@file   prop_pseudoobj.c
  * @ingroup PROPAGATORS
@@ -224,7 +224,7 @@ SCIP_RETCODE propagateCutoffbound(
          {
             SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
                SCIPvarGetName(var), lb, ub, newub);
-            SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, &infeasible, &tightened) );
+            SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, FALSE, &infeasible, &tightened) );
             assert(!infeasible);
             if( tightened ) /* might not be tightened due to numerical reasons */
                *result = SCIP_REDUCEDDOM;
@@ -240,7 +240,7 @@ SCIP_RETCODE propagateCutoffbound(
          if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             SCIPdebugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
-            SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, &infeasible, &tightened) );
+            SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, FALSE, &infeasible, &tightened) );
             assert(!infeasible);
             if( tightened ) /* might not be tightened due to numerical reasons */
                *result = SCIP_REDUCEDDOM;

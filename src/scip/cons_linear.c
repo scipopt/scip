@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.357 2010/04/28 17:44:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.358 2010/05/04 13:28:32 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -3712,9 +3712,9 @@ SCIP_RETCODE applyFixings(
             fixedval = SCIPvarGetLbGlobal(var);
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
-	       if ( SCIPisInfinity(scip, ABS(fixedval)) )
+	       if( SCIPisInfinity(scip, ABS(fixedval)) )
 	       {
-		  if ( val * fixedval > 0.0 )
+		  if( val * fixedval > 0.0 )
 		  {
 		     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
 		  }
@@ -3730,9 +3730,9 @@ SCIP_RETCODE applyFixings(
             }
             if( !SCIPisInfinity(scip, consdata->rhs) )
             {
-	       if ( SCIPisInfinity(scip, ABS(fixedval)) )
+	       if( SCIPisInfinity(scip, ABS(fixedval)) )
 	       {
-		  if ( val * fixedval > 0.0 )
+		  if( val * fixedval > 0.0 )
 		  {
                      /* if rhs gets -infinity it means that the problem is infeasible */
                      *infeasible = TRUE;
@@ -4117,7 +4117,8 @@ SCIP_RETCODE tightenVarBounds(
    SCIP_CONS*            cons,               /**< linear constraint */
    int                   pos,                /**< position of the variable in the vars array */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
+   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
+   SCIP_Bool             force               /**< should a possible boundchange be forced even if below bound strengthening tolerance */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4178,7 +4179,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (rhs - minresactivity)/val;
-         if( (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
+
+         if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
             || SCIPisUbBetter(scip, newub, lb, ub) )
          {
             SCIP_Bool activityunreliable;
@@ -4189,8 +4191,9 @@ SCIP_RETCODE tightenVarBounds(
             {
                consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
                newub = (rhs - minresactivity)/val;
-               activityunreliable = SCIPisInfinity(scip, -minresactivity) || ((!SCIPvarIsIntegral(var) || !SCIPisFeasLT(scip, newub, ub))
-                  && !SCIPisUbBetter(scip, newub, lb, ub));
+               activityunreliable = SCIPisInfinity(scip, -minresactivity) ||
+                  (!SCIPisUbBetter(scip, newub, lb, ub) && (!SCIPisFeasLT(scip, newub, ub) || !SCIPvarIsIntegral(var)) 
+                     && (!force || !SCIPisLT(scip, newub, ub)));
             }
 
             if( !activityunreliable )
@@ -4198,7 +4201,7 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten upper bound */
                SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-               SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos),
+               SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
                if( infeasible )
                {
@@ -4228,7 +4231,7 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (lhs - maxresactivity)/val;
-         if( (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
+         if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
             || SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             /* check maxresactivities for reliablility */
@@ -4237,14 +4240,16 @@ SCIP_RETCODE tightenVarBounds(
                consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
                newlb = (lhs - maxresactivity)/val;
 
-               if( SCIPisInfinity(scip, maxresactivity) || ((!SCIPvarIsIntegral(var) || !SCIPisFeasGT(scip, newlb, lb)) && !SCIPisLbBetter(scip, newlb, lb, ub)) )
+               if( SCIPisInfinity(scip, maxresactivity) || (!SCIPisLbBetter(scip, newlb, lb, ub) 
+                     && (!SCIPisFeasGT(scip, newlb, lb) || !SCIPvarIsIntegral(var)) 
+                     && (!force || !SCIPisGT(scip, newlb, lb))) )
                   return SCIP_OKAY;
             }
 
             /* tighten lower bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-            SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos),
+            SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
             {
@@ -4276,7 +4281,7 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (rhs - minresactivity)/val;
-         if( (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
+         if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
             || SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             SCIP_Bool activityunreliable;
@@ -4287,7 +4292,9 @@ SCIP_RETCODE tightenVarBounds(
                consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
                newlb = (rhs - minresactivity)/val;
 
-               activityunreliable = SCIPisInfinity(scip, -minresactivity) || ((!SCIPvarIsIntegral(var) || !SCIPisFeasGT(scip, newlb, lb)) && !SCIPisLbBetter(scip, newlb, lb, ub));
+               activityunreliable = SCIPisInfinity(scip, -minresactivity) 
+                  || (!SCIPisLbBetter(scip, newlb, lb, ub) && (!SCIPisFeasGT(scip, newlb, lb) || !SCIPvarIsIntegral(var))
+                     && (!force || !SCIPisGT(scip, newlb, lb)));
             }
             
             if( !activityunreliable )
@@ -4295,7 +4302,7 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten lower bound */
                SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-               SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos),
+               SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
                if( infeasible )
                {
@@ -4325,7 +4332,7 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (lhs - maxresactivity)/val;
-         if( (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
+         if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
             || SCIPisUbBetter(scip, newub, lb, ub) )
          {
             /* check maxresactivities for reliablility */
@@ -4334,14 +4341,16 @@ SCIP_RETCODE tightenVarBounds(
                consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
                newub = (lhs - maxresactivity)/val;
 
-               if( SCIPisInfinity(scip, maxresactivity) || ((!SCIPvarIsIntegral(var) || !SCIPisFeasLT(scip, newub, ub)) && !SCIPisUbBetter(scip, newub, lb, ub)) )
+               if( SCIPisInfinity(scip, maxresactivity) || (!SCIPisUbBetter(scip, newub, lb, ub) 
+                     && (!SCIPisFeasLT(scip, newub, ub) && !SCIPvarIsIntegral(var))
+                     && (!force || !SCIPisLT(scip, newub, ub))) )
                   return SCIP_OKAY;
             }
 
             /* tighten upper bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g], newub=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-            SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos),
+            SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
             {
@@ -4383,7 +4392,10 @@ SCIP_RETCODE tightenBounds(
    int nvars;
    int nrounds;
    int lastchange;
-
+   int oldnchgbds;
+   int v;
+   SCIP_Bool force;
+   
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nchgbds != NULL);
@@ -4399,27 +4411,28 @@ SCIP_RETCODE tightenBounds(
    assert(consdata != NULL);
 
    nvars = consdata->nvars;
+   force = (nvars == 1);
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
    for( nrounds = 0; !consdata->boundstightened && nrounds < MAXTIGHTENROUNDS; ++nrounds )
    {
-      int v;
-
       /* mark the constraint to have the variables' bounds tightened */
       consdata->boundstightened = TRUE;
 
       /* try to tighten the bounds of each variable in the constraint */
       for( v = 0; v < nvars && v != lastchange && !(*cutoff); ++v )
       {
-         int oldnchgbds;
-
          oldnchgbds = *nchgbds;
-         SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds) );
+         SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
          if( *nchgbds > oldnchgbds )
             lastchange = v;
       }
    }
+#ifndef NDEBUG
+   if( force && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      assert(*cutoff || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[0]), SCIPvarGetUbLocal(consdata->vars[0])));
+#endif
 
    return SCIP_OKAY;
 }
@@ -4673,6 +4686,7 @@ SCIP_RETCODE propagateCons(
 
          oldnchgbds = *nchgbds;
          SCIP_CALL( tightenBounds(scip, cons, cutoff, nchgbds) );
+
          if( *nchgbds > oldnchgbds )
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -8993,7 +9007,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, cons, &infeasible) );
-      
+
       if( infeasible )
       {
          SCIPdebugMessage(" -> infeasible fixing\n");

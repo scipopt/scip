@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.2 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.3 2010/05/04 13:28:33 bzfwinkm Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -369,7 +369,7 @@ SCIP_RETCODE propagateVbounds(
             SCIPdebugMessage(" -> variable <%s> => lower bound candidate is <%.15g>\n", SCIPvarGetName(SCIPgetVars(scip)[ABS(inferinfo)-1]), newbound);
          }
          
-         SCIP_CALL( SCIPinferVarLbProp(scip, var, newbound, prop, inferinfo, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarLbProp(scip, var, newbound, prop, inferinfo, FALSE, &infeasible, &tightened) );
          
          if( infeasible )
          {
@@ -464,7 +464,7 @@ SCIP_RETCODE propagateVbounds(
          }
 
          /* try new upper bound */
-         SCIP_CALL( SCIPinferVarUbProp(scip, var, newbound, prop, inferinfo, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarUbProp(scip, var, newbound, prop, inferinfo, FALSE, &infeasible, &tightened) );
       
          if( infeasible )
          {

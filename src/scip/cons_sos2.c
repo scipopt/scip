@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.30 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.31 2010/05/04 13:28:32 bzfwinkm Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS 
@@ -152,11 +152,11 @@ SCIP_RETCODE inferVariableZero(
       SCIP_Bool tighten;
 
       /* fix lower bound */
-      SCIP_CALL( SCIPinferVarLbCons(scip, var, 0.0, cons, inferinfo, infeasible, &tighten) );
+      SCIP_CALL( SCIPinferVarLbCons(scip, var, 0.0, cons, inferinfo, FALSE, infeasible, &tighten) );
       *tightened = *tightened || tighten;
 
       /* fix upper bound */
-      SCIP_CALL( SCIPinferVarUbCons(scip, var, 0.0, cons, inferinfo, infeasible, &tighten) );
+      SCIP_CALL( SCIPinferVarUbCons(scip, var, 0.0, cons, inferinfo, FALSE, infeasible, &tighten) );
       *tightened = *tightened || tighten;
    }
 

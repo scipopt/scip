@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.64 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.65 2010/05/04 13:28:33 bzfwinkm Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -401,7 +401,7 @@ SCIP_RETCODE sepastoreApplyLb(
       SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
-      if( SCIPsetIsLE(set, bound, SCIPvarGetUbLocal(var)) )
+      if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
       {
          SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
                var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
@@ -440,7 +440,7 @@ SCIP_RETCODE sepastoreApplyUb(
       SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
 
-      if( SCIPsetIsGE(set, bound, SCIPvarGetLbLocal(var)) )
+      if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
       {
          SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
                var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
