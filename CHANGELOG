@@ -6,7 +6,6 @@ interface:
 - new method SCIPpermuteArray() that randomly shuffles an array using the Fisher-Yates algorithm
 - new method SCIPgetRandomSubset() that draws a random subset of disjoint elements from a given set of disjoint elements
 - new method SCIPpermuteProb() that randomly permutes constraints and variables
-- new method SCIPgenerateBranchingOrder() that creates a random sequence of branching candidates
 - new method SCIPrestartSolve() that allows the user to manually restart the solving process
 - new method SCIPbranchRelax() to branch on a relaxation solution
 - new method SCIPbranchVarVal() to branch on an arbitrary value within the variable's bounds

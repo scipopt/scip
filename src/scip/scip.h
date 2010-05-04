@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.369 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.370 2010/05/04 09:24:40 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -1512,13 +1512,6 @@ SCIP_RETCODE SCIPpermuteProb(
    SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
    SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
    SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
-   );
-
-/** creates a random sequence of branching candidates with a unique priority */
-SCIP_RETCODE SCIPgenerateBranchingOrder(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   npriocands,         /**< number of branching candidates that should be predefined */
-   unsigned int          randseed            /**< seed value for random generator */
    );
 
 /** gets user problem data */

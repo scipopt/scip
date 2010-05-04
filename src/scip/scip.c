@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.556 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.557 2010/05/04 09:24:40 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3252,46 +3252,6 @@ SCIP_RETCODE SCIPpermuteProb(
 
    return SCIP_OKAY;
 }
-
-/** creates a random sequence of branching candidates with a unique priority */
-SCIP_RETCODE SCIPgenerateBranchingOrder(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   npriocands,         /**< number of branching candidates that should be predefined */
-   unsigned int          randseed            /**< seed value for random generator */
-   )
-{
-   SCIP_VAR** priocands;
-   SCIP_VAR** vars;
-   int ndiscvars;
-   int i;
-
-   SCIP_CALL( checkStage(scip, "SCIPgenerateBranchingOrder", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   vars = SCIPgetVars(scip);
-   ndiscvars = SCIPgetNBinVars(scip)+SCIPgetNIntVars(scip);
-   assert(ndiscvars == 0 || vars != NULL);
-
-   /* abort, if not enough discrete variables */
-   if( npriocands > ndiscvars)
-   {
-      SCIPerrorMessage("Cannot determine  %d priority candidates, if only %d discrete variables are present in the problem.\n", npriocands, ndiscvars);      
-      return SCIP_INVALIDDATA;
-   } 
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &priocands, npriocands) );
-
-   /* call random generator to get a subset of npriocands disjoint elements */
-   SCIP_CALL( SCIPgetRandomSubset((void*)vars, ndiscvars, (void*)priocands, npriocands, randseed) );
-
-   /* change the branching priority of the drawn variables */
-   for( i = 0; i < npriocands; ++i )
-      SCIPvarChgBranchPriority(priocands[i],i+1);
-
-   SCIPfreeBufferArray(scip, &priocands);
-
-   return SCIP_OKAY;   
-}
-
 
 /** gets user problem data */
 SCIP_PROBDATA* SCIPgetProbData(
