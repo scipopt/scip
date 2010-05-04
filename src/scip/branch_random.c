@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.16 2010/05/03 16:21:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.17 2010/05/04 09:22:30 bzfheinz Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -35,12 +35,13 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-
+#define DEFAULT_INITSEED                0 /**< initial random seed */
 
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   unsigned int          randseed;           /**< seed value for random number generator */
+   int                   initseed;           /**< initial random seed value */
+   unsigned int          seed;               /**< seed value for random number generator */
    SCIP_Real             mindistbrpointtobound; /**< minimal (relative) distance of branching point to its bounds (for continuous variables) */
 };
 
@@ -97,7 +98,8 @@ SCIP_RETCODE selectBranchingPoint(
       else if( (SCIPisInfinity(scip, -lb) || SCIPisGT(scip, branchpoint, lb)) && (SCIPisInfinity(scip, ub) || SCIPisLT(scip, branchpoint, ub)) )
       { 
          /* if it is continuous and inside the box, then accept it */ 
-         (*leftub) = (*rightlb) = branchpoint;
+         (*leftub) = branchpoint;
+         (*rightlb) = branchpoint;
          return SCIP_OKAY;
       }
    }
@@ -250,8 +252,9 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   branchruledata->randseed = 0;
-
+   /* set the seed value to the initial random seed value */
+   branchruledata->seed = branchruledata->initseed;
+   
    return SCIP_OKAY;
 }
 
@@ -292,7 +295,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
    assert(nlpcands > 0);
 
    /* get random branching candidate */
-   bestcand = SCIPgetRandomInt(0, nlpcands-1, &branchruledata->randseed);
+   bestcand = SCIPgetRandomInt(0, nlpcands-1, &branchruledata->seed);
    assert(bestcand >= 0);
 
    SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>\n",
@@ -338,7 +341,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
     * since variables can occur several times in the list of candidates, variables that have been added more often have
     * a higher probability to be chosen for branching
     */
-   bestcand = SCIPgetRandomInt(0, npriorelaxcands-1, &branchruledata->randseed);
+   bestcand = SCIPgetRandomInt(0, npriorelaxcands-1, &branchruledata->seed);
    assert(bestcand >= 0);
    
    brvar = relaxcands[bestcand];
@@ -428,7 +431,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
    assert(npseudocands > 0);
 
    /* get random branching candidate */
-   bestcand = SCIPgetRandomInt(0, npseudocands-1, &branchruledata->randseed);
+   bestcand = SCIPgetRandomInt(0, npseudocands-1, &branchruledata->seed);
    assert(bestcand >= 0);
 
    SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>\n",
@@ -458,7 +461,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
 
    /* create random branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   branchruledata->randseed = 0;
+   branchruledata->seed = 0;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
@@ -468,6 +471,9 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
          branchExeclpRandom, branchExecrelRandom, branchExecpsRandom,
          branchruledata) );
 
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/seed", "initial random seed value",
+         &branchruledata->initseed, FALSE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
+   
    SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/mindistbrpointtobound",
          "minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",
          &branchruledata->mindistbrpointtobound, FALSE, 0.2, 0.0001, 0.5, NULL, NULL) );

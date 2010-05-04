@@ -163,6 +163,7 @@ parameters:
 - added parameter <constraints/indicator/enforceCuts> that allows to check for violated cust in enforcement
 - added parameter <constraints/indicator/addCouplingCons> that allows to add variable upper bounds if addCoupling is true
 - added parameter <constraints/indicator/maxCouplingValue> for the maximal value of the coefficient in a coupling inequality/constraint
+- added parameter <branching/random/seed> to change the initial seed value of the branching rule random
 
 
 SCIP version 1.2.0
