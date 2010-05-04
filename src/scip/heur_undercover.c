@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.54 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.55 2010/05/04 13:36:10 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1506,8 +1506,8 @@ SCIP_RETCODE solveSubProblem(
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
 
    /* forbid recursive call of undercover heuristic */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
-
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
+   
 #ifdef SCIP_DEBUG
    /* for debugging, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
@@ -1882,7 +1882,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    heurdata->run =  heurdata->run || (conshdlrunivar != NULL && SCIPconshdlrGetNConss(conshdlrunivar) > 0);
    heurdata->run =  heurdata->run || (conshdlrsignpower != NULL && SCIPconshdlrGetNConss(conshdlrsignpower) > 0);
 
-   if( !heurdata->run )
+   if( !heurdata->run && SCIPheurGetFreq(heur) != -1 )
    {
       SCIPdebugMessage("undercover heuristic will not run for <%s> (no known nonlinear constraints present)\n", SCIPgetProbName(scip));
    }
