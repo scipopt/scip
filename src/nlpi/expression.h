@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.2 2010/04/22 19:15:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -102,11 +102,6 @@ int SCIPexprGetIntPowerExponent(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** checks whether expression contains SCIP_EXPR_VARPTR's */
-SCIP_Bool SCIPexprHasVarptr(
-   SCIP_EXPR*            expr                /**< expression */
-);
-
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
 SCIP_Bool SCIPexprHasParam(
    SCIP_EXPR*            expr                /**< expression */
@@ -129,7 +124,9 @@ SCIP_RETCODE SCIPexprEval(
 /** prints an expression */
 void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
-   FILE*                 file                /**< file for printing, or NULL for stdout */
+   FILE*                 file,               /**< file for printing, or NULL for stdout */
+   const char**          varnames,           /**< names of variables, or NULL for default names */
+   const char**          paramnames          /**< names of parameters, or NULL for default names */
 );
 
 /** creates an expression tree */
@@ -181,11 +178,6 @@ SCIP_Bool SCIPexprtreeHasParam(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
-/** whether the expression tree has its variables stored as indices (SCIP_EXPR_VARIDX) */
-SCIP_Bool SCIPexprtreeHasVarsAsIndex(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-);
-
 /** Gives maximal degree of expression in expression tree.
  * If constant expression, gives 0,
  * if linear expression, gives 1,
@@ -193,32 +185,29 @@ SCIP_Bool SCIPexprtreeHasVarsAsIndex(
  * otherwise (nonpolynomial nonconstant expressions) gives at least 65535.
  */
 SCIP_RETCODE SCIPexprtreeGetMaxDegree(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   int*                  maxdegree         /**< buffer to store maximal degree */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int*                  maxdegree           /**< buffer to store maximal degree */
 );
 
 /** sets data of expression tree interpreter */
 void SCIPexprtreeSetInterpreterData(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   SCIP_EXPRINTDATA*     interpreterdata   /**< expression interpreter data */
-);
-
-/** updates the flag that indicates whether the expression tree has its variables stored as indices (SCIP_EXPR_VARIDX) */
-void SCIPexprtreeUpdateVarsAsIndex(
-   SCIP_EXPRTREE*        tree              /**< expression tree */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
 );
 
 /** evaluates an expression tree */
 SCIP_RETCODE SCIPexprtreeEval(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   SCIP_Real*            varvals,          /**< values for variables */
-   SCIP_Real*            val               /**< buffer to store expression tree value */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values for variables */
+   SCIP_Real*            val                 /**< buffer to store expression tree value */
 );
 
 /** prints an expression tree */
 void SCIPexprtreePrint(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   FILE*                 file              /**< file for printing, or NULL for stdout */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   FILE*                 file,               /**< file for printing, or NULL for stdout */
+   const char**          varnames,           /**< names of variables, or NULL for default names */
+   const char**          paramnames          /**< names of parameters, or NULL for default names */
 );
 
 #ifdef __cplusplus

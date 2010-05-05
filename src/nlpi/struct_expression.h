@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expression.h,v 1.2 2010/04/22 19:15:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expression.h,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
 
 /**@file   struct_expression.h
  * @brief  data definitions for expressions and expression trees
@@ -40,7 +40,6 @@ extern "C" {
 
 /** operator data of an expression */
 union SCIP_ExprOpData {
-   SCIP_VAR*             var;                /**< SCIP variable */
    int                   intval;             /**< index of a variable or parameter or a constant integer value */
    SCIP_Real             dbl;                /**< a constant double value */
    void*                 data;               /**< pointer to some data structure */
@@ -59,8 +58,7 @@ struct SCIP_ExprTree {
    BMS_BLKMEM*           blkmem;           /**< block memory data structure */
    SCIP_EXPR*            root;             /**< root node expression of expression tree */
    int                   nvars;            /**< number of variables */
-   SCIP_VAR**            vars;             /**< mapping of variable indices to SCIP variables, may be NULL if not used in context of SCIP */
-   SCIP_Bool             varsasidx;        /**< are variables are stored as index (SCIP_EXPR_VARIDX)? */
+   SCIP_VAR**            vars;             /**< mapping of variable indices to SCIP variables, may be NULL, e.g., if not used in context of SCIP */
    int                   nparams;          /**< number of parameters (modifiable constants) in expression */
    SCIP_Real*            params;           /**< current values for parameters, or NULL if no parameters */
    SCIP_EXPRINTDATA*     interpreterdata;  /**< data of expression interpreter (evaluator) */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expression.h,v 1.2 2010/04/22 19:15:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expression.h,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
 
 /**@file   type_expression.h
  * @brief  type definitions for expressions and expression trees
@@ -31,17 +31,13 @@ extern "C" {
 #endif
 
 /** Operators of expressions.
- * Variables can be specified as a SCIP_VAR* (as used in constraint handlers) or as an index (as used in an NLP or NLPI).
- * To resolve this conflict, there are two operand for variables.
- * There should be a method to convert from one to another.
  */
 enum SCIP_ExprOp {
    /**@name Terminals (Leaves) */
    /**@{ */
-   SCIP_EXPR_VARPTR =  0,  /**< variable given by SCIP_VAR pointer (stored in data.var) */
-   SCIP_EXPR_VARIDX =  1,  /**< variable given by index (stored in data.idx) */
-   SCIP_EXPR_CONST  =  2,  /**< constant (value stored in data.dbl) */
-   SCIP_EXPR_PARAM  =  3,  /**< parameter = a constant that can be modified (should not be simplified away) */
+   SCIP_EXPR_VARIDX    =  1,  /**< variable given by index (stored in data.idx) */
+   SCIP_EXPR_CONST     =  2,  /**< constant (value stored in data.dbl) */
+   SCIP_EXPR_PARAM     =  3,  /**< parameter = a constant that can be modified (should not be simplified away) */
    /**@} */
 
    /**@name Simple Operands */

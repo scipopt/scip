@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.2 2010/04/22 19:15:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -100,9 +100,6 @@ SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type
 
    switch(SCIPexprGetOperator(expr))
    {
-      case SCIP_EXPR_VARPTR:
-         return SCIP_ERROR;
-
       case SCIP_EXPR_VARIDX:
          assert(SCIPexprGetOpIndex(expr) < (int)x.size());
          val = x[SCIPexprGetOpIndex(expr)];
@@ -245,7 +242,6 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
       case SCIP_EXPR_SIGNPOWER:
-      case SCIP_EXPR_SUM:
          return true;
 
       default: ;
@@ -323,7 +319,6 @@ SCIP_RETCODE SCIPexprintCompile(
    }
 
    SCIP_EXPR* root = SCIPexprtreeGetRoot(tree);
-   assert( SCIPexprtreeHasVarsAsIndex(tree) );
    
    SCIP_CALL( SCIPexprCopyDeep(exprint->blkmem, &data->root, root) );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.3 2010/04/22 19:15:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.4 2010/05/05 16:20:13 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -364,7 +364,7 @@ SCIP_DECL_EVAL( SCIPexprevalProduct )
 /** table containing for each operand the name, the number of children, and some evaluation functions */
 struct SCIPexprOpTableElement SCIPexprOpTable[] =
 {
-   { "variable pointer",  0, NULL },
+   {NULL,-1,NULL},
    { "variable",          0, SCIPexprevalPushVar       },
    { "constant",          0, SCIPexprevalPushValue     },
    { "parameter",         0, SCIPexprevalPushParameter },
@@ -419,17 +419,6 @@ SCIP_RETCODE SCIPexprCreate(
 
    switch( op )
    {
-      /* operands without children */
-      case SCIP_EXPR_VARPTR:
-         va_start( ap, op );
-         opdata.var = va_arg( ap, SCIP_VAR* );
-         va_end( ap );
-         
-         assert(opdata.var != NULL);
-         
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata ) );
-         break;
-         
       case SCIP_EXPR_VARIDX:
       case SCIP_EXPR_PARAM:
          va_start( ap, op );
@@ -691,25 +680,6 @@ int SCIPexprGetIntPowerExponent(
    return expr->data.intval;
 }
 
-/** checks whether expression contains SCIP_EXPR_VARPTR's */
-SCIP_Bool SCIPexprHasVarptr(
-   SCIP_EXPR*            expr                /**< expression */
-)
-{
-   int i;
-   
-   assert(expr != NULL);
-   
-   if( expr->op == SCIP_EXPR_VARPTR )
-      return TRUE;
-   
-   for( i = 0; i < expr->nchildren; i++ )
-      if( SCIPexprHasVarptr(expr->children[i]) )
-         return TRUE;
-
-   return FALSE;
-}
-
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
 SCIP_Bool SCIPexprHasParam(
    SCIP_EXPR*            expr                /**< expression */
@@ -743,7 +713,6 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
    switch (expr->op)
    {
-      case SCIP_EXPR_VARPTR:
       case SCIP_EXPR_VARIDX:
          *maxdegree = 1;
          break;
@@ -962,7 +931,9 @@ SCIP_RETCODE SCIPexprEval(
 /** prints an expression */
 void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
-   FILE*                 file                /**< file for printing, or NULL for stdout */
+   FILE*                 file,               /**< file for printing, or NULL for stdout */
+   const char**          varnames,           /**< names of variables, or NULL for default names */
+   const char**          paramnames          /**< names of parameters, or NULL for default names */
 )
 {
    assert( expr != NULL );
@@ -970,16 +941,27 @@ void SCIPexprPrint(
    switch( expr->op )
    {
       case SCIP_EXPR_VARIDX:
-         SCIPmessageFPrintInfo(file, "<var%d>", expr->data.intval );
-         break;
-         
-      case SCIP_EXPR_VARPTR:
-         /* @TODO would be nice to find a way here on how to get to the variable name */ 
-         SCIPmessageFPrintInfo(file, "<%p>", expr->data.var );
+         if( varnames != NULL )
+         {
+            assert(varnames[expr->data.intval] != NULL);
+            SCIPmessageFPrintInfo(file, "<%s>", varnames[expr->data.intval]);
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(file, "<var%d>", expr->data.intval);
+         }
          break;
          
       case SCIP_EXPR_PARAM:
-         SCIPmessageFPrintInfo(file, "<param%d>", expr->data.intval );
+         if( paramnames != NULL )
+         {
+            assert(paramnames[expr->data.intval] != NULL);
+            SCIPmessageFPrintInfo(file, "<%s>", varnames[expr->data.intval]);
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(file, "<param%d>", expr->data.intval );
+         }
          break;
          
       case SCIP_EXPR_CONST:
@@ -988,7 +970,7 @@ void SCIPexprPrint(
 
       case SCIP_EXPR_INTPOWER:
          SCIPmessageFPrintInfo(file, "%s(", SCIPexprOpTable[expr->op].name);
-         SCIPexprPrint(expr->children[0], file);
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ", %d)", expr->data.intval);
          break;
 
@@ -1000,7 +982,7 @@ void SCIPexprPrint(
          
          for( i = 0; i < expr->nchildren; ++i )
          {
-            SCIPexprPrint(expr->children[i], file);
+            SCIPexprPrint(expr->children[i], file, varnames, paramnames);
             if( i + 1 < expr->nchildren )
             {
                SCIPmessageFPrintInfo(file, ", ");
@@ -1032,7 +1014,6 @@ SCIP_RETCODE SCIPexprtreeCreate(
    (*tree)->root      = root;
    (*tree)->nvars     = nvars;
    (*tree)->vars      = NULL;
-   (*tree)->varsasidx = FALSE;
    (*tree)->nparams   = nparams;
    (*tree)->interpreterdata = NULL;
    
@@ -1053,8 +1034,6 @@ SCIP_RETCODE SCIPexprtreeCreate(
       assert(nparams == 0);
       (*tree)->params = NULL;
    }
-   
-   SCIPexprtreeUpdateVarsAsIndex(*tree);
 
    return SCIP_OKAY;
 }
@@ -1179,16 +1158,6 @@ SCIP_Bool SCIPexprtreeHasParam(
    return SCIPexprHasParam(tree->root);
 }
 
-/** whether the expression tree has its variables stored as indices (SCIP_EXPR_VARIDX) */
-SCIP_Bool SCIPexprtreeHasVarsAsIndex(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-)
-{
-   assert(tree != NULL);
-   
-   return tree->varsasidx;
-}
-
 /** Gives maximal degree of expression in expression tree.
  * If constant expression, gives 0,
  * if linear expression, gives 1,
@@ -1196,8 +1165,8 @@ SCIP_Bool SCIPexprtreeHasVarsAsIndex(
  * otherwise (nonpolynomial nonconstant expressions) gives at least 65535.
  */
 SCIP_RETCODE SCIPexprtreeGetMaxDegree(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   int*                  maxdegree         /**< buffer to store maximal degree */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int*                  maxdegree           /**< buffer to store maximal degree */
 )
 {
    assert(tree != NULL);
@@ -1209,8 +1178,8 @@ SCIP_RETCODE SCIPexprtreeGetMaxDegree(
 
 /** sets data of expression tree interpreter */
 void SCIPexprtreeSetInterpreterData(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   SCIP_EXPRINTDATA*     interpreterdata   /**< expression interpreter data */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
 )
 {
    assert(tree != NULL);
@@ -1220,21 +1189,11 @@ void SCIPexprtreeSetInterpreterData(
    tree->interpreterdata = interpreterdata;
 }
 
-/** updates the flag that indicates whether the expression tree has its variables stored as indices (SCIP_EXPR_VARIDX) */
-void SCIPexprtreeUpdateVarsAsIndex(
-   SCIP_EXPRTREE*        tree              /**< expression tree */
-)
-{
-   assert(tree != NULL);
-   
-   tree->varsasidx = !tree->nvars || !SCIPexprHasVarptr(tree->root);
-}
-
 /** evaluates an expression tree */
 SCIP_RETCODE SCIPexprtreeEval(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   SCIP_Real*            varvals,          /**< values for variables */
-   SCIP_Real*            val               /**< buffer to store expression tree value */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values for variables */
+   SCIP_Real*            val                 /**< buffer to store expression tree value */
 )
 {
    assert(tree    != NULL);
@@ -1248,11 +1207,13 @@ SCIP_RETCODE SCIPexprtreeEval(
 
 /** prints an expression tree */
 void SCIPexprtreePrint(
-   SCIP_EXPRTREE*        tree,             /**< expression tree */
-   FILE*                 file              /**< file for printing, or NULL for stdout */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   FILE*                 file,               /**< file for printing, or NULL for stdout */
+   const char**          varnames,           /**< names of variables, or NULL for default names */
+   const char**          paramnames          /**< names of parameters, or NULL for default names */
 )
 {
    assert(tree != NULL);
 
-   SCIPexprPrint(tree->root, file);
+   SCIPexprPrint(tree->root, file, varnames, paramnames);
 }

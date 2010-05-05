@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.2 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -943,7 +943,7 @@ SCIP_RETCODE printFunction(
    if (exprtree)
    {
       SCIPmessageFPrintInfo(file, " +");
-      SCIPexprtreePrint(exprtree, file);
+      SCIPexprtreePrint(exprtree, file, NULL, NULL);
    }
 
    return SCIP_OKAY;
@@ -1387,7 +1387,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
          if( exprtrees[i] != NULL )
          {
             assert(oracle->exprinterpreter != NULL);
-            assert(SCIPexprtreeHasVarsAsIndex(exprtrees[i]));
             
             SCIP_CALL( SCIPexprtreeCopy(oracle->blkmem, &oracle->consexprtrees[oracle->nconss + i], exprtrees[i]) );
             
@@ -1577,7 +1576,6 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       int j;
       
       assert(oracle->exprinterpreter != NULL);
-      assert(SCIPexprtreeHasVarsAsIndex((SCIP_EXPRTREE*)exprtree));
       
       SCIP_CALL( SCIPexprtreeCopy(oracle->blkmem, &oracle->objexprtree, (SCIP_EXPRTREE*)exprtree) );
       
