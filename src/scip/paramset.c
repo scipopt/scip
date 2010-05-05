@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.64 2010/05/03 16:16:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.65 2010/05/05 08:31:53 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2647,6 +2647,12 @@ SCIP_RETCODE SCIPparamsetSetToSeparatingAggressive(
    /* explicitly change a separating parameter of zerohalf separator */
    SCIP_CALL( paramSetBool(scip, paramset, "separating/zerohalf/preprocessing/decomposeproblem", TRUE, quite) );
    
+   /* ??????????????? 
+    * explicitly turn of the zerohalf cuts since there are problem during run time 
+    * @todo romove this line after the zerohalf cuts are fixed  
+    */
+   SCIP_CALL( paramSetBool(scip, paramset, "separating/zerohalf/freq", -1, quite) );
+
    return SCIP_OKAY;
 }
 
