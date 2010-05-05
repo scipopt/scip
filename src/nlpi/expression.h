@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.4 2010/05/05 17:53:12 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_EXPRESSION_H__
-#define __SCIP_EXPRESSION_H__
+#ifndef __NLPI_EXPRESSION_H__
+#define __NLPI_EXPRESSION_H__
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -33,6 +33,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** gives the name of an operand */
+const char* SCIPexpropGetName(
+   SCIP_EXPROP           op                  /**< expression operand */
+);
+
+/** gives the number of children of a simple operand
+ * @return -1 for invalid operands and -2 for complex operands (those where the number of children depends on the expression)
+ */
+int SCIPexpropGetNChildren(
+   SCIP_EXPROP           op                  /**< expression operand */
+);
 
 /** creates an expression */
 SCIP_RETCODE SCIPexprCreate(
@@ -214,4 +226,4 @@ void SCIPexprtreePrint(
 }
 #endif
 
-#endif /* __SCIP_EXPRESSION_H__ */
+#endif /* __NLPI_EXPRESSION_H__ */

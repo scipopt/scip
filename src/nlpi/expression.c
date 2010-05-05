@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.4 2010/05/05 16:20:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.5 2010/05/05 17:53:12 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -401,6 +401,26 @@ struct SCIPexprOpTableElement SCIPexprOpTable[] =
    { "quadratic",        -2, SCIPexprevalQuadratic     },
    { "polynom",          -2, SCIPexprevalPolynom       }
 };
+
+/** gives the name of an operand as string */
+const char* SCIPexpropGetName(
+   SCIP_EXPROP           op                  /**< expression operand */
+)
+{
+   assert(op < SCIP_EXPR_LAST);
+
+   return SCIPexprOpTable[op].name;
+}
+
+/** gives the number of children of a simple operand */
+int SCIPexpropGetNChildren(
+   SCIP_EXPROP           op                  /**< expression operand */
+)
+{
+   assert(op < SCIP_EXPR_LAST);
+
+   return SCIPexprOpTable[op].nargs;
+}
 
 /** creates an expression */
 SCIP_RETCODE SCIPexprCreate(

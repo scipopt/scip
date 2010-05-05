@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.342 2010/04/28 09:45:42 bzfviger Exp $
+# $Id: Makefile,v 1.343 2010/05/05 17:53:12 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -434,6 +434,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
+			scip/expression.o \
 			scip/fileio.o \
 			scip/heur.o \
 			scip/history.o \

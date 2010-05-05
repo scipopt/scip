@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expression.h,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expression.h,v 1.4 2010/05/05 17:53:12 bzfviger Exp $"
 
 /**@file   type_expression.h
  * @brief  type definitions for expressions and expression trees
@@ -76,7 +76,7 @@ enum SCIP_ExprOp {
    SCIP_EXPR_POLYNOM   = 69,  /**< polynomial term sum_{I} a_{I}ops^I (I a multiindex, n operands) */
    /**@} */
 
-   SCIP_EXPR_LAST      = 99   /**< no expression, used for counting reasons */
+   SCIP_EXPR_LAST      = 70   /**< no expression, used for counting reasons */
 };
 
 typedef enum   SCIP_ExprOp     SCIP_EXPROP;     /**< expression operand */
