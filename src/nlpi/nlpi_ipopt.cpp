@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.4 2010/05/03 16:50:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.5 2010/05/05 19:20:37 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -936,7 +936,7 @@ SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatIpopt)
  * return: Termination Status
  */
 static
-SCIP_DECL_NLPIGETTERMSTAT(nlpiGetSoltermIpopt)
+SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -999,7 +999,7 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
  *  - size required size for warmstart buffer
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstatSizeIpopt)
+SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeIpopt)
 {
    SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
    return SCIP_ERROR;
@@ -1018,7 +1018,7 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstatSizeIpopt)
  *  - buffer warmstart information in solver specific data structure
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstatMemoIpopt)
+SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoIpopt)
 {
    SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
    return SCIP_ERROR;
@@ -1034,7 +1034,7 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstatMemoIpopt)
  *  - buffer warmstart information
  */
 static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstatMemoIpopt)
+SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoIpopt)
 {
    SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -1652,10 +1652,10 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
       nlpiChgVarBoundsIpopt, nlpiChgConsBoundsIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
       nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt,
       nlpiChgNonlinCoefIpopt, nlpiSetInitialGuessIpopt,
-      nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetSoltermIpopt, nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
-      nlpiGetWarmstatSizeIpopt, nlpiGetWarmstatMemoIpopt,
-      nlpiSetWarmstatMemoIpopt, nlpiGetIntParIpopt,
-      nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt, nlpiGetStringParIpopt, nlpiSetStringParIpopt,
+      nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetTermstatIpopt, nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
+      nlpiGetWarmstartSizeIpopt, nlpiGetWarmstartMemoIpopt, nlpiSetWarmstartMemoIpopt,
+      nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,
+      nlpiGetStringParIpopt, nlpiSetStringParIpopt,
       nlpidata) );
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.4 2010/05/05 19:20:37 bzfviger Exp $"
 
 /**@file    nlpi_xxx.cpp
  * @ingroup NLPIS
@@ -149,12 +149,13 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXxx)
  *  
  * return: void pointer to problem instance
  */
+static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXxx)
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
    
-   return SCIP_OKAY;
+   return NULL;
 }
 
 /** add variables
@@ -452,7 +453,7 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatXxx )
  * return: Termination Status
  */
 static
-SCIP_DECL_NLPIGETTERMSTAT( nlpiGetSoltermXxx )
+SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -509,7 +510,7 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsXxx )
  *  - size required size for warmstart buffer
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstatSizeXxx )
+SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstartSizeXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -530,7 +531,7 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstatSizeXxx )
  *  - buffer warmstart information in solver specific data structure
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstatMemoXxx )
+SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstartMemoXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -548,7 +549,7 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstatMemoXxx )
  *  - buffer warmstart information
  */
 static
-SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstatMemoXxx )
+SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -672,7 +673,7 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXxx )
  */
 
 /** create solver interface for Xxx solver */
-SCIP_RETCODE SCIP_createNlpSolverXxx(
+SCIP_RETCODE SCIPcreateNlpSolverXxx(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
 )
@@ -694,9 +695,9 @@ SCIP_RETCODE SCIP_createNlpSolverXxx(
       nlpiAddVarsXxx, nlpiAddConstraintsXxx, nlpiSetObjectiveXxx, 
       nlpiChgVarBoundsXxx, nlpiChgConsBoundsXxx, nlpiDelVarSetXxx, nlpiDelConstraintSetXxx,
       nlpiChgLinearCoefsXxx, nlpiChgQuadraticCoefsXxx, nlpiChgNonlinCoefXxx,
-      nlpiSetInitialGuessXxx, nlpiSolveXxx, nlpiGetSolstatXxx, nlpiGetSoltermXxx,
+      nlpiSetInitialGuessXxx, nlpiSolveXxx, nlpiGetSolstatXxx, nlpiGetTermstatXxx,
       nlpiGetSolutionXxx, nlpiGetStatisticsXxx,
-      nlpiGetWarmstatSizeXxx, nlpiGetWarmstatMemoXxx, nlpiSetWarmstatMemoXxx,
+      nlpiGetWarmstartSizeXxx, nlpiGetWarmstartMemoXxx, nlpiSetWarmstartMemoXxx,
       nlpiGetIntParXxx, nlpiSetIntParXxx, nlpiGetRealParXxx, nlpiSetRealParXxx, nlpiGetStringParXxx, nlpiSetStringParXxx,
       nlpidata) );
 

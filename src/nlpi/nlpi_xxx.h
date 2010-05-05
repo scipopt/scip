@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.h,v 1.1 2010/03/11 11:22:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.h,v 1.2 2010/05/05 19:20:37 bzfviger Exp $"
 
 /**@file    nlpi_xxx.h
  * @brief   XXX NLP interface
@@ -33,7 +33,7 @@ extern "C" {
 
 /** create solver interface for Xxx solver */
 extern
-SCIP_RETCODE SCIP_createNlpSolverXxx(
+SCIP_RETCODE SCIPcreateNlpSolverXxx(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
 );
