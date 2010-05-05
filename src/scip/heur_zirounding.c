@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_zirounding.c,v 1.5 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_zirounding.c,v 1.6 2010/05/05 17:42:10 bzfhende Exp $"
 
 /**@file   heur_zirounding.c
  * @ingroup PRIMALHEURISTICS
@@ -57,10 +57,10 @@ struct SCIP_HeurData
 };
 
 enum Direction
-{
-   DIRECTION_UP           =  1,
-   DIRECTION_DOWN         = -1
-};
+   {
+      DIRECTION_UP           =  1,
+      DIRECTION_DOWN         = -1
+   };
 typedef enum Direction DIRECTION;
 
 /*
@@ -556,21 +556,23 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             /* since at least one improvement has been found, heuristic will enter main loop for another time because the improvement
              * might affect many LP rows and their current slacks and thus make further rounding steps possible */
             improvementfound = TRUE;
+         } 
 
-            /* if solution value of variable has become feasibly integral due to rounding step,
-             * variable is put at the end of remaining candidates array so as not to be considered in future loops
-             */
-            if( SCIPisFeasIntegral(scip, solarray[c]) )
-            { 
-               zilpcands[c] = zilpcands[currentlpcands - 1];
-               solarray[c] = solarray[currentlpcands - 1];
-               currentlpcands--;
-               
-               /* counter is decreased if end of candidates array has not been reached yet */
-               if( c < currentlpcands )
-                  c--;
-            }
-         }
+         /* if solution value of variable has become feasibly integral due to rounding step,
+          * variable is put at the end of remaining candidates array so as not to be considered in future loops
+          */
+         if( SCIPisFeasIntegral(scip, solarray[c]) )
+         { 
+            zilpcands[c] = zilpcands[currentlpcands - 1];
+            solarray[c] = solarray[currentlpcands - 1];
+            currentlpcands--;
+            
+            /* counter is decreased if end of candidates array has not been reached yet */
+            if( c < currentlpcands )
+               c--;
+         } 
+         else if( nroundings == heurdata->maxroundingloops - 1 )
+            goto TERMINATE;	
       }
    }
 

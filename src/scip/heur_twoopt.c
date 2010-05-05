@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.6 2010/03/15 18:52:12 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.7 2010/05/05 17:42:10 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -31,17 +31,17 @@
 #define HEUR_DESC             "primal heuristic to improve incumbent solution by flipping pairs of variables"
 #define HEUR_DISPCHAR         'B'
 #define HEUR_PRIORITY         -20100
-#define HEUR_FREQ             1
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE 
 
 /* default parameter values */
-#define DEFAULT_INTOPT                  TRUE /**< optional integer optimization is applied by default */
-#define DEFAULT_WAITINGNODES               0 /**< default number of nodes to wait after current best solution before calling heuristic */
-#define DEFAULT_MATCHINGRATE            0.65 /**< default percentage by which two variables have to match in their LP-row set to be 
-                                              *   associated as pair by heuristic */
+#define DEFAULT_INTOPT                FALSE /**< optional integer optimization is applied by default */
+#define DEFAULT_WAITINGNODES              0 /**< default number of nodes to wait after current best solution before calling heuristic */
+#define DEFAULT_MATCHINGRATE            0.5 /**< default percentage by which two variables have to match in their LP-row set to be 
+                                             *   associated as pair by heuristic */
 
 /*
  * Data structures
@@ -54,28 +54,25 @@ struct SCIP_HeurData
    SCIP_Real             matchingrate;       /**< percentage by which two variables have have to match in their LP-row 
                                               *   set to be associated as pair by heuristic */
    SCIP_VAR**            binvars;            /**< Array of binary variables which are sorted with respect to their occurence
-                                              *   in the LP-rows */
-   
+                                              *   in the LP-rows */  
    int                   nbinvars;           /**< number of binary variables stored in heuristic array */
-  
    int                   waitingnodes;       /**< user parameter to determine number of nodes to wait after last best solution 
                                               *   before calling heuristic   */
-   SCIP_Bool             nobinarymatching;   /**< set to true if heuristic cannot find proper constraint-matchings within binaries
-                                              *   to avoid obsolete calls */ 
-   SCIP_Bool             binequalcoeffs;     /**< heuristic should not be applied if all binary coefficients 
-                                              *   in objective function are equal */
    SCIP_Bool             presolved;          /**< flag to indicate whether presolving has already been executed */
-    
+   int*                  binblockstart;      /**< array to store the start indices of each binary block */
+   int*                  binblockend;        /**< array to store the end indices of each binary block */
+   int                   nbinblocks;         /**< number of blocks */                          
+   
    /* integer variable twoopt data */
    SCIP_Bool             intopt;             /**< parameter to determine if integer 2-opt should be applied */             
-   SCIP_Bool             nointmatching;      /**< set to true if heuristic cannot determine any proper matching for 
-                                              *   Integer variables */
-   SCIP_Bool             intequalcoeffs;     /**< heuristic should not be applied if all binary coefficients in objective 
-                                              *   function are equal */
-  
    SCIP_VAR**            intvars;            /**< array to store the integer variables in non-decreasing order 
                                               *   with respect to their objective coefficient */
    int                   nintvars;           /**< the number of integer variables stored in array intvars */
+   int*                  intblockstart;      /**< array to store the start indices of each binary block */
+   int*                  intblockend;        /**< array to store the end indices of each binary block */
+   int                   nintblocks;         /**< number of blocks */                          
+
+   SCIP_Bool             execute;
 #ifdef STATISTIC_INFORMATION
    /* statistics */
    int                   ntotalbinvars;      /**< total number of binary variables over all runs */
@@ -84,10 +81,8 @@ struct SCIP_HeurData
                                               *   branch and bound processes */
    int                   binnblockvars;      /**< number of binary variables that appear in blocks  */
    int                   binnblocks;         /**< number of blocks with at least two variables */
-       
    int                   intnblockvars;      /**< number of Integer variables that appear in blocks  */
    int                   intnblocks;         /**< number of blocks with at least two variables */
-     
    int                   binnexchanges;      /**< number of executed changes of binary solution values leading to 
                                               *   improvement in objective function */
    int                   intnexchanges;      /**< number of executed changes of Integer solution values leading to improvement in
@@ -95,14 +90,18 @@ struct SCIP_HeurData
 #endif
 };
 
+enum Opttype
+   {
+      OPTTYPE_BINARY = 1,
+      OPTTYPE_INTEGER = 2
+   }; 
+typedef enum Opttype OPTTYPE;
+
 /*
  * Local methods
  */
 
-/** switches the values of two binary or integer variables and checks feasibility with respect to the LP.
- *  feasibility check is applied at the same time, thus the first violation of feasibility will cause this method
- *  to stop constraint forward checking and to undo the applied changes to LP-rows before 
- *
+/** tries to switch the values of two binary or integer variables and checks feasibility with respect to the LP.
  *  @todo adapt method not to copy entire activities array, but only the relevant region  
  */
 static
@@ -112,8 +111,7 @@ SCIP_RETCODE shiftValues(
    SCIP_VAR*             var2,               /**< second variable of pair */
    SCIP_Real*            varvalue1,          /**< current value of variable1 in solution */
    SCIP_Real*            varvalue2,          /**< current value of variable2 in solution */
-   SCIP_Real             shiftvalue1,        /**< the value that variable 1 should be shifted by */
-   SCIP_Real             shiftvalue2,        /**< the value that variable 2 should be shifted by */
+   SCIP_Real             shiftval,           /**< the value that variable 1 should be shifted by */
    SCIP_Real**           activities,         /**< the LP-row activities */
    int                   nrows,              /**< size of activities array */
    SCIP_Bool*            feasible            /**< set to true if method has successfully switched the variable values */
@@ -122,19 +120,25 @@ SCIP_RETCODE shiftValues(
    SCIP_COL* col;
    SCIP_ROW** rows1;
    SCIP_ROW** rows2;
-   int ncolrows1;
-   int ncolrows2;
    SCIP_Real* colvals1;
    SCIP_Real* colvals2;
    SCIP_Real* tmpactivities;
+   int ncolrows1;
+   int ncolrows2;
    int i;
    int j;
-       
+ 
    assert(scip != NULL);
    assert(var1 != NULL);
    assert(var2 != NULL);
    assert(varvalue1 != NULL);
    assert(varvalue2 != NULL);
+
+   assert(SCIPisFeasGE(scip, (*varvalue1)-shiftval, SCIPvarGetLbGlobal(var1)));
+   assert(SCIPisFeasLE(scip, (*varvalue1)-shiftval, SCIPvarGetUbGlobal(var1)));
+   
+   assert(SCIPisFeasGE(scip, (*varvalue2)+shiftval, SCIPvarGetLbGlobal(var2)));
+   assert(SCIPisFeasLE(scip, (*varvalue2)+shiftval, SCIPvarGetUbGlobal(var2)));
 
    /* get variable specific rows and coefficients for both var1 and var2. */
    col = SCIPvarGetCol(var1);
@@ -149,78 +153,85 @@ SCIP_RETCODE shiftValues(
    ncolrows2 = SCIPcolGetNNonz(col);
    assert(ncolrows2 == 0 || rows2 != NULL);
    
-   /* copy current activities to temporary array. if variable shifting turns out to be feasible, 
+   /* copy current activities to temporary array. If variable shifting turns out to be feasible, 
     * we can use the temporary array as new activities array, 
     * otherwise the infeasible temporary activities array can be freed.*/
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpactivities, *activities, nrows) );
 
-   /* feasible can be set to true since there has not been any violated row, yet */
    *feasible =  TRUE;
-
-   /* go through every LP-row of the variables' constraint set, update the activity and 
-    * check if changed row activity will remain feasible.
-    * We have to be careful about some cases concerning the two counters i and j */
    i = 0;
    j = 0;
+  
+   /* go through every LP-row of the variables' constraint set, update the activity and 
+    * check if changed row activity will remain feasible. */
    while( (i < ncolrows1 || j < ncolrows2) && (*feasible) )
    {
-      int rowpos1;
-      int rowpos2;
       SCIP_ROW* row;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
       int rowpos;
+      int index1;
+      int index2;
+
+      /* ensure that the rows are in current LP */
+      /* increase counters, depending on whether they point at a non-LP-Row at the moment */
+      if( i < ncolrows1 && SCIProwGetLPPos(rows1[i]) == -1 )
+      {
+         i = ncolrows1;
+         continue;
+      }
+
+      if( j < ncolrows2 && SCIProwGetLPPos(rows2[j]) == -1 )
+      {
+         j = ncolrows2; 
+         continue;
+      }
 
       /* If one counter has already reached its limit, assign a huge number to the corresponding 
        * row position to simulate an always greater row position. */
       if( i < ncolrows1 )
-         rowpos1 = SCIProwGetLPPos(rows1[i]);
+	 index1 = SCIProwGetIndex(rows1[i]);
       else 
-         rowpos1 = nrows;
+         index1 = INT_MAX;
 
       if( j < ncolrows2 )
-         rowpos2 = SCIProwGetLPPos(rows2[j]);
+	 index2 = SCIProwGetIndex(rows2[j]);
       else
-         rowpos2 = nrows;
+         index2 = INT_MAX;
      
-      /* ensure that the rows are in current LP */
-      if( rowpos1 == -1 || rowpos2 == -1 )
-      {
-         /* increase counters, depending on whether they point at a non-LP-Row at the moment */
-         if( rowpos1 == -1 )
-            ++i;
-         if( rowpos2 == -1 )
-            ++j; 
-
-         continue;
-      }
-
-      assert(0 <= rowpos1 && 0 <= rowpos2);
-      assert(rowpos1 < nrows || rowpos2 < nrows);
+      
+      assert(0 <= index1 && 0 <= index2);
+      assert(index1 < INT_MAX || index2 < INT_MAX);
 
       /* the current row is the one with the smaller position */
-      rowpos = MIN(rowpos1, rowpos2);
+      if( index1 <= index2 )
+      {
+	 rowpos = SCIProwGetLPPos(rows1[i]);
+	 row = rows1[i];
+      } 
+      else
+      {
+         assert(j < ncolrows2);
 
-      if( rowpos1 <= rowpos2 )
-         row = rows1[i];
-      else 
+         rowpos = SCIProwGetLPPos(rows2[j]);
          row = rows2[j];
-      
+      }      
       assert(row != NULL);
-
-      /* get the necessary information about the current row, i.e its lower and upperbound and its activity */
-      lhs = SCIProwGetLhs(row);
-      rhs = SCIProwGetRhs(row);
 
       if( !SCIProwIsLocal(row) )
       {
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+
+         /* get the necessary information about the current row, i.e its lower and upperbound and its activity */
+         lhs = SCIProwGetLhs(row);
+         rhs = SCIProwGetRhs(row);
+
          assert(SCIPisFeasGE(scip, tmpactivities[rowpos], lhs) && SCIPisFeasLE(scip, tmpactivities[rowpos], rhs));
       
          /* update activity with respect to which of the variables occur in this row */
-	 if( rowpos1 <= rowpos2 )
-            tmpactivities[rowpos] += colvals1[i] * shiftvalue1;
-	 if( rowpos2 <= rowpos1 )
-            tmpactivities[rowpos] += colvals2[j] * shiftvalue2;
+	 if( index1 <= index2 )
+            tmpactivities[rowpos] -= colvals1[i] * shiftval;
+	 if( index2 <= index1 )
+            tmpactivities[rowpos] += colvals2[j] * shiftval;
 
          /* check if the LP_row-constraint was violated. In this case, stop forward checking loop by setting 
 	  * feasibility flag */
@@ -229,23 +240,29 @@ SCIP_RETCODE shiftValues(
             *feasible = FALSE;
             break;
 	 } 
-         /* shifting doesn't violate this constraint. Continue with the next row */
-         /* increase counters depending on whether the variables occured in current row */
       }
-      if( rowpos1 <= rowpos2 )
+
+      /* shifting doesn't violate this constraint. Continue with the next row 
+       * increase counters depending on whether the variables occured in current row 
+       */
+      if( index1 <= index2 )
          ++i;
-      if( rowpos2 <= rowpos1 )
+      if( index2 <= index1 )
          ++j;
    }
-   assert( (i == ncolrows1 && j == ncolrows2) || !*feasible );
+   assert( (i == ncolrows1 && j == ncolrows2) || !(*feasible) );
    
    /* check if there is infeasible activity. If not, solution values and activities array can be updated. */ 
    if( *feasible )
    {
-      *varvalue1 += shiftvalue1;
-      *varvalue2 += shiftvalue2;
+       
+      *varvalue1 -= shiftval;
+      *varvalue2 += shiftval;
       SCIPfreeBufferArray(scip, activities);
       *activities = tmpactivities;
+
+      assert(SCIPisFeasIntegral(scip, (*varvalue1)));
+      assert(SCIPisFeasIntegral(scip, (*varvalue2)));
    }
    else
    {    
@@ -256,15 +273,15 @@ SCIP_RETCODE shiftValues(
    return SCIP_OKAY;
 }
 
-/** compare two variables with respect to their columns. Columns are treated as {0,1} vector, where every Nonzeroentry
+/** compare two variables with respect to their columns. Columns are treated as {0,1} vector, where every nonzero entry
  *  is treated as '1', and compared to each other lexicographically. I.e. var1 is < var2 if the corresponding column of
  *  var2 has the smaller single nonzero index of the two columns.  This comparison costs O(constraints) in the worst
  *  case
  */
 static
 int varColCompare(
-   SCIP_VAR*                var1,                /**< left argument of comparison */
-   SCIP_VAR*                var2                 /**< right argument of comparison */ 
+   SCIP_VAR*             var1,               /**< left argument of comparison */
+   SCIP_VAR*             var2                /**< right argument of comparison */ 
    )
 {
    SCIP_COL* col1;
@@ -310,10 +327,8 @@ SCIP_DECL_SORTPTRCOMP(SCIPvarcolComp)
    return varColCompare((SCIP_VAR*) elem1, (SCIP_VAR*) elem2);
 }
 
-/** checks if two given variables are contained in the same LP-constraints which makes them a a pair of candidates for
- *  the 2-opt heuristic. flag is set to true if and only if the variable 1 appears in a proper number of rows of
- *  variable 2 and vice versa, where 'proper' is is determined by the user parameter matchingrate which determines the
- *  necessary percentage of shared rows.
+/** checks if two given variables are contained in common LP rows,
+ *  returns true if variables share the necessary percentage (matchingrate) of rows.
  */
 static 
 SCIP_Bool checkConstraintMatching(
@@ -332,9 +347,10 @@ SCIP_Bool checkConstraintMatching(
    int nnonzeros2;
    int i;
    int j;
-   int nrowsdiffer1;
-   int nrowsdiffer2;
+   int nrows1not2;                           /* the number of LP-rows of variable 1 which variable 2 doesn't appear in */
+   int nrows2not1;                           /* vice versa */
    int nrowmaximum;
+   int nrowabs;
 
    assert(var1 != NULL);
    assert(var2 != NULL);
@@ -350,178 +366,128 @@ SCIP_Bool checkConstraintMatching(
    assert(nnonzeros1 == 0 || rows1 != NULL);
    assert(nnonzeros2 == 0 || rows2 != NULL);
    
-   /* initialize the counters for the number of rows not shared. 
-    * For confusion, nrowsdiffer1 denotes the number of LP-rows of variable 1 which variable 2 doesn't appear in,
-    * and vice versa. At the end of the row check,
-    * the ratio of the counters in comparison with the individual total number of rows should not fall 
-    * below the matchingrate. 
-    */
+   /* initialize the counters for the number of rows not shared. */
    nrowmaximum = MAX(nnonzeros1, nnonzeros2);
-   nrowsdiffer1 = nrowmaximum - nnonzeros2;
-   nrowsdiffer2 = nrowmaximum - nnonzeros1;
+   nrowabs = ABS(nnonzeros1-nnonzeros2);
+   nrows1not2 = nrowmaximum - nnonzeros2;
+   nrows2not1 = nrowmaximum - nnonzeros1;
 
-   /* apply first matching check to the variables. if the numbers of nonzero rows differs too much, 
-    * i.e with respect to matching ratio, the more expensive check over the rows doesn't have to be 
-    * applied anymore because the counters for not shared rows can only increase.
-    * To avoid divisions by zero, one has to exclude the case that the numbers of nonzeros are zero.
-    * In this special case, i.e if one of the variables appears in zero columns,
-    * this is defined as complete matching with the other variable. 
-    * In the case that only one of the two variables appears in zero rows, 
-    * this will cause the method to return false unless the matching rate is 0.0 as well 
+   /* if the numbers of nonzero rows differs too much, w.r.t.matching ratio, the more expensive check over the rows 
+    * doesn't have to be applied anymore because the counters for not shared rows can only increase.
     */
-   if( SCIPisFeasGT(scip, matchingrate, nnonzeros1 == 0 ? 1.0 : (nnonzeros1 - nrowsdiffer1) / (SCIP_Real)nnonzeros1 ) ||
-      SCIPisFeasGT(scip, matchingrate, nnonzeros2 == 0 ? 1.0 : (nnonzeros2 - nrowsdiffer2) / (SCIP_Real)nnonzeros2) )
-   {    
-      /* the desired matching rate cannot be satisfied by these two variables */  
+   assert(nrowmaximum > 0);
+
+   if( (nrowmaximum - nrowabs) / (SCIP_Real) nrowmaximum < matchingrate )
       return FALSE;
-   } 
-   else if( nnonzeros1 == 0 && nnonzeros2 == 0)
-      return TRUE;
-  
-   /* initialize counters */
+
    i = 0;
    j = 0;
    
-   /* loop over all rows and determine in how many rows variable1 and variable2 match and in how many they differ, that is,
-    * in how many constraints of variable1 variable 2 does not appear, denoted by nrowsdiffer1, and vice versa.
-    * Check is complete if the end of one of the two arrays is reached since the remaining difference is equivalent to
-    * the already registered difference of number of nonzeroes.
-    */
+   /* loop over all rows and determine number of non-shared rows */
    while( i < nnonzeros1 && j < nnonzeros2 )
    {
+      /* variables share a common row */
       if( SCIProwGetIndex(rows1[i]) == SCIProwGetIndex(rows2[j]) )
-      { /* variables share a common row, continue by setting both indices */
+      {
          ++i;
          ++j;
       }
+      /* variable 1 appears in rows1[i], variable 2 doesn't */
       else if( SCIProwGetIndex(rows1[i]) < SCIProwGetIndex(rows2[j]) )
-      {  /* first row is a constraint in which variable2 doesn't appear, thus update nrowsdiffer1 and increase only counter i */
+      { 
          ++i;
-         ++nrowsdiffer1;
+         ++nrows1not2;
       } 
+      /* variable 2 appears in rows2[j], variable 1 doesn't */
       else 
       {
-         /* case SCIProwGetIndex(rows2[j] < SCIProwGetIndex(rows1[i])), that is variable2 has a constraint variable1 
-          * doesn't appear in*/
          ++j;
-         ++nrowsdiffer2;
+         ++nrows2not1;
       }
    }
   
    /* now apply the ratio based comparison, that is if the ratio of shared rows is greater equals the matching rate 
     * for each variable 
     */
-   if( SCIPisFeasLE(scip, matchingrate, nnonzeros1 == 0 ? 1.0 : (SCIP_Real)(nnonzeros1 - nrowsdiffer1) / (SCIP_Real)(nnonzeros1)) ||
-      SCIPisFeasLE(scip, matchingrate, nnonzeros2 == 0 ? 1.0 : (SCIP_Real)(nnonzeros2 - nrowsdiffer2) / (SCIP_Real)(nnonzeros2)) )
-      return TRUE;
-   else   
-      return FALSE;
+   return ( SCIPisFeasLE(scip, matchingrate, (nnonzeros1 - nrows1not2) / (SCIP_Real)(nnonzeros1)) ||
+      SCIPisFeasLE(scip, matchingrate, (nnonzeros2 - nrows2not1) / (SCIP_Real)(nnonzeros2)) );
 }
-
-
 
 /** determines a bound by which the absolute solution value of two integer variables can be shifted at most.
  *  the criterion is the maintenance of feasibility of any global LP row. 
  *  first implementation only considers shifting proportion 1:1, i.e. if master value is shifted by a certain 
- *  Integer value k upwards, the value of slave is simultaneously shifted by k downwards. The restriction to this
- *  special case of the
- *  more general idea of shifting integer variables by an arbitrary proportion different from 1:1 is supposed
- *  to simplify the complexity of calculating such a proportion, which would be quadratic in the number of
- *  constraints.
+ *  integer value k upwards, the value of slave is simultaneously shifted by k downwards. 
  *
- *  @todo consider different shifting proportions than only 1:1 
+ *  @todo consider different shifting proportions than 1:1 
  */
 static
 SCIP_Real determineBound(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_SOL*             sol,                /**< current incumbent */
    SCIP_VAR*             master,             /**< current master variable */
-   int                   masterdirection,    /**< shifting direction of master variable */
    SCIP_VAR*             slave,              /**< slave variable with same LP_row set as master variable */
-   int                   slavedirection,     /**< shifting direction of slave variable */
    SCIP_Real*            activities,         /**< array of LP row activities */
    int                   nrows               /**< the number of rows in LP and the size of the activities array */
    )
 {
-   SCIP_VAR* workmaster;
-   SCIP_VAR* workslave;
    SCIP_Real masterbound;
    SCIP_Real slavebound;
    SCIP_Real bound;
 
    SCIP_COL* col;
-   SCIP_ROW** rows1;
-   SCIP_ROW** rows2;
+   SCIP_ROW** slaverows;
+   SCIP_ROW** masterrows;
    SCIP_Real* mastercolvals;
    SCIP_Real* slavecolvals;
-   int ncolrows1;
-   int ncolrows2;
+   int nslaverows;
+   int nmasterrows;
    int i;
    int j;
 
    assert(scip != NULL);
    assert(sol != NULL);
-   assert(masterdirection == -slavedirection);
-  
    assert(master != NULL);
    assert(slave != NULL);
    assert(SCIPvarIsIntegral(master) && SCIPvarIsIntegral(slave));
 
-   /* in order to avoid ugly case differentiations, this method considers the master variable always 
-    * to be shifted upwards and the slave variable to be shifted downwards, which may result in an exchange
-    * of the original master and slave variable */
-   if( masterdirection == 1 )
-   {
-      workmaster = master;
-      workslave = slave;
-   }
-   else 
-   {
-      workmaster = slave;
-      workslave = master;
-   }
-      
    /*
     * determine the trivial bound for shifting and ensure that neither of the two variables 
     * is already set to its most favorable gobal bound
     */
-   masterbound = SCIPvarGetUbGlobal(workmaster) - SCIPgetSolVal(scip, sol, workmaster);
-   slavebound = SCIPgetSolVal(scip, sol, workslave) - SCIPvarGetLbGlobal(workslave);
-   bound = MIN(masterbound, slavebound);
-   
-   /* ensure that shifting is possible */
-   if( SCIPisFeasEQ(scip, bound, 0.0) )
-      return 0.0;
+   slavebound = SCIPvarGetUbGlobal(slave) - SCIPgetSolVal(scip, sol, slave);
+   masterbound = SCIPgetSolVal(scip, sol, master) - SCIPvarGetLbGlobal(master);
+   bound = MIN(slavebound, masterbound);
+   assert(!SCIPisInfinity(scip,bound));
    
    /* get the necessary row and and column data for each variable */
-   col = SCIPvarGetCol(workmaster);
-   rows1 = SCIPcolGetRows(col);
-   mastercolvals = SCIPcolGetVals(col);
-   ncolrows1 = SCIPcolGetNNonz(col);
-
-   col = SCIPvarGetCol(workslave);
+   col = SCIPvarGetCol(slave);
+   slaverows = SCIPcolGetRows(col);
    slavecolvals = SCIPcolGetVals(col);
-   rows2 = SCIPcolGetRows(col);
-   ncolrows2 = SCIPcolGetNNonz(col);
+   nslaverows = SCIPcolGetNNonz(col);
 
-   assert(ncolrows1 == 0 || mastercolvals != NULL);
-   assert(ncolrows2 == 0 || slavecolvals != NULL);
+   col = SCIPvarGetCol(master);
+   mastercolvals = SCIPcolGetVals(col);
+   masterrows = SCIPcolGetRows(col);
+   nmasterrows = SCIPcolGetNNonz(col);
+
+   assert(nslaverows == 0 || slavecolvals != NULL);
+   assert(nmasterrows == 0 || mastercolvals != NULL);
    
    /* loop over all LP rows and determine the maximum Integer bound by which both variables 
     * can be shifted without loss of feasibility 
     */
    i = 0;
    j = 0;
-   while( (i < ncolrows1 || j < ncolrows2) && SCIPisFeasGT(scip, bound, 0.0) )
+   while( (i < nslaverows || j < nmasterrows) && !SCIPisFeasZero(scip, bound) )
    {
       SCIP_ROW* row;
       SCIP_Real effect;
       SCIP_Real rhs;
       SCIP_Real lhs;
       SCIP_Real activity;
-      int rowpos1;
-      int rowpos2;
       int rowpos;
+      int index1;
+      int index2;
 
       assert(SCIPisFeasIntegral(scip, bound));
       /* several case distinctions have to be made. Firstly, assign the corresponding
@@ -530,37 +496,48 @@ SCIP_Real determineBound(
        * occurring and will therefore not cause the corresponding variable to influence
        * the remaining rows which have to be checked
        */
-      if( i < ncolrows1 )
-         rowpos1 = SCIProwGetLPPos(rows1[i]);
-      else
-         rowpos1 = nrows;
-      
-      if( j < ncolrows2 )
-         rowpos2 = SCIProwGetLPPos(rows2[j]);
-      else 
-         rowpos2 = nrows;
 
-      /* ensure that both rows are in current LP. if at least one is not, increase the corresponding counter */
-      if( rowpos1 == -1 || rowpos2 == -1 )
+      if( i < nslaverows && SCIProwGetLPPos(slaverows[i]) == -1 )
       {
-         /* increase counters, if they point at a non-LP-row at the moment */
-         if( rowpos1 == -1 )
-            ++i;
-         if( rowpos2 == -1 )
-            ++j;
-
+         i = nslaverows;
          continue;
       }
-      assert(0 <= rowpos1 && 0 <= rowpos2);
-      assert(rowpos1 < nrows || rowpos2 < nrows);
 
-      /* the active row is always determined by the smaller of the two row positions */
-      rowpos = MIN(rowpos1, rowpos2);
-      if( rowpos1 <= rowpos2 )
-         row = rows1[i];
+      if( j < nmasterrows && SCIProwGetLPPos(masterrows[j]) == -1 )
+      {
+         j = nmasterrows; 
+         continue;
+      }
+
+      /* If one counter has already reached its limit, assign a huge number to the corresponding 
+       * row position to simulate an always greater row position. */
+      if( i < nslaverows )
+	 index1 = SCIProwGetIndex(slaverows[i]);
       else 
-         row = rows2[j];
+         index1 = INT_MAX;
 
+      if( j < nmasterrows )
+	 index2 = SCIProwGetIndex(masterrows[j]);
+      else
+         index2 = INT_MAX;
+     
+      
+      assert(0 <= index1 && 0 <= index2);
+      assert(index1 < INT_MAX || index2 < INT_MAX);
+
+      /* the current row is the one with the smaller position */
+      if( index1 <= index2 )
+      {
+	 rowpos = SCIProwGetLPPos(slaverows[i]);
+	 row = slaverows[i];
+      } 
+      else
+      {
+         assert(j < nmasterrows);
+
+         rowpos = SCIProwGetLPPos(masterrows[j]);
+         row = masterrows[j];
+      }      
       assert(row != NULL);
 
       /* local rows can be skipped */
@@ -570,54 +547,139 @@ SCIP_Real determineBound(
           * and slave by -1 due to convenience. The effect has to be declared with respect to the occurrence
           * of each variable in the current row. If only one of the two appears in the current row, 
           * this will have an effect only in one direction. both variables affect the row activity
-          * <=> rowpos1 = rowpos2 <=> (rowpos1 <= rowpos2 <= rowpos1)
           */
          effect = 0.0;
-	 if( rowpos1 <= rowpos2 )
-            effect += mastercolvals[i];
-	 if( rowpos2 <= rowpos1 )
-            effect -= slavecolvals[j];
+	 if( index1 <= index2 )
+            effect += slavecolvals[i];
+	 if( index2 <= index1 )
+            effect -= mastercolvals[j];
 
          /* get information about the current row */
          activity = activities[rowpos];
          rhs = SCIProwGetRhs(row);
          lhs = SCIProwGetLhs(row);
-
-         /* if the effect which shifting has on a row is zero, no constraint will be violated
-          * by shifting the variables */
-         if( SCIPisFeasEQ(scip, effect, 0.0) )
-         {
-            if( rowpos1 <= rowpos2 )
-               ++i;
-            if( rowpos2 <= rowpos1 )
-               ++j;
-	   
-            continue;
-         }
+         assert(SCIPisFeasLE(scip, lhs, activity) && SCIPisFeasLE(scip, activity, rhs));
 
          /* effect does not equal zero, the bound is determined as minimum positive integer such that 
           * feasibility is remained in all constraints.
           * if constraint is an equality constraint, activity and lhs/rhs should be feasibly equal, which
           * will cause the method to return zero.*/
 
-	 /* if the row has a lower bound, ensure that shifting preserves feasibility of this "<="-constraint */
-	 if( !SCIPisInfinity(scip, -lhs) &&  SCIPisFeasLT(scip, activity + effect * bound, lhs) )
-            bound = SCIPfeasFloor(scip, ABS((activity - lhs)/effect)); 
+	 /* if the row has a left hand side, ensure that shifting preserves feasibility of this ">="-constraint */
+	 if( !SCIPisInfinity(scip, -lhs) && SCIPisFeasLT(scip, activity + effect * bound, lhs) )
+         {
+            assert(SCIPisNegative(scip, effect));
+            bound = SCIPfeasFloor(scip, (lhs - activity)/effect);             
+         }
 	 
-	 /* if the row has an upper bound, ensure that shifting preserves feasibility of this ">="-constraint */
+	 /* if the row has an upper bound, ensure that shifting preserves feasibility of this "<="-constraint */
          if( !SCIPisInfinity(scip, rhs) && SCIPisFeasGT(scip, activity + effect * bound, rhs) )
-            bound = SCIPfeasFloor(scip, ABS((rhs - activity)/effect));
+         {
+            assert(SCIPisPositive(scip, effect));
+            bound = SCIPfeasFloor(scip, (rhs - activity)/effect);
+         }
       }
       
       /* increase the counters which belong to the corresponding row. Both counters are increased by 
        * 1 iff rowpos1 <= rowpos2 <= rowpos1 */
-      if( rowpos1 <= rowpos2 )
+      if( index1 <= index2 )
          ++i;
-      if( rowpos2 <= rowpos1 )
+      if( index2 <= index1 )
          ++j;
    }
 
    return bound;
+}
+
+/** realizes the presolve independently from type of variables it's applied to */
+static 
+SCIP_RETCODE innerPresolve(
+   SCIP*                 scip,               /**< current scip */
+   SCIP_VAR**            vars,               /**< problem vars */
+   SCIP_VAR***           varspointer,        /**< pointer to heuristic specific variable memory */
+   int                   nvars,              /**< the number of variables */
+   int*                  nblocks,            /**< pointer to store the number of detected blocks */
+   int*                  nblockvars,         /**< pointer to store the number of block variables */
+   int**                 blockstart,         /**< pointer to store the array of block start indices */
+   int**                 blockend,           /**< pointer to store the array of block end indices */
+   SCIP_Bool*            equalcoefficients,  /**< are all objective coefficients equal? */
+   SCIP_HEUR*            heur,               /**< the heuristic */
+   SCIP_HEURDATA*        heurdata            /**< the heuristic data */
+   )
+{
+   SCIP_Real* objectives;      
+   SCIP_Real lastcoeff;
+   int v;
+   int startindex;
+  
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(nvars >= 2);
+   assert(nblocks != NULL);
+   assert(nblockvars != NULL);
+   assert(blockstart != NULL);
+   assert(blockend != NULL);
+   assert(heur != NULL);
+   assert(heurdata != NULL);
+
+   /* go through variables first and ensure that not all objective coefficients are equal, 
+    * presolve is stopped otherwise because no improvement can be exspected due to 1:1 exchanges */
+   lastcoeff = SCIPvarGetObj(vars[0]);
+
+   for( v = 1; v < nvars && SCIPisFeasEQ(scip, lastcoeff, SCIPvarGetObj(vars[v])); ++v )
+      lastcoeff = SCIPvarGetObj(vars[v]);
+
+   *equalcoefficients = (v == nvars);
+
+   if( *equalcoefficients )
+      return SCIP_OKAY;
+    
+   /* allocate the heuristic specific variables */
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, varspointer, vars, nvars));
+         
+   /* sort the variables with respect to their columns */
+   SCIPsortPtr((void**)(*varspointer), SCIPvarcolComp, nvars);
+                  
+   /* start determining blocks, i.e. a set of at least two variables which share most of their row set. 
+    * If there is none, heuristic does not need to be executed.
+    */
+   startindex = 0;
+   *nblocks = 0;
+   *nblockvars = 0;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*blockstart)), nvars/2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*blockend)), nvars/2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &objectives, nvars) );
+
+   objectives[startindex] = SCIPvarGetObj((*varspointer)[startindex]);
+      
+   /* loop over variables and compare neighbours*/
+   for( v = 1; v < nvars; ++v ) 
+   {
+      objectives[v] = SCIPvarGetObj((*varspointer)[v]);
+
+      if( !checkConstraintMatching(scip, (*varspointer)[startindex], (*varspointer)[v], heurdata->matchingrate) )
+      {
+         /* current block has its last variable at position v-1. If v differs from startindex by at least 2,
+          * a block is detected. Update the data correspondingly */
+         if( v - startindex >= 2 )
+         {
+            assert(*nblocks < nvars/2);
+            (*nblockvars) += v - startindex;
+            (*blockstart)[*nblocks] = startindex;
+            (*blockend)[*nblocks] = v - 1;
+            (*nblocks)++;      
+            SCIPsortRealPtr(&(objectives[startindex]), (void**)&((*varspointer)[startindex]), v-startindex);
+         }
+         startindex = v;
+      } 
+   }
+
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &((*blockstart)), nvars/2, *nblocks) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &((*blockend)), nvars/2, *nblocks) );   
+   SCIPfreeBufferArray(scip, &objectives);
+
+   return SCIP_OKAY;
 }
 
 /** initializes the required structures for execution of heuristic. 
@@ -628,7 +690,7 @@ SCIP_Real determineBound(
  *  the heuristic specific blocks are determined.
  */
 static 
-SCIP_RETCODE presolve(
+SCIP_RETCODE presolveTwoOpt(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_HEUR*            heur,               /**< heuristic */
    SCIP_HEURDATA*        heurdata            /**< the heuristic data */
@@ -638,8 +700,9 @@ SCIP_RETCODE presolve(
    int nintvars;
    int nvars;
    SCIP_VAR**  vars;
-   SCIP_VAR** binvars;
-   SCIP_VAR** intvars;
+   int nbinblockvars;
+   int nintblockvars;
+   SCIP_Bool equalcoeffs;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
@@ -651,160 +714,60 @@ SCIP_RETCODE presolve(
    /* get necessary variable information, i.e. number of binary and integer variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
-   if( nbinvars > 1 )
-   {  
-      int c;
-      int startindex;
-      int nblocks;
-      SCIP_Real lastcoeff;
-      int nblockvars;
-      
-      SCIPdebugMessage("entering BINARY presolve \n");
-
-      /* go through variables first and ensure that at least some variables differ in their objective coefficients,
-       * presolve is stopped otherwise because no improvement can be exspected due to 1:1 exchanges */
-      lastcoeff = SCIPvarGetObj(vars[0]);
-
-      for( c = 1; c < nbinvars && SCIPisFeasEQ(scip,lastcoeff, SCIPvarGetObj(vars[c])); ++c )
-      {
-         lastcoeff = SCIPvarGetObj(vars[c]);
-      } 
-      if( c == nbinvars )
-         heurdata->binequalcoeffs = TRUE;
-      else 
-         heurdata->binequalcoeffs = FALSE;
-
-      /* check for equal coefficients first. heuristic does not need to be executed in that case */
-      if( !heurdata->binequalcoeffs )
-      {      
-         /* allocate the heuristic specific variables array which is needed for heuristic specific comparison */
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->binvars, vars, nbinvars));
-
-	 /* sort the variables with respect to their columns */
-         SCIPsortPtr((void**)heurdata->binvars, SCIPvarcolComp, nbinvars);
-         binvars = heurdata->binvars;
-         heurdata->nbinvars = nbinvars;
-         
-         /* start determining blocks, i.e. a set of at least two variables which share most of their row set. 
-          * If there is none, heuristic does not need to be executed.
-          * startindex denotes the current startindex of a block. 
-          * Once two differing variables are detected, the current counter position is compared to startindex. */
-         startindex = 0;
-         nblocks = 0;
-         nblockvars = 0;
-         heurdata->nobinarymatching = TRUE;
-
-         /* loop over variables and compare neighbours*/
-         for( c = 1; c < nbinvars; ++c ) 
-         {
-            if( !checkConstraintMatching(scip, binvars[startindex], binvars[c], heurdata->matchingrate) )
-            {
-               /* current block has its last variable at position c-1. If c differs from startindex by at least 2,
-                * a block is detected. Update the data correspondingly */
-               if( c - startindex >= 2 )
-               {
-                  heurdata->nobinarymatching = FALSE;
-                  nblocks += 1;      
-                  nblockvars += c -startindex;
-               }
-               startindex = c;
-            } 
-         }
-#ifdef STATISTIC_INFORMATION         
-         /* update statistics */
-         heurdata->binnblocks += nblocks;
-         heurdata->binnblockvars += nblockvars;
-         heurdata->ntotalbinvars += nbinvars;
-
-         SCIPinfoMessage(scip, NULL, "Twoopt binary presolving finished with <%d> blocks, <%d> block variables \n ", 
-            nblocks, nblockvars);
-      } 
-      else 
-      {
-         SCIPinfoMessage(scip, NULL, "BINARY coefficients are all equal! \n");
-#endif
-      }
-   } /* end of BINARY presolve */
-  
-   /* enters optional integer optimization presolve method */
-   if( !heurdata->presolved && heurdata->intopt && nintvars > 1 )
-   {               
-      int c;
-      SCIP_Real lastcoeff;
-      
-      SCIPdebugMessage("entering INTEGER presolve \n");
-
-      /* go through variables first and ensure that at least some variables differ in their objective coefficients,
-       * presolve is stopped otherwise because no improvement can be exspected due to 1:1 exchanges */
-      vars = SCIPgetVars(scip);
-      lastcoeff = SCIPvarGetObj(vars[0]);
-
-      for( c = 1; c < nintvars && SCIPisFeasEQ(scip,lastcoeff, SCIPvarGetObj(vars[c])); ++c )
-      {
-         lastcoeff = SCIPvarGetObj(vars[c]);
-      }
-      if( c == nintvars )
-         heurdata->intequalcoeffs = TRUE;
-      else 
-         heurdata->intequalcoeffs = FALSE;
-      
-      /* further presolve is only executed if Integer coefficients differ */
-      if(!heurdata->intequalcoeffs)
-      {  
-         int nblockvars;
-         int startindex;
-         int nblocks;
-
-         /* allocate the heuristic specific variables array which is needed for heuristic specific comparison */
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->intvars, &vars[nbinvars], nintvars) );
-         heurdata->nintvars = nintvars;
-
-	 /* sort variables with respect to their columns */
-         SCIPsortPtr((void**)heurdata->intvars, SCIPvarcolComp, nintvars);
-
-         intvars = heurdata->intvars;
-         
-         /* start determining blocks, i.e. a set of at least two variables which share most of their row set. 
-          * If there is none, heuristic does not need to be executed. */
-         startindex = 0;
-         nblocks = 0;
-         nblockvars = 0;
-	 heurdata->nointmatching = TRUE;
-
-         for( c = 1; c < nintvars ; ++c ) 
-         {
-            if( !checkConstraintMatching(scip, intvars[startindex], intvars[c], heurdata->matchingrate) )
-            {
-               /* current block has its last variable at position c-1. If c differs from startindex by at least 2, 
-                * a block is detected. Update the data correspondingly */
-               if( c - startindex >= 2 )
-               { 
-                  heurdata->nointmatching = FALSE; 
-                  ++nblocks;      
-                  nblockvars += c - startindex;
-               }
-               startindex = c;
-            }
-         }
-#ifdef STATISTIC_INFORMATION 
-         /* update statistics */
-         heurdata->intnblocks += nblocks;
-         heurdata->intnblockvars += nblockvars;
-         heurdata->ntotalintvars += nintvars;
-
-         SCIPinfoMessage(scip, NULL, "Twoopt Integer presolving finished with <%d> blocks, <%d> block variables \n ", 
-            nblocks, nblockvars);
-
-      } 
-      else 
-      {
-         SCIPinfoMessage(scip, NULL, "INTEGER coefficients are all equal \n");
-#endif
-      }
-
-      /* end of integer variables specific presolve */
-      
+   /* if number of binary problem variables exceeds 2, they are subject to 2-optimization algorithm, hence heuristic
+    * calls innerPresolve method to detect necessary structures.
+    */
+   if( nbinvars >= 2 ) 
+   {
+      SCIP_CALL( innerPresolve(scip, vars, &(heurdata->binvars), nbinvars, &(heurdata->nbinblocks), &nbinblockvars, &(heurdata->binblockstart), &(heurdata->binblockend), &equalcoeffs, heur, heurdata) );
    }
+
+   heurdata->nbinvars = nbinvars;
+
+   heurdata->execute = nbinvars > 1 && !equalcoeffs && heurdata->nbinblocks > 0;   
+
+#ifdef STATISTIC_INFORMATION        
+   if( !equalcoeffs )
+   {
+      /* update statistics */
+      heurdata->binnblocks += (heurdata->nbinblocks);
+      heurdata->binnblockvars += nbinblockvars;
+      heurdata->ntotalbinvars += nbinvars;
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Twoopt BINARY presolving finished with <%d> blocks, <%d> block variables \n", 
+         heurdata->nbinblocks, nbinblockvars);
+   }
+   else
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "BINARY coefficients are all equal \n");
+   }
+#endif
+
+   if( heurdata->intopt && nintvars > 1 )
+   {               
+      SCIP_CALL( innerPresolve(scip, &(vars[nbinvars]), &(heurdata->intvars), nintvars, &(heurdata->nintblocks), 
+            &nintblockvars, &(heurdata->intblockstart), &(heurdata->intblockend), &equalcoeffs, 
+            heur, heurdata) );
+
+      heurdata->execute = heurdata->execute || (!equalcoeffs && heurdata->nintblocks > 0);   
+   
+#ifdef STATISTIC_INFORMATION 
+      if( !equalcoeffs )
+      {      /* update statistics */
+         heurdata->intnblocks += heurdata->nintblocks;
+         heurdata->intnblockvars += nintblockvars;
+         heurdata->ntotalintvars += nintvars;
+     
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Twoopt Integer presolving finished with <%d> blocks, <%d> block variables \n", 
+            heurdata->nintblocks, nintblockvars);
+      } 
+      else 
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "INTEGER coefficients are all equal \n");
+      }
+#endif
+   }
+   heurdata->nintvars = nintvars;
 
    /* presolving is finished, heuristic data is updated*/
    heurdata->presolved = TRUE;
@@ -812,7 +775,6 @@ SCIP_RETCODE presolve(
 
    return SCIP_OKAY;
 }
-
 
 /*
  * Callback methods of primal heuristic
@@ -869,9 +831,9 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nbinvars = 0;
    heurdata->nintvars = 0;
    heurdata->lastsolindex = -1;
-   heurdata->nobinarymatching = TRUE;
-   heurdata->nointmatching = TRUE;
    heurdata->presolved = FALSE;
+   heurdata->nbinblocks = 0;
+   heurdata->nintblocks = 0;
 
 #ifdef STATISTIC_INFORMATION
    /* init statistics */
@@ -890,13 +852,170 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    /* all pointers are initially set to NULL. Since presolving
     * of the heuristic requires a lot of calculation time on some instances, 
     * but might not be needed e.g. if problem is infeasible, presolving is applied 
-    * when heuristic is executed for the first time */
+    * when heuristic is executed for the first time 
+    */
    heurdata->binvars = NULL;
    heurdata->intvars = NULL;
+   heurdata->binblockstart = NULL;
+   heurdata->binblockend = NULL;
+   heurdata->intblockstart = NULL;
+   heurdata->intblockend = NULL;
     
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;   
+}
+
+/* realizes the 2-optimization algorithm, which tries to improve incumbent solution
+ * by shifting pairs of variables which share a common row set. 
+ */
+static
+SCIP_RETCODE optimize(
+   SCIP*                scip,               /**< current SCIP instance */
+   SCIP_SOL*            worksol,            /**< working solution */
+   SCIP_VAR**           vars,               /**< binary or integer variables */
+   int                  nvars,              /**< number of type of variables */
+   int*                 blockstart,         /**< contains start indices of blocks */
+   int*                 blockend,           /**< contains end indices of blocks */
+   int                  nblocks,            /**< the number of blocks */
+   OPTTYPE              opttype,            /**< are binaries or integers optimized */
+   SCIP_Real**          activities,         /**< the LP-row activities */
+   int                  nrows,              /**< the number of LP rows */
+   SCIP_Bool*           improvement,        /**< was there a successful shift? */
+   SCIP_HEURDATA*       heurdata            /**< the heuristic data */
+   )
+{
+   int b;
+    
+   assert(nblocks > 0);
+   assert(blockstart != NULL && blockend != NULL);
+  
+   /* iterate over blocks */
+   for( b = 0; b < nblocks; ++b )
+   { 
+      int e;
+      
+      /* iterate over variables in current block */
+      for( e = blockend[b]; e > blockstart[b]; --e )
+      {
+         /* determine the new master variable for heuristic's optimization method */
+         SCIP_VAR* master;
+
+         SCIP_Real masterobj;
+         SCIP_Real mastersolval;
+         SCIP_Real bestshift;
+         SCIP_Real bestbound;
+
+         int bestslavepos;
+         int s;
+
+         master = vars[e];
+         masterobj = SCIPvarGetObj(master);
+         mastersolval = SCIPgetSolVal(scip, worksol, master);
+
+         assert(SCIPisFeasIntegral(scip, mastersolval));
+         assert(opttype == OPTTYPE_INTEGER || 
+            (SCIPisFeasEQ(scip, mastersolval, 1.0) || SCIPisFeasEQ(scip, mastersolval, 0.0)));
+
+         /* initialize the data of the best available shift */
+         bestshift = 0.0;
+         bestslavepos = -1;
+         bestbound = 0.0;
+	
+         /* loop over block and determine a slave shift candidate for master variable.
+          * If more than one candidate is available, choose the shift which improves objective function
+          * the most.*/
+         for( s = blockstart[b]; s < e && !SCIPisFeasEQ(scip, masterobj, SCIPvarGetObj(vars[s])); ++s )
+         {
+            SCIP_VAR* slave;
+            SCIP_Real slaveobj;
+            SCIP_Real slavesolval;
+            SCIP_Real changedobj;
+            SCIP_Real bound;
+
+            /* get the next slave variable */
+            slave = vars[s];
+            slaveobj = SCIPvarGetObj(slave);
+            slavesolval = SCIPgetSolVal(scip, worksol, slave);
+
+            assert(SCIPvarGetType(master) == SCIPvarGetType(slave));
+            assert(SCIPisFeasIntegral(scip, slavesolval));
+            assert(opttype == OPTTYPE_INTEGER || 
+               (SCIPisFeasEQ(scip, slavesolval, 1.0) || SCIPisFeasEQ(scip, slavesolval, 0.0)));
+
+            /* determine the shifting direction to improve the objective function */
+            assert(SCIPisFeasGT(scip, masterobj, slaveobj));
+
+            /* the maximum positive integer which preserves feasibility of all rows by shifting variables
+             * in the calculated directions.
+             */
+            bound = determineBound(scip, worksol, master, slave, *activities, nrows);
+
+            assert(SCIPisFeasIntegral(scip, bound));
+            assert(SCIPisFeasGE(scip, bound, 0.0));
+
+            /* the improvement of objective function is calculated */
+            changedobj = (slaveobj - masterobj) * bound;
+	  
+            /* choose the candidate which improves the objective function the most */
+            if( SCIPisFeasLT(scip, changedobj, bestshift) )
+            {
+               bestshift = changedobj;
+               bestslavepos = s;
+               bestbound = bound;	    
+            }
+         }
+	
+         /* choose the most promising candidate, if one exists */
+         if( bestslavepos >= 0 )
+         {
+            SCIP_Real slavesolval;
+            SCIP_VAR* slave;
+            SCIP_Real slaveobj;
+            SCIP_Bool feasible;
+            SCIP_Real changedobj;
+
+            slave = vars[bestslavepos];
+
+            slavesolval = SCIPgetSolVal(scip, worksol, slave);
+            slaveobj = SCIPvarGetObj(slave);
+
+            /* the improvement of objective function is calculated */
+            changedobj = (slaveobj - masterobj) * bestbound;
+	  	  
+            assert(SCIPisFeasLT(scip, changedobj, 0.0));
+
+            /* try to change the solution values of the variables */
+            feasible = FALSE;
+            SCIP_CALL( shiftValues(scip, master, slave, &mastersolval, &slavesolval, bestbound,
+                  activities, nrows, &feasible) );
+	  
+            if( feasible )
+            {
+               /* The variables' solution values were successfully shifted and can hence be updated. */
+               assert(SCIPisFeasIntegral(scip, mastersolval));
+               assert(SCIPisFeasIntegral(scip, slavesolval));
+
+               SCIP_CALL( SCIPsetSolVal(scip, worksol, master, mastersolval) );
+               SCIP_CALL( SCIPsetSolVal(scip, worksol, slave, slavesolval) );
+               SCIPdebugMessage("Exchange is feasible and executed. Changed Objective: <%.4g>\n", changedobj);
+               SCIPdebugMessage("-> Variables: <%d><%g><%g> &&  <%d><%g><%g> (<index><value><objective coefficient>)\n",
+                  SCIPvarGetProbindex(master), mastersolval, masterobj, 
+                  SCIPvarGetProbindex(slave), slavesolval, slaveobj);
+
+#ifdef STATISTIC_INFORMATION
+               /* update statistics */
+               if( opttype == OPTTYPE_BINARY )
+                  ++(heurdata->binnexchanges);
+               else
+                  ++(heurdata->intnexchanges);
+#endif
+               *improvement = TRUE;
+            }
+         }
+      }
+   }
+   return SCIP_OKAY;
 }
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
@@ -910,20 +1029,8 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
 
    /*ensure that initialization was successful */
    assert(heurdata->nbinvars <= 1 || heurdata->binvars != NULL);
+   
 
-   /* free used memory for Binary Optimization*/
-   if( heurdata->binvars != NULL )
-   {
-      SCIPfreeBlockMemoryArray(scip, &heurdata->binvars, heurdata->nbinvars);
-   }
-
-   /* free heuristic data of Integer variables */
-   if( heurdata->intvars != NULL )
-   {
-      SCIPfreeBlockMemoryArray(scip, &heurdata->intvars, heurdata->nintvars);
-   }
-
- 
 #ifdef STATISTIC_INFORMATION
    /* print relevant statistics to console */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
@@ -958,7 +1065,39 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
    heurdata->binnexchanges = 0;
    heurdata->intnexchanges = 0;
 #endif
+   /* free the allocated memory for the binary variables */
+   if( heurdata->binvars != NULL )
+   {
+      SCIPfreeBlockMemoryArray(scip, &heurdata->binvars, heurdata->nbinvars);
+   }
+   if( heurdata->nbinblocks > 0 )
+   {
+      assert(heurdata->binblockstart != NULL);
+      assert(heurdata->binblockend != NULL);
 
+      SCIPfreeBlockMemoryArray(scip, &heurdata->binblockstart, heurdata->nbinblocks);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->binblockend, heurdata->nbinblocks);
+   }
+   heurdata->nbinvars = 0;
+   heurdata->nbinblocks = 0;
+
+   if( heurdata->nintblocks > 0 )
+   {
+      assert(heurdata->intblockstart != NULL);
+      assert(heurdata->intblockend != NULL);
+
+      SCIPfreeBlockMemoryArray(scip, &heurdata->intblockstart, heurdata->nintblocks);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->intblockend, heurdata->nintblocks);
+   }
+   
+   /* free the allocated memory for the integers */
+   if( heurdata->intvars != NULL )
+   {
+      SCIPfreeBlockMemoryArray(scip, &heurdata->intvars, heurdata->nintvars);
+   }
+
+   heurdata->nbinblocks = 0;
+   heurdata->nintblocks = 0;
    heurdata->nbinvars = 0;
    heurdata->nintvars = 0;
   
@@ -984,13 +1123,13 @@ SCIP_DECL_HEURINITSOL(heurInitsolTwoopt)
 
    assert(heurdata != NULL);
    assert(heurdata->binvars == NULL && heurdata->intvars == NULL);
+   assert(heurdata->binblockstart == NULL && heurdata->binblockend == NULL);
+   assert(heurdata->intblockstart == NULL && heurdata->intblockend == NULL);
 
    /* set heuristic data to initial values, but increase the total number of runs */ 
    heurdata->nbinvars = 0;
    heurdata->nintvars = 0;
    heurdata->lastsolindex = -1;
-   heurdata->nobinarymatching = TRUE;
-   heurdata->nointmatching = TRUE;
    heurdata->presolved = FALSE;
 
 #ifdef STATISTIC_INFORMATION
@@ -1029,8 +1168,26 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTwoopt)
    {
       SCIPfreeBlockMemoryArray(scip, &heurdata->binvars, nbinvars);
    }
+   if( heurdata->nbinblocks > 0 )
+   {
+      assert(heurdata->binblockstart != NULL);
+      assert(heurdata->binblockend != NULL);
 
+      SCIPfreeBlockMemoryArray(scip, &heurdata->binblockstart, heurdata->nbinblocks);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->binblockend, heurdata->nbinblocks);
+   }
    heurdata->nbinvars = 0;
+   heurdata->nbinblocks = 0;
+
+   if( heurdata->nintblocks > 0 )
+   {
+      assert(heurdata->intblockstart != NULL);
+      assert(heurdata->intblockend != NULL);
+
+      SCIPfreeBlockMemoryArray(scip, &heurdata->intblockstart, heurdata->nintblocks);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->intblockend, heurdata->nintblocks);
+   }
+   heurdata->nintblocks = 0;
    
    /* free the allocated memory for the integers */
    if( heurdata->intvars != NULL )
@@ -1041,7 +1198,9 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTwoopt)
    heurdata->nintvars = 0;
 
    assert(heurdata->binvars == NULL && heurdata->intvars == NULL);
-   
+   assert(heurdata->binblockstart == NULL && heurdata->binblockend == NULL);
+   assert(heurdata->intblockstart == NULL && heurdata->intblockend == NULL);
+
    /* set heuristic data */
    SCIPheurSetData(heur, heurdata);
 
@@ -1056,18 +1215,17 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    SCIP_HEURDATA*  heurdata;
    SCIP_SOL* bestsol;
    SCIP_SOL* worksol;
-   SCIP_VAR** vars;
-   SCIP_VAR** allvars;
    SCIP_ROW** lprows;
    SCIP_Real* activities;
- 
+   SCIP_COL** cols;
+   int ncols;
    int nbinvars;
    int nintvars;
-   int nvars;
+   int ndiscvars;
    int nlprows;
    int i;
-   int j;
    SCIP_Bool improvement;
+   SCIP_Bool presolthiscall;
   
    assert(heur != NULL);
    assert(scip != NULL);
@@ -1079,43 +1237,53 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    
    *result = SCIP_DIDNOTRUN;
 
-   /* ensure that heuristic has not already been processed on current incumbent */
+   /* we need an LP */
+   if( SCIPgetNLPRows(scip) == 0 )
+      return SCIP_OKAY;
+
    bestsol = SCIPgetBestSol(scip);
+
+   /* ensure that heuristic has not already been processed on current incumbent */
    if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
       return SCIP_OKAY;
+
+   heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
 
    /* we can only work on solutions valid in the transformed space */
    if( SCIPsolGetOrigin(bestsol) == SCIP_SOLORIGIN_ORIGINAL )
       return SCIP_OKAY;
+
    /* ensure that the user defined number of nodes after last best solution has been reached, return otherwise */
    if( (SCIPgetNNodes(scip) - SCIPsolGetNodenum(bestsol)) < heurdata->waitingnodes )
       return SCIP_OKAY;
-   /* we need an LP */
-   if( SCIPgetNLPRows(scip) == 0 )
-      return SCIP_OKAY;
+
+   presolthiscall = FALSE;
    
    /* ensure that heuristic specific presolve is applied when heuristic is executed first */
    if( !heurdata->presolved )
    {
-      SCIP_CALL( presolve(scip, heur, heurdata) );
+      SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
+      for( i = 0; i < SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip); ++i )
+         SCIPcolSort(cols[i]);
+
+      SCIP_CALL( presolveTwoOpt(scip, heur, heurdata) );
+      presolthiscall = TRUE;
    }
 
-   assert(heurdata->presolved == TRUE);
-
-   nbinvars = heurdata->nbinvars;
-   nintvars = heurdata->nintvars;
+   assert(heurdata->presolved);
 
    /* ensure that presolve has detected structures in the problem to which the 2-optimization can be applied.
     * That is if at least one of the sorted arrays in heuristic data, 'binvars' or 'intvars' exists and at least 
     * some of the variables' objective function coefficient differ. */
-   if( (nbinvars <= 1 || heurdata->binequalcoeffs || heurdata->nobinarymatching)
-      && (!heurdata->intopt || nintvars <= 1 || heurdata->intequalcoeffs || heurdata->nointmatching) )
-   {
+   if( !heurdata->execute )
       return SCIP_OKAY;
-   }
-   
+      
    /* problem satisfies all necessary conditions for 2-optimization heuristic, execute heuristic! */
    *result = SCIP_DIDNOTFIND;
+
+   nbinvars = heurdata->nbinvars;
+   nintvars = heurdata->nintvars;
+   ndiscvars = nbinvars+nintvars;
 
    /* initialize a working solution as a copy of the current incumbent to be able to store 
     * possible improvements obtained by 2-optimization */
@@ -1129,8 +1297,8 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    for( i = 0; i < nlprows; i++ )
    {
       SCIP_ROW* row;
-      row = lprows[i];
 
+      row = lprows[i];
       assert(row != NULL);
       assert(SCIProwGetLPPos(row) == i);
                
@@ -1144,213 +1312,38 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          goto TERMINATE;
    }
 
-   heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
+   if( !presolthiscall )
+   {
+      SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
+      for( i = 0; i < ndiscvars; ++i )
+      {
+         SCIPcolSort(cols[i]);
+      }
+   }
 
    /* start with binary optimization */
-   vars = heurdata->binvars;
    improvement = FALSE;
 
-   if( vars != NULL && !heurdata->nobinarymatching )
+   if( heurdata->nbinblocks > 0 )
    {
-      int startindex;
-      int endindex;
-      
-      startindex = 0;
-
-      /* loop over variables by two counters, startindex and endindex, 
-       * which are supposed to to mark the current start and end index
-       * of a heuristic relevant block. The variable at the endindex is the current master and compared 
-       * to all of its predecessors,
-       * whether an exchange is possible and favorable with respect to objective function */
-      while( startindex < nbinvars-1 )
-      { 
-         endindex = startindex +1;
-         /* check if startindex and endindex still mark the same block */
-         while( endindex < nbinvars && checkConstraintMatching(scip, vars[startindex], vars[endindex], heurdata->matchingrate) )  
-         {
-            /* determine the new master variable for heuristic's optimization method */
-            SCIP_VAR* master;
-            SCIP_Real masterobjective;
-            SCIP_Real mastershiftvalue;
-            SCIP_Real mastersolvalue;
-            
-            master = vars[endindex];
-            masterobjective = SCIPvarGetObj(master);
-            mastersolvalue = SCIPgetSolVal(scip, worksol, master);
-            
-            assert(SCIPisFeasEQ(scip, mastersolvalue, 1.0) || SCIPisFeasEQ(scip, mastersolvalue, 0.0));
-            
-            /* the shifting value of a binary variable is canonically calculated */
-	    if( SCIPisFeasEQ(scip, mastersolvalue, 1.0) )
-               mastershiftvalue = -1.0;
-	    else
-               mastershiftvalue = 1.0;
-
-            /* loop over whole block and apply the necessary checks */
-            for( j = startindex; j < endindex; ++j )
-            {
-               SCIP_VAR* slave;
-               SCIP_Real slaveobjective;
-               SCIP_Real slaveshiftvalue;
-               SCIP_Real slavesolvalue;
-               SCIP_Real changedobjective;
-
-               /* get the next slave variable */
-               slave = vars[j];
-               slaveobjective = SCIPvarGetObj(slave);
-               slavesolvalue = SCIPgetSolVal(scip, worksol, slave);
-            
-               assert(SCIPisFeasEQ(scip, slavesolvalue, 1.0) || SCIPisFeasEQ(scip, slavesolvalue, 0.0));
-
-	       if( SCIPisFeasEQ(scip, slavesolvalue, 1.0) )
-                  slaveshiftvalue = -1.0;
-	       else 
-                  slaveshiftvalue = 1.0;
-
-               changedobjective = mastershiftvalue * masterobjective + slaveshiftvalue* slaveobjective;
-
-               /* ensure that the given pair of variables can be flipped in favor of objective function,
-                * and try to flip them */
-               if( !SCIPisFeasEQ(scip, mastersolvalue, slavesolvalue) && SCIPisFeasLT(scip, changedobjective, 0.0) )
-               {
-                  SCIP_Bool feasible;
-                  feasible = FALSE;
-
-                  shiftValues(scip, master, slave, &mastersolvalue, &slavesolvalue, mastershiftvalue, 
-                     slaveshiftvalue, &activities, nlprows, &feasible);
-		 
-		  /* if exchange was feasible, set new solution values */
-                  if( feasible )
-                  {
-                     SCIP_CALL( SCIPsetSolVal(scip, worksol, master, mastersolvalue) );
-                     SCIP_CALL( SCIPsetSolVal(scip, worksol, slave, slavesolvalue) );
-
-                     SCIPdebugMessage("Exchange is feasible and executed. Changed Objective: <%.4g>\n", changedobjective);
-                     SCIPdebugMessage("-> Variables: <%d><%g><%g> &&  <%d><%g><%g> (<index><value><objective coefficient>)\n",
-                        endindex, mastersolvalue, masterobjective, j, slavesolvalue, slaveobjective);
-                     
-
-#ifdef STATISTIC_INFORMATION
-                     /* update statistics */
-                     ++(heurdata->binnexchanges);
-#endif
-                     improvement = TRUE;
-                     mastershiftvalue *= -1.0;
-                  }
-               }
-            }
-            ++endindex;
-         }
-
-         /* variables differ too much. go for the next block by setting startindex */
-         startindex = endindex;
-      }
+      SCIP_CALL( optimize(scip, worksol, heurdata->binvars, heurdata->nbinvars, heurdata->binblockstart, heurdata->binblockend, heurdata->nbinblocks,
+            OPTTYPE_BINARY, &activities, nlprows, &improvement, heurdata) );
    }
    
    /* ensure that their are at least two integer variables which do not have the same coefficient 
     * in the objective function. In one of these cases, the heuristic will automatically skip the
     * integer variable optimization */
-   if( heurdata->intvars != NULL && !heurdata->nointmatching )
+   if( heurdata->nintblocks > 0 )
    {         
-      int startindex;
-      int endindex;
-      vars = heurdata->intvars;
-      
-      startindex = 0;
-
-      /* loop over variables of a heuristic relevant block. 
-       * The variable at the endindex is the current master and compared to all of its predecessors,
-       * whether an exchange is possible and favorable with respect to objective function*/
-      while( startindex < nintvars - 1 ) 
-      { 
-         endindex = startindex +1;
-
-         /* check if startindex and endindex still mark the same block*/
-         while( endindex < nintvars && checkConstraintMatching(scip, vars[startindex], vars[endindex], heurdata->matchingrate) )
-         {
-            SCIP_VAR* master;
-            SCIP_Real masterobjective;
-            SCIP_Real mastersolvalue;
-            int masterdirection;
-           
-            /* determine a new master variable for heuristic's optimization method. Heuristic 
-             * will try to improve the objective function by shifting this master's solution value with 
-             * another variable from the same block if it is favorable for the objective function  */
-            master = vars[endindex];
-            masterobjective = SCIPvarGetObj(master);
-            mastersolvalue = SCIPgetSolVal(scip, worksol, master);
-
-            /* loop over all possible exchange candidates and apply the necessary checks*/
-            for( j = startindex; j < endindex; ++j )
-            {
-               SCIP_VAR* slave;
-               SCIP_Real slaveobjective;
-               SCIP_Real slavesolvalue;
-               SCIP_Real changedobjective;
-               SCIP_Real bound;
-               int slavedirection;
-
-               /* get next slave variable for exchange */
-               slave = vars[j];
-               slaveobjective = SCIPvarGetObj(slave);
-               slavesolvalue = SCIPgetSolVal(scip, worksol, slave);
-
-               /* the shifting directions have to be determined, choose the direction in favor of objective function.
-                * if objective coefficients are feasibly equal, shifting will not have any impact on objective funtion,
-                * thus this pair can be skipped. 
-                */
-	       if( SCIPisFeasEQ(scip, masterobjective, slaveobjective) )
-                  continue;
-               else if( SCIPisFeasLT(scip, masterobjective, slaveobjective) )
-                  masterdirection = 1; 
-               else 
-                  masterdirection = -1;
-	       
-               slavedirection = -masterdirection;
-
-	       /* the bound is determined, the smallest positive Integer to preserve feasibility of all rows 
-                * if variables' solution values are shifted
-                */
-               bound = determineBound(scip, worksol, master, masterdirection, slave, slavedirection, activities, nlprows);
-               changedobjective = masterobjective * masterdirection * bound + slaveobjective * slavedirection * bound;
-   
-	       /* if shifting has a negative impact on objective function (which is quite favorable with respect to minimization),
-                * try to shift the variables, update the activitities and and store the new solution values
-                */
-               if( SCIPisFeasLT(scip, changedobjective, 0.0) )
-               {
-                  SCIP_Bool feasible;
-                  feasible = FALSE;
-                  shiftValues(scip, master, slave, &mastersolvalue, &slavesolvalue, bound * masterdirection, 
-                     bound * slavedirection, &activities, nlprows, &feasible);
-                  if( feasible )
-                  {
-                     SCIP_CALL( SCIPsetSolVal(scip, worksol, master, mastersolvalue) );
-                     SCIP_CALL( SCIPsetSolVal(scip, worksol, slave, slavesolvalue) );
-                     SCIPdebugMessage("Exchange is feasible and executed. Changed Objective: <%.4g>\n", changedobjective);
-                     SCIPdebugMessage("-> Variables: <%d><%g><%g> &&  <%d><%g><%g> (<index><value><objective coefficient>)\n",
-                        endindex, mastersolvalue, masterobjective, j, slavesolvalue, slaveobjective);
-
-#ifdef STATISTIC_INFORMATION
-                     /* update statistics */
-                     ++(heurdata->intnexchanges);
-#endif
-                     improvement = TRUE;
-                  }
-               }
-            }
-            ++endindex;
-         }
-
-         /* variables differ too much. go for the next block by setting startindex */
-         startindex = endindex;
-      }
+      assert(heurdata->intopt);
+      SCIP_CALL( optimize(scip, worksol, heurdata->intvars, heurdata->nintvars, heurdata->intblockstart, heurdata->intblockend, heurdata->nintblocks,
+            OPTTYPE_INTEGER, &activities, nlprows, &improvement, heurdata) );
    }
+ 
+   if( !improvement )
+      goto TERMINATE;
 
-   nintvars = nbinvars + nintvars;
-   nvars = SCIPgetNVars(scip);
-
-   if( improvement && (nvars == nintvars) )
+   if( SCIPgetNVars(scip) == ndiscvars )
    {
       /* the problem is a pure IP, hence, no continuous or implicit variables are left for diving.
        * try if new working solution is feasible in original problem */
@@ -1371,23 +1364,24 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 #endif
       }
    }
-   else if( improvement )
+   /* fix the integer variables and start diving to optimize continuous variables with respect to reduced domain */
+   else
    {
-      /* fix the integer variables and start diving to optimize continuous variables with respect to reduced domain */
+      SCIP_VAR** allvars;
       SCIP_Bool lperror;
 #ifdef NDEBUG
       SCIP_RETCODE retstat;
 #endif
 
       SCIPdebugMessage("shifted solution should be feasible -> solve LP to fix continuous variables to best values\n");
-      
+
+      allvars = SCIPgetVars(scip);
+            
       /* start diving to calculate the LP relaxation */
       SCIP_CALL( SCIPstartDive(scip) );
 
-      allvars = SCIPgetVars(scip);
-      
       /* set the bounds of the variables: fixed for integers, global bounds for continuous */
-      for( i = 0; i < nvars; ++i )
+      for( i = 0; i < SCIPgetNVars(scip); ++i )
       {
          if( SCIPvarGetStatus(allvars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1395,14 +1389,17 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], SCIPvarGetUbGlobal(allvars[i])) );
          }
       }
+
       /* apply this after global bounds to not cause an error with intermediate empty domains */
-      for( i = 0; i < nintvars; ++i )
+      for( i = 0; i < ndiscvars; ++i )
       {
          if( SCIPvarGetStatus(allvars[i]) == SCIP_VARSTATUS_COLUMN )
          {  
             SCIP_Real solval;
 
             solval = SCIPgetSolVal(scip, worksol, allvars[i]);
+	    assert(SCIPvarGetType(allvars[i]) == SCIP_VARTYPE_CONTINUOUS || SCIPisIntegral(scip, solval));
+
             SCIP_CALL( SCIPchgVarLbDive(scip, allvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], solval) );
          }
@@ -1455,6 +1452,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       /* terminate the diving */
       SCIP_CALL( SCIPendDive(scip) );
    }
+
  TERMINATE:
    SCIPfreeBufferArray(scip, &activities);
    SCIP_CALL( SCIPfreeSol(scip, &worksol) );
