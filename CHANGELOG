@@ -42,6 +42,8 @@ interface:
 - new method SCIPselectBranchVarPscost() in branch_pscost.{c,h}; this method selects from a given candidate array a branching variable 
   w.r.t. pseudo cost branching for relax candidates
 - new methods SCIPsetEmphasisFeasibility() which sets parameter to detect feasibility fast
+- lpi_spx.cpp: implemented option to restore basis only after entire strong branching phase instead of after each strong branch
+  (off, because it appears to cost time)
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

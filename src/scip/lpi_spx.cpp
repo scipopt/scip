@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.97 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.98 2010/05/06 21:59:53 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -25,6 +25,9 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #define AUTOPRICING_ITERSWITCH          1000 /**< start with devex and switch to steepest edge after this many iterations */
+#define STRONGBRANCH_RESTOREBASIS       true /**< if true then in SCIPlpiStrongbranch() we restore the basis after the
+                                              *   down branch and after the up branch; if false only after the end of a
+                                              *   strong branching phase */
 
 
 /* remember the original value of the SCIP_DEBUG define and undefine it */
@@ -121,6 +124,9 @@ class SPxSCIP : public SPxSolver
    bool             m_autopricing;      /**< is automatic pricing selected? */
    int              m_autophase1iters;  /**< number of iterations spend in phase one of auto pricing */
    bool             m_rowrep;           /**< is row representation selected? */
+   bool             m_strongbranching;  /**< was last lp solve a strong branching call? */
+   SPxSolver::VarStatus* m_rowstat;     /**< basis status of rows before starting strong branching (if m_strongbranching == true, NULL otherwise) */
+   SPxSolver::VarStatus* m_colstat;     /**< basis status of columns before starting strong branching (if m_strongbranching == true, NULL otherwise) */
 
 public:
    SPxSCIP(const char* probname = NULL)
@@ -133,7 +139,10 @@ public:
           m_lpinfo(false),
           m_autopricing(true),
           m_autophase1iters(0),
-          m_rowrep(false)
+          m_rowrep(false),
+          m_strongbranching(false),
+          m_rowstat(NULL),
+          m_colstat(NULL)
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
@@ -148,6 +157,8 @@ public:
    {
       if( m_probname != NULL )
          spx_free(m_probname);  /*lint !e1551*/
+
+      freePreStrongbranchingBasis();
    }
 
    void setAutoPricer(bool initialphase)
@@ -276,6 +287,7 @@ public:
       {
 	 try
 	 {
+            freePreStrongbranchingBasis();
 	    SPxSolver::reLoad();
 	 }
 	 catch(SPxException x)
@@ -322,6 +334,112 @@ public:
       return m_stat;
    }
 
+   /** save the current basis if (and only if) no basis is in store, yet */
+   void savePreStrongbranchingBasis()
+   {
+      if( !m_strongbranching )
+      {
+         assert(m_rowstat == NULL);
+         assert(m_colstat == NULL);
+
+         m_rowstat = new SPxSolver::VarStatus[nRows()];
+         m_colstat = new SPxSolver::VarStatus[nCols()];
+
+         try
+         {
+            m_stat = getBasis(m_rowstat, m_colstat);
+         }
+         catch(SPxException x)
+         {
+            std::string s = x.what();      
+            SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+
+            /* since it is not clear if the status in SoPlex are set correctly
+             * we want to make sure that if an error is thrown the status is
+             * not OPTIMAL anymore.
+             */
+            assert(m_stat != SPxSolver::OPTIMAL);
+         }
+
+         m_strongbranching = true;
+      }
+      else
+      {
+         assert(m_rowstat != NULL);
+         assert(m_colstat != NULL);
+      }
+   }
+
+   /** if basis is in store, restore and free it */
+   void restorePreStrongbranchingBasis(const bool freebasis)
+   {
+      if( m_strongbranching )
+      {
+         assert(m_rowstat != NULL);
+         assert(m_colstat != NULL);
+
+         try
+         {
+            setBasis(m_rowstat, m_colstat);
+         }
+         catch(SPxException x)
+         {
+            std::string s = x.what();      
+            SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+            m_stat = SPxSolver::status();
+
+            /* since it is not clear if the status in SoPlex are set correctly
+             * we want to make sure that if an error is thrown the status is
+             * not OPTIMAL anymore.
+             */
+            assert(m_stat != SPxSolver::OPTIMAL);
+         }
+
+         if( freebasis )
+         {
+            delete [] m_rowstat;
+            delete [] m_colstat;
+
+            m_strongbranching = false;
+            m_rowstat = NULL;
+            m_colstat = NULL;
+         }
+      }
+      else
+      {
+         assert(m_rowstat == NULL);
+         assert(m_colstat == NULL);
+      }
+   }
+
+   /** if basis is in store, delete it without restoring it */
+   void freePreStrongbranchingBasis()
+   {
+      if( m_strongbranching )
+      {
+         assert(m_rowstat != NULL);
+         assert(m_colstat != NULL);
+
+         delete [] m_rowstat;
+         delete [] m_colstat;
+
+         m_strongbranching = false;
+         m_rowstat = NULL;
+         m_colstat = NULL;
+      }
+      else
+      {
+         assert(m_rowstat == NULL);
+         assert(m_colstat == NULL);
+      }
+   }
+
+   /** is pre-strong-branching basis stored? */
+   bool hasPreStrongbranchingBasis()
+   {
+      return m_strongbranching;
+   }
+
    Status getStatus() const
    {
       return m_stat;
@@ -340,6 +458,7 @@ public:
    virtual void clear()
    {
       SPxSolver::clear();
+      freePreStrongbranchingBasis();
       m_stat = NO_PROBLEM;
    }
 }; /*lint !e1748*/
@@ -713,6 +832,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(rhs != NULL);
 
    invalidateSolution(lpi);
+   lpi->spx->freePreStrongbranchingBasis();
 
    try
    {
@@ -771,6 +891,11 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    invalidateSolution(lpi);
 
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before adding new
+      columns (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    SPxSCIP* spx = lpi->spx;
    try
    {
@@ -819,6 +944,11 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    invalidateSolution(lpi);
 
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      columns (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    SOPLEX_TRY( lpi->spx->removeColRange(firstcol, lastcol) );
 
    return SCIP_OKAY;   
@@ -841,6 +971,11 @@ SCIP_RETCODE SCIPlpiDelColset(
    assert(lpi->spx != NULL);
 
    invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      columns (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    ncols = lpi->spx->nCols();
 
@@ -877,6 +1012,11 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(nnonz == 0 || val != NULL);
 
    invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before adding new
+      rows (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    try
    {
@@ -926,6 +1066,11 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    invalidateSolution(lpi);
 
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      rows (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    SOPLEX_TRY( lpi->spx->removeRowRange(firstrow, lastrow) );
 
    return SCIP_OKAY;   
@@ -948,6 +1093,11 @@ SCIP_RETCODE SCIPlpiDelRowset(
    assert(lpi->spx != NULL);
 
    invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      rows (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    nrows = lpi->spx->nRows();
 
@@ -973,6 +1123,7 @@ SCIP_RETCODE SCIPlpiClear(
    invalidateSolution(lpi);
 
    SOPLEX_TRY( lpi->spx->clear() );
+   assert(!lpi->spx->hasPreStrongbranchingBasis());
 
    return SCIP_OKAY;
 }
@@ -997,6 +1148,12 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(ub != NULL);
 
    invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing bounds via SCIPlpiChgBounds indicates the end of the
+      strong branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    try
    {
@@ -1037,6 +1194,12 @@ SCIP_RETCODE SCIPlpiChgSides(
 
    invalidateSolution(lpi);
 
+   /* if last lp solves were strong branching calls, changing sides via SCIPlpiChgSides indicates the end of the strong
+      branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    try
    {
       for( i = 0; i < nrows; ++i )
@@ -1072,6 +1235,12 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    invalidateSolution(lpi);
 
+   /* if last lp solves were strong branching calls, changing coefficients via SCIPlpiChgCoef indicates the end of the
+      strong branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    SOPLEX_TRY( lpi->spx->changeElement(row, col, newval) );
 
    return SCIP_OKAY;
@@ -1089,6 +1258,12 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    assert(lpi->spx != NULL);
 
    invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing the objective sense indicates the end of the strong
+      branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    SOPLEX_TRY( lpi->spx->changeSense(spxObjsen(objsen)) );
 
@@ -1113,6 +1288,12 @@ SCIP_RETCODE SCIPlpiChgObj(
    assert(obj != NULL);
 
    invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing objective coefficients indicates the end of the strong
+      branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    try
    {
@@ -1151,6 +1332,12 @@ SCIP_RETCODE SCIPlpiScaleRow(
    try 
    {
       invalidateSolution(lpi);
+
+      /* if last lp solves were strong branching calls, scaling a row indicates the end of the strong branching phase;
+         in this case we should restore the pre-strong-branching basis here (not necessary if STRONGBRANCH_RESTOREBASIS
+         true, since done right after strong branch) */
+      if( !STRONGBRANCH_RESTOREBASIS )
+         lpi->spx->restorePreStrongbranchingBasis(true);
 
       /* get the row vector and the row's sides */
       SVector rowvec = lpi->spx->rowVector(row);
@@ -1214,6 +1401,12 @@ SCIP_RETCODE SCIPlpiScaleCol(
    try
    {
       invalidateSolution(lpi);
+
+      /* if last lp solves were strong branching calls, scaling a column indicates the end of the strong branching
+         phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+         STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+      if( !STRONGBRANCH_RESTOREBASIS )
+         lpi->spx->restorePreStrongbranchingBasis(true);
 
       /* get the col vector and the col's bounds and objective value */
       SVector colvec = lpi->spx->colVector(col);
@@ -1591,7 +1784,12 @@ SCIP_RETCODE spxSolve(
    assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
 
    invalidateSolution(lpi);
-   
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    /* set the algorithm type */
    lpi->spx->setType(type);
 
@@ -1701,13 +1899,12 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    )
 {
    SPxSCIP* spx;
-   SPxSolver::VarStatus* rowstat;
-   SPxSolver::VarStatus* colstat;
    SPxSolver::Status status;
    SCIP_Real oldlb;
    SCIP_Real oldub;
    SCIP_Real newlb;
    SCIP_Real newub;
+   bool fromparentbasis;
    bool error;
    int oldItlim;
 
@@ -1720,15 +1917,24 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
-   /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
-   rowstat = new SPxSolver::VarStatus[spx->nRows()];
-   colstat = new SPxSolver::VarStatus[spx->nCols()]; 
    status = SPxSolver::UNKNOWN;                      
+   fromparentbasis = false;
    error = false;                                 
+   oldItlim = spx->terminationIter();
 
-   /* get basis and current bounds of column */
-   SOPLEX_TRY( (void)spx->getBasis(rowstat, colstat) );
+   /* if the last lp solve was not a strong branching call then we save the current basis; we will restore this basis
+    * (I) after each strong branch if flag STRONGBRANCH_RESTOREBASIS is set to true, otherwise (II) before the next
+    * non-strong-branching lp solve or problem modifications, since this may change the dimension of the basis and
+    * typically indicates the end of the strong branching phase
+    */
+   if( !spx->hasPreStrongbranchingBasis() )
+   {
+      spx->savePreStrongbranchingBasis();
+      fromparentbasis = true;
+   }
+
+   /* get current bounds of column */
    oldlb = spx->lower(col);
    oldub = spx->upper(col);
 
@@ -1736,9 +1942,6 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    *upvalid = FALSE;
    if( iter != NULL )
       *iter = 0;
-
-   oldItlim = spx->terminationIter();
-   spx->setTerminationIter(itlim);
 
    /* set the algorithm type to use dual simplex */
    if( lpi->spx->getRowRep() )
@@ -1754,39 +1957,69 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
       spx->changeUpper(col, newub);
 
-      status = spx->solve();
-      SCIPdebugMessage(" --> Terminate with status %d\n",status);
-      switch( status )
+      spx->setTerminationIter(itlim);
+      do
       {
-      case SPxSolver::OPTIMAL:
-         *down = spx->value();
-         *downvalid = TRUE;
-         SCIPdebugMessage(" --> Terminate with value %f\n",spx->value());
-         break;
-      case SPxSolver::ABORT_TIME: /* Soplex does not return a proven dual bound, if it is aborted */
-      case SPxSolver::ABORT_ITER:
-      case SPxSolver::ABORT_CYCLING:
-         *down = spx->value();
-         break;
-      case SPxSolver::ABORT_VALUE:
-      case SPxSolver::INFEASIBLE:
-         *down = spx->terminationValue();
-         *downvalid = TRUE;
-         break;
-      default:
-         error = true;
-         break;
-      }  /*lint !e788*/
-      if( iter != NULL )
-         (*iter) += spx->iterations();
+         status = spx->solve();
+         SCIPdebugMessage(" --> Terminate with status %d\n", status);
+         switch( status )
+         {
+         case SPxSolver::OPTIMAL:
+            *down = spx->value();
+            *downvalid = TRUE;
+            SCIPdebugMessage(" --> Terminate with value %f\n", spx->value());
+            break;
+         case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
+         case SPxSolver::ABORT_ITER:
+         case SPxSolver::ABORT_CYCLING:
+            *down = spx->value();
+            break;
+         case SPxSolver::ABORT_VALUE:
+         case SPxSolver::INFEASIBLE:
+            *down = spx->terminationValue();
+            *downvalid = TRUE;
+            break;
+         default:
+            error = true;
+            break;
+         }  /*lint !e788*/
+         if( iter != NULL )
+            (*iter) += spx->iterations();
+
+         /* if this flag is set, we restore the pre-strong-branching basis by default (and don't solve again) */
+         if( STRONGBRANCH_RESTOREBASIS )
+         {
+            assert(spx->hasPreStrongbranchingBasis());
+            spx->restorePreStrongbranchingBasis(false);
+            fromparentbasis = false;
+         }
+         /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
+          * pre-strong-branching basis and try again with reduced iteration limit */
+         else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
+         {
+            SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n", itlim - spx->iterations());
+            spx->setTerminationIter(itlim - spx->iterations());
+            assert(spx->hasPreStrongbranchingBasis());
+            spx->restorePreStrongbranchingBasis(false);
+            fromparentbasis = true;
+            error = false;
+         }
+         /* otherwise don't solve again */
+         else
+            fromparentbasis = false;
+      }
+      while( fromparentbasis );
+
       spx->changeUpper(col, oldub);
-      SOPLEX_TRY( spx->setBasis(rowstat, colstat) );
    }
    else
    {
       *down = spx->terminationValue();
       *downvalid = TRUE;
    }
+
+   /**@todo if basis was singular, currently we do not perform the up branch; alternatively, we could reload the
+      pre-strong-branching basis and continue */
       
    /* up branch */
    if( !error )
@@ -1797,34 +2030,61 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
       
          spx->changeLower(col, newlb);
-      
-         status = spx->solve();
-         SCIPdebugMessage(" --> Terminate with status %d\n",status);
-         switch( status )
+
+         spx->setTerminationIter(itlim);
+         do
          {
-         case SPxSolver::OPTIMAL:
-            *up = spx->value();
-            *upvalid = TRUE;
-            SCIPdebugMessage(" --> Terminate with value %f\n",spx->value());
-            break;
-         case SPxSolver::ABORT_TIME: /* Soplex does not return a proven dual bound, if it is aborted */
-         case SPxSolver::ABORT_ITER:
-         case SPxSolver::ABORT_CYCLING:
-            *up = spx->value();
-            break;
-         case SPxSolver::ABORT_VALUE:
-         case SPxSolver::INFEASIBLE:
-            *up = spx->terminationValue();
-            *upvalid = TRUE;
-            break;
-         default:
-            error = true;
-            break;
-         }  /*lint !e788*/
-         if( iter != NULL )
-            (*iter) += spx->iterations();
+            status = spx->solve();
+            SCIPdebugMessage(" --> Terminate with status %d\n", status);
+            switch( status )
+            {
+            case SPxSolver::OPTIMAL:
+               *up = spx->value();
+               *upvalid = TRUE;
+               SCIPdebugMessage(" --> Terminate with value %f\n", spx->value());
+               break;
+            case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
+            case SPxSolver::ABORT_ITER:
+            case SPxSolver::ABORT_CYCLING:
+               *up = spx->value();
+               break;
+            case SPxSolver::ABORT_VALUE:
+            case SPxSolver::INFEASIBLE:
+               *up = spx->terminationValue();
+               *upvalid = TRUE;
+               break;
+            default:
+               error = true;
+               break;
+            }  /*lint !e788*/
+            if( iter != NULL )
+               (*iter) += spx->iterations();
+
+            /* if this flag is set, we restore the pre-strong-branching basis by default (and don't solve again) */
+            if( STRONGBRANCH_RESTOREBASIS )
+            {
+               assert(spx->hasPreStrongbranchingBasis());
+               spx->restorePreStrongbranchingBasis(false);
+               fromparentbasis = false;
+            }
+            /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
+             * pre-strong-branching basis and try again with reduced iteration limit */
+            else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
+            {
+               SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->iterations());
+               assert(spx->hasPreStrongbranchingBasis());
+               spx->restorePreStrongbranchingBasis(false);
+               spx->setTerminationIter(itlim - spx->iterations());
+               error = false;
+               fromparentbasis = true;
+            }
+            /* otherwise don't solve again */
+            else
+               fromparentbasis = false;
+         }
+         while( fromparentbasis );
+
          spx->changeLower(col, oldlb);
-         SOPLEX_TRY( spx->setBasis(rowstat, colstat) );
       }
       else
       {
@@ -1832,11 +2092,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          *upvalid = TRUE;
       }
    }
-   
+
+   /* reset old iteration limit */
    spx->setTerminationIter(oldItlim);
-   
-   delete [] rowstat;
-   delete [] colstat;
+
+   /* if this flag is set, we have restored the pre-strong-branching basis before without freeing it; do this now */
+   if( STRONGBRANCH_RESTOREBASIS )
+      spx->freePreStrongbranchingBasis();
 
    if( error )
    {
@@ -2341,6 +2603,12 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis in order to return
+      the original basis status (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong
+      branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    if( rstat != NULL )
    {
       for( i = 0; i < lpi->spx->nRows(); ++i )
@@ -2425,6 +2693,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(rstat != NULL || lpi->spx->nRows() == 0);
 
    invalidateSolution(lpi);
+   lpi->spx->freePreStrongbranchingBasis();
 
    SPxSolver::VarStatus* spxcstat = new SPxSolver::VarStatus[lpi->spx->nCols()];
    SPxSolver::VarStatus* spxrstat = new SPxSolver::VarStatus[lpi->spx->nRows()];
@@ -2492,6 +2761,11 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    /* This function expects that the basis is a column basis. If SoPlex uses row representation, we
     * have to transform the basis and possibly compute a new factorization in the function
@@ -2602,6 +2876,11 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
 
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    try
    {
       assert(lpi != NULL);
@@ -2659,6 +2938,11 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    try
    {
@@ -2724,6 +3008,11 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    nrows = lpi->spx->nRows();
    ncols = lpi->spx->nCols();
    buf = NULL;
@@ -2759,6 +3048,11 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    try 
    {
@@ -2835,6 +3129,11 @@ SCIP_RETCODE SCIPlpiGetState(
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
 
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
    ncols = lpi->spx->nCols();
    nrows = lpi->spx->nRows();
    assert(ncols >= 0);
@@ -2876,6 +3175,11 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
+
+   /* if last lp solves were strong branching calls, we delete the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->freePreStrongbranchingBasis();
 
    lpncols = lpi->spx->nCols();
    lpnrows = lpi->spx->nRows();
@@ -2936,6 +3240,11 @@ SCIP_RETCODE SCIPlpiReadState(
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
 
+   /* if last lp solves were strong branching calls, we delete the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->freePreStrongbranchingBasis();
+
    bool res;
    SOPLEX_TRY( res = lpi->spx->readBasisFile(fname, 0, 0) );
 
@@ -2953,6 +3262,12 @@ SCIP_RETCODE SCIPlpiWriteState(
    )
 {
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis in order to return
+      the original basis status (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong
+      branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
 
    bool res;
    SOPLEX_TRY( res = lpi->spx->writeBasisFile(fname, 0, 0) );
@@ -3222,6 +3537,9 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->freePreStrongbranchingBasis();
 
    if( !fileExists(fname) )
       return SCIP_NOFILE;
