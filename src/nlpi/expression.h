@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.4 2010/05/05 17:53:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.5 2010/05/06 18:30:23 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -29,6 +29,7 @@
 #include "blockmemshell/memory.h"
 #include "nlpi/type_expression.h"
 #include "nlpi/type_exprinterpret.h"
+#include "scip/intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -125,12 +126,21 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
    int*                  maxdegree           /**< buffer to store maximal degree */
 );
 
-/** evaluates an expression */
+/** evaluates an expression w.r.t. a point */
 SCIP_RETCODE SCIPexprEval(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real*            varvals,            /**< values for variables, can be NULL if the expression is constant */
    SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
    SCIP_Real*            val                 /**< buffer to store value */
+);
+
+/** evaluates an expression w.r.t. an interval */
+SCIP_RETCODE SCIPexprEvalInt(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        varvals,            /**< interval values for variables, can be NULL if the expression is constant */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
+   SCIP_INTERVAL*        val                 /**< buffer to store value */
 );
 
 /** prints an expression */
@@ -207,11 +217,19 @@ void SCIPexprtreeSetInterpreterData(
    SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
 );
 
-/** evaluates an expression tree */
+/** evaluates an expression tree w.r.t. a point */
 SCIP_RETCODE SCIPexprtreeEval(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values for variables */
    SCIP_Real*            val                 /**< buffer to store expression tree value */
+);
+
+/** evaluates an expression tree w.r.t. an interval */
+SCIP_RETCODE SCIPexprtreeEvalInt(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        varvals,            /**< intervals for variables */
+   SCIP_INTERVAL*        val                 /**< buffer to store expression tree value */
 );
 
 /** prints an expression tree */

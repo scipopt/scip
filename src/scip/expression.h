@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.2 2010/05/06 16:12:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.3 2010/05/06 18:30:23 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  more methods for expressions and expression trees
@@ -57,6 +57,22 @@ SCIP_RETCODE SCIPexprtreeEvalSol(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_SOL*             sol,                /**< a solution, or NULL for current LP solution */
    SCIP_Real*            val                 /**< buffer to store value */
+);
+
+/** evaluates an expression tree w.r.t. current global bounds */
+SCIP_RETCODE SCIPexprtreeEvalIntGlobalBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        val                 /**< buffer to store result */
+);
+
+/** evaluates an expression tree w.r.t. current local bounds */
+SCIP_RETCODE SCIPexprtreeEvalIntLocalBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        val                 /**< buffer to store result */
 );
 
 #ifdef __cplusplus
