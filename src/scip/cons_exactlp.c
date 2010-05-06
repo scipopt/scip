@@ -12,16 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.16 2010/05/03 20:57:27 bzfsteff Exp $"
-//#define SCIP_DEBUG /*??????????????*/
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.17 2010/05/06 01:19:21 bzfwolte Exp $"
+////#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
 //#define PSEUDOOBJ_OUT /* only for debugging ?????????? */
 //#define BASIS_OUT /* only for debugging ???????????????? */
 //#define DBVERIFY_TEST /* only for testing the methode ?????????????????? */
 //#define EXLPSOLVER_OUT /* only for debugging ???????????????? */
-//#define DETAILED_DEBUG /* only for debugging ???????????????? */
+////#define DETAILED_DEBUG /* only for debugging ???????????????? */
 //#define PS_OUT /* only for debugging ???????????????? */
+//#define PS_OUT2
 //#define READER_OUT /* only for debugging ???????????????? */
 //#define PRESOL_OUT /* only for debugging ?????????? */
 //#define BOUNDING_OUT /* only for debugging ?????????? */
@@ -70,8 +71,9 @@
 #define EVENTHDLR_NAME        "exactlp"
 #define EVENTHDLR_DESC        "bound change event handler for exactlp constraints"
 
-#define ALLROWS                         /**< consider all rows for project method */
-//#define ACTIVEDUAL                      /**< only use active rows for dual in project method */
+//#define ALLROWS                         /**< consider all rows for project method */
+#define ACTIVEDUAL                      /**< only use active rows for dual in project method */
+#define LAMBDACOMP                      /**< should lambda in project and scale method be computed componentwise? */       
 
 /*
  * Data structures
@@ -2187,7 +2189,6 @@ SCIP_RETCODE checkIntegrality(
    int nint;
    int v;
    int ncols;
-   SCIP_Bool fpvalue;
    SCIP_Bool inrange;
    SCIP_Bool integral;
    int branchvar;
@@ -2215,28 +2216,6 @@ SCIP_RETCODE checkIntegrality(
    /* gets primal solution vector of exact LP */
    SCIP_CALL( SCIPlpiexGetSol(conshdlrdata->lpiex, &lpobjval, primsol, NULL, NULL, NULL) );
 
-   /* get all problem variables and integer region in vars array */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, NULL, NULL) );
-   
-   /* check whether primal solution satisfies all integrality restrictions */
-   integral = TRUE;
-   branchvar = -1;
-   for( v = 0; v < nbin + nint && integral; ++v )
-   {
-      assert(SCIPvarGetProbindex(vars[v]) == v);
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
-
-      if( mpz_get_si(mpq_denref(primsol[v])) != 1 ) 
-      {
-         integral = FALSE;
-         branchvar = v;
-#ifdef DETAILED_DEBUG  /*???????????????*/
-         SCIPdebugMessage("   exact LP value of intvar %s ", SCIPvarGetName(vars[v]));
-         gmp_printf("<%Qd> is not integral\n", primsol[v]); 
-#endif
-      }
-   }
-
    /* try to improve current local lower bound by using the result of the exact LP solver */
 #ifdef DETAILED_DEBUG /*????????? */
    oldlb = SCIPgetLocalLowerbound(scip);
@@ -2253,165 +2232,203 @@ SCIP_RETCODE checkIntegrality(
    }
 #endif
 
-   /* store exact LP solution as feasible MIP solution and cut off current node */
-   if( integral )
+   integral = TRUE;
+   inrange = TRUE;
+
+   /* check for infeasible node by bounding */
+   if( SCIPgetLocalLowerbound(scip) >= SCIPgetCutoffbound(scip) )
    {
-      SCIP_SOL* sol;
-      SCIP_SOLEX* solex;
-      mpq_t tmp;
-      SCIP_Bool stored;
-
-      assert(branchvar == -1);
-
-      mpq_init(tmp);
-
-#ifdef DETAILED_DEBUG  /*???????????????*/
-      SCIPdebugMessage("   current exact LP solution is integral\n");
-#endif
-
-      /* create exact and approximate primal solution */
-      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-      SCIP_CALL( SCIPsolexCreate(&solex, SCIPblkmem(scip), NULL) );
-      
-      fpvalue = TRUE;
-      inrange = TRUE;
-
-      /* check whether it is likely that the lpobjval is treated as infinite in scip, i.e., is out of range in scip */
-      if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, lpobjval))) )
-         inrange = FALSE;
-
-      for( v = 0; v < nvars; ++v )
-      {
-         SCIP_Real scipsolval;
-
-         scipsolval = mpqGetRealApprox(scip, primsol[v]);
-
-         /* check whether we can store the primal solution without FP errors */
-         mpq_set_d(tmp, scipsolval);
-         if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
-            inrange = FALSE;
-         if( !mpq_equal(primsol[v], tmp) )
-            fpvalue = FALSE;
-
-         /* set value of variabel in exact and approximate solution */
-         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], scipsolval) );
-         /* todo: using scip->set is ugly! think about a general way to get information from the constraint handler 
-          *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
-          *       ??????????? 
-          */
-         SCIP_CALL( SCIPsolexSetVal(solex, scip->set, vars[v], consdata->obj[v], consdata->lb[v], primsol[v]) );
-      }
-      mpq_set_d(tmp, SCIPgetSolTransObj(scip, sol));
-      assert(!inrange || !fpvalue || !SCIPuseFPRelaxation(scip) || mpq_cmp(lpobjval, tmp) <= 0);
-
-      /* add approximate primal solution */ 
-      if( !inrange )   
-         SCIPfreeSol(scip, &sol);
-      else   
-      {
-         /* @todo (later): ????????? 
-          * 1. maybe improve objval (using SCIPsetSolTransObj() is only a workaround, and this method is not very safe, 
-          *    i.e., should be deleted from the source code later when point 2. was implemented)
-          * 2. store all primal solutions in the exactlp conshdlr with the exact objval and 
-          *    hand over an FP approximation of the exact sol with safe objval to scip (step 3c)
-          */
-         /* store safe objective value for approximate primal solution */ 
-         SCIP_CALL( SCIPsetSolTransObj(scip, sol, mpqGetRealRelax(scip, lpobjval, GMP_RNDU)) );
-
-         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
-         
-#if 0 /* since exact solutions can be stored now, this is not needed anymore */
-         if( stored && !fpvalue )
-         {
-            SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
-         }
-#endif
-      }
-
-      /* add exact primal solution */ 
-      /* todo: using scip->set is ugly! think about a general way get information from the constraint handler 
-       *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
-       *       ??????????? 
-       */
-      SCIP_CALL( SCIPprimalexAddSolFree(conshdlrdata->primal, SCIPblkmem(scip), scip->set, scip->transprob, 
-            &solex, &stored) );
+      SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
 
       *result = SCIP_CUTOFF;
-
-      mpq_clear(tmp);
    }
    else
    {
-      SCIP_Bool solvelpagain; 
-
-      /* if the inexact LP was claimed to be infeasible, i.e., a pseudo solution is enforced here, but the exact LP 
-       * has been proved to be feasible, try to solve the inexact LP again with starting basis equal to optimal 
-       * basis of the exact LP; in order to avoid an infinite loop, this is only done once at a node 
-       */
-      solvelpagain = FALSE;
-      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && conshdlrdata->lastenfopsnode != SCIPgetCurrentNode(scip) )
+      /* get all problem variables and integer region in vars array */
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, NULL, NULL) );
+   
+      /* check whether primal solution satisfies all integrality restrictions */
+      branchvar = -1;
+      for( v = 0; v < nbin + nint && integral; ++v )
       {
-         SCIP_CALL( loadLPEXState(scip, conshdlrdata, &solvelpagain) );
+         assert(SCIPvarGetProbindex(vars[v]) == v);
+         assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
 
-         if( solvelpagain )
+         if( mpz_get_si(mpq_denref(primsol[v])) != 1 ) 
          {
-            solvelpagain = TRUE;
-            *result = SCIP_SOLVELP;
+            integral = FALSE;
+            branchvar = v;
 #ifdef DETAILED_DEBUG  /*???????????????*/
-            SCIPdebugMessage("   ---> LP was infeasible but LPEX not: solve LP once again with basis of LPEX\n");
+            SCIPdebugMessage("   exact LP value of intvar %s ", SCIPvarGetName(vars[v]));
+            gmp_printf("<%Qd> is not integral\n", primsol[v]); 
 #endif
          }
       }
 
-      /* branch on the first fractional variable in the exact LP solution */
-      if( !solvelpagain )
+
+      /* store exact LP solution as feasible MIP solution and cut off current node */
+      if( integral )
       {
-         SCIP_NODE* node;
-         SCIP_Real downub;
-         SCIP_Real uplb;
+         SCIP_SOL* sol;
+         SCIP_SOLEX* solex;
+         mpq_t tmp;
+         SCIP_Bool stored;
+         SCIP_Bool fpvalue;
 
-         /* @todo (later): ???????????
-          *  - implement more sophisticated branching rules 
+         assert(branchvar == -1);
+
+         mpq_init(tmp);
+
+#ifdef DETAILED_DEBUG  /*???????????????*/
+         SCIPdebugMessage("   current exact LP solution is integral\n");
+#endif
+
+         /* create exact and approximate primal solution */
+         SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+         SCIP_CALL( SCIPsolexCreate(&solex, SCIPblkmem(scip), NULL) );
+      
+         fpvalue = TRUE;
+
+         /* check whether it is likely that the lpobjval is treated as infinite in scip, i.e., is out of range in scip */
+         if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, lpobjval))) )
+            inrange = FALSE;
+
+         for( v = 0; v < nvars; ++v )
+         {
+            SCIP_Real scipsolval;
+
+            scipsolval = mpqGetRealApprox(scip, primsol[v]);
+
+            /* check whether we can store the primal solution without FP errors */
+            mpq_set_d(tmp, scipsolval);
+            if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
+               inrange = FALSE;
+            if( !mpq_equal(primsol[v], tmp) )
+               fpvalue = FALSE;
+
+            /* set value of variabel in exact and approximate solution */
+            SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], scipsolval) );
+            /* todo: using scip->set is ugly! think about a general way to get information from the constraint handler 
+             *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
+             *       ??????????? 
+             */
+            SCIP_CALL( SCIPsolexSetVal(solex, scip->set, vars[v], consdata->obj[v], consdata->lb[v], primsol[v]) );
+         }
+         mpq_set_d(tmp, SCIPgetSolTransObj(scip, sol));
+         assert(!inrange || !fpvalue || !SCIPuseFPRelaxation(scip) || mpq_cmp(lpobjval, tmp) <= 0);
+
+         /* add approximate primal solution */ 
+         if( !inrange )   
+            SCIPfreeSol(scip, &sol);
+         else   
+         {
+            /* @todo (later): ????????? 
+             * 1. maybe improve objval (using SCIPsetSolTransObj() is only a workaround, and this method is not very safe, 
+             *    i.e., should be deleted from the source code later when point 2. was implemented)
+             * 2. store all primal solutions in the exactlp conshdlr with the exact objval and 
+             *    hand over an FP approximation of the exact sol with safe objval to scip (step 3c)
+             */
+            /* store safe objective value for approximate primal solution */ 
+            SCIP_CALL( SCIPsetSolTransObj(scip, sol, mpqGetRealRelax(scip, lpobjval, GMP_RNDU)) );
+
+            SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+         
+#if 0 /* since exact solutions can be stored now, this is not needed anymore */
+            if( stored && !fpvalue )
+            {
+               SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
+            }
+#endif
+         }
+
+         /* add exact primal solution */ 
+         /* todo: using scip->set is ugly! think about a general way get information from the constraint handler 
+          *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
+          *       ??????????? 
           */
+         SCIP_CALL( SCIPprimalexAddSolFree(conshdlrdata->primal, SCIPblkmem(scip), scip->set, scip->transprob, 
+               &solex, &stored) );
 
-         assert(branchvar >= 0 && branchvar < nvars);
+         *result = SCIP_CUTOFF;
+
+         mpq_clear(tmp);
+      }
+      else
+      {
+         SCIP_Bool solvelpagain; 
+
+         /* if the inexact LP was claimed to be infeasible, i.e., a pseudo solution is enforced here, but the exact LP 
+          * has been proved to be feasible, try to solve the inexact LP again with starting basis equal to optimal 
+          * basis of the exact LP; in order to avoid an infinite loop, this is only done once at a node 
+          */
+         solvelpagain = FALSE;
+         if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && conshdlrdata->lastenfopsnode != SCIPgetCurrentNode(scip) )
+         {
+            SCIP_CALL( loadLPEXState(scip, conshdlrdata, &solvelpagain) );
+
+            if( solvelpagain )
+            {
+               solvelpagain = TRUE;
+               *result = SCIP_SOLVELP;
+#ifdef DETAILED_DEBUG  /*???????????????*/
+               SCIPdebugMessage("   ---> LP was infeasible but LPEX not: solve LP once again with basis of LPEX\n");
+#endif
+            }
+         }
+
+         /* branch on the first fractional variable in the exact LP solution */
+         if( !solvelpagain )
+         {
+            SCIP_NODE* node;
+            SCIP_Real solval;
+            SCIP_Real downub;
+            SCIP_Real uplb;
+
+            /* @todo (later): ???????????
+             *  - implement more sophisticated branching rules 
+             */
+
+            assert(branchvar >= 0 && branchvar < nvars);
       
-         /* create left child: add x_i <= floor(x_i^*) */
-         downub = floor(mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDD));
-         SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], downub),
-               SCIPcalcChildEstimate(scip, vars[branchvar], downub)) );
-         SCIP_CALL( SCIPchgVarUbNode(scip, node, vars[branchvar], downub) );
+            /* create left child: add x_i <= floor(x_i^*) */
+            solval = mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDD);
+            downub = floor(solval);
+            SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], downub),
+                  SCIPcalcChildEstimate(scip, vars[branchvar], downub)) );
+            SCIP_CALL( SCIPchgVarUbNode(scip, node, vars[branchvar], downub) );
       
-         /* create right child: add x_i >= ceil(x_i^*) */
-         uplb = ceil(mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDU)); 
-         SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], uplb),
-               SCIPcalcChildEstimate(scip, vars[branchvar], uplb)) );
-         SCIP_CALL( SCIPchgVarLbNode(scip, node, vars[branchvar], uplb) );
+            /* create right child: add x_i >= ceil(x_i^*) */
+            solval = mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDU);
+            uplb = ceil(solval); 
+            SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], uplb),
+                  SCIPcalcChildEstimate(scip, vars[branchvar], uplb)) );
+            SCIP_CALL( SCIPchgVarLbNode(scip, node, vars[branchvar], uplb) );
  
-         assert(uplb == downub + 1.0);
+            assert(uplb == downub + 1.0);
 
 #ifndef NDEBUG
-         {
-            mpq_t resultuplb;
-            mpq_t resultdownub;
+            {
+               mpq_t resultuplb;
+               mpq_t resultdownub;
          
-            mpq_init(resultuplb);
-            mpq_init(resultdownub);
+               mpq_init(resultuplb);
+               mpq_init(resultdownub);
 
-            mpq_set_d(resultuplb, uplb);
-            mpq_set_d(resultdownub, downub);
+               mpq_set_d(resultuplb, uplb);
+               mpq_set_d(resultdownub, downub);
          
-            assert(mpq_cmp(resultdownub, primsol[branchvar]) < 0);
-            assert(mpq_cmp(resultuplb, primsol[branchvar]) > 0);
+               assert(mpq_cmp(resultdownub, primsol[branchvar]) < 0);
+               assert(mpq_cmp(resultuplb, primsol[branchvar]) > 0);
 
-            mpq_clear(resultuplb);
-            mpq_clear(resultdownub);
-         }
+               mpq_clear(resultuplb);
+               mpq_clear(resultdownub);
+            }
 #endif
-         *result = SCIP_BRANCHED;
+            *result = SCIP_BRANCHED;
 #ifdef DETAILED_DEBUG  /*???????????????*/
-         SCIPdebugMessage("   ---> LP was not solved: branch on result of LPEX\n");
+            SCIPdebugMessage("   ---> LP was not solved: branch on result of LPEX\n");
 #endif
+         }
       }
    }
 
@@ -3486,15 +3503,17 @@ SCIP_RETCODE getPSdualbound(
 #endif
 
    /* calculate max violation of inequality constraints */
-//    mpq_set_ui(maxv,0,1);
-
-//    for( i = 0; i < psdim; i++)
-//    {
-//       if(mpq_cmp(maxv,approxdualsol[i]) > 0)
-//          mpq_set(maxv,approxdualsol[i]);
-//    }    
- 
-// #ifdef PS_OUT 
+#ifndef LAMBDACOMP
+   mpq_set_ui(maxv,0,1);
+   
+   for( i = 0; i < psdim; i++)
+   {
+       if(mpq_cmp(maxv,approxdualsol[i]) > 0)
+          mpq_set(maxv,approxdualsol[i]);
+   }    
+#endif
+   
+   // #ifdef PS_OUT 
 //    printf("maximum violation is: \n");  
 //    mpq_out_str(stdout,10,maxv);
 //    printf(" \n");
@@ -3507,6 +3526,7 @@ SCIP_RETCODE getPSdualbound(
 
    /* compute lambda componentwise */
    /* set lambda1 = 1 and lower it if necessary */
+#ifdef LAMBDACOMP
    mpq_set_ui(lambda1,1,1);
    for( i = 0; i < psdim; i++)
    {
@@ -3519,9 +3539,13 @@ SCIP_RETCODE getPSdualbound(
             mpq_set(lambda1,mpqtemp2);
       }
    }    
-   // mpq_set(lambda1, conshdlrdata->commonslack);
-   // mpq_sub(mpqtemp, conshdlrdata->commonslack,maxv);
-   // mpq_div(lambda1,lambda1,mpqtemp);
+#endif
+
+#ifndef LAMBDACOMP
+   mpq_set(lambda1, conshdlrdata->commonslack);
+   mpq_sub(mpqtemp, conshdlrdata->commonslack,maxv);
+   mpq_div(lambda1,lambda1,mpqtemp);
+#endif
    mpq_set_si(lambda2,1,1);
    mpq_sub(lambda2,lambda2,lambda1);
 

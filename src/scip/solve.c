@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.11 2010/04/24 16:24:35 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.12 2010/05/06 01:19:21 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2642,8 +2642,7 @@ SCIP_RETCODE solveNode(
                stat->nnodes, stat->nlps, nlperrors);
          }
          
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT 
-            || (set->misc_exactsolve && set->misc_dbmethod == 'e') )
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT )
          {
             SCIPtreeSetFocusNodeLP(tree, FALSE);
             forcedenforcement = TRUE;

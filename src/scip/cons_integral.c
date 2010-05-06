@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.5 2010/03/22 16:05:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.6 2010/05/06 01:19:21 bzfwolte Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -111,6 +111,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    assert(result != NULL);
 
    SCIPdebugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
+
+   /* in exactip mode with pure rational approach, the branching is based on the exact LP solution 
+    * (computed in enfolp method of exactlp constraint handler) 
+    */
+   if( SCIPisExactSolve(scip) && SCIPdualBoundMethod(scip) == 'e' )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
 
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
