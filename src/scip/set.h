@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.111 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.112 2010/05/06 09:13:08 bzfviger Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -1029,7 +1029,7 @@ SCIP_Real SCIPsetSumFrac(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if values are in range of feasibility tolerance */
+/** checks, if relative difference of values is in range of feastol */
 extern
 SCIP_Bool SCIPsetIsFeasEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1037,7 +1037,7 @@ SCIP_Bool SCIPsetIsFeasEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is lower than feastol */
 extern
 SCIP_Bool SCIPsetIsFeasLT(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1045,7 +1045,7 @@ SCIP_Bool SCIPsetIsFeasLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is not greater than feastol */
 extern
 SCIP_Bool SCIPsetIsFeasLE(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1053,7 +1053,7 @@ SCIP_Bool SCIPsetIsFeasLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is greater than feastol */
 extern
 SCIP_Bool SCIPsetIsFeasGT(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1061,7 +1061,7 @@ SCIP_Bool SCIPsetIsFeasGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is not lower than -feastol */
 extern
 SCIP_Bool SCIPsetIsFeasGE(
    SCIP_SET*             set,                /**< global SCIP settings */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.559 2010/05/04 13:28:33 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.560 2010/05/06 09:13:07 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -17579,7 +17579,7 @@ SCIP_Bool SCIPisSumNegative(
    return SCIPsetIsSumNegative(scip->set, val);
 }
 
-/** checks, if values are in range of feasibility tolerance */
+/** checks, if relative difference of values is in range of feasibility tolerance */
 SCIP_Bool SCIPisFeasEQ(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -17598,7 +17598,7 @@ SCIP_Bool SCIPisFeasEQ(
    return SCIPsetIsFeasEQ(scip->set, val1, val2);
 }
 
-/** checks, if val1 is (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference val1 and val2 is lower than feasiblity tolerance */
 SCIP_Bool SCIPisFeasLT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -17617,7 +17617,7 @@ SCIP_Bool SCIPisFeasLT(
    return SCIPsetIsFeasLT(scip->set, val1, val2);
 }
 
-/** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is not greater than feasibility tolerance */
 SCIP_Bool SCIPisFeasLE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -17636,7 +17636,7 @@ SCIP_Bool SCIPisFeasLE(
    return SCIPsetIsFeasLE(scip->set, val1, val2);
 }
 
-/** checks, if val1 is (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is greater than feastol */
 SCIP_Bool SCIPisFeasGT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -17655,7 +17655,7 @@ SCIP_Bool SCIPisFeasGT(
    return SCIPsetIsFeasGT(scip->set, val1, val2);
 }
 
-/** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is not lower than -feastol */
 SCIP_Bool SCIPisFeasGE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.372 2010/05/04 13:28:33 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.373 2010/05/06 09:13:08 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -6485,7 +6485,7 @@ SCIP_Bool SCIPisSumNegative(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if values are in range of feasibility tolerance */
+/** checks, if relative difference of values is in range of feasibility tolerance */
 extern
 SCIP_Bool SCIPisFeasEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6493,7 +6493,7 @@ SCIP_Bool SCIPisFeasEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference val1 and val2 is lower than feasiblity tolerance */
 extern
 SCIP_Bool SCIPisFeasLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6501,7 +6501,7 @@ SCIP_Bool SCIPisFeasLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is not greater than feasibility tolerance */
 extern
 SCIP_Bool SCIPisFeasLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6509,7 +6509,7 @@ SCIP_Bool SCIPisFeasLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is greater than feastol */
 extern
 SCIP_Bool SCIPisFeasGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6517,7 +6517,7 @@ SCIP_Bool SCIPisFeasGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is not lower than -feastol */
 extern
 SCIP_Bool SCIPisFeasGE(
    SCIP*                 scip,               /**< SCIP data structure */
