@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.1 2010/05/05 17:53:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.2 2010/05/06 16:12:56 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  more methods for expressions and expression trees
@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "scip/expression.h"
+#include "scip/scip.h"
 
 #include "nlpi/struct_expression.h"
 
@@ -65,6 +66,36 @@ SCIP_RETCODE SCIPexprtreeSetVars(
    }
 
    tree->nvars = nvars;
+
+   return SCIP_OKAY;
+}
+
+/** evaluates an expression tree for a primal solution or LP solution */
+SCIP_RETCODE SCIPexprtreeEvalSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_SOL*             sol,                /**< a solution, or NULL for current LP solution */
+   SCIP_Real*            val                 /**< buffer to store value */
+)
+{
+   SCIP_Real* varvals;
+
+   assert(scip != NULL);
+   assert(tree != NULL);
+   assert(val  != NULL);
+
+   if( tree->nvars == 0 )
+   {
+      SCIP_CALL( SCIPexprEval(tree->root, NULL, tree->params, val) );
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varvals, tree->nvars) );
+   SCIP_CALL( SCIPgetSolVals(scip, sol, tree->nvars, tree->vars, varvals) );
+
+   SCIP_CALL( SCIPexprEval(tree->root, varvals, tree->params, val) );
+
+   SCIPfreeBufferArray(scip, &varvals);
 
    return SCIP_OKAY;
 }
