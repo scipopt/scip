@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.104 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.105 2010/05/06 15:13:24 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1020,6 +1020,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecNewstart)
 /** dialog execution method for the optimize command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 {  /*lint --e{715}*/
+   int permutationseed;
+   
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1030,7 +1032,16 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       break;
 
    case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPtransformProb(scip) );
    case SCIP_STAGE_TRANSFORMED:
+      
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/permutationseed", &permutationseed) );
+
+      if( permutationseed != -1 )
+      {
+         SCIPdialogMessage(scip, NULL, "permutate the problem using random seed %d\n", permutationseed); 
+         SCIP_CALL( SCIPpermuteProb(scip, permutationseed, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      }
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
