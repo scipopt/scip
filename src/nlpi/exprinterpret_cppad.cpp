@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.4 2010/05/06 12:48:52 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -91,7 +91,9 @@ public:
 template<class Type>
 SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type& val)
 {
-   Type *buf;
+   Type* buf;
+   
+   buf = NULL;
    if( BMSallocMemoryArray(&buf, SCIPexprGetNChildren(expr)) == NULL )
       return SCIP_NOMEMORY;
 

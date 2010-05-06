@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.5 2010/05/05 19:20:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.6 2010/05/06 12:48:52 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -1639,6 +1639,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
    
+   nlpidata = NULL;
    if( BMSallocMemory(&nlpidata) == NULL )
       return SCIP_NOMEMORY;
    nlpidata->blkmem = blkmem;
