@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.34 2010/05/04 10:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.35 2010/05/06 15:15:43 bzfheinz Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -235,9 +235,9 @@ SCIP_RETCODE SCIPvbcNewChild(
    printTime(vbc, stat);
    if( branchvar != NULL )
    {
-      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s %s %f\\nbound:\\t%f\n", 
+      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n", 
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
-         branchvar == NULL ? "-" : SCIPvarGetName(branchvar),  
+         SCIPvarGetName(branchvar), SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
          branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node));
    }
    else
@@ -305,9 +305,9 @@ void SCIPvbcSolvedNode(
 
    if( branchvar != NULL )
    {
-      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
+      SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
          (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
-         branchvar == NULL ? "-" : SCIPvarGetName(branchvar),  
+         SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
          branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node), stat->nnodes);
    }
    else

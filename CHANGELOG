@@ -90,6 +90,7 @@ features:
 - added new dialog for setting heuristics to aggressive, fast, or off in interactive shell
 - the vbc visualization adds the branching type (lower or upper bound change) and the new bound to the node information 
 - following methods SCIPinferVarUbProp, SCIPinferVarLbProp, SCIPinferVarLbCons, SCIPinferVarUbCons have a new 6th parameter "SCIP_Bool force" which allows bound tightening even if the difference to the newbound is below bound strengthening tolerance
+- the vbc visualization adds the new bound of the branched variable to the node information 
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
