@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.7 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.8 2010/05/07 18:25:58 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -1128,7 +1128,6 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/nsols/active", 2) );
 #else
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/nsols/active", 2) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
 #endif
 
@@ -1413,14 +1412,16 @@ SCIP_RETCODE computeCut(
    for (j = 0; j < nvars; ++j)
    {
       SCIP_VAR* var;
+      int pos;
+
       var = vars[j];
       assert( var != NULL );
-      if ( SCIPvarIsIntegral(var) )
-      {
-	 int pos;
+      pos = SCIPcolGetLPPos(SCIPvarGetCol(var));
 
-	 pos = SCIPcolGetLPPos(SCIPvarGetCol(var));
-	 assert( 0 <= pos && pos < ncols );
+      if ( pos >= 0 && SCIPvarIsIntegral(var) )
+      {
+	 assert( pos < ncols );
+	 assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
 
 	 /* check whether variable is complemented */
 	 if ( mipdata->isComplemented[pos] )
@@ -1495,8 +1496,8 @@ SCIP_RETCODE computeCut(
       }
       else
       {
-	 /* force coefficients of continuous variables to zero */
-	 assert( SCIPvarGetType(vars[j]) == SCIP_VARTYPE_CONTINUOUS );
+	 /* force coefficients of all continuous variables or of variables not in the lp to zero */
+	 assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || pos == -1 );
 	 cutcoefs[j] = 0.0;
       }
    }
@@ -1601,7 +1602,7 @@ SCIP_RETCODE createCGCutsDirect(
       SCIPdebugMessage("act=%f, rhs=%f\n", cutact, cutrhs);
 
       /* the following test should be treated with care because of numerical differences - see computeCut() */ 
-#if 0
+      #if 0
       {
 	 /* check for correctness of computed values */
 	 SCIP_Real obj = 0.0;
@@ -1638,8 +1639,7 @@ SCIP_RETCODE createCGCutsDirect(
 	 obj += val * SCIPvarGetObj(mipdata->beta);
 	 assert( contVarShifted || SCIPisFeasEQ(scip, obj, cutact - cutrhs) );
       }
-#endif
-
+      #endif
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if ( SCIPisFeasGT(scip, cutact, cutrhs) )
