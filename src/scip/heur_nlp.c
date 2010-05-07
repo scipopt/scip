@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.58 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.59 2010/05/07 11:06:56 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -443,8 +443,10 @@ SCIP_RETCODE setupNLP(
    {
       if( SCIPvarGetObj(heurdata->var_nlp2scip[i]) )
       {
-         /* NLPI understands only minimization problems, so we turn maximization problems into minimization problems */ 
-         objcoeff[cnt] = SCIPvarGetObj(heurdata->var_nlp2scip[i]) * (int)SCIPgetObjsense(scip);
+         /* the transformed problem in SCIP is always a minimization problem,
+          * thus we do not have to take care of the objective sense here */
+         assert( !SCIPvarIsOriginal(heurdata->var_nlp2scip[i]) );
+         objcoeff[cnt] = SCIPvarGetObj(heurdata->var_nlp2scip[i]);
          objvar[cnt]   = i;
          ++cnt;
       }
