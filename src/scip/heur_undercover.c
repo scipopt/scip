@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.55 2010/05/04 13:36:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.56 2010/05/07 17:49:57 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1655,6 +1655,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* initializing subMIQCP */
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
+   BMSclearMemoryArray(subvars, nvars);
 
 #ifdef WITH_CONSBRANCHNL
    SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
@@ -1773,7 +1774,10 @@ SCIP_RETCODE SCIPapplyUndercover(
  TERMINATE:
    for( i = nvars-1; i >= 0; --i )
    {
-      SCIP_CALL( SCIPreleaseVar(subscip, &(subvars[i])) );
+      /* in case the creation of the subproblem is unsuccessful, not all subvariables might have been created and
+       * captured; release only subvariable pointers which are not NULL */
+      if( subvars[i] != NULL )
+         SCIP_CALL( SCIPreleaseVar(subscip, &(subvars[i])) );
    }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
