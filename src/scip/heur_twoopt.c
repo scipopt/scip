@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.7 2010/05/05 17:42:10 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.8 2010/05/07 10:36:53 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -79,6 +79,8 @@ struct SCIP_HeurData
    int                   ntotalintvars;      /**< total number of Integer variables over all runs */
    int                   nruns;              /**< counts the number of runs, i.e. the number of initialized
                                               *   branch and bound processes */
+   int                   maxbinblocksize;    /**< maximum size of a binary block */
+   int                   maxintblocksize;    /**< maximum size of an integer block */
    int                   binnblockvars;      /**< number of binary variables that appear in blocks  */
    int                   binnblocks;         /**< number of blocks with at least two variables */
    int                   intnblockvars;      /**< number of Integer variables that appear in blocks  */
@@ -599,6 +601,7 @@ SCIP_RETCODE innerPresolve(
    SCIP_VAR***           varspointer,        /**< pointer to heuristic specific variable memory */
    int                   nvars,              /**< the number of variables */
    int*                  nblocks,            /**< pointer to store the number of detected blocks */
+   int*                  maxblocksize,       /**< maximum size of a block */
    int*                  nblockvars,         /**< pointer to store the number of block variables */
    int**                 blockstart,         /**< pointer to store the array of block start indices */
    int**                 blockend,           /**< pointer to store the array of block end indices */
@@ -666,6 +669,7 @@ SCIP_RETCODE innerPresolve(
          {
             assert(*nblocks < nvars/2);
             (*nblockvars) += v - startindex;
+            (*maxblocksize) = MAX((*maxblocksize), v - startindex);
             (*blockstart)[*nblocks] = startindex;
             (*blockend)[*nblocks] = v - 1;
             (*nblocks)++;      
@@ -702,11 +706,14 @@ SCIP_RETCODE presolveTwoOpt(
    SCIP_VAR**  vars;
    int nbinblockvars;
    int nintblockvars;
+   int maxbinblocksize;
+   int maxintblocksize;
    SCIP_Bool equalcoeffs;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
 
+   maxbinblocksize = 0;
    /* ensure that method is not executed if presolving was already applied once in current branch and bound process */
    if( heurdata->presolved )
       return SCIP_OKAY;
@@ -719,7 +726,9 @@ SCIP_RETCODE presolveTwoOpt(
     */
    if( nbinvars >= 2 ) 
    {
-      SCIP_CALL( innerPresolve(scip, vars, &(heurdata->binvars), nbinvars, &(heurdata->nbinblocks), &nbinblockvars, &(heurdata->binblockstart), &(heurdata->binblockend), &equalcoeffs, heur, heurdata) );
+      
+      SCIP_CALL( innerPresolve(scip, vars, &(heurdata->binvars), nbinvars, &(heurdata->nbinblocks), &maxbinblocksize, 
+            &nbinblockvars, &(heurdata->binblockstart), &(heurdata->binblockend), &equalcoeffs, heur, heurdata) );
    }
 
    heurdata->nbinvars = nbinvars;
@@ -733,6 +742,7 @@ SCIP_RETCODE presolveTwoOpt(
       heurdata->binnblocks += (heurdata->nbinblocks);
       heurdata->binnblockvars += nbinblockvars;
       heurdata->ntotalbinvars += nbinvars;
+      heurdata->maxbinblocksize = MAX(maxbinblocksize, heurdata->maxbinblocksize);
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Twoopt BINARY presolving finished with <%d> blocks, <%d> block variables \n", 
          heurdata->nbinblocks, nbinblockvars);
@@ -745,7 +755,7 @@ SCIP_RETCODE presolveTwoOpt(
 
    if( heurdata->intopt && nintvars > 1 )
    {               
-      SCIP_CALL( innerPresolve(scip, &(vars[nbinvars]), &(heurdata->intvars), nintvars, &(heurdata->nintblocks), 
+      SCIP_CALL( innerPresolve(scip, &(vars[nbinvars]), &(heurdata->intvars), nintvars, &(heurdata->nintblocks), &maxintblocksize, 
             &nintblockvars, &(heurdata->intblockstart), &(heurdata->intblockend), &equalcoeffs, 
             heur, heurdata) );
 
@@ -757,7 +767,7 @@ SCIP_RETCODE presolveTwoOpt(
          heurdata->intnblocks += heurdata->nintblocks;
          heurdata->intnblockvars += nintblockvars;
          heurdata->ntotalintvars += nintvars;
-     
+         heurdata->maxintblocksize = MAX(maxintblocksize, heurdata->maxintblocksize);
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Twoopt Integer presolving finished with <%d> blocks, <%d> block variables \n", 
             heurdata->nintblocks, nintblockvars);
       } 
@@ -843,6 +853,9 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->intnblockvars = 0;
    heurdata->binnblocks = 0;
    heurdata->intnblocks = 0;
+
+   heurdata->maxbinblocksize = 0;
+   heurdata->maxintblocksize = 0;
    
    heurdata->ntotalbinvars = 0;
    heurdata->ntotalintvars = 0;
@@ -1035,20 +1048,21 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
    /* print relevant statistics to console */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
       "Twoopt Binary Statistics  :   "
-      "%6.2g   %6.2g   %4.2g   %4.0g  (blocks/run, variables/run, varpercentage, average block size) \n",
-      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->binnblocks/heurdata->nruns,
-      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->binnblockvars/heurdata->nruns,
-      heurdata->ntotalbinvars == 0 ? 0.0 : (SCIP_Real)heurdata->binnblockvars/heurdata->ntotalbinvars * 100.0,
-      heurdata->binnblocks == 0 ? 0.0 : (SCIP_Real)heurdata->binnblockvars/(SCIP_Real)heurdata->binnblocks);
+      "%6.2g   %6.2g   %4.2g   %4.0g %6d (blocks/run, variables/run, varpercentage, avg. block size, max block size) \n",
+      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->binnblocks/(heurdata->nruns),
+      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->binnblockvars/(heurdata->nruns),
+      heurdata->ntotalbinvars == 0 ? 0.0 : (SCIP_Real)heurdata->binnblockvars/(heurdata->ntotalbinvars) * 100.0,
+      heurdata->binnblocks == 0 ? 0.0 : heurdata->binnblockvars/(SCIP_Real)(heurdata->binnblocks),
+      heurdata->maxbinblocksize);
    
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
       "Twoopt Integer statistics :   " 
-      "%6.2g   %6.2g   %4.2g   %4.0g  (blocks/run, variables/run, varpercentage, average block size) \n",
-      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->intnblocks/heurdata->nruns,
-      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->intnblockvars/heurdata->nruns,
-      heurdata->ntotalintvars == 0 ? 0.0 : (SCIP_Real)heurdata->intnblockvars/heurdata->ntotalintvars * 100.0,
-      heurdata->intnblocks == 0 ? 0.0 : (SCIP_Real)heurdata->intnblockvars/(SCIP_Real)heurdata->intnblocks);
-   
+      "%6.2g   %6.2g   %4.2g   %4.0g %6d (blocks/run, variables/run, varpercentage, avg block size, max block size) \n",
+      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->intnblocks/(heurdata->nruns),
+      heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->intnblockvars/(heurdata->nruns),
+      heurdata->ntotalintvars == 0 ? 0.0 : (SCIP_Real)heurdata->intnblockvars/(heurdata->ntotalintvars) * 100.0,
+      heurdata->intnblocks == 0 ? 0.0 : heurdata->intnblockvars/(SCIP_Real)(heurdata->intnblocks),
+      heurdata->maxintblocksize);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
       "Twoopt results            :   "
       "%6d   %6d   %4d   %4.2g  (runs, binary exchanges, Integer shiftings, matching rate)\n",
