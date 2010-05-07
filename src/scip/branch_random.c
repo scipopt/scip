@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.17 2010/05/04 09:22:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.18 2010/05/07 08:06:14 bzfheinz Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -285,7 +285,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of random branching\n");
+   SCIPdebugMessage("Execlp method of random branching in depth %d\n", SCIPgetDepth(scip));
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
