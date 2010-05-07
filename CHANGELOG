@@ -171,7 +171,7 @@ parameters:
 - added parameter <constraints/indicator/addCouplingCons> that allows to add variable upper bounds if addCoupling is true
 - added parameter <constraints/indicator/maxCouplingValue> for the maximal value of the coefficient in a coupling inequality/constraint
 - added parameter <branching/random/seed> to change the initial seed value of the branching rule random
-- added parameter <misc/permutationseed> to change the permutation seed value for permuting the problem before solving (-1 means no permutation)
+- added parameter <misc/permutationseed> to change the permutation seed value for permuting the problem after the problem is transformed (-1 means no permutation)
 
 SCIP version 1.2.0
 ===============

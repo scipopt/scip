@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.560 2010/05/06 09:13:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.561 2010/05/07 07:25:01 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4747,6 +4747,15 @@ SCIP_RETCODE SCIPtransformProb(
 
    /* call init methods of plugins */
    SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->solvemem, scip->stat) );
+
+   /* in case the permutation seed is different to -1, permute the transformed problem */
+   if( scip->set->misc_permuatationseed > -1 )
+   {
+      SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         "permute problem using random seed %d\n", scip->set->misc_permuatationseed);
+      
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permuatationseed, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   }
 
    return SCIP_OKAY;
 }

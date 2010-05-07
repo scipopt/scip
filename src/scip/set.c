@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.219 2010/05/06 15:13:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.220 2010/05/07 07:25:01 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -185,7 +185,7 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem before solving (-1: no permutation) */
+#define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 
 
@@ -1050,11 +1050,6 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
-         "misc/permutationseed",
-         "seed value for permuting the problem before solving (-1: no permutation)",
-         NULL, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
-         NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
 #if 0
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
@@ -1065,6 +1060,11 @@ SCIP_RETCODE SCIPsetCreate(
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
 #endif
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "misc/permutationseed",
+         "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
+         &(*set)->misc_permuatationseed, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
+         NULL, NULL) );
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
