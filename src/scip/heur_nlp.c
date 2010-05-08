@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.59 2010/05/07 11:06:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.60 2010/05/08 15:48:27 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1505,7 +1505,7 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    /* if we have no point yet, or the new point has a lower constraint violation, or it has a better objective function value,
     * then take the new point */
    if( heurdata->startcand == NULL || SCIPisGT(scip, heurdata->startcandviol, violation) ||
-      SCIPisRelGT(scip, SCIPgetSolTransObj(scip, heurdata->startcand)*(int)SCIPgetObjsense(scip), SCIPgetSolTransObj(scip, solcand)*(int)SCIPgetObjsense(scip)) )
+      SCIPisRelGT(scip, SCIPgetSolTransObj(scip, heurdata->startcand), SCIPgetSolTransObj(scip, solcand)) )
    {
       if( heurdata->startcand != NULL )
       {
