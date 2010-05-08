@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.38 2010/03/10 12:08:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.39 2010/05/08 11:18:38 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -700,8 +700,15 @@ void SCIPintervalMulScalar(
    assert(operand1.sup > -infinity);
    assert(operand2     > -infinity);
 
+   if( operand2 == 0.0 )
+   {
+      resultant->inf = 0.0;
+      resultant->sup = 0.0;
+      return;
+   }
+
    roundmode = getRoundingMode();
-   
+
    if( operand2 >= 0.0 )
    {
       if( operand1.inf <= -infinity )
