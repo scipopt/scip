@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.40 2010/05/10 15:13:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.41 2010/05/10 16:33:53 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -40,11 +40,8 @@
 #include <fenv.h>
 
 /** Linux rounding mode settings */
-enum RoundMode
-{
-   SCIP_ROUND_DOWNWARDS = FE_DOWNWARD,  /**< round always down */
-   SCIP_ROUND_UPWARDS   = FE_UPWARD     /**< round always up */
-};
+#define SCIP_ROUND_DOWNWARDS FE_DOWNWARD     /**< round always down */
+#define SCIP_ROUND_UPWARDS   FE_UPWARD       /**< round always up */
 
 /** sets rounding mode of floating point operations */
 void setRoundingMode(
@@ -78,11 +75,8 @@ ROUNDMODE getRoundingMode(
 #include <float.h>
 
 /** OSF rounding mode settings */
-enum RoundMode
-{
-   SCIP_ROUND_DOWNWARDS = FP_RND_RM,    /**< round always down */
-   SCIP_ROUND_UPWARDS   = FP_RND_RP     /**< round always up */
-};
+#define SCIP_ROUND_DOWNWARDS FP_RND_RM       /**< round always down */
+#define SCIP_ROUND_UPWARDS   FP_RND_RP       /**< round always up */
 
 /** sets rounding mode of floating point operations */
 void setRoundingMode(
@@ -114,11 +108,8 @@ ROUNDMODE getRoundingMode(
 #include <float.h>
 
 /** Microsoft rounding mode settings */
-enum RoundMode
-{
-   SCIP_ROUND_DOWNWARDS = RC_DOWN,           /**< round always down */
-   SCIP_ROUND_UPWARDS   = RC_UP              /**< round always up */
-};
+#define SCIP_ROUND_DOWNWARDS RC_DOWN         /**< round always down */
+#define SCIP_ROUND_UPWARDS   RC_UP           /**< round always up */
 
 /** sets rounding mode of floating point operations */
 void setRoundingMode(
@@ -146,11 +137,8 @@ ROUNDMODE getRoundingMode(
 /*
  * rouding operations not available
  */
-enum RoundMode
-{
-   SCIP_ROUND_DOWNWARDS = 0,            /**< round always down */
-   SCIP_ROUND_UPWARDS   = 1             /**< round always up */
-};
+#define SCIP_ROUND_DOWNWARDS 0               /**< round always down */
+#define SCIP_ROUND_UPWARDS   1               /**< round always up */
 
 /** sets rounding mode of floating point operations */
 void setRoundingMode(
@@ -170,6 +158,22 @@ ROUNDMODE getRoundingMode(
 #else
 #undef ROUNDING
 #endif
+
+/** sets rounding mode of floating point operations to downwards rounding */
+void setRoundingModeDownwards(
+   void
+   )
+{
+   setRoundingMode(SCIP_ROUND_DOWNWARDS);
+}
+
+/** sets rounding mode of floating point operations to upwards rounding */
+void setRoundingModeUpwards(
+   void
+   )
+{
+   setRoundingMode(SCIP_ROUND_UPWARDS);
+}
 
 
 /** sign of a value (-1 or +1)
