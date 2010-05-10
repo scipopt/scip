@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.1 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.2 2010/05/10 19:03:33 bzfviger Exp $"
 
 /**@file   exprinterpret_none.c
  * @brief  function definitions for nonexisting expression interpreter to resolve linking references 
@@ -95,6 +95,19 @@ SCIP_RETCODE SCIPexprintEval(
 {
 	return SCIP_PLUGINNOTFOUND;
 }
+
+/** evaluates an expression tree on intervals */
+SCIP_RETCODE SCIPexprintEvalInt(
+   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /** expression tree */
+   SCIP_Real             infinity,           /** value for infinity */
+   SCIP_INTERVAL*        varvals,            /** interval values of variables */
+   SCIP_INTERVAL*        val                 /** buffer to store interval value of expression */
+)
+{
+   return SCIP_PLUGINNOTFOUND;
+}
+
 /** gets number of nonzeros in gradient of expression tree */
 SCIP_RETCODE SCIPexprintGetNGradPattern(
    SCIP_EXPRINT*         exprint,            /** interpreter data structure */
@@ -136,6 +149,20 @@ SCIP_RETCODE SCIPexprintGradDense(
    SCIP_Bool             new_varvals,        /** have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /** buffer to store value */
    SCIP_Real*            gradient            /** buffer to store gradient */
+)
+{
+   return SCIP_PLUGINNOTFOUND;
+}
+
+/** computes interval value and dense interval gradient of an expression tree */
+SCIP_RETCODE SCIPexprintGradDenseInt(
+   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /** expression tree */
+   SCIP_Real             infinity,           /** value for infinity */
+   SCIP_INTERVAL*        varvals,            /** interval values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /** have variable values changed since last call to an interval evaluation routine? */
+   SCIP_INTERVAL*        val,                /** buffer to store expression interval value */
+   SCIP_INTERVAL*        gradient            /** buffer to store expression interval gradient */
 )
 {
    return SCIP_PLUGINNOTFOUND;

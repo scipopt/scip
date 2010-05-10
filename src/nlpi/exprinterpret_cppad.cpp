@@ -12,13 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.4 2010/05/06 12:48:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.5 2010/05/10 19:03:33 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
  * @author Stefan Vigerske
- * 
- * @todo can allow MIN and MAX if we retape for every new x
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,11 +26,23 @@
 #include "nlpi/expression.h"
 #include "nlpi/exprinterpret.h"
 
+#include <vector>
+using std::vector;
+
 /** sign of a value (-1 or +1)
  * 
  * 0.0 has sign +1
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
+
+/* in order to use intervals as operands in CppAD,
+ * we need to include the intervalarith.hpp very early and require the interval operations to be in the CppAD namespace */
+namespace CppAD
+{
+#include <nlpi/intervalarith.hpp>
+}
+SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+using CppAD::SCIPInterval;
 
 #include <cppad/cppad.hpp>
 #include <cppad/config.h>  // to get PACKAGE_STRING define
@@ -52,22 +62,163 @@ template <class Base>
 inline AD<Base> sign(const VecAD_reference<Base> &x) { return sign( x.ADBase() ); }
 }
 
-#include <vector>
+/** defintion of CondExpOp for SCIPInterval (required by CppAD) */
+inline
+SCIPInterval CondExpOp(
+   enum CppAD::CompareOp cop,
+   const SCIPInterval&   left,
+   const SCIPInterval&   right,
+   const SCIPInterval&   trueCase,
+   const SCIPInterval&   falseCase)
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "SCIPInterval CondExpOp(...)",
+      "Error: cannot use CondExp with an interval type"
+   );
 
-using std::vector;
+   return SCIPInterval();
+}
+
+/** another function that returns whether two intervals are the same (required by CppAD) */
+inline
+bool EqualOpSeq(
+   const SCIPInterval&   x,                  /**< first operand */
+   const SCIPInterval&   y                   /**< second operand */
+   )
+{
+   return x == y;
+}
+
+/** another function required by CppAD */
+inline
+bool IdenticalPar(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   return true;
+}
+
+/** returns whether the interval equals [0,0] */
+inline
+bool IdenticalZero(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   return (x == 0.0);
+}
+
+/** returns whether the interval equals [1,1] */
+inline
+bool IdenticalOne(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   return (x == 1.0);
+}
+
+/** yet another function that checks whether two intervals are equal */
+inline
+bool IdenticalEqualPar(
+   const SCIPInterval&   x,                  /**< first operand */
+   const SCIPInterval&   y                   /**< second operand */
+   )
+{
+   return (x == y);
+}
+
+/** greater than zero not defined for intervals */
+inline
+bool GreaterThanZero(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "GreaterThanZero(x)",
+      "Error: cannot use GreaterThanZero with interval"
+   );
+
+   return false;
+}
+
+/** greater than or equal zero not defined for intervals */
+inline
+bool GreaterThanOrZero(
+   const SCIPInterval&   x                   /**< operand */
+   )
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__ ,
+      "GreaterThanOrZero(x)",
+      "Error: cannot use GreaterThanOrZero with interval"
+   );
+
+   return false;
+}
+
+/** less than not defined for intervals */
+inline
+bool LessThanZero(
+   const SCIPInterval&   x                   /**< operand */
+)
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "LessThanZero(x)",
+      "Error: cannot use LessThanZero with interval"
+   );
+
+   return false;
+}
+
+/** less than or equal not defined for intervals */
+inline
+bool LessThanOrZero(
+   const SCIPInterval&   x                   /**< operand */
+)
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "LessThanOrZero(x)",
+      "Error: cannot use LessThanOrZero with interval"
+   );
+
+   return false;
+}
+
+/** conversion to integers not defined for intervals */
+inline
+int Integer(
+   const SCIPInterval&   x                   /**< operand */
+)
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "Integer(x)",
+      "Error: cannot use Integer with interval"
+   );
+
+   return 0;
+}
+
+/** printing of an interval (required by CppAD) */
+inline
+std::ostream& operator<<(std::ostream& out, const SCIP_INTERVAL& x)
+{
+   out << '[' << x.inf << ',' << x.sup << ']';
+   return out;
+}
+
 using CppAD::AD;
 
+/** expression interpreter */
 struct SCIP_ExprInt
 {
    BMS_BLKMEM*           blkmem;             /**< block memory data structure */
 };
 
+/** expression specific interpreter data */
 class SCIP_ExprIntData
 {
 public:
    /* constructor */
    SCIP_ExprIntData()
-   : need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
+   : need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
    { }
 
    /* destructor */
@@ -80,25 +231,159 @@ public:
 
    vector<double>        x;                  /**< current values of dependent variables */
    double                val;                /**< current function value */
+   bool                  need_retape;        /**< will retaping be required for the next point evaluation? */
 
-   bool                  need_retape;        /**< will retaping be required for the next evaluation? */
+   vector< AD<SCIPInterval> > int_X;         /**< interval vector of dependent variables */
+   vector< AD<SCIPInterval> > int_Y;         /**< interval result vector */
+   CppAD::ADFun<SCIPInterval> int_f;         /**< the function to evaluate on intervals as CppAD object */
+
+   vector<SCIPInterval>  int_x;              /**< current interval values of dependent variables */
+   SCIPInterval          int_val;            /**< current interval function value */
+   bool                  int_need_retape;    /**< will retaping be required for the next interval evaluation? */
+
    bool                  need_retape_always; /**< will retaping be always required? */
 
    BMS_BLKMEM*           blkmem;             /**< block memory used to allocate expresstion tree */
    SCIP_EXPR*            root;               /**< copy of expression tree; @todo do we really need to make a copy? */
 };
 
+/** template for evaluation for signpower operator
+ * only implemented for real numbers, thus gives error by default
+ */
 template<class Type>
-SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type& val)
+void evalSignPower(
+   Type&                 resultant,          /**< resultant */
+   Type&                 arg1,               /**< first operand */
+   Type&                 arg2                /**< second operand */
+   )
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "evalSignPower()",
+      "Error: SignPower not implemented for this value type"
+   );
+}
+
+/** specialization of signpower evaluation for real numbers
+ */
+template<>
+void evalSignPower(
+   SCIP_Real&            resultant,          /**< resultant */
+   SCIP_Real&            arg1,               /**< first operand */
+   SCIP_Real&            arg2                /**< second operand */
+   )
+{
+   if( arg1 == 0.0 )
+      resultant = 0.0;
+   else if( arg1 > 0.0 )
+      resultant =  pow( arg1, arg2);
+   else
+      resultant = -pow(-arg1, arg2);
+}
+
+/** template for evaluation for minimum operator
+ * only implemented for real numbers, thus gives error by default
+ */
+template<class Type>
+void evalMin(
+   Type&                 resultant,          /**< resultant */
+   Type&                 arg1,               /**< first operand */
+   Type&                 arg2                /**< second operand */
+   )
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "evalMin()",
+      "Error: Min not implemented for this value type"
+   );
+}
+
+/** specialization of minimum evaluation for real numbers
+ */
+template<>
+void evalMin(
+   SCIP_Real&            resultant,          /**< resultant */
+   SCIP_Real&            arg1,               /**< first operand */
+   SCIP_Real&            arg2                /**< second operand */
+   )
+{
+   resultant = MIN(arg1, arg2);
+}
+/** template for evaluation for maximum operator
+ * only implemented for real numbers, thus gives error by default
+ */
+template<class Type>
+void evalMax(
+   Type&                 resultant,          /**< resultant */
+   Type&                 arg1,               /**< first operand */
+   Type&                 arg2                /**< second operand */
+   )
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "evalMax()",
+      "Error: Max not implemented for this value type"
+   );
+}
+
+/** specialization of maximum evaluation for real numbers
+ */
+template<>
+void evalMax(
+   SCIP_Real&            resultant,          /**< resultant */
+   SCIP_Real&            arg1,               /**< first operand */
+   SCIP_Real&            arg2                /**< second operand */
+   )
+{
+   resultant = MAX(arg1, arg2);
+}
+
+
+/** template for evaluation for square operator
+ * default is to multiply arg with itself
+ */
+template<class Type>
+void evalSquare(
+   Type&                 resultant,          /**< resultant */
+   Type&                 arg                 /**< operand */
+   )
+{
+   resultant = arg * arg;
+}
+
+/** specialization of square evaluation for intervals
+ * for intervals, we can get tighter results if we do not just multiply the argument with itself
+ */
+template<>
+void evalSquare(
+   SCIPInterval&         resultant,          /**< resultant */
+   SCIPInterval&         arg                 /**< operand */
+   )
+{
+   SCIPintervalSquare(SCIPInterval::infinity, &resultant, arg);
+}
+
+/** CppAD compatible evaluation of an expression for given arguments and parameters */
+template<class Type>
+SCIP_RETCODE eval(
+   SCIP_EXPR*            expr,               /**< expression */
+   const vector<Type>&   x,                  /**< values of variables */
+   SCIP_Real*            param,              /**< values of parameters */
+   Type&                 val                 /**< buffer to store expression value */
+   )
 {
    Type* buf;
    
-   buf = NULL;
-   if( BMSallocMemoryArray(&buf, SCIPexprGetNChildren(expr)) == NULL )
-      return SCIP_NOMEMORY;
+   assert(expr != NULL);
 
-   for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
-      SCIP_CALL( eval(SCIPexprGetChildren(expr)[i], x, param, buf[i]) );
+   /* todo use SCIP_MAXCHILD_ESTIMATE as in expression.c */
+
+   buf = NULL;
+   if( SCIPexprGetNChildren(expr) )
+   {
+      if( BMSallocMemoryArray(&buf, SCIPexprGetNChildren(expr)) == NULL )
+         return SCIP_NOMEMORY;
+
+      for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
+         SCIP_CALL( eval(SCIPexprGetChildren(expr)[i], x, param, buf[i]) );
+   }
 
    switch(SCIPexprGetOperator(expr))
    {
@@ -133,7 +418,7 @@ SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type
          break;
 
       case SCIP_EXPR_SQUARE:
-         val = buf[0] * buf[0];
+         evalSquare(val, buf[0]);
          break;
 
       case SCIP_EXPR_SQRT:
@@ -172,13 +457,11 @@ SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type
          return SCIP_ERROR;
 
       case SCIP_EXPR_MIN:
-         return SCIP_ERROR;
-         //			val = MIN(buf[0], buf[1]);
+         evalMin(val, buf[0], buf[1]);
          break;
 
       case SCIP_EXPR_MAX:
-         return SCIP_ERROR;
-         //			val = MAX(buf[0], buf[1]);
+         evalMax(val, buf[0], buf[1]);
          break;
 
       case SCIP_EXPR_ABS:
@@ -190,12 +473,7 @@ SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type
          break;
 
       case SCIP_EXPR_SIGNPOWER:
-         if( buf[0] == 0.0 )
-            val = 0.0;
-         else if( buf[0] > 0.0 )
-            val =  pow( buf[0], buf[1]);
-         else
-            val = -pow(-buf[0], buf[1]);
+         evalSignPower(val, buf[0], buf[1]);
          break;
 
       case SCIP_EXPR_INTPOWER:
@@ -218,7 +496,7 @@ SCIP_RETCODE eval(SCIP_EXPR* expr, const vector<Type>& x, SCIP_Real* param, Type
          return SCIP_ERROR;
    }
 
-   BMSfreeMemoryArray(&buf);
+   BMSfreeMemoryArrayNull(&buf);
 
    return SCIP_OKAY;
 }
@@ -307,6 +585,7 @@ SCIP_RETCODE SCIPexprintCompile(
    else
    {
       data->need_retape     = true;
+      data->int_need_retape = true;
    }
 
    int n = SCIPexprtreeGetNVars(tree);
@@ -314,6 +593,10 @@ SCIP_RETCODE SCIPexprintCompile(
    data->X.resize(n);
    data->x.resize(n);
    data->Y.resize(1);
+
+   data->int_X.resize(n);
+   data->int_x.resize(n);
+   data->int_Y.resize(1);
 
    if( data->root != NULL )
    {
@@ -361,7 +644,10 @@ SCIP_RETCODE SCIPexprintNewParametrization(
 
    SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
    if( data != NULL )
-      data->need_retape = true;
+   {
+      data->need_retape     = true;
+      data->int_need_retape = true;
+   }
 
    return SCIP_OKAY;
 }
@@ -374,12 +660,14 @@ SCIP_RETCODE SCIPexprintEval(
    SCIP_Real*            val                 /** buffer to store value */
 )
 {
+   SCIP_EXPRINTDATA* data;
+
    assert(exprint != NULL);
    assert(tree    != NULL);
    assert(varvals != NULL);
    assert(val     != NULL);
 
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
+   data = SCIPexprtreeGetInterpreterData(tree);
    assert(data != NULL);
    assert(SCIPexprtreeGetNVars(tree) == (int)data->X.size());
    assert(SCIPexprtreeGetRoot(tree)  != NULL);
@@ -419,6 +707,67 @@ SCIP_RETCODE SCIPexprintEval(
    }
 
    *val = data->val;
+
+   return SCIP_OKAY;
+}
+
+/** evaluates an expression tree on intervals */
+extern
+SCIP_RETCODE SCIPexprintEvalInt(
+   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /** expression tree */
+   SCIP_Real             infinity,           /** value for infinity */
+   SCIP_INTERVAL*        varvals,            /** interval values of variables */
+   SCIP_INTERVAL*        val                 /** buffer to store interval value of expression */
+)
+{
+   SCIP_EXPRINTDATA* data;
+
+   assert(exprint != NULL);
+   assert(tree    != NULL);
+   assert(varvals != NULL);
+   assert(val     != NULL);
+
+   data = SCIPexprtreeGetInterpreterData(tree);
+   assert(data != NULL);
+   assert(SCIPexprtreeGetNVars(tree) == (int)data->int_X.size());
+   assert(SCIPexprtreeGetRoot(tree)  != NULL);
+
+   int n = SCIPexprtreeGetNVars(tree);
+
+   SCIPInterval::infinity = infinity;
+
+   if( data->int_need_retape || data->need_retape_always )
+   {
+      for( int i = 0; i < n; ++i )
+      {
+         data->int_X[i] = varvals[i];
+         data->int_x[i] = varvals[i];
+      }
+
+      CppAD::Independent(data->int_X);
+
+      if( data->root != NULL )
+         SCIP_CALL( eval(data->root, data->int_X, SCIPexprtreeGetParamVals(tree), data->int_Y[0]) );
+      else
+         data->int_Y[0] = 0.0;
+
+      data->int_f.Dependent(data->int_X, data->int_Y);
+
+      data->int_val = Value(data->int_Y[0]);
+
+      data->int_need_retape = false;
+   }
+   else
+   {
+      assert((int)data->int_x.size() >= n);
+      for( int i = 0; i < n; ++i )
+         data->int_x[i] = varvals[i];
+
+      data->int_val = data->int_f.Forward(0, data->int_x)[0];
+   }
+
+   *val = data->int_val;
 
    return SCIP_OKAY;
 }
@@ -496,6 +845,47 @@ SCIP_RETCODE SCIPexprintGradDense(
    SCIPdebugMessage("GradDense for "); SCIPexprtreePrint(tree, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t %g", gradient[i]); printf("\n");
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** computes interval value and dense interval gradient of an expression tree */
+SCIP_RETCODE SCIPexprintGradDenseInt(
+   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /** expression tree */
+   SCIP_Real             infinity,           /** value for infinity */
+   SCIP_INTERVAL*        varvals,            /** interval values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /** have variable values changed since last call to an interval evaluation routine? */
+   SCIP_INTERVAL*        val,                /** buffer to store expression interval value */
+   SCIP_INTERVAL*        gradient            /** buffer to store expression interval gradient */
+)
+{
+   assert(exprint  != NULL);
+   assert(tree     != NULL);
+   assert(varvals  != NULL || new_varvals == false);
+   assert(val      != NULL);
+   assert(gradient != NULL);
+
+   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
+   assert(data != NULL);
+
+   if (new_varvals)
+      SCIP_CALL( SCIPexprintEvalInt(exprint, tree, infinity, varvals, val) );
+   else
+      *val = data->int_val;
+
+   int n = SCIPexprtreeGetNVars(tree);
+
+   vector<SCIPInterval> jac(data->int_f.Jacobian(data->int_x));
+
+   for (int i = 0; i < n; ++i)
+      gradient[i] = jac[i];
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("IntGradDense for "); SCIPexprtreePrint(NULL, tree); printf("\n");
+   SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(data->int_x[i]), SCIPintervalGetSup(data->int_x[i])); printf("\n");
+   SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(gradient[i]), SCIPintervalGetSup(gradient[i])); printf("\n");
 #endif
 
    return SCIP_OKAY;
