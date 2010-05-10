@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.22 2010/01/04 20:35:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.23 2010/05/10 15:13:12 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -40,11 +40,24 @@ struct SCIP_Interval
 };
 typedef struct SCIP_Interval SCIP_INTERVAL;
 
-
+/** rounding mode of floating point operations (upwards, downwards, nearest, ...) - exact values depend on machine and compiler */
+typedef enum RoundMode ROUNDMODE;
 
 /*
  * Interval arithmetic operations
  */
+
+/** sets rounding mode of floating point operations */
+extern
+void setRoundingMode(
+   ROUNDMODE             roundmode           /**< rounding mode to activate */
+   );
+
+/** gets current rounding mode of floating point operations */
+extern
+ROUNDMODE getRoundingMode(
+   void
+   );
 
 /** stores given value as interval */
 extern

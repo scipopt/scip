@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.39 2010/05/08 11:18:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.40 2010/05/10 15:13:12 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -45,10 +45,8 @@ enum RoundMode
    SCIP_ROUND_DOWNWARDS = FE_DOWNWARD,  /**< round always down */
    SCIP_ROUND_UPWARDS   = FE_UPWARD     /**< round always up */
 };
-typedef enum RoundMode ROUNDMODE;
 
 /** sets rounding mode of floating point operations */
-static
 void setRoundingMode(
    ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
@@ -61,7 +59,6 @@ void setRoundingMode(
 }
 
 /** gets current rounding mode of floating point operations */
-static
 ROUNDMODE getRoundingMode(
    void
    )
@@ -86,10 +83,8 @@ enum RoundMode
    SCIP_ROUND_DOWNWARDS = FP_RND_RM,    /**< round always down */
    SCIP_ROUND_UPWARDS   = FP_RND_RP     /**< round always up */
 };
-typedef enum RoundMode ROUNDMODE;
 
 /** sets rounding mode of floating point operations */
-static
 void setRoundingMode(
    ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
@@ -102,7 +97,6 @@ void setRoundingMode(
 }
 
 /** gets current rounding mode of floating point operations */
-static
 ROUNDMODE getRoundingMode(
    void
    )
@@ -125,10 +119,8 @@ enum RoundMode
    SCIP_ROUND_DOWNWARDS = RC_DOWN,           /**< round always down */
    SCIP_ROUND_UPWARDS   = RC_UP              /**< round always up */
 };
-typedef enum RoundMode ROUNDMODE;
 
 /** sets rounding mode of floating point operations */
-static
 void setRoundingMode(
    ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
@@ -141,7 +133,6 @@ void setRoundingMode(
 }
 
 /** gets current rounding mode of floating point operations */
-static
 ROUNDMODE getRoundingMode(
    void
    )
@@ -160,10 +151,8 @@ enum RoundMode
    SCIP_ROUND_DOWNWARDS = 0,            /**< round always down */
    SCIP_ROUND_UPWARDS   = 1             /**< round always up */
 };
-typedef enum RoundMode ROUNDMODE;
 
 /** sets rounding mode of floating point operations */
-static
 void setRoundingMode(
    ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
@@ -172,7 +161,6 @@ void setRoundingMode(
 }
 
 /** gets current rounding mode of floating point operations */
-static
 ROUNDMODE getRoundingMode(
    void
    )
