@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.10 2010/04/21 18:23:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.h,v 1.11 2010/05/11 10:11:15 bzfviger Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic
@@ -88,6 +88,43 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver                                 */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
    SCIP_Longint*         iterused            /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
+   );
+
+/** gets NLPI interface used by NLP heuristic, or NULL if none */
+extern
+SCIP_NLPI* SCIPgetNlpiHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   );
+
+/** gets the NLP that is used by the NLP heuristic as NLPI problem, or NULL if not constructed */
+extern
+SCIP_NLPIPROBLEM* SCIPgetNlpiProblemHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   );
+
+/** gets number of variables in NLP
+ * usually, this equals SCIPgetNVars()
+ */
+extern
+int SCIPgetGetNVarsHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   );
+
+/** gets mapping of NLP variables to SCIP variables */
+extern
+SCIP_VAR** SCIPgetNlpVarsHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   );
+
+/** gets mapping of SCIP variables to NLP variables */
+extern
+SCIP_HASHMAP* SCIPgetVarMappingHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
 
 #ifdef __cplusplus

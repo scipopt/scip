@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.60 2010/05/08 15:48:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.61 2010/05/11 10:11:15 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1517,4 +1517,86 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    }
 
    return SCIP_OKAY;
+}
+
+/** gets NLPI interface used by NLP heuristic, or NULL if none */
+SCIP_NLPI* SCIPgetNlpiHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->nlpi;
+}
+
+/** gets the NLP that is used by the NLP heuristic as NLPI problem, or NULL if not constructed */
+SCIP_NLPIPROBLEM* SCIPgetNlpiProblemHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->nlpiprob;
+}
+
+/** gets number of variables in NLP
+ * usually, this equals SCIPgetNVars()
+ */
+int SCIPgetGetNVarsHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->nvars;
+}
+
+/** gets mapping of NLP variables to SCIP variables */
+SCIP_VAR** SCIPgetNlpVarsHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->var_nlp2scip;
+}
+
+/** gets mapping of SCIP variables to NLP variables */
+SCIP_HASHMAP* SCIPgetVarMappingHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->var_scip2nlp;
 }
