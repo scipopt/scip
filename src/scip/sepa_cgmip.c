@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.8 2010/05/07 18:25:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.9 2010/05/11 12:02:46 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -64,6 +64,8 @@
 #define DEFAULT_ALLOWLOCAL        FALSE /**< allow to generate local cuts */
 #define DEFAULT_ONLYINTVARS       FALSE /**< generate cuts for problems with only integer variables? */
 #define DEFAULT_ONLYACTIVEROWS     TRUE /**< use only active rows to generate cuts? */
+#define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts? */
+#define DEFAULT_PRIMALSEPARATION   TRUE /**< only separate cuts that are tight for the best feasible solution? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -102,6 +104,8 @@ struct SCIP_SepaData
    SCIP_Bool             allowlocal;         /**< allow local cuts */
    SCIP_Bool             onlyintvars;        /**< generate cuts for problems with only integer variables? */
    SCIP_Bool             onlyActiveRows;     /**< use only active rows to generate cuts? */
+   SCIP_Bool             useCutpool;         /**< use cutpool to store CG-cuts? */
+   SCIP_Bool             primalSeparation;   /**< only separate cuts that are tight for the best feasible solution? */
 };
 
 
@@ -493,6 +497,10 @@ SCIP_RETCODE transformColumn(
  *  - If an integer variable \f$x_i\f$ is free, we are not allowed to round the cut down. In this
  *    case, the combintation of rows and bounds has to be integral. We force this by requiring that
  *    \f$f_i = 0\f$.
+ *
+ *  - If required, i.e., parameter primalSeparation is true, we force a primal separation step. For
+ *    this we require that the cut is tight at the currently best solution. To get reliable solutions
+ *    we relax equality by EPSILONVALUE.
  */
 static
 SCIP_RETCODE createSubscip(
@@ -1034,6 +1042,41 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
    ++mipdata->m;
 
+   /* add primal separation constraint if required */
+   if ( sepadata->primalSeparation )
+   {
+      SCIP_SOL* bestsol;
+      bestsol = SCIPgetBestSol(scip);
+      if ( bestsol != NULL )
+      {
+	 nconsvars = 0;
+	 for (j = 0; j < ncols; ++j)
+	 {
+	    if ( mipdata->alpha[j] != NULL )
+	    {
+	       SCIP_Real val;
+	       assert( mipdata->colType[j] == colPresent );
+	       
+	       val = SCIPgetSolVal(scip, bestsol, SCIPcolGetVar(cols[j]));
+	       consvars[nconsvars] = mipdata->alpha[j];
+	       consvals[nconsvars] = val;
+	       ++nconsvars;
+	       assert( nconsvars <= (int) mipdata->n );
+	    }
+	 }
+	 consvars[nconsvars] = mipdata->beta;
+	 consvals[nconsvars] = -1.0;
+	 ++nconsvars;
+
+	 /* add linear constraint - allow slight deviation from equality */
+	 SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, "primalSeparation", nconsvars, consvars, consvals, -EPSILONVALUE, EPSILONVALUE,
+	       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+	 SCIP_CALL( SCIPaddCons(subscip, cons) );
+	 SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+	 ++mipdata->m;
+      }
+   }
+
    SCIPdebugMessage("subscip has %u variables and %u constraints (%u shifted, %u complemented, %u at lb, %u at ub).\n",
       mipdata->n, mipdata->m, nshifted, ncomplemented, nlbounds, nubounds);
 
@@ -1418,6 +1461,7 @@ SCIP_RETCODE computeCut(
       assert( var != NULL );
       pos = SCIPcolGetLPPos(SCIPvarGetCol(var));
 
+      /* a variable may has status COLUMN, but the corresponding column may not (yet) be in the LP */
       if ( pos >= 0 && SCIPvarIsIntegral(var) )
       {
 	 assert( pos < ncols );
@@ -1675,6 +1719,17 @@ SCIP_RETCODE createCGCutsDirect(
 	    ++(*nGen);
 
 	    /* release the row */
+	    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+	 }
+	 else if ( sepadata->useCutpool && ! cutislocal )
+	 {
+	    SCIP_ROW* cut;
+
+	    /* create the cut for the pool */
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *nGen);
+	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
+	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
+	    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 	 }
       }
@@ -2181,6 +2236,14 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/onlyActiveRows",
          "use only active rows to generate cuts?",
          &sepadata->onlyActiveRows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/useCutpool",
+         "use cutpool to store CG-cuts?",
+         &sepadata->useCutpool, FALSE, DEFAULT_USECUTPOOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/primalSeparation",
+         "only separate cuts that are tight for the best feasible solution?",
+         &sepadata->primalSeparation, FALSE, DEFAULT_PRIMALSEPARATION, NULL, NULL) );
 
    return SCIP_OKAY;
 }
