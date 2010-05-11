@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.98 2010/05/06 21:59:53 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.99 2010/05/11 17:51:38 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -1928,6 +1928,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
     * non-strong-branching lp solve or problem modifications, since this may change the dimension of the basis and
     * typically indicates the end of the strong branching phase
     */
+   assert(!STRONGBRANCH_RESTOREBASIS || !spx->hasPreStrongbranchingBasis());
    if( !spx->hasPreStrongbranchingBasis() )
    {
       spx->savePreStrongbranchingBasis();
@@ -1989,7 +1990,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          /* if this flag is set, we restore the pre-strong-branching basis by default (and don't solve again) */
          if( STRONGBRANCH_RESTOREBASIS )
          {
-            assert(spx->hasPreStrongbranchingBasis());
+            assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
             spx->restorePreStrongbranchingBasis(false);
             fromparentbasis = false;
          }
@@ -1999,7 +2000,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          {
             SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n", itlim - spx->iterations());
             spx->setTerminationIter(itlim - spx->iterations());
-            assert(spx->hasPreStrongbranchingBasis());
+            assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
             spx->restorePreStrongbranchingBasis(false);
             fromparentbasis = true;
             error = false;
@@ -2063,7 +2064,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
             /* if this flag is set, we restore the pre-strong-branching basis by default (and don't solve again) */
             if( STRONGBRANCH_RESTOREBASIS )
             {
-               assert(spx->hasPreStrongbranchingBasis());
+               assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
                spx->restorePreStrongbranchingBasis(false);
                fromparentbasis = false;
             }
@@ -2072,7 +2073,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
             else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
             {
                SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->iterations());
-               assert(spx->hasPreStrongbranchingBasis());
+               assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
                spx->restorePreStrongbranchingBasis(false);
                spx->setTerminationIter(itlim - spx->iterations());
                error = false;
