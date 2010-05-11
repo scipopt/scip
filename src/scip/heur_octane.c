@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.29 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.30 2010/05/11 09:14:32 bzfberth Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -786,13 +786,13 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          }
          break;    
       case 4: 
-         if( heurdata->useavgwgtray )
+         if( heurdata->useavgwgtray && SCIPisLPSolBasic(scip) )
          {
             SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, TRUE) );
          }
          break;
       case 0:
-         if( heurdata->useavgray )
+         if( heurdata->useavgray && SCIPisLPSolBasic(scip) )
          {
             SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, FALSE) );
          }

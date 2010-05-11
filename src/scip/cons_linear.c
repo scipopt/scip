@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.358 2010/05/04 13:28:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.359 2010/05/11 09:14:32 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -7051,6 +7051,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    /* hash value depends on vectors of variable indices */
    if( consdataGetMaxAbsval(consdata) > INT_MAX )
       maxabsval = 0;
+   else if( consdataGetMaxAbsval(consdata) < 1.0 )
+      maxabsval = (int) 10000*consdataGetMaxAbsval(consdata);
    else
       maxabsval = (int) consdataGetMaxAbsval(consdata);
 
