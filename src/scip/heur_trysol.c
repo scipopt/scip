@@ -12,12 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.8 2010/04/26 18:14:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.9 2010/05/11 18:23:05 bzfpfets Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
  * @brief  primal heuristic that tries a given solution
  * @author Marc Pfetsch
+ *
+ * This heuristic takes a solution from somewhere else via the function SCIPheurPassSolTrySol(). It
+ * then tries to commit this solution. It is mainly used by cons_indicator, which tries to correct a
+ * given solution, but cannot directly submit this solution, because it is a constraint handler and
+ * not a heuristic.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -49,6 +54,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*      sol;                /**< storing solution passed to heuristic (NULL if none) */
+   SCIP_Bool      rec;                /**< whether we are within our own call */
 };
 
 
@@ -145,6 +151,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
 
    SCIPdebugMessage("exec method of trysol primal heuristic.\n");
    *result = SCIP_DIDNOTFIND;
+   heurdata->rec = TRUE;
 
    /* try solution and free it - check everything, because we are not sure */
 #ifdef SCIP_DEBUG
@@ -160,6 +167,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
 #endif
       *result = SCIP_FOUNDSOL;
    }
+   heurdata->rec = FALSE;
 
    return SCIP_OKAY;
 }
@@ -184,6 +192,7 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    heurdata->sol = NULL;
+   heurdata->rec = FALSE;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
@@ -215,11 +224,18 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    assert(heurdata != NULL);
 
    /* only store solution if we are not within our own SCIPtrySol() call */
-   if ( heurdata->sol == NULL )
+   if ( ! heurdata->rec )
    {
-      SCIPdebugMessage("Recieved feasible solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
-      SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
-      SCIPsolSetHeur(heurdata->sol, heur);
+      if ( heurdata->sol == NULL || SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->sol)) )
+      {
+	 if ( heurdata->sol != NULL )
+	    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+	 SCIPdebugMessage("Recieved solution of value %g.\n", SCIPgetSolOrigObj(scip, sol)); 
+	 SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
+	 SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+	 SCIPsolSetHeur(heurdata->sol, heur);
+      }
    }
 
    return SCIP_OKAY;
