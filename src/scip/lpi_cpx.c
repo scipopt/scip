@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.127 2010/02/25 19:02:58 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.128 2010/05/11 19:25:37 bzfberth Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -2955,8 +2955,11 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
        * call of the separators, in particular, the Gomory separator
        */
       CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
+
+      /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
+       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
+      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) <= 10);
+      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) <= 10);
       retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, coef);
    }
    CHECK_ZERO( retval );
@@ -2990,8 +2993,11 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
        * call of the separators, in particular, the Gomory separator
        */
       CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
+
+      /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
+       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
+      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) <= 10);
+      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) <= 10);
       retval = CPXbinvacol(cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( retval );
