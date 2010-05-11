@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.65 2010/05/04 13:28:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.66 2010/05/11 18:36:55 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3177,8 +3177,8 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    {
       assert( conshdlrdata->heurTrySol != NULL );
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
-      SCIP_CALL( SCIPunlinkSol(scip, trysol) );
       assert( trysol != NULL );
+      SCIP_CALL( SCIPunlinkSol(scip, trysol) );
    }
 
    /* check each constraint */
@@ -3202,6 +3202,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       }
 
       assert( consdata->slackvar != NULL );
+      assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
 
       if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) &&
 	   ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) )
@@ -4258,7 +4259,7 @@ SCIP_Bool SCIPisViolatedIndicator(
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
-   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            changed             /**< whether the solution has been changed */
    )
 {
@@ -4280,8 +4281,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
    *changed = FALSE;
 
-   /* avoid delete indicator constraints, e.g., due to preprocessing */
-   if ( SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING )
+   /* avoid deleted indicator constraints, e.g., due to preprocessing */
+   if ( ! SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
    assert( cons != NULL );
@@ -4299,8 +4300,6 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    assert( lincons != NULL );
    assert( binvar != NULL );
 
-   sum = 0.0;
-
    /* avoid non-active linear constraints, e.g., due to preprocessing */
    if ( SCIPconsIsActive(lincons) || SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING)
    {
@@ -4309,6 +4308,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       linvals = SCIPgetValsLinear(scip, lincons);
 
       /* compute value of regular variables */
+      sum = 0.0;
       for (v = 0; v < nlinvars; ++v)
       {
 	 SCIP_VAR* var;
@@ -4323,49 +4323,51 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
       val = SCIPgetRhsLinear(scip, lincons);
       if ( ! SCIPisInfinity(scip, val) )
 	 sum -= val;
+      else
+      {
+	 val = SCIPgetLhsLinear(scip, lincons);
+	 if ( ! SCIPisInfinity(scip, -val) )
+	    sum = val - sum;
+      }
 
-      val = SCIPgetLhsLinear(scip, lincons);
-      if ( ! SCIPisInfinity(scip, -val) )
-	 sum = val - sum;
-   }
-
-   /* set slack variable */
-   if ( SCIPisFeasPositive(scip, sum) )
-   {
-      /* the original constraint is violated */
-      if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), sum) )
+      /* check if linear constraint w/o slack variable is violated */
+      if ( SCIPisFeasPositive(scip, sum) )
       {
-	 SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, sum) );
-	 *changed = TRUE;
-      }
-      if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
-      {
-	 SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
-	 *changed = TRUE;
-      }
-   }
-   else
-   {
-      /* the original constraint is satisfied */
-      if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), 0.0) )
-      {
-	 SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
-	 *changed = TRUE;
-      }
-      if ( SCIPvarGetObj(binvar) <= 0 )
-      {
-	 if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+	 /* the original constraint is violated */
+	 if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), sum) )
 	 {
-	    SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+	    SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, sum) );
+	    *changed = TRUE;
+	 }
+	 if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+	 {
+	    SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
 	    *changed = TRUE;
 	 }
       }
       else
       {
-	 if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+	 /* the original constraint is satisfied */
+	 if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, slackvar), 0.0) )
 	 {
-	    SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
-	    *changed = FALSE;
+	    SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
+	    *changed = TRUE;
+	 }
+	 if ( SCIPvarGetObj(binvar) < 0 )
+	 {
+	    if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+	    {
+	       SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+	       *changed = TRUE;
+	    }
+	 }
+	 else
+	 {
+	    if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+	    {
+	       SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+	       *changed = TRUE;
+	    }
 	 }
       }
    }
