@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.275 2010/05/04 15:27:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.276 2010/05/11 16:21:04 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8655,8 +8655,8 @@ SCIP_Bool SCIPvarIsTransformedOrigvar(
 
    parentvar = var->parentvars[0];
 
-   /* we follow the aggregation tree to the root; then the corresponding original variable is the first variable */
-   while ( parentvar->nparentvars >= 1 )
+   /* we follow the aggregation tree to the root unless an original variable has been found - the first entries in the parentlist are candidates */
+   while ( parentvar->nparentvars >= 1 && SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL )
       parentvar = parentvar->parentvars[0];
    assert( parentvar != NULL );
 
