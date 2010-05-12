@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.56 2010/05/07 17:49:57 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.57 2010/05/12 10:08:45 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -222,7 +222,7 @@ SCIP_RETCODE createPpcProblem(
 
       SCIP_CALL( SCIPcreateVar(ppcscip, &ppcvars[i], name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
             TRUE, FALSE, NULL, NULL, NULL, NULL) );
-
+      
       SCIP_CALL( SCIPaddVar(ppcscip, ppcvars[i]) );
    }
 
@@ -673,7 +673,7 @@ SCIP_RETCODE createPpcProblem(
          ppcconsvars[1] = ppcvars[SCIPvarGetProbindex(nonlinearspvar)];
 
          SCIP_CALL( SCIPcreateConsSetcover(ppcscip, &ppccons, name, 2, ppcconsvars,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
 
          if( ppccons == NULL )
          {
@@ -1328,18 +1328,16 @@ SCIP_RETCODE createSubProblem(
                   }
                   else 
                   {
-                     SCIPfreeBufferArray(scip, &alternatives);
-                     SCIP_CALL( SCIPendProbing(scip) );
                      SCIPdebugMessage("  --> cutoff detected - abort\n");
-                     goto TERMINATE;
+                     goto TERMINATE2;
                   }
                }
                else 
                {
                   /* if the fixing did not lead to a cutoff, transfer it to the subMIQCP */
                   SCIPdebugMessage("  --> finally %s %s variable <%s> to [%g, %g] in subMIQCP\n", SCIPisEQ(scip, lb, ub) ? "fix" : "restrict", 
-                  SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
-                  SCIPvarGetName(vars[i]), lb, ub);
+                     SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
+                     SCIPvarGetName(vars[i]), lb, ub);
                   SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
                   SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
                   break;
@@ -1366,7 +1364,7 @@ SCIP_RETCODE createSubProblem(
                if( !*success )
                {
                   SCIPdebugMessage("undercover heuristic terminating: problems creating ppc problem\n");
-                  goto TERMINATE;
+                  goto TERMINATE2;
                }
 
                /* solving ppc problem; we only need ppcsolvals, so we can immediately free the problem */
@@ -1381,7 +1379,7 @@ SCIP_RETCODE createSubProblem(
                if( !*success )
                {  
                   SCIPdebugMessage("undercover heuristic terminating: problems solving ppc problem\n");
-                  goto TERMINATE;
+                  goto TERMINATE2;
                }
 
                *success = FALSE;
@@ -1389,7 +1387,7 @@ SCIP_RETCODE createSubProblem(
                if( *timelimit < 10.0 )
                {
                   SCIPdebugMessage("undercover heuristic terminating: subtimelimit=%f\n", *timelimit);
-                  goto TERMINATE;
+                  goto TERMINATE2;
                }
 
                /* return to last variable in the (new) cover) */
@@ -1397,18 +1395,22 @@ SCIP_RETCODE createSubProblem(
             }
          }
       }
+      *success = TRUE;
+      
+   TERMINATE2:
+      /* free memory from fix-and-propagte loop */
       SCIPfreeBufferArray(scip, &alternatives);
       SCIP_CALL( SCIPendProbing(scip) );
 
       SCIPdebugMessage("undercover heuristic fixed %d variables (%d integer variables to rounded LP value) during probing\n", fixingcounter, roundedfixingcounter);
    }
 
-   /* abort, if nothing was fixed or all variables were fixed to their current LP value */
-   /* CAN this happen??????? The first condition means, that we have a MIP, 
-    * the second, that the LP solution was integral
-    * if( fixingcounter == 0 || (fixingcounter == nvars && roundedfixingcounter == 0) )
-    *   goto TERMINATE;
-    */
+   /* If the problem is a MIP, or the LP solution was integral, undercover should not have been called */
+   assert(fixingcounter != 0);
+   assert(fixingcounter != nvars || roundedfixingcounter != 0);
+
+   if( !(*success) )
+      goto TERMINATE;
 
    /* copy all constraints */
    for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
@@ -1446,9 +1448,7 @@ SCIP_RETCODE createSubProblem(
          }
       }
    }
-
-   *success = TRUE;
-
+         
  TERMINATE:
    /* free memory from ppc problem */      
    SCIPfreeBufferArray(scip, &ppcsolvals);
@@ -1777,7 +1777,9 @@ SCIP_RETCODE SCIPapplyUndercover(
       /* in case the creation of the subproblem is unsuccessful, not all subvariables might have been created and
        * captured; release only subvariable pointers which are not NULL */
       if( subvars[i] != NULL )
+      {
          SCIP_CALL( SCIPreleaseVar(subscip, &(subvars[i])) );
+      }
    }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
