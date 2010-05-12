@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.195 2010/04/13 21:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.196 2010/05/12 08:27:16 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -763,6 +763,8 @@ SCIP_RETCODE checkCons(
 
 /** solves knapsack problem in maximization form exactly using dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
+ *
+ * @note in case you provide the solitems or nonsolitems array you also have to provide the counter part as well
  */
 SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3669,6 +3671,141 @@ SCIP_RETCODE mergeMultiples(
    }
 
    consdata->merged = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** in case the knapsack constraint is independent of every else, solve the knapsack problem (exactly) and apply the
+ *  fixings (dual reductions) */
+static
+SCIP_RETCODE dualPresolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints  */
+   SCIP_Bool*            deleted             /**< pointer to store if the constraint is deleted */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* profits;
+   int* solitems;
+   int* nonsolitems;
+   int* items;
+   SCIP_Real solval;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+   SCIP_Bool applicable;
+   int nsolitems;      
+   int nnonsolitems;      
+   int nvars;
+   int v;
+
+   assert(!SCIPconsIsModifiable(cons));
+
+   /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
+    * use the locks to decide for a dual reduction using this constraint; for example after a restart the cuts which are
+    * added to the problems have the check flag set to FALSE */
+   if( !SCIPconsIsChecked(cons) )
+      return SCIP_OKAY;
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+   vars = consdata->vars;
+      
+   SCIP_CALL( SCIPallocBufferArray(scip, &profits, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &items, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solitems, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nonsolitems, nvars) );
+
+   applicable = TRUE;
+
+   /* check if we can apply the dual reduction; this can be done if the knapsack has the only looks on this constraint;
+    * collect object values which are the profits of the knapsack problem */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Bool negated;
+      
+      var = vars[v];
+      assert(var != NULL);
+
+      /* the variable should not be (globally) fixed */
+      assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
+      
+      if( SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 1 ) 
+      {
+         applicable = FALSE;
+         break;
+      }
+
+      negated = FALSE;
+      
+      /* get the active variable */
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      assert(SCIPvarIsActive(var));
+
+      if( negated )
+         profits[v] = SCIPvarGetObj(var);
+      else
+         profits[v] = -SCIPvarGetObj(var);
+
+      SCIPdebugMessage("variable <%s> -> item size %"SCIP_LONGINT_FORMAT", profit <%g>\n", 
+         SCIPvarGetName(vars[v]), consdata->weights[v], profits[v]);
+      items[v] = v;
+   }
+   
+   if( applicable )
+   {
+      SCIPdebugMessage("the knapsack constraint <%s> is independent to rest of the problem\n", SCIPconsGetName(cons));
+      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+
+      /* solve knapsack problem exactly */
+      SCIP_CALL( SCIPsolveKnapsackExactly(scip, consdata->nvars, consdata->weights, profits, consdata->capacity, 
+            items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval) );
+
+      /* apply solution of the knapsack as dual reductions */
+      for( v = 0; v < nsolitems; ++v )
+      {
+         SCIP_VAR* var;
+         
+         var = vars[solitems[v]];
+         assert(var != NULL);
+         
+         SCIPdebugMessage("variable <%s> only locked up in knapsack constraints: dual presolve <%s>[%.15g,%.15g] >= 1.0\n",
+            SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         SCIP_CALL( SCIPtightenVarLb(scip, var, 1.0, TRUE, &infeasible, &tightened) );
+         assert(!infeasible);
+         assert(tightened);
+         (*nfixedvars)++;
+      }
+      
+      for( v = 0; v < nnonsolitems; ++v )
+      {
+         SCIP_VAR* var;
+         
+         var = vars[nonsolitems[v]];
+         assert(var != NULL);
+
+         SCIPdebugMessage("variable <%s> has no down locks: dual presolve <%s>[%.15g,%.15g] <= 0.0\n",
+            SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         SCIP_CALL( SCIPtightenVarUb(scip, var, 0.0, TRUE, &infeasible, &tightened) );
+         assert(!infeasible);
+         assert(tightened);
+         (*nfixedvars)++;
+      }
+
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      (*ndelconss)++;
+      (*deleted) = TRUE;
+   }
+      
+   SCIPfreeBufferArray(scip, &nonsolitems);
+   SCIPfreeBufferArray(scip, &solitems);
+   SCIPfreeBufferArray(scip, &items);
+   SCIPfreeBufferArray(scip, &profits);
 
    return SCIP_OKAY;
 }
@@ -6906,7 +7043,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
       if( cutoff )
          break;
-
+      
       /* propagate constraint */
       SCIP_CALL( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars, TRUE) );
       if( cutoff )
@@ -6949,6 +7086,11 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 	   if( cutoff )
 	      break;
          }
+
+         /* in case the knapsack constraints is independent of everything else, solve the knapsack and apply the dual reduction */
+         SCIP_CALL( dualPresolving(scip, cons, nchgbds, ndelconss, &redundant) );
+         if( redundant )
+            continue;
       }
       /* remember the first changed constraint to begin the next aggregation round with */
       if( firstchange == INT_MAX && !consdata->presolved )

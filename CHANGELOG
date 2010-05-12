@@ -109,6 +109,7 @@ performance improvements:
 - changed default value of parameter "nodeselection/restartdfs/selectbestfreq" to 0;
   this means if the current node has no children the node with the best bound is selected (SCIPgetBestboundNode()) 
 - separators are not called any longer for an integral root LP
+- added a dual reduction step in cons_knapsack.c
 
 fixed bugs:
 - fixed bug in lpi_clp.cpp: SCIPlpiChgBounds checks if the column status exists in Clp before using it
