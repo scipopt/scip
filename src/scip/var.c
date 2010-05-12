@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.276 2010/05/11 16:21:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.277 2010/05/12 08:19:30 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8364,7 +8364,8 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
 
 
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
- *  negation status
+ *  negation status (this means you have to assign a value to SCIP_Bool negated before calling this method, usually
+ *  FALSE is used)
  *
  *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
  *    SCIPvarFlattenAggregationGraph()
