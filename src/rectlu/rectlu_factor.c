@@ -12,7 +12,7 @@
 /*  along with RECTLU; see the file COPYING.                                 */ 
 /*                                                                           */ 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: rectlu_factor.c,v 1.1.2.1 2010/04/02 18:40:45 bzfsteff Exp $"
+#pragma ident "@(#) $Id: rectlu_factor.c,v 1.1.2.2 2010/05/14 21:09:25 bzfsteff Exp $"
 
 /**@file   rectlu_factor.c 
  * @brief  rectlu internal functions
@@ -1576,7 +1576,7 @@ static int qsnum_dense_build_matrix (qsnum_factor_work * f)
         beg = f->ur_inf[r].rbeg;
         for (j = 0; j < nzcnt; j++) {
             QSnum_Copy (dmat[i * dcols - stage + crank[urindx[beg + j]]],
-                                     urcoef[beg + j]);
+                                      urcoef[beg + j]);
         }
     }
 
@@ -2834,7 +2834,10 @@ int RECTLUbuildFactorization(
 
    assert(*f == NULL);
    assert(m >= n);
-
+   
+   if(m<n)
+      return 1;
+   
    QSnum_factor_init ();
 
    *f = (qsnum_factor_work *) malloc (sizeof (qsnum_factor_work));
