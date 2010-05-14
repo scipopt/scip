@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.337 2010/04/21 16:25:27 bzfhende Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.338 2010/05/14 17:46:41 bzfgleix Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11190,6 +11190,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_Bool needprimalray;
    SCIP_Bool needdualray;
 
@@ -11201,6 +11202,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIPdebugMessage("solving LP: %d rows, %d cols, primalfeasible=%u, dualfeasible=%u, solved=%u, diving=%u, probing=%u, cutoff=%g\n", 
       lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->probing, lp->cutoffbound);
 
+   retcode = SCIP_OKAY;
    *lperror = FALSE;
 
    /* check whether we need a proof of unboundness or infeasibility by a primal or dual ray */
@@ -11241,7 +11243,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       /* check for error */
       if( *lperror )
-         return SCIP_OKAY;
+      {
+         retcode = SCIP_OKAY;
+         goto TERMINATE;
+      }
 
       /* evaluate solution status */
       switch( SCIPlpGetSolstat(lp) )
@@ -11365,7 +11370,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of LP %d may not be unbounded (pfeas=%d, dfeas=%d) since lazy bounds are violated -- solving again with added violated lazy bounds\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
-               
+
+               /* if the LP had to be solved from scratch, we have to reset this flag, since we want to resolve from the
+                * current basis */
+               fromscratch = FALSE;
+
                goto SOLVEAGAIN;
             }
             
@@ -11405,6 +11414,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                char tmppricingchar;
 
                SCIPdebugMessage("objval = %f < %f = lp->lpiuobjlim, but status objlimit\n", objval, lp->lpiuobjlim);
+
+               /* we want to resolve from the current basis (also if the LP had to be solved from scratch) */
+               fromscratch = FALSE;
 
                /* temporarily disable cutoffbound, which also disables the objective limit */ 
                tmpcutoff = lp->cutoffbound;
@@ -11461,10 +11473,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   lp->solved = FALSE;
                   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
-                  if( *lperror )
-                     return SCIP_OKAY;
-                  else
-                     return SCIP_LPERROR;                     
+                  retcode = *lperror ? SCIP_OKAY : SCIP_LPERROR;
+                  goto TERMINATE;
                }
                
                lp->solved = TRUE;
@@ -11489,7 +11499,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      SCIPdebugMessage("unresolved error while resolving LP in order to exceed the objlimit\n");
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-                     return SCIP_LPERROR;                     
+                     retcode = SCIP_LPERROR;
+                     goto TERMINATE;
                   }
                }
                /* infeasible solution */
@@ -11531,16 +11542,28 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_NOTSOLVED:
          SCIPerrorMessage("error in LP solver\n");
-         return SCIP_LPERROR;
+         retcode = SCIP_LPERROR;
+         goto TERMINATE;
 
       default:
          SCIPerrorMessage("unknown LP solution status\n");
-         return SCIP_ERROR;
+         retcode = SCIP_ERROR;
+         goto TERMINATE;
       }
    }
    assert(!(*lperror) || !lp->solved);
 
-   return SCIP_OKAY;
+ TERMINATE:
+   /* if the LP had to be solved from scratch, we have to reset this flag since it is stored in the LPi; otherwise it
+    * may happen that we continue to solve from scratch during strong branching */
+   if( lp->lpifromscratch )
+   {
+      SCIP_Bool success;
+      lpSetFromscratch(lp, FALSE, &success);
+      SCIPdebugMessage("resetting parameter SCIP_LPPARAM_FROMSCRATCH to FALSE %s\n", success ? "" : "failed");
+   }
+
+   return retcode;
 }
 
 /** gets solution status of current LP */

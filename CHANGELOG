@@ -153,6 +153,7 @@ fixed bugs:
 - fixed bug in heur_nlp.c: objective function had wrong sign for maximization problems
 - fixed potential bug in OCTANE heuristic with nonbasic solutions
 - fixed wrong assert in Cplex LPI: Due to numerical inaccuracies, a few pivtos might be performed after refactorization
+- fixed bug in lp.c: if in SCIPlpSolveAndEval() the LP has to be solved from scratch due to numerical troubles, reset SCIP_LPPARAM_FROMSCRATCH to FALSE afterwards
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
