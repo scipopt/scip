@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.26 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.27 2010/05/15 12:12:27 bzfberth Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -6849,13 +6849,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    assert(scip != NULL);
    assert(result != NULL);
 
-  
    *result = SCIP_DIDNOTRUN;  
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    depth = SCIPgetDepth(scip); 
    ncalls = SCIPsepaGetNCallsAtNode(sepa); 
    totalncalls = SCIPsepaGetNCalls(sepa);
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
 
    /* only call the {0,1/2}-cut separator a given number of times at all */
    if( sepadata->maxncalls > -1 && totalncalls > sepadata->maxncalls - 1 )
@@ -6872,6 +6875,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
   
    /* only call separator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
    /* allocate temporary memory for LP data structures */

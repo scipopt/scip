@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.125 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.126 2010/05/15 12:12:27 bzfberth Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -6495,8 +6495,8 @@ SCIP_RETCODE separateCuts(
    int i;
 
    assert(result != NULL);
+   assert(*result == SCIP_DIDNOTRUN);
 
-   *result = SCIP_DIDNOTRUN;
    ncuts = 0;
 
    /* check for column/row ratio */
@@ -6741,6 +6741,21 @@ static
 SCIP_DECL_SEPAEXECLP(sepaExeclpMcf)
 {
    /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    /* separate cuts on the LP solution */
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
@@ -6753,6 +6768,9 @@ static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolMcf)
 {
    /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    /* separate cuts on the given primal solution */
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 

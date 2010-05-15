@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.563 2010/05/12 08:17:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.564 2010/05/15 12:12:26 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12066,7 +12066,7 @@ SCIP_RETCODE SCIPseparateSol(
    actdepth = (pretendroot ? 0 : SCIPtreeGetCurrentDepth(scip->tree));
 
    /* apply separation round */
-   SCIP_CALL( SCIPseparationRound(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand, scip->sepastore,
+   SCIP_CALL( SCIPseparationRound(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp, scip->sepastore,
          sol, actdepth, onlydelayed, delayed, cutoff) );
 
    return SCIP_OKAY;

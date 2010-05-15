@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.93 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.94 2010/05/15 12:12:26 bzfberth Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -1203,8 +1203,7 @@ SCIP_RETCODE separateCuts(
    int v;
 
    assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
+   assert(*result == SCIP_DIDNOTRUN);
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -1493,6 +1492,21 @@ SCIP_DECL_SEPAFREE(sepaFreeCmir)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
@@ -1503,12 +1517,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolCmir)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.58 2010/05/11 19:25:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.59 2010/05/15 12:12:27 bzfberth Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -108,7 +108,6 @@ SCIP_RETCODE SCIPseparationRound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
    int                   actdepth,           /**< current depth in the tree */

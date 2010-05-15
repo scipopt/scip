@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.359 2010/05/11 09:14:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.360 2010/05/15 12:12:26 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -8672,6 +8672,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    cutoffbound = SCIPgetCutoffbound(scip);
    maxbound = glblowerbound + conshdlrdata->maxcardbounddist * (cutoffbound - glblowerbound);
    separatecards = SCIPisLE(scip, loclowerbound, maxbound);
+   separatecards = separatecards && (SCIPgetNLPBranchCands(scip) > 0);
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;

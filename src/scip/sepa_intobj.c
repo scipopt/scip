@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.35 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.36 2010/05/15 12:12:27 bzfberth Exp $"
 
 /**@file   sepa_intobj.c
  * @ingroup SEPARATORS
@@ -185,8 +185,7 @@ SCIP_RETCODE separateCuts(
    SCIP_Bool tightened;
 
    assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
+   assert(*result == SCIP_DIDNOTRUN);
 
    /* if the objective value may be fractional, we cannot do anything */
    if( !SCIPisObjIntegral(scip) )
@@ -331,6 +330,21 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
@@ -341,6 +355,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.83 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.84 2010/05/15 12:12:27 bzfberth Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS
@@ -288,6 +288,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    /* only call the gomory cut separator a given number of times at each node */
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
@@ -299,6 +303,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    /* only call separator, if the LP solution is basic */
    if( !SCIPisLPSolBasic(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
    /* get variables data */

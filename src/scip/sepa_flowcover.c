@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.28 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.29 2010/05/15 12:12:27 bzfberth Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -2323,9 +2323,8 @@ SCIP_RETCODE separateCuts(
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(result != NULL);
-   
-   *result = SCIP_DIDNOTRUN;
-
+   assert(*result == SCIP_DIDNOTRUN);
+ 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
@@ -2651,6 +2650,21 @@ SCIP_DECL_SEPAFREE(sepaFreeFlowcover)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpFlowcover)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
@@ -2661,6 +2675,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpFlowcover)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolFlowcover)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
    return SCIP_OKAY;

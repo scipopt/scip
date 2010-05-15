@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.42 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.43 2010/05/15 12:12:26 bzfberth Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -1147,8 +1147,7 @@ SCIP_RETCODE separateCuts(
    int maxzeroextensions;
 
    assert(scip != NULL);
-
-   *result = SCIP_DIDNOTRUN;
+   assert(*result == SCIP_DIDNOTRUN);
 
    /* get separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -1299,6 +1298,22 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolClique)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpClique)
 {
+   /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    /* separate cuts on the LP solution */
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
@@ -1310,6 +1325,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClique)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolClique)
 {
+   /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    /* separate cuts on the given primal solution */
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 

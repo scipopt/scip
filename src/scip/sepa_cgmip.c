@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.9 2010/05/11 12:02:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.10 2010/05/15 12:12:26 bzfberth Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -192,10 +192,10 @@ SCIP_RETCODE storeCutInArrays(
    {
    case 'e':
       cutsqrnorm = 0.0;
-      for (v = 0; v < nvars; ++v)
+      for( v = 0; v < nvars; ++v )
       {
          val = cutcoefs[v];
-         if ( !SCIPisZero(scip, val) )
+         if( !SCIPisZero(scip, val) )
          {
             act += val * varsolvals[v];
             cutsqrnorm += SQR(val);
@@ -206,10 +206,10 @@ SCIP_RETCODE storeCutInArrays(
       norm = SQRT(cutsqrnorm);
       break;
    case 'm':
-      for (v = 0; v < nvars; ++v)
+      for( v = 0; v < nvars; ++v )
       {
          val = cutcoefs[v];
-         if ( !SCIPisZero(scip, val) )
+         if( !SCIPisZero(scip, val) )
          {
             act += val * varsolvals[v];
             norm = MAX(norm, REALABS(val));
@@ -219,10 +219,10 @@ SCIP_RETCODE storeCutInArrays(
       }
       break;
    case 's':
-      for (v = 0; v < nvars; ++v)
+      for( v = 0; v < nvars; ++v )
       {
          val = cutcoefs[v];
-         if ( !SCIPisZero(scip, val) )
+         if( !SCIPisZero(scip, val) )
          {
             act += val * varsolvals[v];
             norm += REALABS(val);
@@ -232,17 +232,17 @@ SCIP_RETCODE storeCutInArrays(
       }
       break;
    case 'd':
-      for (v = 0; v < nvars; ++v)
+      for( v = 0; v < nvars; ++v )
       {
          val = cutcoefs[v];
-         if ( !SCIPisZero(scip, val) )
+         if( !SCIPisZero(scip, val) )
          {
             act += val * varsolvals[v];
             cutvars[len] = vars[v];
             cutvals[len++] = val;
          }
       }
-      if ( len > 0 )
+      if( len > 0 )
 	 norm = 1.0;
       break;
    default:
@@ -327,7 +327,7 @@ SCIP_RETCODE transformColumn(
    assert( ! SCIPisZero(scip, sigma) );
 
    /* loop through rows that contain column */
-   for (i = 0; i < SCIPcolGetNLPNonz(col); ++i)
+   for( i = 0; i < SCIPcolGetNLPNonz(col); ++i )
    {
       SCIP_ROW* row;
 
@@ -335,34 +335,34 @@ SCIP_RETCODE transformColumn(
       assert( row != NULL );
 
       /* skip modifiable rows and local rows, unless allowed */
-      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+      if( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	 continue;
 
       pos = SCIProwGetLPPos(row);
       assert( 0 <= pos && pos < (int) mipdata->nrows );
 
       assert( ! SCIPisInfinity(scip, lhs[pos]) );
-      if ( ! SCIPisInfinity(scip, -lhs[pos]) )
+      if( ! SCIPisInfinity(scip, -lhs[pos]) )
 	 lhs[pos] += sigma * colvals[i] * offset;
 
       assert( ! SCIPisInfinity(scip, -rhs[pos]) );
-      if ( ! SCIPisInfinity(scip, rhs[pos]) )
+      if( ! SCIPisInfinity(scip, rhs[pos]) )
 	 rhs[pos] += sigma * colvals[i] * offset;
    }
 
    /* correct lower and upper bounds and solution */
-   if ( SCIPisNegative(scip, sigma) )
+   if( SCIPisNegative(scip, sigma) )
    {
       SCIP_Real l;
 
       assert( ! SCIPisInfinity(scip, -*ub) );
-      if ( ! SCIPisInfinity(scip, *ub) )
+      if( ! SCIPisInfinity(scip, *ub) )
 	 l = *ub/sigma + offset;
       else
 	 l = -SCIPinfinity(scip);
 
       assert( ! SCIPisInfinity(scip, *lb) );
-      if ( ! SCIPisInfinity(scip, -*lb) )
+      if( ! SCIPisInfinity(scip, -*lb) )
 	 *ub = *lb/sigma + offset;
       else
 	 *ub = SCIPinfinity(scip);
@@ -371,10 +371,10 @@ SCIP_RETCODE transformColumn(
    else
    {
       assert( ! SCIPisInfinity(scip, *lb) );
-      if ( ! SCIPisInfinity(scip, -*lb) )
+      if( ! SCIPisInfinity(scip, -*lb) )
 	 *lb = *lb/sigma + offset;
       assert( ! SCIPisInfinity(scip, -*ub) );
-      if ( ! SCIPisInfinity(scip, *ub) )
+      if( ! SCIPisInfinity(scip, *ub) )
 	 *ub = *ub/sigma + offset;
    }
    *primsol = *primsol/sigma + offset;
@@ -579,18 +579,18 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPallocBufferArray(scip, &primsol, ncols) );
 
    /* store lhs/rhs for complementing (see below) */
-   for (i = 0; i < nrows; ++i)
+   for( i = 0; i < nrows; ++i )
    {
       SCIP_Real val;
       assert( rows[i] != NULL );
 
       val = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
-      if ( SCIProwIsIntegral(rows[i]) )
+      if( SCIProwIsIntegral(rows[i]) )
 	 val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
       lhs[i] = val;
 
       val = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
-      if ( SCIProwIsIntegral(rows[i]) )
+      if( SCIProwIsIntegral(rows[i]) )
 	 val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
       rhs[i] = val;
    }
@@ -600,7 +600,7 @@ SCIP_RETCODE createSubscip(
    ncomplemented = 0;
    nlbounds = 0;
    nubounds = 0;
-   for (j = 0; j < ncols; ++j)
+   for( j = 0; j < ncols; ++j )
    {
       SCIP_COL* col;
       SCIP_VAR* var;
@@ -618,7 +618,7 @@ SCIP_RETCODE createSubscip(
       assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(col)) );
 
       /* if allowed, try to use stronger local bound */
-      if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lb[j] )
+      if( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lb[j] )
       {
 	 lb[j] = SCIPvarGetLbLocal(var);
 	 assert( SCIPisIntegral(scip, lb[j]) );
@@ -628,7 +628,7 @@ SCIP_RETCODE createSubscip(
       assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(col)) );
 
       /* if allowed, try to use stronger local bound */
-      if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ub[j] )
+      if( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ub[j] )
       {
 	 ub[j] = SCIPvarGetUbLocal(var);
 	 assert( SCIPisIntegral(scip, ub[j]) );
@@ -639,11 +639,11 @@ SCIP_RETCODE createSubscip(
       mipdata->isShifted[j] = FALSE;
 
       /* detect continuous variables, but perform preprocessing for them */
-      if ( ! SCIPcolIsIntegral(col) )
+      if( ! SCIPcolIsIntegral(col) )
 	 mipdata->colType[j] = colContinuous;
 
       /* if integer variable is at its upper bound -> complementing (this also generates a 0 lower bound) */
-      if ( mipdata->colType[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
+      if( mipdata->colType[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
       {
 	 assert( ! SCIPisInfinity(scip, ub[j]) );
 	 SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
@@ -654,9 +654,9 @@ SCIP_RETCODE createSubscip(
       else
       {
 	 /* if a variable has a finite nonzero lower bound -> shift */
-	 if ( ! SCIPisInfinity(scip, -lb[j]) )
+	 if( ! SCIPisInfinity(scip, -lb[j]) )
 	 {
-	    if ( ! SCIPisZero(scip, lb[j]) )
+	    if( ! SCIPisZero(scip, lb[j]) )
 	    {
 	       SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
 	       assert( SCIPisZero(scip, lb[j]) );
@@ -665,7 +665,7 @@ SCIP_RETCODE createSubscip(
 	    }
 
 	    /* if integer variable is at its lower bound */
-	    if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+	    if( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
 	    {
 	       mipdata->colType[j] = colAtLb;
 	       ++nlbounds;
@@ -674,7 +674,7 @@ SCIP_RETCODE createSubscip(
 	 else
 	 {
 	    /* lower bound is minus-infinity -> check whether upper bound is finite */
-	    if ( ! SCIPisInfinity(scip, ub[j]) )
+	    if( ! SCIPisInfinity(scip, ub[j]) )
 	    {
 	       /* complement variable */
 	       SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
@@ -683,7 +683,7 @@ SCIP_RETCODE createSubscip(
 	       ++ncomplemented;
 
 	       /* if integer variable is at its lower bound */
-	       if ( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+	       if( mipdata->colType[j] == colPresent && SCIPisZero(scip, primsol[j]) )
 	       {
 		  mipdata->colType[j] = colAtLb;
 		  ++nlbounds;
@@ -698,7 +698,7 @@ SCIP_RETCODE createSubscip(
 
    /* create artificial variables for row combinations (y-variables) */
    cnt = 0;
-   for (i = 0; i < nrows; ++i)
+   for( i = 0; i < nrows; ++i )
    {
       SCIP_ROW* row;
 
@@ -706,15 +706,15 @@ SCIP_RETCODE createSubscip(
       assert( row != NULL );
 
       /* skip modifiable rows and local rows, unless allowed */
-      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+      if( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	 continue;
 
       /* if we have an equation */
-      if ( SCIPisEQ(scip, lhs[i], rhs[i]) )
+      if( SCIPisEQ(scip, lhs[i], rhs[i]) )
       {
 	 assert( ! SCIPisInfinity(scip, rhs[i]) );
 
-	 if ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
+	 if( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
 	 {
 	    /* create two variables for each equation */
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
@@ -738,7 +738,7 @@ SCIP_RETCODE createSubscip(
       else
       {
 	 /* create variable for lhs of row if necessary */
-	 if ( ! SCIPisInfinity(scip, -lhs[i]) && 
+	 if( ! SCIPisInfinity(scip, -lhs[i]) && 
 	    ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row))) )
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ylhs_%d", i);
@@ -751,7 +751,7 @@ SCIP_RETCODE createSubscip(
 	    mipdata->ylhs[i] = NULL;
 
 	 /* create variable for rhs of row if necessary */
-	 if ( ! SCIPisInfinity(scip, rhs[i]) && 
+	 if( ! SCIPisInfinity(scip, rhs[i]) && 
 	    ( ! sepadata->onlyActiveRows || SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row))) )
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yrhs_%d", i);
@@ -770,13 +770,13 @@ SCIP_RETCODE createSubscip(
    /* create alpha, bound, and fractional variables */
    cnt = 0;
    ucnt = 0;
-   for (j = 0; j < ncols; ++j)
+   for( j = 0; j < ncols; ++j )
    {
       mipdata->z[j] = NULL;
       mipdata->alpha[j] = NULL;
       mipdata->fracalpha[j] = NULL;
 
-      if ( mipdata->colType[j] == colPresent )
+      if( mipdata->colType[j] == colPresent )
       {
 	 /* create alpha variables */
 	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
@@ -787,7 +787,7 @@ SCIP_RETCODE createSubscip(
 
 	 /* create fractional variables */
 	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "f_%d", j);
-	 if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
+	 if( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
 	 {
 	    /* fix fractional value to be zero for free original variables */
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 0.0, 0.0,
@@ -803,7 +803,7 @@ SCIP_RETCODE createSubscip(
 	 ++cnt;
 
 	 /* create variables for upper bounds */
-	 if ( ! SCIPisInfinity(scip, ub[j]) )
+	 if( ! SCIPisInfinity(scip, ub[j]) )
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "zub_%d", j);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->z[j]), name, 0.0, 1.0-EPSILONVALUE,
@@ -833,13 +833,13 @@ SCIP_RETCODE createSubscip(
 
    /* create constraints for alpha variables of CG-cut */
    cnt = 0;
-   for (j = 0; j < ncols; ++j)
+   for( j = 0; j < ncols; ++j )
    {
       SCIP_ROW** colrows;
       SCIP_Real* colvals;
 
       /* create ordinary part for all selected variables */
-      if ( mipdata->colType[j] == colPresent )
+      if( mipdata->colType[j] == colPresent )
       {
 	 SCIP_Real sigma;
 
@@ -848,13 +848,13 @@ SCIP_RETCODE createSubscip(
 	 colvals = SCIPcolGetVals(cols[j]);
 	 nconsvars = 0;
 
-	 if ( mipdata->isComplemented[j] )
+	 if( mipdata->isComplemented[j] )
 	    sigma = -1.0;
 	 else
 	    sigma = 1.0;
 
 	 /* add part for columns */
-	 for (i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i)
+	 for( i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i )
 	 {
 	    SCIP_ROW* row;
 	    int pos;
@@ -863,19 +863,19 @@ SCIP_RETCODE createSubscip(
 	    assert( row != NULL );
 
 	    /* skip modifiable rows and local rows, unless allowed */
-	    if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+	    if( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	       continue;
 
 	    pos = SCIProwGetLPPos(row);
 	    assert( 0 <= pos && pos < nrows );
 
-	    if ( mipdata->ylhs[pos] != NULL )
+	    if( mipdata->ylhs[pos] != NULL )
 	    {
 	       consvars[nconsvars] = mipdata->ylhs[pos];
 	       consvals[nconsvars] = -sigma * colvals[i];
 	       ++nconsvars;
 	    }
-	    if ( mipdata->yrhs[pos] != NULL )
+	    if( mipdata->yrhs[pos] != NULL )
 	    {
 	       consvars[nconsvars] = mipdata->yrhs[pos];
 	       consvals[nconsvars] = sigma * colvals[i];
@@ -884,7 +884,7 @@ SCIP_RETCODE createSubscip(
 	    assert( nconsvars <= (int) mipdata->n );
 	 }
 	 /* add part for upper bounds */
-	 if ( mipdata->z[j] != NULL )
+	 if( mipdata->z[j] != NULL )
 	 {
 	    assert( ! SCIPisInfinity(scip, ub[j]) );
 	    consvars[nconsvars] = mipdata->z[j];
@@ -914,7 +914,7 @@ SCIP_RETCODE createSubscip(
 	 ++cnt;
       }
       /* generate part that makes sure that cut is valid for continuous variables */
-      else if ( mipdata->colType[j] == colContinuous )
+      else if( mipdata->colType[j] == colContinuous )
       {
 	 SCIP_Real sigma;
 	 SCIP_Real r;
@@ -924,13 +924,13 @@ SCIP_RETCODE createSubscip(
 	 colvals = SCIPcolGetVals(cols[j]);
 	 nconsvars = 0;
 
-	 if ( mipdata->isComplemented[j] )
+	 if( mipdata->isComplemented[j] )
 	    sigma = -1.0;
 	 else
 	    sigma = 1.0;
 
 	 /* add part for columns */
-	 for (i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i)
+	 for( i = 0; i < SCIPcolGetNLPNonz(cols[j]); ++i )
 	 {
 	    SCIP_ROW* row;
 	    int pos;
@@ -939,19 +939,19 @@ SCIP_RETCODE createSubscip(
 	    assert( row != NULL );
 
 	    /* skip modifiable rows and local rows, unless allowed */
-	    if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+	    if( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	       continue;
 
 	    pos = SCIProwGetLPPos(row);
 	    assert( 0 <= pos && pos < nrows );
 
-	    if ( mipdata->ylhs[pos] != NULL )
+	    if( mipdata->ylhs[pos] != NULL )
 	    {
 	       consvars[nconsvars] = mipdata->ylhs[pos];
 	       consvals[nconsvars] = -sigma * colvals[i];
 	       ++nconsvars;
 	    }
-	    if ( mipdata->yrhs[pos] != NULL )
+	    if( mipdata->yrhs[pos] != NULL )
 	    {
 	       consvars[nconsvars] = mipdata->yrhs[pos];
 	       consvals[nconsvars] = sigma * colvals[i];
@@ -965,7 +965,7 @@ SCIP_RETCODE createSubscip(
 
 	 /* for free continuous variables require equality */
 	 r = SCIPinfinity(subscip);
-	 if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
+	 if( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
 	    r = 0.0;
 	 else
 	    assert( SCIPisZero(scip, lb[j]) );
@@ -984,16 +984,16 @@ SCIP_RETCODE createSubscip(
    nconsvars = 0;
 
    /* first for the rows */
-   for (i = 0; i < nrows; ++i)
+   for( i = 0; i < nrows; ++i )
    {
       assert( rows[i] != NULL );
 
       /* skip modifiable rows and local rows, unless allowed */
-      if ( SCIProwIsModifiable(rows[i]) || (SCIProwIsLocal(rows[i]) && !sepadata->allowlocal) )
+      if( SCIProwIsModifiable(rows[i]) || (SCIProwIsLocal(rows[i]) && !sepadata->allowlocal) )
 	 continue;
 
       /* if lhs is there */
-      if ( mipdata->ylhs[i] != NULL && ! SCIPisZero(scip, lhs[i]) )
+      if( mipdata->ylhs[i] != NULL && ! SCIPisZero(scip, lhs[i]) )
       {
 	 assert( ! SCIPisInfinity(scip, -lhs[i]) );
 	 consvars[nconsvars] = mipdata->ylhs[i];
@@ -1001,7 +1001,7 @@ SCIP_RETCODE createSubscip(
 	 ++nconsvars;
       }
       /* if rhs is there */
-      if ( mipdata->yrhs[i] != NULL && ! SCIPisZero(scip, rhs[i]) )
+      if( mipdata->yrhs[i] != NULL && ! SCIPisZero(scip, rhs[i]) )
       {
 	 assert( ! SCIPisInfinity(scip, rhs[i]) );
 	 consvars[nconsvars] = mipdata->yrhs[i];
@@ -1011,10 +1011,10 @@ SCIP_RETCODE createSubscip(
       assert( nconsvars <= (int) mipdata->n );
    }
    /* next for the columns */
-   for (j = 0; j < ncols; ++j)
+   for( j = 0; j < ncols; ++j )
    {
       /* if ub is there */
-      if ( mipdata->z[j] != NULL && ! SCIPisZero(scip, ub[j]) )
+      if( mipdata->z[j] != NULL && ! SCIPisZero(scip, ub[j]) )
       {
 	 assert( mipdata->colType[j] == colPresent );
 	 assert( ! SCIPisInfinity(scip, ub[j]) );
@@ -1043,16 +1043,16 @@ SCIP_RETCODE createSubscip(
    ++mipdata->m;
 
    /* add primal separation constraint if required */
-   if ( sepadata->primalSeparation )
+   if( sepadata->primalSeparation )
    {
       SCIP_SOL* bestsol;
       bestsol = SCIPgetBestSol(scip);
-      if ( bestsol != NULL )
+      if( bestsol != NULL )
       {
 	 nconsvars = 0;
-	 for (j = 0; j < ncols; ++j)
+	 for( j = 0; j < ncols; ++j )
 	 {
-	    if ( mipdata->alpha[j] != NULL )
+	    if( mipdata->alpha[j] != NULL )
 	    {
 	       SCIP_Real val;
 	       assert( mipdata->colType[j] == colPresent );
@@ -1105,7 +1105,7 @@ SCIP_RETCODE subscipSetParams(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
-   SCIP_Bool*            success             /**< if setting was successfull -> stop solution otherwise */
+   SCIP_Bool*            success             /**< if setting was successful -> stop solution otherwise */
    )
 {
    SCIP* subscip;
@@ -1124,11 +1124,11 @@ SCIP_RETCODE subscipSetParams(
 
    /* determine timelimit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if ( sepadata->timelimit < timelimit )
+   if( sepadata->timelimit < timelimit )
       timelimit = sepadata->timelimit;
-   if ( ! SCIPisInfinity(scip, timelimit) )
+   if( ! SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
-   if ( timelimit > 0.0 )
+   if( timelimit > 0.0 )
    {
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    }
@@ -1140,11 +1140,11 @@ SCIP_RETCODE subscipSetParams(
 
    /* determine memorylimit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if ( sepadata->memorylimit < memorylimit )
+   if( sepadata->memorylimit < memorylimit )
       memorylimit = sepadata->memorylimit;
-   if ( ! SCIPisInfinity(scip, memorylimit) )
+   if( ! SCIPisInfinity(scip, memorylimit) )
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if ( memorylimit > 0.0 )
+   if( memorylimit > 0.0 )
    {
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
    }
@@ -1179,6 +1179,9 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
 
    /* set other heuristics */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
@@ -1292,7 +1295,7 @@ SCIP_RETCODE computeCut(
    *cutrhs = 0.0;
 
    /* calculate the row summation */
-   for (i = 0; i < nrows; ++i)
+   for( i = 0; i < nrows; ++i )
    {
       SCIP_ROW* row;
       SCIP_Real weight;
@@ -1302,35 +1305,35 @@ SCIP_RETCODE computeCut(
       assert( row != NULL );
 
       /* skip modifiable rows and local rows, unless allowed */
-      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+      if( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	 continue;
 
       /* get weight from solution */
       weight = 0.0;
       uselhs = FALSE;
-      if ( mipdata->ylhs[i] != NULL )
+      if( mipdata->ylhs[i] != NULL )
       {
 	 val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
 	 assert( ! SCIPisFeasNegative(subscip, val) );
 
-	 if ( SCIPisFeasPositive(scip, val) )
+	 if( SCIPisFeasPositive(scip, val) )
 	 {
 	    uselhs = TRUE;
 	    weight = -val;
 	 }
       }
-      if ( mipdata->yrhs[i] != NULL )
+      if( mipdata->yrhs[i] != NULL )
       {
 	 val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
 	 assert( ! SCIPisFeasNegative(subscip, val) );
 
 	 /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
-	 if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+	 if( SCIPisFeasGT(scip, val, ABS(weight)) )
 	    weight = val;
       }
 
       /* add row if weight is nonzero */
-      if ( ! SCIPisSumZero(scip, weight) )
+      if( ! SCIPisSumZero(scip, weight) )
       {
 	 SCIP_COL** rowcols;
 	 SCIP_Real* rowvals;
@@ -1339,7 +1342,7 @@ SCIP_RETCODE computeCut(
 	 rowvals = SCIProwGetVals(row);
 
 	 /* add the row coefficients to the sum */
-	 for (j = 0; j < SCIProwGetNLPNonz(row); ++j)
+	 for( j = 0; j < SCIProwGetNLPNonz(row); ++j )
 	 {
 	    int idx;
 	    SCIP_VAR* var;
@@ -1358,18 +1361,18 @@ SCIP_RETCODE computeCut(
 	 }
 
 	 /* compute rhs */
-	 if ( uselhs )
+	 if( uselhs )
 	 {
 	    assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
 	    val = SCIProwGetLhs(row) - SCIProwGetConstant(row);
-	    if ( SCIProwIsIntegral(row) )
+	    if( SCIProwIsIntegral(row) )
 	       val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
 	 }
 	 else
 	 {
 	    assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
 	    val = SCIProwGetRhs(row) - SCIProwGetConstant(row);
-	    if ( SCIProwIsIntegral(row) )
+	    if( SCIProwIsIntegral(row) )
 	       val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
 	 }
 	 (*cutrhs) += weight * val;
@@ -1379,10 +1382,10 @@ SCIP_RETCODE computeCut(
    }
 
    /* add upper bounds */
-   for (j = 0; j < ncols; ++j)
+   for( j = 0; j < ncols; ++j )
    {
       assert( cols[j] != NULL );
-      if ( mipdata->z[j] != NULL )
+      if( mipdata->z[j] != NULL )
       {
 	 assert( mipdata->colType[j] == colPresent );
 
@@ -1390,7 +1393,7 @@ SCIP_RETCODE computeCut(
 	 assert( ! SCIPisFeasNegative(subscip, val) );
 
 	 /* if a bound has been used */
-	 if ( SCIPisSumPositive(subscip, val) )
+	 if( SCIPisSumPositive(subscip, val) )
 	 {
 	    SCIP_VAR* var;
 	    int idx;
@@ -1406,7 +1409,7 @@ SCIP_RETCODE computeCut(
 	    assert( 0 <= idx && idx < nvars );
 
 	    /* check whether variable is complemented */
-	    if ( mipdata->isComplemented[j] )
+	    if( mipdata->isComplemented[j] )
 	    {
 	       SCIP_Real lbnd;
 	       lbnd = SCIPvarGetLbGlobal(var);
@@ -1418,7 +1421,7 @@ SCIP_RETCODE computeCut(
 	       assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
 
 	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
+	       if( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
 	       {
 		  lbnd = SCIPvarGetLbLocal(var);
 		  assert( SCIPisIntegral(scip, lbnd) );
@@ -1437,7 +1440,7 @@ SCIP_RETCODE computeCut(
 	       assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(cols[j])) );
 
 	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
+	       if( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
 	       {
 		  ubnd = SCIPvarGetUbLocal(var);
 		  assert( SCIPisIntegral(scip, ubnd) );
@@ -1452,7 +1455,7 @@ SCIP_RETCODE computeCut(
    }
 
    /* check lower bounds for integral variables */
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
       int pos;
@@ -1462,13 +1465,13 @@ SCIP_RETCODE computeCut(
       pos = SCIPcolGetLPPos(SCIPvarGetCol(var));
 
       /* a variable may has status COLUMN, but the corresponding column may not (yet) be in the LP */
-      if ( pos >= 0 && SCIPvarIsIntegral(var) )
+      if( pos >= 0 && SCIPvarIsIntegral(var) )
       {
 	 assert( pos < ncols );
 	 assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
 
 	 /* check whether variable is complemented */
-	 if ( mipdata->isComplemented[pos] )
+	 if( mipdata->isComplemented[pos] )
 	 {
 	    assert( ! mipdata->isShifted[pos] );
 	    /* if the variable is complemented, the multiplier for the upper bound arises from the
@@ -1478,7 +1481,7 @@ SCIP_RETCODE computeCut(
 	    assert( ! SCIPisFeasNegative(scip, val) );
 
 	    /* only if variable needs to be rounded */
-	    if ( SCIPisSumPositive(scip, val) )
+	    if( SCIPisSumPositive(scip, val) )
 	    {
 	       SCIP_Real ubnd;
 	       ubnd = SCIPvarGetUbGlobal(var);
@@ -1489,7 +1492,7 @@ SCIP_RETCODE computeCut(
 	       assert( ! SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || ! SCIPisInfinity(scip, ubnd) );
 
 	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
+	       if( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ubnd )
 	       {
 		  ubnd = SCIPvarGetUbLocal(var);
 		  assert( SCIPisIntegral(scip, ubnd) );
@@ -1500,7 +1503,7 @@ SCIP_RETCODE computeCut(
 	       cutcoefs[j] = SCIPfeasCeil(scip, cutcoefs[j]);
 
 	       /* correct rhs */
-	       if ( ! SCIPisSumZero(scip, ubnd) )
+	       if( ! SCIPisSumZero(scip, ubnd) )
 		  *cutrhs += ubnd * val;
 	    }
 	 }
@@ -1511,7 +1514,7 @@ SCIP_RETCODE computeCut(
 	    assert( ! SCIPisFeasNegative(scip, val) );
 
 	    /* only if variable needs to be rounded */
-	    if ( SCIPisSumPositive(scip, val) )
+	    if( SCIPisSumPositive(scip, val) )
 	    {
 	       SCIP_Real lbnd;
 	       lbnd = SCIPvarGetLbGlobal(var);
@@ -1522,7 +1525,7 @@ SCIP_RETCODE computeCut(
 	       assert( ! SCIPisInfinity(scip, -lbnd) || ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) );
 
 	       /* if allowed, try to use stronger local bound */
-	       if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
+	       if( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lbnd )
 	       {
 		  lbnd = SCIPvarGetLbLocal(var);
 		  assert( SCIPisIntegral(scip, lbnd) );
@@ -1533,7 +1536,7 @@ SCIP_RETCODE computeCut(
 	       cutcoefs[j] = SCIPfeasFloor(scip, cutcoefs[j]);
 
 	       /* correct rhs */
-	       if ( ! SCIPisSumZero(scip, lbnd) )
+	       if( ! SCIPisSumZero(scip, lbnd) )
 		  *cutrhs -= lbnd * val;
 	    }
 	 }
@@ -1559,7 +1562,7 @@ SCIP_RETCODE createCGCutsDirect(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
-   unsigned int*         nGen                /**< number of generated cuts */
+   unsigned int*         ngen                /**< number of generated cuts */
 )
 {
    SCIP* subscip;
@@ -1584,23 +1587,23 @@ SCIP_RETCODE createCGCutsDirect(
    assert( scip != NULL );
    assert( sepadata != NULL );
    assert( mipdata != NULL );
-   assert( nGen != NULL );
+   assert( ngen != NULL );
 
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
    SCIPdebugMessage("Trying to generate cuts directly ...\n");
-   *nGen = 0;
+   *ngen = 0;
 
    /* check if solving was successful and get solutions */
    stage = SCIPgetStage(subscip);
-   if ( stage == SCIP_STAGE_SOLVING || stage == SCIP_STAGE_SOLVED )
+   if( stage == SCIP_STAGE_SOLVING || stage == SCIP_STAGE_SOLVED )
       nsols = SCIPgetNSols(subscip);
    else
       nsols = 0;
 
    /* only if solutions have been found */
-   if ( nsols == 0 )
+   if( nsols == 0 )
       return SCIP_OKAY;
 
    sols = SCIPgetSols(subscip);
@@ -1618,16 +1621,16 @@ SCIP_RETCODE createCGCutsDirect(
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
 
    /* get solution values */
-   for (k = 0; k < nvars; ++k)
+   for( k = 0; k < nvars; ++k )
    {
-      if ( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_COLUMN )
+      if( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_COLUMN )
 	 varsolvals[k] = SCIPvarGetLPSol(vars[k]);
       else
 	 varsolvals[k] = 0.0;
    }
 
    /* loop through solutions found */
-   for (s = 0; s < nsols; ++s)
+   for( s = 0; s < nsols; ++s )
    {
       SCIP_SOL* sol;
       SCIP_Bool localrowsused;
@@ -1640,7 +1643,7 @@ SCIP_RETCODE createCGCutsDirect(
 
       /* compute activity */
       cutact = 0.0;
-      for (k = 0; k < nvars; ++k)
+      for( k = 0; k < nvars; ++k )
 	 cutact += cutcoefs[k] * varsolvals[k];
 
       SCIPdebugMessage("act=%f, rhs=%f\n", cutact, cutrhs);
@@ -1659,9 +1662,9 @@ SCIP_RETCODE createCGCutsDirect(
 	 SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) );
 
 	 SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
-	 for (j = 0; j < mipdata->ncols; ++j)
+	 for( j = 0; j < mipdata->ncols; ++j )
 	 {
-	    if ( mipdata->colType[j] == colPresent )
+	    if( mipdata->colType[j] == colPresent )
 	    {
 	       int idx;
 	       assert( mipdata->alpha[j] != NULL );
@@ -1673,7 +1676,7 @@ SCIP_RETCODE createCGCutsDirect(
 	    }
 	    else
 	    {
-	       if ( mipdata->colType[j] == colContinuous && mipdata->isShifted[j] )
+	       if( mipdata->colType[j] == colContinuous && mipdata->isShifted[j] )
 		  contVarShifted = TRUE;
 	    }
 	 }
@@ -1686,7 +1689,7 @@ SCIP_RETCODE createCGCutsDirect(
       #endif
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
-      if ( SCIPisFeasGT(scip, cutact, cutrhs) )
+      if( SCIPisFeasGT(scip, cutact, cutrhs) )
       {
 	 SCIP_Real cutnorm;
 	 int cutlen;
@@ -1697,12 +1700,12 @@ SCIP_RETCODE createCGCutsDirect(
 
 	 SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
 
-	 if ( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
+	 if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
 	 {
 	    SCIP_ROW* cut;
 
 	    /* create the cut */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *nGen);
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 	    /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
@@ -1714,19 +1717,21 @@ SCIP_RETCODE createCGCutsDirect(
 	       SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 	    /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
 	    SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-	    if ( !cutislocal )
-	       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-	    ++(*nGen);
+	    if( !cutislocal )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+	    }
+            ++(*ngen);
 
 	    /* release the row */
 	    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 	 }
-	 else if ( sepadata->useCutpool && ! cutislocal )
+	 else if( sepadata->useCutpool && ! cutislocal )
 	 {
 	    SCIP_ROW* cut;
 
 	    /* create the cut for the pool */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *nGen);
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 	    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
@@ -1752,7 +1757,7 @@ SCIP_RETCODE createCGCutsCMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
-   unsigned int*         nGen                /**< number of generated cuts */
+   unsigned int*         ngen                /**< number of generated cuts */
 )
 {
    SCIP* subscip;
@@ -1783,23 +1788,23 @@ SCIP_RETCODE createCGCutsCMIR(
    assert( scip != NULL );
    assert( sepadata != NULL );
    assert( mipdata != NULL );
-   assert( nGen != NULL );
+   assert( ngen != NULL );
 
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
    SCIPdebugMessage("Trying to generate cuts via CMIR routines ...\n");
-   *nGen = 0;
+   *ngen = 0;
 
    /* check if solving was successful and get solutions */
    stage = SCIPgetStage(subscip);
-   if ( stage == SCIP_STAGE_SOLVING || stage == SCIP_STAGE_SOLVED )
+   if( stage == SCIP_STAGE_SOLVING || stage == SCIP_STAGE_SOLVED )
       nsols = SCIPgetNSols(subscip);
    else
       nsols = 0;
 
    /* only if solutions have been found */
-   if ( nsols == 0 )
+   if( nsols == 0 )
       return SCIP_OKAY;
 
    sols = SCIPgetSols(subscip);
@@ -1826,40 +1831,40 @@ SCIP_RETCODE createCGCutsCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
 
    /* get solution values */
-   for (k = 0; k < nvars; ++k)
+   for( k = 0; k < nvars; ++k )
    {
-      if ( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_COLUMN )
+      if( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_COLUMN )
 	 varsolvals[k] = SCIPvarGetLPSol(vars[k]);
       else
 	 varsolvals[k] = 0.0;
    }
 
    /* loop through solutions found */
-   for (s = 0; s < nsols; ++s)
+   for( s = 0; s < nsols; ++s )
    {
       SCIP_SOL* sol;
       sol = sols[s];
 
       /* generate weights */
-      for (k = 0; k < nrows; ++k)
+      for( k = 0; k < nrows; ++k )
       {
 	 SCIP_Real val;
 
 	 weights[k] = 0;
-	 if ( mipdata->ylhs[k] != NULL )
+	 if( mipdata->ylhs[k] != NULL )
 	 {
 	    val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[k]);
 	    assert( ! SCIPisFeasNegative(subscip, val) );
 
-	    if ( SCIPisFeasPositive(subscip, val) )
+	    if( SCIPisFeasPositive(subscip, val) )
 	       weights[k] = -val;
 	 }
-	 if ( mipdata->yrhs[k] != NULL )
+	 if( mipdata->yrhs[k] != NULL )
 	 {
 	    val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[k]);
 	    assert( ! SCIPisFeasNegative(subscip, val) );
 
-	    if ( SCIPisFeasPositive(subscip, val) )
+	    if( SCIPisFeasPositive(subscip, val) )
 	       weights[k] = val;  /* not both should be positive */
 	 }
       }
@@ -1874,7 +1879,7 @@ SCIP_RETCODE createCGCutsCMIR(
       SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
-      if ( success && SCIPisFeasGT(scip, cutact, cutrhs) )
+      if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
       {
 	 SCIP_Real cutnorm;
 	 int cutlen;
@@ -1883,12 +1888,12 @@ SCIP_RETCODE createCGCutsCMIR(
 	 SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
 	       cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-	 if ( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
+	 if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
 	 {
 	    SCIP_ROW* cut;
 
 	    /* create the cut */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *nGen);
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 	    /* SCIPdebug(SCIPprintRow(scip, cut, NULL)); */
@@ -1904,9 +1909,9 @@ SCIP_RETCODE createCGCutsCMIR(
 	    success = TRUE;
 #endif
 
-	    if ( success )
+	    if( success )
 	    {
-	       if ( !SCIPisCutEfficacious(scip, NULL, cut) )
+	       if( !SCIPisCutEfficacious(scip, NULL, cut) )
 	       {
 		  SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
 		     name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
@@ -1923,9 +1928,11 @@ SCIP_RETCODE createCGCutsCMIR(
 		     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 		  /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
 		  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-		  if ( !cutislocal )
-		     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-		  ++(*nGen);
+		  if( !cutislocal )
+		  {
+                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+		  }
+                  ++(*ngen);
 	       }
 	    }
 	    else
@@ -1969,9 +1976,9 @@ SCIP_RETCODE freeSubscip(
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
-   for (j = 0; j < mipdata->ncols; ++j)
+   for( j = 0; j < mipdata->ncols; ++j )
    {
-      if ( mipdata->colType == colPresent )
+      if( mipdata->colType == colPresent )
       {
 	 assert( mipdata->alpha[j] != NULL );
 	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->alpha[j])) );
@@ -1981,21 +1988,30 @@ SCIP_RETCODE freeSubscip(
    SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->beta)) );
    SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->fracbeta)) );
 
-   for (i = 0; i < mipdata->nrows; ++i)
+   for( i = 0; i < mipdata->nrows; ++i )
    {
-      if ( mipdata->ylhs[i] != NULL )
+      if( mipdata->ylhs[i] != NULL )
+      {
 	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->ylhs[i])) );
-      if ( mipdata->yrhs[i] != NULL )
-	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->yrhs[i])) );
-   }
-   for (j = 0; j < mipdata->ncols; ++j)
-   {
-      if ( mipdata->z[j] != NULL )
-	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->z[j])) );
+      }
+      if( mipdata->yrhs[i] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->yrhs[i])) );
+      }
    }
 
-   if (mipdata->subscip != NULL)
+   for( j = 0; j < mipdata->ncols; ++j )
+   {
+      if( mipdata->z[j] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->z[j])) );
+      }
+   }
+
+   if( mipdata->subscip != NULL )
+   {
       SCIP_CALL( SCIPfree(&(mipdata->subscip)) );
+   }
 
    SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->nrows);
@@ -2078,41 +2094,49 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    int ncalls;
    int ncols;
    int nrows;
-   unsigned int nGen;
+   unsigned int ngen;
 
    SCIP_Bool success;
 
-   assert( scip != NULL );
-   assert( sepa != NULL ) ;
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   nGen = 0;
+   ngen = 0;
 
    sepadata = SCIPsepaGetData(sepa);
-   assert( sepadata != NULL );
+   assert(sepadata != NULL);
 
    depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    /* only call separator a given number of times at each node */
-   if (  (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
-      || (depth > 0  && sepadata->maxrounds >= 0     && ncalls >= sepadata->maxrounds) )
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
    /* only call separator, if an optimal LP solution is at hand */
-   if ( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* skip separation if there are continuous variables and required */
-   if ( SCIPgetNContVars(scip) > 0 && sepadata->onlyintvars )
+   /* skip separation if there are continuous variables, but only integers required */
+   if( SCIPgetNContVars(scip) > 0 && sepadata->onlyintvars )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
    /* get LP data */
    ncols = SCIPgetNLPCols(scip);
    nrows = SCIPgetNLPRows(scip);
-   if ( ncols <= NCOLSTOOSMALL || nrows <= NROWSTOOSMALL )
+   if( ncols <= NCOLSTOOSMALL || nrows <= NROWSTOOSMALL )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -2139,7 +2163,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    /* set parameters */
    SCIP_CALL( subscipSetParams(scip, sepadata, mipdata, &success) );
 
-   if ( success )
+   if( success && !SCIPisStopped(scip) )
    {
       /* solve subscip */
       SCIP_CALL( SCIPsolve(mipdata->subscip) );
@@ -2147,18 +2171,22 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
       /* print statistics in debug mode */
       SCIPdebug( SCIP_CALL( SCIPprintStatistics(mipdata->subscip, NULL) ) );
 
-      if ( sepadata->usecmir )
-	 SCIP_CALL( createCGCutsCMIR(scip, sepadata, mipdata, &nGen) );
+      if( sepadata->usecmir )
+      {
+         SCIP_CALL( createCGCutsCMIR(scip, sepadata, mipdata, &ngen) );
+      }
       else
-	 SCIP_CALL( createCGCutsDirect(scip, sepadata, mipdata, &nGen) );
+      {
+         SCIP_CALL( createCGCutsDirect(scip, sepadata, mipdata, &ngen) );
+      }
    }
 
    SCIP_CALL( freeSubscip(scip, mipdata) );
    SCIPfreeBlockMemory(scip, &mipdata);
 
-   SCIPdebugMessage("Found %u CG-cuts.\n", nGen);
+   SCIPdebugMessage("Found %u CG-cuts.\n", ngen);
 
-   if ( nGen > 0 )
+   if( ngen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;

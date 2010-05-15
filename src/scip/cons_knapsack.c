@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.196 2010/05/12 08:27:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.197 2010/05/15 12:12:26 bzfberth Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -6727,6 +6727,12 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool sepacardinality;
+
+   SCIP_Real loclowerbound;
+   SCIP_Real glblowerbound;
+   SCIP_Real cutoffbound;
+   SCIP_Real maxbound;
+  
    int depth;
    int nrounds;
    int sepafreq;
@@ -6758,19 +6764,12 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
       && ((sepacardfreq == 0 && depth == 0) || (sepacardfreq >= 1 && (depth % sepacardfreq == 0)));
 
    /* check dual bound to see if we want to produce knapsack cuts at this node */
-   if( sepacardinality )
-   {
-      SCIP_Real loclowerbound;
-      SCIP_Real glblowerbound;
-      SCIP_Real cutoffbound;
-      SCIP_Real maxbound;
-
-      loclowerbound = SCIPgetLocalLowerbound(scip);
-      glblowerbound = SCIPgetLowerbound(scip);
-      cutoffbound = SCIPgetCutoffbound(scip);
-      maxbound = glblowerbound + conshdlrdata->maxcardbounddist * (cutoffbound - glblowerbound);
-      sepacardinality = SCIPisLE(scip, loclowerbound, maxbound);
-   }
+   loclowerbound = SCIPgetLocalLowerbound(scip);
+   glblowerbound = SCIPgetLowerbound(scip);
+   cutoffbound = SCIPgetCutoffbound(scip);
+   maxbound = glblowerbound + conshdlrdata->maxcardbounddist * (cutoffbound - glblowerbound);
+   sepacardinality = sepacardinality && SCIPisLE(scip, loclowerbound, maxbound);
+   sepacardinality = sepacardinality && (SCIPgetNLPBranchCands(scip) > 0);
 
    /* get the maximal number of cuts allowed in a separation round */
    maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
