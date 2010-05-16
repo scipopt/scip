@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.51 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.52 2010/05/16 08:01:57 bzfkocht Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -1018,8 +1018,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( usestartsol )
    {
       startvalssize_ = 1024;
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvals_,startvalssize_) );
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvars_,startvalssize_) );
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &startvals_, startvalssize_) );
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &startvars_, startvalssize_) );
    }
 
    /* get the parameter string */
@@ -1115,7 +1115,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
          readerror_ = TRUE;
 
       /* free argument memory */
-      for( i = argc-1; i >= 1; --i )
+      for( i = argc - 1; i >= 1; --i )
       {
          SCIPfreeBufferArray(scip, &argv[i]);
       }
@@ -1136,20 +1136,25 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
    if( usestartsol )
    {
-      /* transform the problem such that adding primal solutions is possible */
-      SCIP_CALL( SCIPtransformProb(scip) );
-      SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
-      for( i = 0; i < nstartvals_; i++ )
+      /* if read failed, transformProb might fail also, due to lack of a Prob
+       */
+      if( !readerror_ )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
-         SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
-      }
+         /* transform the problem such that adding primal solutions is possible */
+         SCIP_CALL( SCIPtransformProb(scip) );
+         SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
+         for( i = 0; i < nstartvals_; i++ )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
+            SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
+         }
    
-      success = FALSE;
-      SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
-      if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
-
+         success = FALSE;
+         SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
+         if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
+      }
+      
       SCIPfreeMemoryArray(scip_,&startvals_);
       SCIPfreeMemoryArray(scip_,&startvars_);
       nstartvals_ = 0;
