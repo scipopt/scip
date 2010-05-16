@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.99 2010/05/11 17:51:38 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.100 2010/05/16 21:50:37 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -27,7 +27,8 @@
 #define AUTOPRICING_ITERSWITCH          1000 /**< start with devex and switch to steepest edge after this many iterations */
 #define STRONGBRANCH_RESTOREBASIS       true /**< if true then in SCIPlpiStrongbranch() we restore the basis after the
                                               *   down branch and after the up branch; if false only after the end of a
-                                              *   strong branching phase */
+                                              *   strong branching phase, which however seems to mostly increase strong
+                                              *   branching time and iterations */
 
 
 /* remember the original value of the SCIP_DEBUG define and undefine it */

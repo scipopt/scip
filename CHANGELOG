@@ -43,7 +43,7 @@ interface:
   w.r.t. pseudo cost branching for relax candidates
 - new methods SCIPsetEmphasisFeasibility() which sets parameter to detect feasibility fast
 - lpi_spx.cpp: implemented option to restore basis only after entire strong branching phase instead of after each strong branch
-  (off, because it appears to cost time)
+  (off, because it mostly appears to increase strong branching time and iterations)
 - NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into src/nlpi 
 - NLPIs can now be managed like other SCIP plugins, i.e., they can be included into the SCIP core and accessed by methods
   SCIPincludeNlpi(), SCIPfindNlpi(), SCIPgetNNlpis(), SCIPgetNlpis(), SCIPsetNlpiPriority()
