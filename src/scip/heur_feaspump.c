@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.64 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.65 2010/05/17 12:53:37 bzfhende Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -522,7 +522,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       /* if the rounded solution is feasible and better, add it to SCIP */ 
       if( success )
       {
-         SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
          if( success )
             *result = SCIP_FOUNDSOL; 
       }
@@ -699,7 +699,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    if( nfracs == 0 && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
    }

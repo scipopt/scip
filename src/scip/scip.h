@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.373 2010/05/06 09:13:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.374 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5296,6 +5296,7 @@ extern
 SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -5307,6 +5308,7 @@ extern
 SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -5318,6 +5320,7 @@ extern
 SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
@@ -5328,6 +5331,7 @@ extern
 SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */

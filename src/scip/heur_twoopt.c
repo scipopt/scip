@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.9 2010/05/10 13:23:06 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.10 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -1543,7 +1543,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
        * try if new working solution is feasible in original problem */
       SCIP_Bool success;
 
-      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
       {
          SCIPdebugMessage("found feasible shifted solution:\n");
@@ -1627,7 +1627,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
          /* check solution for feasibility */
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
 
          if( success )
          {

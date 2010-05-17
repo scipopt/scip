@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.59 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.60 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -272,6 +272,7 @@ SCIP_RETCODE SCIPsolCheck(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */

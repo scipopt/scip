@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.92 2010/04/20 12:40:01 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.93 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -760,6 +760,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -784,7 +785,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, insertpos) )
    {
       /* check solution for feasibility */
-      SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, prob, checkbounds, checkintegrality, checklprows, &feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, prob, printreason, checkbounds, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -818,6 +819,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< should all the reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -844,7 +846,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, *sol, insertpos) )
    {
       /* check solution for feasibility */
-      SCIP_CALL( SCIPsolCheck(*sol, blkmem, set, stat, prob, checkbounds, checkintegrality, checklprows, &feasible) );
+      SCIP_CALL( SCIPsolCheck(*sol, blkmem, set, stat, prob, printreason, checkbounds, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -880,6 +882,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
@@ -892,7 +895,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
 
    /* add solution to solution storage */
    SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, primal->currentsol,
-         FALSE, checkintegrality, checklprows, stored) );
+         printreason, FALSE, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }

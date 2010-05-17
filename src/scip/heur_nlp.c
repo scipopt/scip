@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.61 2010/05/11 10:11:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.62 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1016,7 +1016,7 @@ SCIP_RETCODE SCIPapplyNlpHeur(
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
       SCIP_CALL( SCIPsetSolVals(scip, sol, heurdata->nvars, heurdata->var_nlp2scip, primals) );
 
-      SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, &feasible) );
+      SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
 
       if( feasible )
       {  /* SCIP agrees that solution is feasible (yippi!), so we add it */ 
@@ -1057,7 +1057,7 @@ SCIP_RETCODE SCIPapplyNlpHeur(
             /* print the infeasibilities to stdout */
             SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
 #endif
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
             if( stored )
             {
                SCIPdebugMessage("SCIP stored solution\n");

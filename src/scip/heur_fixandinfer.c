@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.29 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.30 2010/05/17 12:53:37 bzfhende Exp $"
 
 /**@file   heur_fixandinfer.c
  * @ingroup PRIMALHEURISTICS
@@ -247,7 +247,7 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
       success = FALSE;
 
       /* try to add solution to SCIP */
-      SCIP_CALL( SCIPtryCurrentSol(scip, heur, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtryCurrentSol(scip, heur, FALSE, FALSE, TRUE, &success) );
 
       if( success )
       {

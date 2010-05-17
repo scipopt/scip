@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.13 2010/04/08 18:38:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.14 2010/05/17 12:53:38 bzfhende Exp $"
 
 
 /**@file   heur_trivial.c
@@ -163,7 +163,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    }
    
    /* try lower bound solution */
-   SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, TRUE, TRUE, &success) );
+   SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
@@ -174,7 +174,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    }
 
    /* try upper bound solution */   
-   SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, TRUE, TRUE, &success) );
+   SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
@@ -187,7 +187,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    /* try zero solution */
    if( zerovalid )
    {
-      SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, TRUE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, FALSE, TRUE, TRUE, &success) );
       
       if( success )
       {
@@ -199,7 +199,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    }
 
    /* try lock solution */
-   SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, TRUE, TRUE, &success) );
+   SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {

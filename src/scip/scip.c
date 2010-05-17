@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.564 2010/05/15 12:12:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.565 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11176,7 +11176,7 @@ SCIP_RETCODE SCIPreadSol(
    if( !error )
    {
       /* add and free the solution */
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, &stored) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 
       /* display result */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
@@ -14057,7 +14057,7 @@ SCIP_RETCODE checkSolOrig(
    /* check bounds */
    if( checkbounds )
    {
-      for( v = 0; v < scip->origprob->nvars && *feasible; ++v )
+      for( v = 0; v < scip->origprob->nvars && (*feasible || printreason); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -14130,6 +14130,7 @@ SCIP_RETCODE checkSolOrig(
 SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             printreason,        /**< should all reasons of violation be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -14155,7 +14156,7 @@ SCIP_RETCODE SCIPtrySol(
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, FALSE, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
@@ -14167,7 +14168,7 @@ SCIP_RETCODE SCIPtrySol(
    else
    {
       SCIP_CALL( SCIPprimalTrySol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree,
-            scip->lp, scip->eventfilter, sol, checkbounds, checkintegrality, checklprows, stored) );
+            scip->lp, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
    }
 
    return SCIP_OKAY;
@@ -14177,6 +14178,7 @@ SCIP_RETCODE SCIPtrySol(
 SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -14203,7 +14205,7 @@ SCIP_RETCODE SCIPtrySolFree(
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem 
       *  including modifiable constraints */
-      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, FALSE, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
@@ -14218,7 +14220,7 @@ SCIP_RETCODE SCIPtrySolFree(
    else
    {
       SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->tree, scip->lp, scip->eventfilter, sol, checkbounds, checkintegrality, checklprows, stored) );
+            scip->tree, scip->lp, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
    }
 
    return SCIP_OKAY;
@@ -14228,6 +14230,7 @@ SCIP_RETCODE SCIPtrySolFree(
 SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
@@ -14236,7 +14239,7 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP_CALL( checkStage(scip, "SCIPtryCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPprimalTryCurrentSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-         scip->tree, scip->lp, scip->eventfilter, heur, checkintegrality, checklprows, stored) );
+         scip->tree, scip->lp, scip->eventfilter, heur, printreason, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }
@@ -14245,6 +14248,7 @@ SCIP_RETCODE SCIPtryCurrentSol(
 SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -14259,11 +14263,11 @@ SCIP_RETCODE SCIPcheckSol(
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
-      SCIP_CALL( checkSolOrig(scip, sol, feasible, FALSE, FALSE, checkbounds, checkintegrality, checklprows, FALSE) );
+      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, FALSE) );
    }
    else
    {
-      SCIP_CALL( SCIPsolCheck(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+      SCIP_CALL( SCIPsolCheck(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, printreason,
             checkbounds, checkintegrality, checklprows, feasible) );
    }
 

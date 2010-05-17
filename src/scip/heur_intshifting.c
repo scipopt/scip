@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.14 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.15 2010/05/17 12:53:37 bzfhende Exp $"
 
 /**@file   heur_intshifting.c
  * @ingroup PRIMALHEURISTICS
@@ -973,7 +973,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
           * neither integrality nor feasibility of LP rows has to be checked, because this is already
           * done in the intshifting heuristic itself and due to the LP resolve
           */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
          
          if( stored )
          {

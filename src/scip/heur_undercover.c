@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.57 2010/05/12 10:08:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.58 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1732,7 +1732,7 @@ SCIP_RETCODE SCIPapplyUndercover(
       {
          /* try to add new solution to scip */
          SCIP_CALL( copySol(scip, subscip, subvars, subsols[i], &newsol, &success) );
-         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, &success) );
       }
 
       if( success )

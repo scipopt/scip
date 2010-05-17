@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.20 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.21 2010/05/17 12:53:37 bzfhende Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -343,7 +343,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPsetSolVals( scip, newsol, nvars, vars, subsolvals ) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree( scip, &newsol, TRUE, TRUE, TRUE, success ) );
+   SCIP_CALL( SCIPtrySolFree( scip, &newsol, FALSE, TRUE, TRUE, TRUE, success ) );
    if( *success )
    {
       SCIPdebugMessage("DINS successfully found new solution\n");

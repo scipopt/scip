@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.52 2010/05/16 08:01:57 bzfkocht Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.53 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -1150,7 +1150,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
          }
    
          success = FALSE;
-         SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
+         SCIP_CALL( SCIPtrySolFree(scip, &startsol, FALSE, TRUE, TRUE, TRUE, &success) );
          if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
       }

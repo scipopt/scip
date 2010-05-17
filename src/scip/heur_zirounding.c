@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_zirounding.c,v 1.6 2010/05/05 17:42:10 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_zirounding.c,v 1.7 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   heur_zirounding.c
  * @ingroup PRIMALHEURISTICS
@@ -582,7 +582,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    if( currentlpcands == 0 )
    {           
       SCIP_Bool stored;
-      SCIP_CALL(SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, &stored));
+      SCIP_CALL(SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, &stored));
       if ( stored )
       {
 #ifdef SCIP_DEBUG

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.30 2010/05/11 09:14:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.31 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -943,7 +943,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 	 for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
          {
             assert(first_sols[i] != NULL);
-            SCIP_CALL( SCIPtrySol(scip, first_sols[i], TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, first_sols[i], FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
 	       *result = SCIP_FOUNDSOL; 
          }
@@ -954,7 +954,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                break;
             generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
             SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
-            SCIP_CALL( SCIPtrySol(scip, sol, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, TRUE, &success) );
             if( success )
 	       *result = SCIP_FOUNDSOL; 
          }

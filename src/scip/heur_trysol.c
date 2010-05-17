@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.9 2010/05/11 18:23:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.10 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -157,7 +157,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
 #ifdef SCIP_DEBUG
    obj = SCIPgetSolOrigObj(scip, heurdata->sol);
 #endif
-   SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sol, TRUE, TRUE, TRUE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sol, FALSE, TRUE, TRUE, TRUE, &stored) );
    assert( heurdata->sol == NULL );
 
    if ( stored )

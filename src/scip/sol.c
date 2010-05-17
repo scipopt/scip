@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.92 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.93 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -981,6 +981,7 @@ SCIP_RETCODE SCIPsolCheck(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -1005,7 +1006,7 @@ SCIP_RETCODE SCIPsolCheck(
    {
       int v;
 
-      for( v = 0; v < prob->nvars && *feasible; ++v )
+      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -1020,10 +1021,14 @@ SCIP_RETCODE SCIPsolCheck(
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
             *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
+            
+            if( printreason && SCIPsetIsFeasLT(set, solval, lb) && SCIPsetIsFeasGT(set, solval, ub) )
+               printf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
          }
 
 #ifdef SCIP_DEBUG
-         if( !(*feasible) )
+         if( !(*feasible) && !printreason )
          {
             SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
@@ -1032,10 +1037,10 @@ SCIP_RETCODE SCIPsolCheck(
       }
    }
 
-   for( h = 0; h < set->nconshdlrs && *feasible; ++h )
+   for( h = 0; h < set->nconshdlrs && (*feasible || printreason); ++h )
    {
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
-            checkintegrality, checklprows, FALSE, &result) );
+            checkintegrality, checklprows, printreason, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
 #ifdef SCIP_DEBUG

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.295 2010/05/15 12:12:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.296 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2750,7 +2750,7 @@ SCIP_RETCODE solveNode(
          SCIP_SOL* sol;
 
          SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
-         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          *infeasible = TRUE;
       }
@@ -2994,7 +2994,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol,
-               TRUE, TRUE, TRUE, &foundsol) );
+               FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
@@ -3017,7 +3017,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol,
-               TRUE, TRUE, TRUE, &foundsol) );
+               FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.16 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.17 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   heur_shifting.c
  * @ingroup PRIMALHEURISTICS
@@ -820,7 +820,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
        * done in the shifting heuristic itself; however, we better check feasibility of LP rows,
        * because of numerical problems with activity updating
        */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
 
       if( stored )
       {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.37 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.38 2010/05/17 12:53:38 bzfhende Exp $"
 
 /**@file   heur_simplerounding.c
  * @ingroup PRIMALHEURISTICS
@@ -256,7 +256,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
        * neither integrality nor feasibility of LP rows has to be checked, because all fractional
        * variables were already moved in feasible direction to the next integer
        */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &stored) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
 
       if( stored )
       {
