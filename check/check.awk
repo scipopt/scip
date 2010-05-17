@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.84 2010/04/28 15:06:21 bzfwanie Exp $
+# $Id: check.awk,v 1.85 2010/05/17 16:48:33 bzfhende Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -46,6 +46,7 @@ BEGIN {
    useshortnames = 1;   # should problem name be truncated to fit into column?
    writesolufile = 0;   # should a solution file be created from the results
    NEWSOLUFILE = "new_solufile.solu";
+   printsoltimes = 0;
    infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
@@ -58,17 +59,31 @@ BEGIN {
    printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
    printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
    printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
-   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") > TEXFILE;
+   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") >TEXFILE;
    printf("\\midrule\n}\n")                                         >TEXFILE;
    printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
    printf("\\multicolumn{8}{r} \\; continue next page \\\\\n")      >TEXFILE;
    printf("\\bottomrule\n}\n")                                      >TEXFILE;
    printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
    printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
-  
-   printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
-   printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
-   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
+
+   tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
+   tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
+   tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
+
+   if( printsoltimes ) {  
+       tablehead1 = tablehead1"----------+---------+";
+       tablehead2 = tablehead2" To First | To Best |";
+       tablehead3 = tablehead3"----------+---------+";
+   } 
+
+   tablehead1 = tablehead1"--------\n";
+   tablehead2 = tablehead2"       \n";
+   tablehead3 = tablehead3"--------\n";
+   
+   printf(tablehead1);
+   printf(tablehead2);
+   printf(tablehead3);
 
    nprobs = 0;
    sbab = 0;
@@ -76,8 +91,12 @@ BEGIN {
    ssim = 0;
    ssblp = 0;
    stottime = 0.0;
+   stimetofirst = 0.0;
+   stimetobest = 0.0;
    nodegeom = 0.0;
    timegeom = 0.0;
+   timetofirstgeom = 0.0;
+   timetobestgeom = 0.0;
    sblpgeom = 0.0;
    conftimegeom = 0.0;
    basictimegeom = 0.0;
@@ -88,6 +107,8 @@ BEGIN {
    shiftedconftimegeom = timegeomshift;
    shiftedbasictimegeom = timegeomshift;
    shiftedoverheadtimegeom = timegeomshift;
+   shiftedtimetofirstgeom = timegeomshift;
+   shiftedtimetobestgeom = timegeomshift;
    timeouttime = 0.0;
    timeouts = 0;
    failtime = 0.0;
@@ -280,22 +301,28 @@ BEGIN {
 /solution limit reached/ { sollimitreached = 1; }
 /memory limit reached/ { memlimitreached = 1; }
 /problem is solved/    { timeout = 0; }
+/^  First Solution   :/{
+    timetofirst = $11;
+}
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
    {
       pb = +infty;
       db = +infty;
       feasible = 0;
+      timetobest = -1;
    }
    else if( $4 == "-" )
    {
       pb = +infty;
       feasible = 0;
+      timetobest = -1;
    }
    else
    {
       pb = $4;
       feasible = 1;
+      timetobest=$11;
    }
 }
 /^  Dual Bound       :/ { 
@@ -396,9 +423,17 @@ BEGIN {
       if( timelimit > 0.0 )
          tottime = min(tottime, timelimit);
 
+      if( aborted || timetobest < 0 )
+      {
+	  timetofirst = tottime;
+	  timetobest = tottime;
+      } 
+
       lps = primlps + duallps;
       simplex = primiter + dualiter;
       stottime += tottime;
+      stimetofirst += timetofirst;
+      stimetobest += timetobest;
       sbab += bbnodes;
       slp += lps;
       ssim += simplex;
@@ -420,6 +455,11 @@ BEGIN {
       shiftedconftimegeom = shiftedconftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedoverheadtimegeom = shiftedoverheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedbasictimegeom = shiftedbasictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
+
+      timetobestgeom = timetobestgeom^((nprobs-1)/nprobs) * max(timetobest,1.0)^(1.0/nprobs);
+      timetofirstgeom = timetofirstgeom^((nprobs-1)/nprobs) * max(timetofirst,1.0)^(1.0/nprobs);
+      shiftedtimetofirstgeom = shiftedtimetofirstgeom^((nprobs-1)/nprobs) * max(timetofirst + timegeomshift, 1.0)^(1.0/nprobs);
+      shiftedtimetobestgeom = shiftedtimetobestgeom^((nprobs-1)/nprobs) * max(timetobest + timegeomshift, 1.0)^(1.0/nprobs);
 
       status = "";
       if( readerror )
@@ -619,9 +659,14 @@ BEGIN {
       if( !onlypresolvereductions || origcons > cons || origvars > vars )
       {
          printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-                pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f %s\n",
-		shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
+                pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
+         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+		shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
+
+	 if( printsoltimes )
+	     printf(" %9.1f %9.1f ", timetofirst, timetobest);
+
+	 printf("%s\n", status);
       }
 
       # PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
@@ -652,6 +697,8 @@ END {
    shiftedconftimegeom -= timegeomshift;
    shiftedoverheadtimegeom -= timegeomshift;
    shiftedbasictimegeom -= timegeomshift;
+   shiftedtimetofirstgeom -= timegeomshift;
+   shiftedtimetobestgeom -= timegeomshift;
 
    printf("\\midrule\n")                                                 >TEXFILE;
    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
@@ -660,16 +707,38 @@ END {
           "Geom. Mean", nodegeom, timegeom) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
           "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
-   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf(tablehead3);
    printf("\n");
-   printf("------------------------------[Nodes]---------------[Time]------\n");
-   printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
-   printf("----------------------------------------------------------------\n");
-   printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f \n",
+
+   tablebottom1 = "------------------------------[Nodes]---------------[Time]------";
+   tablebottom2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
+   tablebottom3 = "----------------------------------------------------------------";
+
+   if( printsoltimes ) {
+       tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
+       tablebottom2 = tablebottom2"     total     geom.     total     geom.";
+       tablebottom3 = tablebottom3"-----------------------------------------";
+   }
+   tablebottom1 = tablebottom1"\n";
+   tablebottom2 = tablebottom2"\n";
+   tablebottom3 = tablebottom3"\n";
+   
+   printf(tablebottom1);
+   printf(tablebottom2);
+   printf(tablebottom3);
+   printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
           nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
-   printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f \n",
+   if( printsoltimes )
+       printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeom);
+
+   printf("\n");
+   printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
-   printf("----------------------------------------------------------------\n");
+   if( printsoltimes )
+       printf("          %9.1f           %9.1f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
+   printf("\n");
+   printf(tablebottom3);
+
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{supertabular*}\n")                                      >TEXFILE;
    printf("{\\bfseries Settings:} %s\n", settings)                       >TEXFILE;
