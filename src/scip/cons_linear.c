@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.360 2010/05/15 12:12:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.361 2010/05/17 19:32:04 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -188,7 +188,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
    SCIP_Bool             dualpresolving;      /**< should dual presolving steps be preformed? */
-
 };
 
 /** linear constraint update method */
@@ -7020,12 +7019,14 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    return (coefsequal || coefsnegated);
 }
 
+#define MULTIPLIER 2048
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
    SCIP* scip;
    SCIP_CONSDATA* consdata;
+   SCIP_Real maxabsrealval;;
    unsigned int hashval;
    int minidx;
    int mididx;
@@ -7048,13 +7049,14 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
+   maxabsrealval = consdataGetMaxAbsval(consdata);
    /* hash value depends on vectors of variable indices */
-   if( consdataGetMaxAbsval(consdata) > INT_MAX )
+   if( maxabsrealval > INT_MAX )
       maxabsval = 0;
-   else if( consdataGetMaxAbsval(consdata) < 1.0 )
-      maxabsval = (int) 10000*consdataGetMaxAbsval(consdata);
+   else if( maxabsrealval < 1.0 )
+      maxabsval = (int) (MULTIPLIER * maxabsrealval);
    else
-      maxabsval = (int) consdataGetMaxAbsval(consdata);
+      maxabsval = (int) maxabsrealval;
 
    hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + maxabsval; /*lint !e701*/
 
@@ -8357,6 +8359,7 @@ SCIP_DECL_CONSINIT(consInitLinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
+   assert(nconss == 0 || conss != NULL);
 
    /* catch events for the constraints */
    for( c = 0; c < nconss; ++c )
@@ -8373,7 +8376,6 @@ SCIP_DECL_CONSINIT(consInitLinear)
    }
 
    return SCIP_OKAY;
-
 }
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.44 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.45 2010/05/17 19:32:04 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -146,7 +146,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
-   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
+   SCIP_Bool*            success             /**< pointer to store if an error occured during solving (normally a memory problem) */
    );
 
 /** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's

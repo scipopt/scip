@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.29 2010/05/15 12:12:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.30 2010/05/17 19:32:04 bzfwinkm Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -1465,10 +1465,20 @@ SCIP_RETCODE getFlowCover(
       tmp2 = (SCIP_Real) ((transcapacityint) + 1);
       if( transcapacityint * nitems <= MAXDYNPROGSPACE && tmp1 * tmp2 <= INT_MAX / 8.0)
       {
+         SCIP_Bool success;
+
          /* solve KP^SNF_int by dynamic programming */
-         SCIP_CALL(SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint,transcapacityint, 
-               itemsint, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
-         kpexact = TRUE;
+         SCIP_CALL(SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint, transcapacityint, 
+               itemsint, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL, &success));
+
+         if( !success )
+         {
+            /* solve KP^SNF_rat approximately */
+            SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, 
+                  transcapacityreal, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+         }
+         else
+            kpexact = TRUE;
       }
       else
       {

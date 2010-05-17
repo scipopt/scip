@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.565 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.566 2010/05/17 19:32:04 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5841,6 +5841,22 @@ SCIP_RETCODE SCIPsolve(
             break;
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
+#if 0
+         {
+            SCIP_VAR** fixvars;
+            int nfixvars;
+            int v;
+            
+            nfixvars = SCIPgetNFixedVars(scip);
+            fixvars = SCIPgetFixedVars(scip);
+
+            for( v = nfixvars - 1; v >= 0; --v )
+            {
+               SCIP_CALL( SCIPprintVar(scip, fixvars[v], NULL) );
+            }
+            SCIP_CALL( SCIPwriteTransProblem(scip, "p0291.res_pre.lp", NULL, FALSE) );
+         }
+#endif
          /*lint -fallthrough*/
 
       case SCIP_STAGE_PRESOLVED:
@@ -8358,18 +8374,16 @@ SCIP_RETCODE SCIPaddClique(
 /** calculates a partition of the given set of binary variables into cliques;
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
- *  these values are positive if we have a "normal" clique and negative if we have "negated" clique;
- *  the first variable is always assigned to clique +/-1 (depending if it is normal or negated clique), and a variable can only 
- *  be assigned to clique +/-i if at least one of the preceeding variables was assigned to clique +/-(i-1);
- *  from each clique with a positive index at most one variable can be set to TRUE in a feasible solution;
- *  from each clique with a negative index at most one variable can be set to FALSE in a feasible solution
+ *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
+ *  the preceeding variables was assigned to clique i-1;
+ *  for each clique at most 1 variables can be set to TRUE in a feasible solution;
  */
 SCIP_RETCODE SCIPcalcCliquePartition(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int                   nvars,              /**< number of variables in the clique */
-   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int const             nvars,              /**< number of variables in the clique */
+   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** tmpvars;
@@ -8387,10 +8401,10 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_CALL( checkStage(scip, "SCIPcalcCliquePartition", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( nvars == 0 )
-     {
-       *ncliques = 0;
-       return SCIP_OKAY;
-     }
+   {
+      *ncliques = 0;
+      return SCIP_OKAY;
+   }
 
    /* allocate temporary memory for storing the variables of the current clique */
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
@@ -8399,21 +8413,22 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );
    ncliquevars = 0;
 
-   /* initialize the cliquepartition array with zeros */
-   BMSclearMemoryArray(cliquepartition, nvars);
-
+   /* initialize the cliquepartition array with -1 */
    /* initialize the tmpvalues array */
    for( i = nvars - 1; i >= 0; --i )
+   {  
       tmpvalues[i] = TRUE;
-   
+      cliquepartition[i] = -1;
+   }
+
    /* get corresponding active problem variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
    /* calculate the clique partition */
-   *ncliques = 1;
+   *ncliques = 0;
    for( i = 0; i < nvars; ++i )
    {
-      if( cliquepartition[i] == 0 )
+      if( cliquepartition[i] == -1 )
       {
          SCIP_Bool sign;
          int j;
@@ -8432,54 +8447,34 @@ SCIP_RETCODE SCIPcalcCliquePartition(
             for( j = i+1; j < nvars; ++j )
             {
 	       /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-	       if( cliquepartition[j] == 0 && SCIPvarIsActive(tmpvars[j]) )
+	       if( cliquepartition[j] == -1 && SCIPvarIsActive(tmpvars[j]) )
                {
                   int k;
 
-                  /* check if the variable has an edge in the implication graph to all other variables in this clique,
-		   * the first variable pair for which an implication is found, determines the type of the clique: "normal" or "negated" 
-		   */
-                  k = 0;
-                  if( ncliquevars == 1 )
+                  /* check if every variable in the actual clique is in clique with the actual variable */ 
+                  for( k = ncliquevars - 1; k >= 0; --k )
                   {
-                     if( SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[0], cliquevalues[0], TRUE) )
-                        k = -1;
-                     else if( SCIPvarsHaveCommonClique(tmpvars[j], !tmpvalues[j], cliquevars[0], !cliquevalues[0], TRUE) )
-                     {
-                        sign = FALSE;
-                        cliquepartition[i] *= -1;     
-                        k = -1;
-                     }
+                     if( !SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[k], cliquevalues[k], TRUE) )
+                        break;
                   }
-                  else
-                  {
-		     /* check if every variable in the actual clique is in clique with the actual variable */ 
-		     for( k = ncliquevars - 1; k >= 0; --k )
-                     {
-                        if( !SCIPvarsHaveCommonClique(tmpvars[j], sign ? tmpvalues[j] : !tmpvalues[j], cliquevars[k],  sign ? cliquevalues[k] : !cliquevalues[k], TRUE) )
-                           break;
-                     }
-                  }
-                  
+                                    
                   if( k == -1 )
                   {
                      /* put the variable into the same clique */
                      cliquepartition[j] = cliquepartition[i];
                      cliquevars[ncliquevars] = tmpvars[j];
                      cliquevalues[ncliquevars] = tmpvalues[j];
-                     ncliquevars++;
+                     ++ncliquevars;
                   }
                }
             }
          }
 
          /* this clique is finished */
-         (*ncliques)++;
+         ++(*ncliques);
       }
-      assert(0 != cliquepartition[i] && ABS(cliquepartition[i]) <= i+1);
+      assert(cliquepartition[i] >= 0 && cliquepartition[i] < i+1);
    }
-
-   --(*ncliques);
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(scip->set, &tmpvars);
@@ -8487,6 +8482,53 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIPsetFreeBufferArray(scip->set, &cliquevalues);
    SCIPsetFreeBufferArray(scip->set, &cliquevars);
 
+   return SCIP_OKAY;
+}
+
+/** calculates a partition of the given set of binary variables into negated cliques;
+ *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
+ *  were assigned to the same negated clique;
+ *  the first variable is always assigned to clique 0 and a variable can only be assigned to clique i if at least one of
+ *  the preceeding variables was assigned to clique i-1;
+ *  for each clique with n_c variables at least n_c-1 variables can be set to TRUE in a feasible solution;
+ */
+SCIP_RETCODE SCIPcalcNegatedCliquePartition(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int const             nvars,              /**< number of variables in the clique */
+   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   )
+{
+   SCIP_VAR** negvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(cliquepartition != NULL || nvars == 0);
+   assert(ncliques != NULL);
+
+   if( nvars == 0 )
+   {
+      *ncliques = 0;
+      return SCIP_OKAY;
+   }
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &negvars, nvars) );
+   
+   /* get all negated variables */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &(negvars[v])) );
+   }
+
+   /* calculate cliques on negated variables, which are "negated" cliques on normal variables array */
+   SCIP_CALL( SCIPcalcCliquePartition( scip, negvars, nvars, cliquepartition, ncliques) );
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(scip->set, &negvars);
+   
    return SCIP_OKAY;
 }
 

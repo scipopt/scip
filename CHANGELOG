@@ -50,6 +50,8 @@ interface:
 - new data structures and methods to handle nonlinear expressions in NLPI ({type_,struct_,}expression.{h,c}):
   nlpioracle can store and evaluate general NLPs now, nlpi_ipopt can solve general NLPs now
 - new API for "expressions interpreter" - code that evaluates expression trees, including first and second derivatives
+- added SCIPsortPtrPtrLongIntInt, SCIPsortLongPtrPtrIntInt and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- added SCIPcalcNegatedCliquePartition to scip.c to calculate a clique partition on negations of all given binary variables
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -100,6 +102,8 @@ features:
 - following methods SCIPinferVarUbProp, SCIPinferVarLbProp, SCIPinferVarLbCons, SCIPinferVarUbCons have a new 6th parameter "SCIP_Bool force" which allows bound tightening even if the difference to the newbound is below bound strengthening tolerance
 - the vbc visualization adds the new bound of the branched variable to the node information 
 - allow user to trigger a restart during presolving SCIPrestartSolve()
+- SCIPsolveKnapsackExactly got a new 12. parameter "SCIP_Bool* success" which stores if an error occured during solving(normally a memory problem)
+- "negated cliques" handling in knapsack constraint handler got changed due to the new method SCIPcalcNegatedCliquePartition resulting in new consdata members "negcliquepartition", "negcliquepartitioned" and "nnegcliques"; changed SCIPcalcCliquePartition so all cliquepartitions (calculated by SCIPcalcCliquePartition or SCIPcalcNegatedCliquePartition, which uses the first one) contain again positiv integers
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
@@ -188,6 +192,7 @@ parameters:
 - added parameter <misc/permutationseed> to change the permutation seed value for permuting the problem after the problem is transformed (-1 means no permutation)
 - added parameter <heuristics/nlp/nlpsolver> to specify name of NLP solver to use
 - added parameter <heuristics/nlp/nlpoptfile> to specify name of (NLP solver specific) option file
+- added parameter <constraints/knapsack/dualpresolving> to switch dualpresolving on/off inside the knapsack constraint handler, default is TRUE
 
 SCIP version 1.2.0
 ===============

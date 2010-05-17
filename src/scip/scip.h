@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.374 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.375 2010/05/17 19:32:04 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2781,19 +2781,32 @@ SCIP_RETCODE SCIPaddClique(
 /** calculates a partition of the given set of binary variables into cliques;
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
- *  these values are positive if we have a "normal" clique and negative if we have "negated" clique;
- *  the first variable is always assigned to clique +/-1 (depending if it is normal or negated clique), and a variable can only 
- *  be assigned to clique +/-i if at least one of the preceeding variables was assigned to clique +/-(i-1);
- *  from each clique with a positive index at most one variable can be set to TRUE in a feasible solution;
- *  from each clique with a negative index at most one variable can be set to FALSE in a feasible solution
+ *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
+ *  the preceeding variables was assigned to clique i-1;
+ *  for each clique at most 1 variables can be set to TRUE in a feasible solution;
+ */
+SCIP_RETCODE SCIPcalcCliquePartition(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int const             nvars,              /**< number of variables in the clique */
+   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   );
+
+/** calculates a partition of the given set of binary variables into negated cliques;
+ *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
+ *  were assigned to the same negated clique;
+ *  the first variable is always assigned to clique 0 and a variable can only be assigned to clique i if at least one of
+ *  the preceeding variables was assigned to clique i-1;
+ *  for each clique with n_c variables at least n_c-1 variables can be set to TRUE in a feasible solution;
  */
 extern
-SCIP_RETCODE SCIPcalcCliquePartition(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int                   nvars,              /**< number of variables in the clique */
-   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+SCIP_RETCODE SCIPcalcNegatedCliquePartition(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int const             nvars,              /**< number of variables in the clique */
+   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    );
 
 /** gets the number of cliques in the clique table */

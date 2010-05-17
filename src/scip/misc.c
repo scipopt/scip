@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.110 2010/04/15 17:55:03 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.111 2010/05/17 19:32:04 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2691,6 +2691,17 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortPtrPtrLongIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrLongIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Real
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -2848,6 +2859,16 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortLongPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortLongPtrPtrBoolInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     LongPtrPtrBoolInt
 #define SORTTPL_KEYTYPE     SCIP_Longint
@@ -2983,6 +3004,18 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrPtrLongIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrLongIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
@@ -3142,6 +3175,17 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownLongPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
