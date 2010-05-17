@@ -103,7 +103,7 @@ features:
 - the vbc visualization adds the new bound of the branched variable to the node information 
 - allow user to trigger a restart during presolving SCIPrestartSolve()
 - SCIPsolveKnapsackExactly got a new 12. parameter "SCIP_Bool* success" which stores if an error occured during solving(normally a memory problem)
-- "negated cliques" handling in knapsack constraint handler got changed due to the new method SCIPcalcNegatedCliquePartition resulting in new consdata members "negcliquepartition", "negcliquepartitioned" and "nnegcliques"; changed SCIPcalcCliquePartition so all cliquepartitions (calculated by SCIPcalcCliquePartition or SCIPcalcNegatedCliquePartition, which uses the first one) contain again positiv integers
+- "negated cliques" handling in knapsack constraint handler got changed due to the new method SCIPcalcNegatedCliquePartition resulting in new consdata members "negcliquepartition", "negcliquepartitioned" and "nnegcliques"; changed SCIPcalcCliquePartition so all cliquepartitions (calculated by SCIPcalcCliquePartition or SCIPcalcNegatedCliquePartition, which uses the first one) contain again not negative integers
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
