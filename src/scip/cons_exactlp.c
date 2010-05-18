@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.19 2010/05/14 21:26:45 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.20 2010/05/18 20:58:26 bzfsteff Exp $"
 ////#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -76,7 +76,7 @@
                                          *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP, 
                                          *   'b'asic rows of exact primal LP, 'B'asic rows of inexact primal LP)" */
 #define DEFAULT_PSINTPOINTSELECTION 'a' /**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point) */
-
+#define DEFAULT_PSUSEINTPOINT      TRUE /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
 
 #define EVENTHDLR_NAME        "exactlp"
 #define EVENTHDLR_DESC        "bound change event handler for exactlp constraints"
@@ -106,13 +106,11 @@ struct SCIP_ConshdlrData
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in pseudo solution at node 
                                               *   where all unprocessed bound changes were applied last */
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project and scale */
-   mpq_t*                interiorpt;         /**< stores relative interior point for root node dual problem */
+   mpq_t*                interiorpt;         /**< stores S-interior point/ray for root node dual problem */
    int*                  impliedeq;          /**< 1 if constraints dual variable is always zero, 0 otherwise */
-   int                   psdim;              /**< dimension of interior point */
-   int                   pscondim;           /**< number of primal constraints used to generate dual variables */
-   int                   psbdim;             /**< number of variables with bounds used to generate dual variables */
+   int                   nextendedconss;     /**< dimension of interior point */
    int*                  psbasis;            /**< mapping for basis used in factorization */
-   int                   psbasiscount;       /**< length of psbasis */
+   int                   npsbasis;           /**< length of psbasis */
    mpq_t                 commonslack;        /**< slack by which interior point satisfies all dual inequalities */
    SCIP_PRIMALEX*        primal;             /**< exact primal data and solution storage */
    SCIP_Bool             psdatacon;          /**< was project and scale data structure constructed? */  
@@ -124,6 +122,7 @@ struct SCIP_ConshdlrData
                                               *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP, 
                                               *   'b'asic rows of exact primal LP, 'B'asic rows of inexact primal LP)" */
    char                  psintpointselection;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point) */
+   SCIP_Bool             psuseintpoint;      /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
 };
 
 /** constraint data for exactlp constraints */
@@ -708,7 +707,7 @@ SCIP_RETCODE conshdlrdataCreate(
    /* open exact LP Solver interface for factorization */
 
    (*conshdlrdata)->rectfactor = (qsnum_factor_work*) NULL;
-   (*conshdlrdata)->psdim = 0;
+   (*conshdlrdata)->nextendedconss = 0;
 
    mpq_init((*conshdlrdata)->commonslack);
    
@@ -756,9 +755,9 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   if( (*conshdlrdata)->psdim > 0 )
+   if( (*conshdlrdata)->nextendedconss > 0 )
    {
-      for( i = 0; i < (*conshdlrdata)->psdim; i++ )
+      for( i = 0; i < (*conshdlrdata)->nextendedconss; i++ )
          mpq_clear((*conshdlrdata)->interiorpt[i]);
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorpt);
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->impliedeq);
@@ -2547,43 +2546,44 @@ SCIP_RETCODE constructPSData(
    int                   j;
    int                   rval;
    int                   pos;
+   int                   nconss;
+   int                   nvars;
+   int                   nnonz;
+   int                   indx;
    mpq_t                 mpqtemp;
    int                   nobjnz;             /**< number of nonzeros in cost vector */ 
-   SCIP_LPIEX*           pslpiex;            /**< modified exact LP to find interior point of dual */ 
-   int                   psnvars;            /**< number of variables in modified problem */
-   mpq_t*                psobj;              /**< objective function values of variables in modified problem */
-   mpq_t*                pslb;               /**< lower bounds of variables in modified problem */
-   mpq_t*                psub;               /**< upper bounds of variables in modified problem */
-   int                   psnconss;           /**< number of constraints in modified problem */
-   mpq_t*                pslhs;              /**< left hand sides of constraints in modified problem */
-   mpq_t*                psrhs;              /**< right hand sides of constraints in modified problem */
-   int                   psnnonz;            /**< number of nonzero elements in the constraint matrix in modified prob */
-   int*                  psbeg;              /**< start index of each constraint in ind- and val-array in modified prob */
-   int*                  pslen;              /**< length array for constraints of modified problem */
+   SCIP_LPIEX*           pslpiex;            /**< exact LP to find interior point of dual */ 
+   int                   psnvars;            /**< number of variables used in aux problem to find S-interior point/ray*/
+   mpq_t*                psobj;              /**< objective function values of variables in aux problem */
+   mpq_t*                pslb;               /**< lower bounds of variables in aux problem */
+   mpq_t*                psub;               /**< upper bounds of variables in aux problem */
+   int                   psnconss;           /**< number of constraints in aux problem */
+   mpq_t*                pslhs;              /**< left hand sides of constraints in aux problem */
+   mpq_t*                psrhs;              /**< right hand sides of constraints in aux problem */
+   int                   psnnonz;            /**< number of nonzero elements in the constraint matrix in aux prob */
+   int*                  psbeg;              /**< start index of each constraint in ind- and val-array in aux prob */
+   int*                  pslen;              /**< length array for constraints of aux problem */
    int*                  psind;              /**< col indices of variables (probindex) corresponding to nonzero matrix entries */
-   mpq_t*                psval;              /**< values of nonzero constraint matrix entries in modified problem */   
-   int                   ndvars;             /**< number of dual vars we consider, one for each finite side of a constraint/var bound */
-   int*                  dvarmap;            /**< mapping from considered dual vars (1..ndvars) to all possible dual variables */
+   mpq_t*                psval;              /**< values of nonzero constraint matrix entries in aux problem */   
+   int                   ndvarmap;           /**< number of dual vars we consider in aux problem */
+   int*                  dvarmap;            /**< mapping from considered dual vars (1..ndvarmap) to all possible dual variables */
 
-   mpq_t*                dualsol;            /**< stores the dual solution vector of the modified problem */  
+   mpq_t*                dualsol;            /**< stores the dual solution vector of the aux problem */  
    char **               colnames;           /**< meaningless variable names */
-   mpq_t                 objval;             /**< objective value of modified problem */
+   mpq_t                 objval;             /**< objective value of aux problem */
 
    int*                  projbeg;            /**< projection submatrix begin */
    int*                  projlen;            /**< projection column length */
    int*                  projind;            /**< dual row indices of projection submatrix */
    mpq_t*                projval;            /**< values of projection submatrix */ 
-   int                   psdim;              /**< dimension of dual solution */    
-   int                   pscondim;
-   int                   psbdim;
-   int                   indx;
+   int                   nextendedconss;     /**< dimension of dual solution */    
 
 
 #ifdef ACTIVEDUAL
    SCIP_LPIEX*           rootlp;             /**< root node LP, solved to determine active dual constraints */ 
    mpq_t*                rootactivity;       /**< activity of root node LP */
    mpq_t*                rootprimal;         /**< primal solution at root node LP */
-   char **               rootcolnames;           /**< meaningless variable names */
+   char **               rootcolnames;       /**< meaningless variable names */
 #endif
 
 
@@ -2642,28 +2642,27 @@ SCIP_RETCODE constructPSData(
    mpq_init(mpqtemp);
 
    /* allocate memory for the interior point solution */
-   conshdlrdata->pscondim = consdata->nconss;
-   pscondim = conshdlrdata->pscondim;
-   conshdlrdata->psbdim = consdata->nvars;
-   psbdim = conshdlrdata->psbdim;
-   conshdlrdata->psdim = 2*pscondim + 2* psbdim;
-   psdim = conshdlrdata->psdim;   
+   nconss = consdata->nconss;
+   nvars = consdata->nvars;
+   nnonz = consdata->nnonz;
+   conshdlrdata->nextendedconss = 2*nconss + 2*nvars;
+   nextendedconss = conshdlrdata->nextendedconss;   
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->impliedeq,psdim) ); 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorpt,psdim) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->psbasis,psdim) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->impliedeq,nextendedconss) ); 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->interiorpt,nextendedconss) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->psbasis,nextendedconss) );
    // ALWAYS do it this way for the spacing
-   for( i = 0; i < psdim; i++ )
+   for( i = 0; i < nextendedconss; i++ )
       mpq_init(conshdlrdata->interiorpt[i]);
 
    /* allocate memory for the projection factorization */
-   SCIP_CALL( SCIPallocBufferArray(scip, &projbeg, psdim) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlen, psdim) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projind,  2*consdata->nnonz + 2*psbdim) ); 
-   for( i = 0; i < 2*consdata->nnonz + 2*psbdim; i++)
+   SCIP_CALL( SCIPallocBufferArray(scip, &projbeg, nextendedconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlen, nextendedconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projind,  2*nnonz + 2*nvars) ); 
+   for( i = 0; i < 2*nnonz + 2*nvars; i++)
       projind[i]=0; 
-   SCIP_CALL( SCIPallocBufferArray(scip, &projval,  2*consdata->nnonz + 2*psbdim) );
-   for( i = 0; i <  2*consdata->nnonz + 2*psbdim; i++)
+   SCIP_CALL( SCIPallocBufferArray(scip, &projval,  2*nnonz + 2*nvars) );
+   for( i = 0; i <  2*nnonz + 2*nvars; i++)
       mpq_init(projval[i]);   
 
 
@@ -2673,31 +2672,31 @@ SCIP_RETCODE constructPSData(
 #ifdef ACTIVEDUAL
 
    /* allocate space for root lp */
-   SCIP_CALL( SCIPallocBufferArray(scip, &rootprimal, consdata->nvars) );
-   for( i = 0; i < consdata->nvars ; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &rootprimal, nvars) );
+   for( i = 0; i < nvars ; i++ )
       mpq_init(rootprimal[i]);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rootactivity ,consdata->nconss) );
-   for( i = 0; i < consdata->nconss ; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &rootactivity, conss) );
+   for( i = 0; i < nconss ; i++ )
       mpq_init(rootactivity[i]);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rootcolnames, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rootcolnames, nvars) );
 
-   for( i = 0; i < consdata->nvars; i++ )
+   for( i = 0; i < nvars; i++ )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &rootcolnames[i],SCIP_MAXSTRLEN ) );
       (void) SCIPsnprintf(rootcolnames[i], SCIP_MAXSTRLEN, "var%d",i); 
    }
 
 
-   /* build modified LP using the exact LP interface */
+   /* build aux LP using the exact LP interface */
    SCIP_CALL( SCIPlpiexCreate(&rootlp, NULL, SCIP_OBJSEN_MINIMIZE) );
    
    /* add all columns to the exact LP */
-   SCIP_CALL( SCIPlpiexAddCols(rootlp, consdata->nvars, consdata->obj, consdata->lbloc, consdata->ubloc, rootcolnames, 0, NULL, NULL, NULL) );   
+   SCIP_CALL( SCIPlpiexAddCols(rootlp, nvars, consdata->obj, consdata->lbloc, consdata->ubloc, rootcolnames, 0, NULL, NULL, NULL) );   
    /* add all constraints to the exact LP */
-   SCIP_CALL( SCIPlpiexAddRows(rootlp, consdata->nconss, (const mpq_t*) consdata->lhs, (const mpq_t*) consdata->rhs, 
-         NULL, consdata->nnonz, consdata->beg, consdata->len, consdata->ind, consdata->val) );
+   SCIP_CALL( SCIPlpiexAddRows(rootlp, nconss, (const mpq_t*) consdata->lhs, (const mpq_t*) consdata->rhs, 
+         NULL, nnonz, consdata->beg, consdata->len, consdata->ind, consdata->val) );
 
    /* solve the LP */
    SCIP_CALL( SCIPlpiexSolveDual(rootlp));
@@ -2733,64 +2732,64 @@ SCIP_RETCODE constructPSData(
       SCIPerrorMessage("rootlp Other Error\n");
    }
 
-   ndvars = 0;
+   ndvarmap = 0;
    psnnonz = 0;
-   for( i = 0;i<consdata->nconss; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      if( mpq_equal(rootactivity[i],consdata->lhs[i]) )
+      if( mpq_equal(rootactivity[i], consdata->lhs[i]) )
       {
-         ndvars++;
+         ndvarmap++;
          psnnonz += consdata->len[i];
       }
-      if(mpq_equal(rootactivity[i],consdata->rhs[i]))
+      if( mpq_equal(rootactivity[i], consdata->rhs[i]) )
       {
-         ndvars++;
+         ndvarmap++;
          psnnonz += consdata->len[i];
       }
    }   
-   for( i = 0;i<consdata->nvars; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(mpq_equal(rootprimal[i],consdata->lbloc[i]))
+      if( mpq_equal(rootprimal[i], consdata->lbloc[i]) )
       {
-         ndvars++;
+         ndvarmap++;
          psnnonz++;
       }
-      if(mpq_equal(rootprimal[i],consdata->ubloc[i]))
+      if( mpq_equal(rootprimal[i], consdata->ubloc[i]) )
       {       
-         ndvars++;
+         ndvarmap++;
          psnnonz++;
       }
    }
 
 #endif //ACTIVEDUAL
 
-   /* determine the number of variables used in the dual problem, ndvars */
+   /* determine the number of variables used in the dual problem, ndvarmap */
 #ifdef ALLROWS
-   ndvars = 0;
+   ndvarmap = 0;
    psnnonz = 0;
-   for( i = 0;i<pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      if(!isNegInfinity(conshdlrdata,consdata->lhs[i]))
+      if( !isNegInfinity(conshdlrdata, consdata->lhs[i]) )
       {
-         ndvars++;
+         ndvarmap++;
          psnnonz += consdata->len[i];
       }
-      if(!isPosInfinity(conshdlrdata,consdata->rhs[i]))
+      if( !isPosInfinity(conshdlrdata, consdata->rhs[i]) )
       {
-         ndvars++;
+         ndvarmap++;
          psnnonz += consdata->len[i];
       }
    }   
-   for( i = 0;i<psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(!isNegInfinity(conshdlrdata,consdata->lbloc[i]))
+      if( !isNegInfinity(conshdlrdata, consdata->lbloc[i]) )
       {
-         ndvars++;
+         ndvarmap++;
          psnnonz++;
       }
-      if(!isPosInfinity(conshdlrdata,consdata->ubloc[i]))
+      if( !isPosInfinity(conshdlrdata, consdata->ubloc[i]) )
       {       
-         ndvars++;
+         ndvarmap++;
          psnnonz++;
       }
    }
@@ -2798,21 +2797,21 @@ SCIP_RETCODE constructPSData(
 
 
    /* figure out the dimensions of the aux problem */
-   psnvars = consdata->nvars + 2 * ndvars + 1;
-   psnconss = 2 * ndvars + 1;
+   psnvars = nvars + 2 * ndvarmap + 1;
+   psnconss = 2 * ndvarmap + 1;
    nobjnz = 0;
 
    /* update number of nonzeros of the aux problem
     * (-A,+A,-I+I part is already counted) 
     */ 
-   for( i = 0; i < consdata->nvars; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(mpq_sgn(consdata->obj[i]))
+      if( mpq_sgn(consdata->obj[i]) )
       {
          nobjnz++;
       }
    }
-   psnnonz += nobjnz + 1 + 3 * ndvars;
+   psnnonz += nobjnz + 1 + 3 * ndvarmap;
 
 
    /* allocate memory for aux problem */
@@ -2857,93 +2856,93 @@ SCIP_RETCODE constructPSData(
    /* set up dvarmap - mapping between variables and original problem 
     * use the rows that are active for the optimal dual solution. 
     * dvarmap[i] is the index in the original problem of the i^th constraint
-    * in the reduced size problem (reduced from psdim to ndvars)
+    * in the reduced size problem (reduced from nextendedconss to ndvarmap)
     */
    /* Use the hashmap ?? */
-   SCIP_CALL( SCIPallocBufferArray(scip, &dvarmap, ndvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &dvarmap, ndvarmap) );
 
 #ifdef ACTIVEDUAL
    pos = 0;
-   for( i = 0;i<pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      if(mpq_equal(rootactivity[i],consdata->lhs[i]))   
+      if( mpq_equal(rootactivity[i], consdata->lhs[i]) )   
       {
          dvarmap[pos] = i;
          pos++;
       }
    }
-   for( i = 0;i<pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      if(mpq_equal(rootactivity[i],consdata->rhs[i]))
+      if( mpq_equal(rootactivity[i], consdata->rhs[i]) )
       {
-         dvarmap[pos] = i + pscondim;
+         dvarmap[pos] = i + nconss;
          pos++;
       }
    }   
-   for( i = 0;i<psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(mpq_equal(rootprimal[i],consdata->lbloc[i]))
+      if( mpq_equal(rootprimal[i], consdata->lbloc[i]) )
       {
-         dvarmap[pos] = i + 2*pscondim;
+         dvarmap[pos] = i + 2*nconss;
          pos++;
       }
    }
-   for( i = 0;i<psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(mpq_equal(rootprimal[i],consdata->ubloc[i]))
+      if( mpq_equal(rootprimal[i], consdata->ubloc[i]) )
       {       
-         dvarmap[pos] = i + 2*pscondim + psbdim;
+         dvarmap[pos] = i + 2*nconss + nvars;
          pos++;
       }
    }
-   assert( pos == ndvars );
+   assert( pos == ndvarmap );
 #endif //ACTIVEDUAL
 
 
 #ifdef ALLROWS
    pos = 0;
-   for( i = 0;i<pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      if(!isNegInfinity(conshdlrdata,consdata->lhs[i]))
+      if( !isNegInfinity(conshdlrdata, consdata->lhs[i]) )
       {
          dvarmap[pos] = i;
          pos++;
       }
    }
-   for( i = 0;i<pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      if(!isPosInfinity(conshdlrdata,consdata->rhs[i]))
+      if( !isPosInfinity(conshdlrdata, consdata->rhs[i]) )
       {
-         dvarmap[pos] = i + pscondim;
+         dvarmap[pos] = i + nconss;
          pos++;
       }
    }   
-   for( i = 0;i<psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(!isNegInfinity(conshdlrdata,consdata->lbloc[i]))
+      if( !isNegInfinity(conshdlrdata, consdata->lbloc[i]) )
       {
-         dvarmap[pos] = i + 2*pscondim;
+         dvarmap[pos] = i + 2*nconss;
          pos++;
       }
    }
-   for( i = 0;i<psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(!isPosInfinity(conshdlrdata,consdata->ubloc[i]))
+      if( !isPosInfinity(conshdlrdata, consdata->ubloc[i]) )
       {       
-         dvarmap[pos] = i + 2*pscondim + psbdim;
+         dvarmap[pos] = i + 2*nconss + nvars;
          pos++;
       }
    }
-   assert( pos == ndvars );
+   assert( pos == ndvarmap );
 
 #endif  // ALLROWS
    // Write down entire matrix and problem here!! ??  also write where it comes from
 
    /* set objective */
-   for( i = 0; i < psbdim + ndvars; i++ )
+   for( i = 0; i < nvars + ndvarmap; i++ )
       mpq_set_si( psobj[i ], 0, 1);
-   mpq_set_si( psobj[psbdim + ndvars],-1,1);
-   for( i = psbdim + ndvars + 1; i < psnvars; i++ )
+   mpq_set_si( psobj[nvars + ndvarmap],-1,1);
+   for( i = nvars + ndvarmap + 1; i < psnvars; i++ )
       mpq_set_si( psobj[i], 1, 1);   
     
    /* set variable bounds */
@@ -2952,7 +2951,7 @@ SCIP_RETCODE constructPSData(
 
    for( i = 0; i < psnvars; i++ )
    {
-      if( i < psbdim)
+      if( i < nvars)
          mpq_set( pslb[i], conshdlrdata->neginfinity );
       else
          mpq_set_si( pslb[i], 0, 1);      
@@ -2961,35 +2960,35 @@ SCIP_RETCODE constructPSData(
    /* set up constraint bounds */
    for( i = 0; i < psnconss; i++ )
    {
-      if(i < ndvars )
+      if( i < ndvarmap )
       {
-         mpq_set_si(pslhs[i],0,1);
-         mpq_set_si(psrhs[i],0,1);
+         mpq_set_si(pslhs[i], 0, 1);
+         mpq_set_si(psrhs[i], 0, 1);
       }
-      else if( i == psnconss -1)
+      else if( i == psnconss -1 )
       {
-         mpq_set_si(pslhs[i],0,1);
-         mpq_set(psrhs[i],conshdlrdata->posinfinity);
+         mpq_set_si(pslhs[i], 0, 1);
+         mpq_set(psrhs[i], conshdlrdata->posinfinity);
       }
       else
       {
-         mpq_set_si(pslhs[i],1,1);
-         mpq_set(psrhs[i],conshdlrdata->posinfinity);
+         mpq_set_si(pslhs[i], 1, 1);
+         mpq_set(psrhs[i], conshdlrdata->posinfinity);
       }    
    }
 
    /* set up constraint matrix */
 
-   /* set up the first ndvars rows*/
+   /* set up the first ndvarmap rows*/
    pos = 0;
-   for( i = 0; i < ndvars; i++ )
+   for( i = 0; i < ndvarmap; i++ )
    {  
       indx = dvarmap[i];
       /* current row comes from lhs/rhs constraints of original problem */
-      if(indx < 2*pscondim)
+      if( indx < 2*nconss )
       {
-         if(indx >= pscondim)
-            indx -= pscondim;
+         if(indx >= nconss)
+            indx -= nconss;
          pslen[i] = consdata->len[indx] + 1;
          psbeg[i] = pos;
 
@@ -2998,52 +2997,52 @@ SCIP_RETCODE constructPSData(
          {
             psind[ psbeg[i] + j ] = consdata->ind[ consdata->beg[indx] + j];
             /* If it is an LHS constraint */
-            if(dvarmap[i]<pscondim)
+            if( dvarmap[i] < nconss )
                mpq_set( psval[ psbeg[i] + j], consdata->val[ consdata->beg[indx] + j ] );
             /* otherwise it is the RHS of the constraint */
             else 
                mpq_neg( psval[ psbeg[i] + j], consdata->val[ consdata->beg[indx] + j ] );
          }
          /* set I part of row */
-         psind[ psbeg[i] + pslen[i] - 1] = psbdim + i ;
-         mpq_set_si( psval[psbeg[i] + pslen[i] - 1 ],-1,1); 
+         psind[ psbeg[i] + pslen[i] - 1] = nvars + i ;
+         mpq_set_si( psval[psbeg[i] + pslen[i] - 1 ], -1, 1); 
 
          /* update pos */
          pos += consdata->len[indx] + 1;
       }
       /* current row comes from lower bound constraints of original problem */
-      else if (indx < 2*pscondim + psbdim)
+      else if ( indx < 2*nconss + nvars )
       {  
-         indx -= 2 * pscondim;
+         indx -= 2 * nconss;
          psbeg[i] = pos;
          pslen[i] = 2;
          psind[pos] = indx;
-         psind[pos + 1] = psbdim + i;
-         mpq_set_si(psval[pos], 1,1);
-         mpq_set_si(psval[pos+1],-1,1);
+         psind[pos + 1] = nvars + i;
+         mpq_set_si(psval[pos], 1, 1);
+         mpq_set_si(psval[pos+1], -1, 1);
          pos += 2;
       }
       /* current row comes from upper bound constraints of original problem */
       else 
       {  
-         indx -= (2*pscondim + psbdim);
+         indx -= (2*nconss + nvars);
          psbeg[i] = pos;
          pslen[i] = 2;
          psind[pos] = indx;
-         psind[pos + 1] = psbdim + i;
-         mpq_set_si(psval[pos], -1,1);
-         mpq_set_si(psval[pos+1],-1,1);
+         psind[pos + 1] = nvars + i;
+         mpq_set_si(psval[pos], -1, 1);
+         mpq_set_si(psval[pos+1], -1, 1);
          pos += 2;
       }
    }
 
-   /* set up the next ndvars rows */   
-   for( i = 0; i < ndvars; i++ )
+   /* set up the next ndvarmap rows */   
+   for( i = 0; i < ndvarmap; i++ )
    { 
-      psbeg[ndvars + i] = pos;
-      pslen[ndvars + i] = 2;
-      psind[pos] = psbdim + i;
-      psind[pos + 1] = psbdim + ndvars + 1 + i;
+      psbeg[ndvarmap + i] = pos;
+      pslen[ndvarmap + i] = 2;
+      psind[pos] = nvars + i;
+      psind[pos + 1] = nvars + ndvarmap + 1 + i;
       mpq_set_si(psval[pos], 1,1);
       mpq_set_si(psval[pos+1],1,1);
       pos += 2;
@@ -3052,10 +3051,10 @@ SCIP_RETCODE constructPSData(
    /* last row */
    psbeg[ psnconss - 1 ] = pos;
    pslen[ psnconss - 1 ] = nobjnz + 1; /* this = objective length + 1 */
-   j = psbeg[ 2 * psdim ];
-   for( i = 0; i < psbdim; i++ )
+   j = psbeg[ 2 * nextendedconss ];
+   for( i = 0; i < nvars; i++ )
    { 
-      if(mpq_sgn(consdata->obj[i]))
+      if( mpq_sgn(consdata->obj[i]) )
       {
          mpq_neg(psval[pos], consdata->obj[i]);
          psind[pos] = i;
@@ -3063,7 +3062,7 @@ SCIP_RETCODE constructPSData(
       }
    }
    mpq_set_si(psval[pos], -1,1);
-   psind[pos] = psbdim + ndvars;
+   psind[pos] = nvars + ndvarmap;
    pos++;
    assert(pos == psnnonz);
   
@@ -3083,7 +3082,7 @@ SCIP_RETCODE constructPSData(
    //   SCIP_CALL( SCIPlpiexWriteLP(pslpiex, "prob/psdebug.lp") );  /* ????????????*/
 
    /* solve the LP */
-   SCIP_CALL( SCIPlpiexSolveDual(pslpiex));
+   SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
 
    if( SCIPlpiexIsOptimal(pslpiex) )
    {
@@ -3092,30 +3091,30 @@ SCIP_RETCODE constructPSData(
       SCIP_CALL( SCIPlpiexGetSol(pslpiex, &objval, NULL, dualsol, NULL, NULL) );
 #ifdef PS_OUT /*???????????????????*/
       printf("Dual solution: \n");
-      if(psnconss<100)
+      if( psnconss < 100 )
       {
          for( i = 0; i < psnconss; i++ )
          {
-            mpq_out_str(stdout,10,dualsol[i]);
+            mpq_out_str(stdout, 10, dualsol[i]);
             printf(" \n");
          }   
       }
       else
          printf("Solution too long\n");
       printf("Objective value: ");
-      mpq_out_str(stdout,10,objval);
+      mpq_out_str(stdout, 10, objval);
       printf(" \n");   
 #endif
 
       /* assign interior point solution to constraint handler data */
       /* compute 1/lambda (lambda is the dual variable corresponding to the last row in the aux LP) */ 
-      if(mpq_sgn(dualsol[psnconss - 1]))
+      if( mpq_sgn(dualsol[psnconss - 1]) )
          mpq_inv(conshdlrdata->commonslack,dualsol[psnconss - 1]);
       else
          mpq_set_si(conshdlrdata->commonslack, 0, 1);
 
       /* interior point is z/lambda */ 
-      for( i = 0; i < ndvars; i++ )                
+      for( i = 0; i < ndvarmap; i++ )                
       {                                         
          
          mpq_div( conshdlrdata->interiorpt[dvarmap[i]], dualsol[i],dualsol[psnconss - 1]);    
@@ -3123,14 +3122,14 @@ SCIP_RETCODE constructPSData(
 
 #ifdef PS_OUT /*???????????????????*/
       printf("Constraints all satisfied by slack of:  ");
-      mpq_out_str(stdout,10,conshdlrdata->commonslack);
+      mpq_out_str(stdout, 10, conshdlrdata->commonslack);
       printf(" \n"); 
       printf("Relative interior solution: \n");
-      if(conshdlrdata->psdim<100)
+      if( conshdlrdata->nextendedconss < 100 )
       {
-         for( i = 0; i <  conshdlrdata->psdim; i++ )
+         for( i = 0; i <  conshdlrdata->nextendedconss; i++ )
          {
-            mpq_out_str(stdout,10,conshdlrdata->interiorpt[i]);
+            mpq_out_str(stdout, 10, conshdlrdata->interiorpt[i]);
             printf(" \n");
          }
       }
@@ -3141,13 +3140,13 @@ SCIP_RETCODE constructPSData(
       /* could check here if we have too many implied equalities, then return failure */
 
       /* assign implied equality characteristic vector to constraint handler data */
-      for( i = 0; i < psdim; i++ )
+      for( i = 0; i < nextendedconss; i++ )
          conshdlrdata->impliedeq[i] = 1;
-      for( i = 0; i < ndvars; i++ )
+      for( i = 0; i < ndvarmap; i++ )
       {
-         if(mpq_sgn(dualsol[i + ndvars ]))
+         if( mpq_sgn(dualsol[i + ndvarmap ]) )
          {
-            /* if we are in a case where ps method will succeed, this should hold for all ndvars */
+            /* if we are in a case where ps method will succeed, this should hold for all ndvarmap  */
             conshdlrdata->impliedeq[dvarmap[i]] = 0;
          }
       }  
@@ -3155,11 +3154,11 @@ SCIP_RETCODE constructPSData(
 
 #ifdef PS_OUT 
       printf("Implied equality: \n");
-      if(psdim<100)
+      if( nextendedconss < 100 )
       {
-         for( i = 0; i < psdim; i++ )
+         for( i = 0; i < nextendedconss; i++ )
          {
-            printf("%d \n",conshdlrdata->impliedeq[i]);
+            printf("%d \n", conshdlrdata->impliedeq[i]);
          }
       } 
 #endif
@@ -3196,7 +3195,7 @@ SCIP_RETCODE constructPSData(
     * to dual valuse that have a strictly positive value in the relative interior point
     */
    pos = 0;
-   for( i = 0; i < psdim; i++ )
+   for( i = 0; i < nextendedconss; i++ )
    {
       if(!conshdlrdata->impliedeq[i])
       {
@@ -3204,13 +3203,13 @@ SCIP_RETCODE constructPSData(
          pos++;
       }
    }
-   conshdlrdata->psbasiscount = pos;
+   conshdlrdata->npsbasis = pos;
 
 #ifdef PS_OUT
    printf("projbasis: \n");
-   if(conshdlrdata->psbasiscount<100)
+   if( conshdlrdata->npsbasis < 100 )
    {
-      for( i = 0; i < conshdlrdata->psbasiscount; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
          printf("%d \n",conshdlrdata->psbasis[i]);    
    }
    else
@@ -3220,10 +3219,10 @@ SCIP_RETCODE constructPSData(
 
    /* D' is equal to a subset of [A^T -A^T I -I] and is given to the factor code in sparse column representation */
    pos = 0;
-   for( i = 0; i < psdim; i++ )
+   for( i = 0; i < nextendedconss; i++ )
    {  
       /* A part (?rhs? constraints) */
-      if(i < pscondim)
+      if(i < nconss)
       {
          projlen[i] = consdata->len[i];
          projbeg[i] = pos;
@@ -3235,24 +3234,24 @@ SCIP_RETCODE constructPSData(
          pos += consdata->len[i];
       }
       /* -A part (?lhs? constraints) */
-      else if(i < 2 * pscondim)
+      else if(i < 2 * nconss)
       {
-         projlen[i] = consdata->len[i - pscondim];
+         projlen[i] = consdata->len[i - nconss];
          projbeg[i] = pos;
          for(j = 0; j < projlen[i]; j++)
          {
-            projind[ projbeg[i] + j ] = consdata->ind[ consdata->beg[i - pscondim] + j ];
-            mpq_neg( projval[ projbeg[i] + j], consdata->val[ consdata->beg[i - pscondim] + j ] );
+            projind[ projbeg[i] + j ] = consdata->ind[ consdata->beg[i - nconss] + j ];
+            mpq_neg( projval[ projbeg[i] + j], consdata->val[ consdata->beg[i - nconss] + j ] );
          }
-         pos += consdata->len[i - pscondim];
+         pos += consdata->len[i - nconss];
       }
       /* I part (?ub? constraints) */
-      else if (i < 2*pscondim + psbdim)
+      else if (i < 2*nconss + nvars)
       {  
          projbeg[i] = pos;
          projlen[i] = 1;
-         projind[pos] = i - 2*pscondim;
-         mpq_set_si(projval[pos], 1,1);
+         projind[pos] = i - 2*nconss;
+         mpq_set_si(projval[pos], 1, 1);
          pos ++;
       }
       /* -I part (?lb? constraints) */
@@ -3260,8 +3259,8 @@ SCIP_RETCODE constructPSData(
       {  
          projbeg[i] = pos;
          projlen[i] = 1;
-         projind[pos] = i - (2*pscondim + psbdim);
-         mpq_set_si(projval[pos], -1,1);
+         projind[pos] = i - (2*nconss + nvars);
+         mpq_set_si(projval[pos], -1, 1);
          pos ++;
       }
    }
@@ -3270,21 +3269,21 @@ SCIP_RETCODE constructPSData(
 
 #ifdef PS_OUT /*???????????????????*/
    printf("Printing matrix used for factorization:\n");
-   if(psdim<100)
+   if( nextendedconss < 100 )
    {
       printf("projbeg: \n");    
-      for( i = 0; i < psdim; i++ )
+      for( i = 0; i < nextendedconss; i++ )
          printf("%d \n",projbeg[i]);                                                                                      
       printf("projlen: \n");                                                                                              
-      for( i = 0; i < psdim; i++ )                                                                               
+      for( i = 0; i < nextendedconss; i++ )                                                                               
       printf("%d \n",projlen[i]);                                                                                      
       printf("projind: \n");                                                                                              
-      for( i = 0; i < 2*consdata->nnonz + 2*psbdim; i++ )                                                                               
+      for( i = 0; i < 2*nnonz + 2*nvars; i++ )                                                                               
          printf("%d \n",projind[i]);                                                                                      
       printf("projval: \n");                                                                                              
-      for( i = 0; i < 2*consdata->nnonz + 2*psbdim; i++ )                                                                               
+      for( i = 0; i < 2*nnonz + 2*nvars; i++ )                                                                               
       {                                                                                                                   
-         mpq_out_str(stdout,10,projval[i]);                                                                               
+         mpq_out_str(stdout, 10, projval[i]);                                                                               
          printf(" \n");                                                                                                   
       }                                       
    }
@@ -3292,18 +3291,18 @@ SCIP_RETCODE constructPSData(
       printf("Too much to print\n");
 
    printf("Factoring matrix \n");    
-   printf("consdata->nvars = %d, conshdlrdata->psbasiscoun= %d \n",consdata->nvars,conshdlrdata->psbasiscount);
+   printf("nvars = %d, conshdlrdata->psbasiscoun= %d \n", nvars, conshdlrdata->npsbasis);
 #endif
    
    /* compute factorization of D' */
-   if( conshdlrdata->psbasiscount < consdata->nvars )
+   if( conshdlrdata->npsbasis < nvars )
    {
       /* can't factorize D' if it has less columns than rows */
       rval = 1;
    }
    else
    {
-      rval = RECTLUbuildFactorization(&conshdlrdata->rectfactor, consdata->nvars, conshdlrdata->psbasiscount,
+      rval = RECTLUbuildFactorization(&conshdlrdata->rectfactor, nvars, conshdlrdata->npsbasis,
          conshdlrdata->psbasis, projval, projind, projbeg, projlen);
    }
    
@@ -3321,7 +3320,7 @@ SCIP_RETCODE constructPSData(
    /* free memory */  /* this might not be done in the right order */
 
 #ifdef ACTIVEDUAL
-   for( i = consdata->nvars - 1; i >= 0; i--)
+   for( i = nvars - 1; i >= 0; i--)
       SCIPfreeBufferArray(scip, &rootcolnames[i] );   
    SCIPfreeBufferArray(scip, &rootcolnames);
    if( rootlp != NULL )
@@ -3329,16 +3328,16 @@ SCIP_RETCODE constructPSData(
       SCIP_CALL( SCIPlpiexFree(&rootlp) );
    }
    assert(rootlp == NULL);
-   for( i = 0; i < consdata->nconss ; i++ )
+   for( i = 0; i < nconss ; i++ )
       mpq_clear(rootactivity[i]);
    SCIPfreeBufferArray(scip, &rootactivity );
-   for( i = 0; i < consdata->nvars ; i++ )
+   for( i = 0; i < nvars ; i++ )
       mpq_clear(rootprimal[i]);
    SCIPfreeBufferArray(scip, &rootprimal);
 #endif
 
 
-   for( i = 0; i < 2*consdata->nnonz + 2*psbdim; i++ )
+   for( i = 0; i < 2*nnonz + 2*nvars; i++ )
       mpq_clear(projval[i]); 
    SCIPfreeBufferArray(scip, &projval);
    SCIPfreeBufferArray(scip, &projind);
@@ -3409,9 +3408,9 @@ SCIP_RETCODE getPSdualbound(
    int                   currentrow;
    mpq_t*                approxdualsol;      /**< stores the approximate dual solution vector */
    mpq_t*                costvect;           /**< dual cost vector */
-   int                   psdim;              /**< column dimension of dual problem */
-   int                   pscondim;           /**< number of primal constraints */
-   int                   psbdim;             /**< number of primal variables */
+   int                   nextendedconss;              /**< column dimension of dual problem */
+   int                   nconss;             /**< number of primal constraints */
+   int                   nvars;              /**< number of primal variables */
    mpq_t*                violation;          /**< amount by which the approx dual solution violates constraints */  
    mpq_t*                correction;         /**< stores the correction to the approximate dual solution */
    mpq_t                 mpqtemp;
@@ -3432,130 +3431,127 @@ SCIP_RETCODE getPSdualbound(
    mpq_init(maxv);
    mpq_init(dualbound);
 
-   psdim = conshdlrdata->psdim;
-   pscondim = consdata->nconss;
-   psbdim = consdata->nvars;
+   nextendedconss = conshdlrdata->nextendedconss;
+   nconss = consdata->nconss;
+   nvars = consdata->nvars;
 
    /* process bound changes */
    processBoundchgs(scip, conshdlrdata, consdata);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &approxdualsol, psdim) );
-   for( i = 0; i < psdim; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &approxdualsol, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
       mpq_init(approxdualsol[i]);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &costvect, psdim) );
-   for( i = 0; i < psdim; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &costvect, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
       mpq_init(costvect[i]);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &violation, psbdim) );
-   for( i = 0; i < psbdim; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &violation, nvars) );
+   for( i = 0; i < nvars; i++ )
       mpq_init(violation[i]);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &correction, psdim) );
-   for( i = 0; i < psdim; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &correction, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
       mpq_init(correction[i]);
 
    /* recover the objective coefs and approximate solution value of dual solution; 
     * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),
     * dual vars of lb constraint (including -inf) and ub constraints (including +inf) 
     */
-   for( i = 0; i < pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      mpq_set_d(mpqtemp,SCIProwGetDualsol(consdata->rows[i]));
+      mpq_set_d(mpqtemp, SCIProwGetDualsol(consdata->rows[i]));
       /* lhs constraint */
-      if(mpq_sgn(mpqtemp)>0)
-         mpq_set(approxdualsol[i],mpqtemp);
+      if( mpq_sgn(mpqtemp) > 0 )
+         mpq_set(approxdualsol[i], mpqtemp);
       /* rhs constraint */
       else
-         mpq_neg(approxdualsol[i+pscondim],mpqtemp);
+         mpq_neg(approxdualsol[i+nconss], mpqtemp);
 
       mpq_set(costvect[i], consdata->lhs[i]);
-      mpq_neg(costvect[i+pscondim], consdata->rhs[i]);
+      mpq_neg(costvect[i+nconss], consdata->rhs[i]);
    }
    cols = SCIPgetLPCols(scip);
-   for( i = 0; i < psbdim; i++ )  
+   for( i = 0; i < nvars; i++ )  
    {
-      mpq_set_d(mpqtemp,SCIPgetColRedcost(scip,cols[i]));
+      mpq_set_d(mpqtemp, SCIPgetColRedcost(scip, cols[i]));
       /* lb constraint */
-      if(mpq_sgn(mpqtemp)>0)
-         mpq_set(approxdualsol[i + 2*pscondim],mpqtemp);
+      if( mpq_sgn(mpqtemp) > 0 )
+         mpq_set(approxdualsol[i + 2*nconss], mpqtemp);
       /* ub constraint */
       else
-         mpq_neg(approxdualsol[i + 2*pscondim + psbdim],mpqtemp);
+         mpq_neg(approxdualsol[i + 2*nconss + nvars], mpqtemp);
 
-      mpq_set(costvect[i + 2*pscondim],consdata->lbloc[i]);
-      mpq_neg(costvect[i + 2*pscondim + psbdim],consdata->ubloc[i]);
+      mpq_set(costvect[i + 2*nconss], consdata->lbloc[i]);
+      mpq_neg(costvect[i + 2*nconss + nvars], consdata->ubloc[i]);
    }
    
-
-
-
 #ifdef PS_OUT 
    printf("Approximate dual solution:\n");
-   if(psdim <100)
+   if( nextendedconss < 100 )
    {
-      for( i = 0; i < psdim; i++ )
+      for( i = 0; i < nextendedconss; i++ )
       {
-         mpq_out_str(stdout,10,approxdualsol[i]);
+         mpq_out_str(stdout, 10, approxdualsol[i]);
          printf(" \n");
       }
    }
-   mpq_set_ui(dualbound,0,1);                                                             
-   for( i = 0; i < psdim; i++ )
+   mpq_set_ui(dualbound, 0, 1);                                                             
+   for( i = 0; i < nextendedconss; i++ )
    {
-      mpq_mul(mpqtemp,approxdualsol[i],costvect[i]);
-      mpq_add(dualbound,dualbound,mpqtemp);
+      mpq_mul(mpqtemp, approxdualsol[i], costvect[i]);
+      mpq_add(dualbound, dualbound,mpqtemp);
    }
-   printf("objective value of approx solution is %.20f: \n",mpq_get_d(dualbound));         
-   mpq_out_str(stdout,10,dualbound);                                                      
+   printf("objective value of approx solution is %.20f: \n", mpq_get_d(dualbound));         
+   mpq_out_str(stdout, 10, dualbound);                                                      
    printf(" \n");                                                                        
 #endif  
 
    /* first, ensure nonnegativity of dual solution and fix artificial dual variables to zero */
-   for( i = 0; i < psdim; i++ ) 
+   for( i = 0; i < nextendedconss; i++ ) 
    { 
-      if( mpq_sgn(approxdualsol[i])<0)
-         mpq_set_si(approxdualsol[i],0,1);
-      else if( isNegInfinity(conshdlrdata,costvect[i]))
+      if( mpq_sgn(approxdualsol[i]) < 0)
+         mpq_set_si(approxdualsol[i], 0, 1);
+      else if( isNegInfinity(conshdlrdata, costvect[i]) )
       {
          assert(conshdlrdata->impliedeq[i]);
-         mpq_set_si(approxdualsol[i],0,1);
+         mpq_set_si(approxdualsol[i], 0, 1);
       }
    } 
    
    /* calculate violation of equality constraints r=c-A^ty */
-   for( i = 0; i < psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      mpq_set(violation[i],consdata->obj[i]);
+      mpq_set(violation[i], consdata->obj[i]);
    }
    /* A^ty for y corresponding to primal constraints */
-   for( i = 0; i < pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      for( j = consdata->beg[i] ; j < consdata->beg[i] + consdata->len[i] ; j++)
+      for( j = consdata->beg[i]; j < consdata->beg[i] + consdata->len[i]; j++)
       {
          currentrow = consdata->ind[j];
-         mpq_mul(mpqtemp,approxdualsol[i],consdata->val[j]);
-         mpq_sub(violation[currentrow],violation[currentrow],mpqtemp);
-         mpq_mul(mpqtemp,approxdualsol[i+pscondim],consdata->val[j]);
-         mpq_add(violation[currentrow],violation[currentrow],mpqtemp);
+         mpq_mul(mpqtemp, approxdualsol[i], consdata->val[j]);
+         mpq_sub(violation[currentrow], violation[currentrow], mpqtemp);
+         mpq_mul(mpqtemp, approxdualsol[i+nconss], consdata->val[j]);
+         mpq_add(violation[currentrow], violation[currentrow], mpqtemp);
       }
    }
    /* A^ty for y corresponding to bound constraints */
-   for( i = 0; i < psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      mpq_sub(violation[i],violation[i],approxdualsol[i+2*pscondim]);
-      mpq_add(violation[i],violation[i],approxdualsol[i+2*pscondim+psbdim]);
+      mpq_sub(violation[i], violation[i], approxdualsol[i+2*nconss]);
+      mpq_add(violation[i], violation[i], approxdualsol[i+2*nconss+nvars]);
    }
 
 
    /* project solution */
 #ifdef PS_OUT 
    printf("violation: \n");
-   if(psbdim<10000)
+   if(nvars<10000)
    {
-      for( i = 0; i < psbdim; i++ )
+      for( i = 0; i < nvars; i++ )
       {
-         mpq_out_str(stdout,10,violation[i]);
+         mpq_out_str(stdout, 10, violation[i]);
          printf(" \n");
       }     
    }
@@ -3565,16 +3561,16 @@ SCIP_RETCODE getPSdualbound(
 #endif
 
    /* compute [z] with Dz=r (D depends on psdualcolselection) */
-   rval = RECTLUsolveSystem( conshdlrdata->rectfactor,psbdim,psdim ,violation ,correction);
+   rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
 
 #ifdef PS_OUT 
    printf("correction: \n");  
-   if(psdim < 100)
+   if(nextendedconss < 100)
    {
-      for( i = 0; i < conshdlrdata->psbasiscount; i++ )
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
       {
-         mpq_out_str(stdout,10,correction[i]);
-         printf(" in position %d \n",conshdlrdata->psbasis[i]);
+         mpq_out_str(stdout, 10, correction[i]);
+         printf(" in position %d \n", conshdlrdata->psbasis[i]);
       }   
    }
    else
@@ -3582,20 +3578,20 @@ SCIP_RETCODE getPSdualbound(
 #endif
 
    /* projection step: compute bold(y)=y^+[z 0];
-    * correct only components corresponding to D (psbasiscount=#of columns in D 
+    * correct only components corresponding to D (npsbasis=#of columns in D 
     */
-   for( i = 0; i < conshdlrdata->psbasiscount; i++ )
+   for( i = 0; i < conshdlrdata->npsbasis; i++ )
    {
-      mpq_add(approxdualsol[conshdlrdata->psbasis[i]],approxdualsol[conshdlrdata->psbasis[i]],correction[i]);
+      mpq_add(approxdualsol[conshdlrdata->psbasis[i]], approxdualsol[conshdlrdata->psbasis[i]], correction[i]);
    }   
 
 #ifdef PS_OUT 
    printf("updated dual solution: \n");
-   if(psdim < 100)
+   if(nextendedconss < 100)
    {
-      for( i = 0; i < psdim; i++ )
+      for( i = 0; i < nextendedconss; i++ )
       {
-         mpq_out_str(stdout,10,approxdualsol[i]);
+         mpq_out_str(stdout, 10, approxdualsol[i]);
          printf(" \n");
       } 
    }
@@ -3613,48 +3609,48 @@ SCIP_RETCODE getPSdualbound(
    if( conshdlrdata->pslambdacompwise )
    {
       /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-      mpq_set_ui(lambda1,1,1);
-      for( i = 0; i < psdim; i++ )
+      mpq_set_ui(lambda1, 1, 1);
+      for( i = 0; i < nextendedconss; i++ )
       {
-         if(mpq_sgn(approxdualsol[i]) < 0)
+         if( mpq_sgn(approxdualsol[i]) < 0 )
          {
             mpq_set(mpqtemp2, conshdlrdata->interiorpt[i]);
-            mpq_sub(mpqtemp, conshdlrdata->interiorpt[i],approxdualsol[i]);
-            mpq_div(mpqtemp2,mpqtemp2,mpqtemp);
-            if(mpq_cmp(lambda1,mpqtemp2)>0)
-               mpq_set(lambda1,mpqtemp2);
+            mpq_sub(mpqtemp, conshdlrdata->interiorpt[i], approxdualsol[i]);
+            mpq_div(mpqtemp2, mpqtemp2, mpqtemp);
+            if( mpq_cmp(lambda1, mpqtemp2) > 0 )
+               mpq_set(lambda1, mpqtemp2);
          }
       }    
    }
    else
    {
-      mpq_set_ui(maxv,0,1);
+      mpq_set_ui(maxv, 0, 1);
       
       /* compute lambda1 as max violation of inequality constraints */
-      for( i = 0; i < psdim; i++ )
+      for( i = 0; i < nextendedconss; i++ )
       {
-         if(mpq_cmp(maxv,approxdualsol[i]) > 0)
-            mpq_set(maxv,approxdualsol[i]);
+         if( mpq_cmp(maxv, approxdualsol[i]) > 0 )
+            mpq_set(maxv, approxdualsol[i]);
       }    
       mpq_set(lambda1, conshdlrdata->commonslack);
-      mpq_sub(mpqtemp, conshdlrdata->commonslack,maxv);
-      mpq_div(lambda1,lambda1,mpqtemp);
+      mpq_sub(mpqtemp, conshdlrdata->commonslack, maxv);
+      mpq_div(lambda1, lambda1, mpqtemp);
    }
 
-   mpq_set_si(lambda2,1,1);
-   mpq_sub(lambda2,lambda2,lambda1);
+   mpq_set_si(lambda2, 1, 1);
+   mpq_sub(lambda2, lambda2, lambda1);
 
    /* perform shift */
    if( mpq_sgn(lambda2) != 0 )
    {
-      for( i = 0; i < psdim; i++ )
+      for( i = 0; i < nextendedconss; i++ )
       {
-         mpq_mul(approxdualsol[i],approxdualsol[i],lambda1);
+         mpq_mul(approxdualsol[i], approxdualsol[i], lambda1);
       }  
-      for( i =0; i < psdim; i++ )
+      for( i =0; i < nextendedconss; i++ )
       {
-         mpq_mul(mpqtemp,conshdlrdata->interiorpt[i],lambda2);
-         mpq_add(approxdualsol[i],approxdualsol[i],mpqtemp);
+         mpq_mul(mpqtemp, conshdlrdata->interiorpt[i], lambda2);
+         mpq_add(approxdualsol[i], approxdualsol[i], mpqtemp);
       }
    }
 
@@ -3665,35 +3661,35 @@ SCIP_RETCODE getPSdualbound(
    if( PSPOSTPROCESSDUALSOL )
    {
       /* y(lhs) and y(rhs) corresponding to primal constraints */
-      for( i = 0; i < pscondim; i++ )
+      for( i = 0; i < nconss; i++ )
       {
          /* find the min value of y(lhs) and y(rhs) */
-         if(mpq_cmp(approxdualsol[i],approxdualsol[i+pscondim])>0)
-            mpq_set(mpqtemp,approxdualsol[i+pscondim]);
+         if( mpq_cmp(approxdualsol[i], approxdualsol[i+nconss]) > 0 )
+            mpq_set(mpqtemp, approxdualsol[i+nconss]);
          else
-            mpq_set(mpqtemp,approxdualsol[i]);
+            mpq_set(mpqtemp, approxdualsol[i]);
          
          /* shift if both are nonzero */
-         if(mpq_sgn(mpqtemp)>0)
+         if( mpq_sgn(mpqtemp) > 0 )
          {
-            mpq_sub(approxdualsol[i],approxdualsol[i],mpqtemp);
-            mpq_sub(approxdualsol[i+pscondim],approxdualsol[i+pscondim],mpqtemp);
+            mpq_sub(approxdualsol[i], approxdualsol[i], mpqtemp);
+            mpq_sub(approxdualsol[i+nconss], approxdualsol[i+nconss], mpqtemp);
          }
       }
       /* y(lhs) and y(rhs) corresponding to bound constraints */
-      for( i = 0; i < psbdim; i++ )
+      for( i = 0; i < nvars; i++ )
       {
          /* find the min value of y(lhs) and y(rhs) */
-         if(mpq_cmp(approxdualsol[i + 2*pscondim],approxdualsol[i + 2*pscondim + psbdim])>0)
-            mpq_set(mpqtemp,approxdualsol[i + 2*pscondim + psbdim]);
+         if( mpq_cmp(approxdualsol[i + 2*nconss], approxdualsol[i + 2*nconss + nvars]) > 0 )
+            mpq_set(mpqtemp, approxdualsol[i + 2*nconss + nvars]);
          else
-            mpq_set(mpqtemp,approxdualsol[i + 2*pscondim]);
+            mpq_set(mpqtemp, approxdualsol[i + 2*nconss]);
          
          /* shift if both are nonzero */
-         if(mpq_sgn(mpqtemp)>0)
+         if( mpq_sgn(mpqtemp) > 0 )
          {
-            mpq_sub(approxdualsol[i+2*pscondim],approxdualsol[i+2*pscondim],mpqtemp);
-            mpq_sub(approxdualsol[i+2*pscondim + psbdim],approxdualsol[i+2*pscondim + psbdim],mpqtemp);
+            mpq_sub(approxdualsol[i+2*nconss], approxdualsol[i+2*nconss], mpqtemp);
+            mpq_sub(approxdualsol[i+2*nconss + nvars], approxdualsol[i+2*nconss + nvars], mpqtemp);
          }
       }
    }
@@ -3701,11 +3697,11 @@ SCIP_RETCODE getPSdualbound(
 #ifdef PS_OUT 
    printf("projected and shifted dual solution: \n");
    printf("(Should be an exact feasible solution) \n");
-   if(psdim < 100)
+   if( nextendedconss < 100 )
    {
-      for( i = 0; i < psdim; i++ )            
+      for( i = 0; i < nextendedconss; i++ )            
       {                                                                                     
-         mpq_out_str(stdout,10,approxdualsol[i]);           
+         mpq_out_str(stdout, 10, approxdualsol[i]);           
          printf(" \n");             
       }            
    }
@@ -3713,97 +3709,99 @@ SCIP_RETCODE getPSdualbound(
       printf(" Solution too long to print.\n");
 #endif
 
-   SCIPdebugMessage("Verifying feasibility of dual solution... \n");
 
 #ifndef NDEBUG
+
+   SCIPdebugMessage("Verifying feasibility of dual solution... \n");
+
    /* calculate violation of equality constraints */
    rval = 0;
-   for( i = 0; i < psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      mpq_set(violation[i],consdata->obj[i]);
+      mpq_set(violation[i], consdata->obj[i]);
       /* SUBTRACT Ax to get violation b-Ax */
       /* subtract A(approxdualsol) */
    }
-   for( i = 0; i < pscondim; i++ )
+   for( i = 0; i < nconss; i++ )
    {
-      for( j = consdata->beg[i] ; j < consdata->beg[i] + consdata->len[i] ; j++)
+      for( j = consdata->beg[i]; j < consdata->beg[i] + consdata->len[i]; j++ )
       {
          currentrow = consdata->ind[j];
-         mpq_mul(mpqtemp,approxdualsol[i],consdata->val[j]);
-         mpq_sub(violation[currentrow],violation[currentrow],mpqtemp);
-         mpq_mul(mpqtemp,approxdualsol[i+pscondim],consdata->val[j]);
-         mpq_add(violation[currentrow],violation[currentrow],mpqtemp);
+         mpq_mul(mpqtemp, approxdualsol[i], consdata->val[j]);
+         mpq_sub(violation[currentrow], violation[currentrow], mpqtemp);
+         mpq_mul(mpqtemp, approxdualsol[i+nconss], consdata->val[j]);
+         mpq_add(violation[currentrow], violation[currentrow], mpqtemp);
       }
    }
-   for( i = 0; i < psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      mpq_sub(violation[i],violation[i],approxdualsol[i+2*pscondim]);
-      mpq_add(violation[i],violation[i],approxdualsol[i+2*pscondim+psbdim]);
+      mpq_sub(violation[i], violation[i], approxdualsol[i+2*nconss]);
+      mpq_add(violation[i], violation[i], approxdualsol[i+2*nconss+nvars]);
    }
-   for( i = 0; i < psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
    {
-      if(mpq_sgn(violation[i]))
+      if( mpq_sgn(violation[i]) )
       {
          SCIPdebugMessage("Dual solution incorrect, violates equalties\n");
-         i = psbdim;
+         i = nvars;
          rval = 1;
       }
    }
-   for( i = 0; i < psdim; i++ )            
+   for( i = 0; i < nextendedconss; i++ )            
    {                                                                                     
       if( mpq_sgn(approxdualsol[i])<0 )
       {
          SCIPdebugMessage("Dual solution incorrect, negative components\n");
-         i = psdim;
+         i = nextendedconss;
          rval = 1;
       }
    }            
-   if(!rval)
+   if( !rval )
       SCIPdebugMessage("Dual solution verified\n");
    assert(!rval);
 #endif 
 
    /* compute dual bound for constructed exact dual solution */
-   mpq_set_ui(dualbound,0,1);
-   for( i = 0; i < psdim; i++ )
+   mpq_set_ui(dualbound, 0, 1);
+   for( i = 0; i < nextendedconss; i++ )
    {
-      mpq_mul(mpqtemp,approxdualsol[i],costvect[i]);
-      mpq_add(dualbound,dualbound,mpqtemp);
+      mpq_mul(mpqtemp, approxdualsol[i], costvect[i]);
+      mpq_add(dualbound, dualbound, mpqtemp);
    }
-   mpq_set(*boundval,dualbound);
+   mpq_set(*boundval, dualbound);
 
 #ifdef PS_OUT 
-   printf("Common slack is: %.20f or \n",mpq_get_d(conshdlrdata->commonslack));
-   mpq_out_str(stdout,10,conshdlrdata->commonslack);
+   printf("Common slack is: %.20f or \n", mpq_get_d(conshdlrdata->commonslack));
+   mpq_out_str(stdout, 10, conshdlrdata->commonslack);
    printf(" \n");
 
-   printf("Max violation is: %.20f or \n",mpq_get_d(maxv));
-   mpq_out_str(stdout,10,maxv);
+   printf("Max violation is: %.20f or \n", mpq_get_d(maxv));
+   mpq_out_str(stdout, 10, maxv);
    printf(" \n");
 
-   printf("Lambda (use of interior point) is: %.20f or \n",mpq_get_d(lambda2));
-   mpq_out_str(stdout,10,lambda2);
+   printf("Lambda (use of interior point) is: %.20f or \n", mpq_get_d(lambda2));
+   mpq_out_str(stdout, 10, lambda2);
    printf(" \n");
 
    printf("objective value of dual feasible solution is: \n");  
-   mpq_out_str(stdout,10,dualbound);
+   mpq_out_str(stdout, 10, dualbound);
    printf(" \n");
 #endif
 
    /* free memory */
-   for( i = 0; i < psdim; i++ )
+   for( i = 0; i < nextendedconss; i++ )
       mpq_clear(correction[i]);
    SCIPfreeBufferArray(scip, &correction);
 
-   for( i = 0; i < psbdim; i++ )
+   for( i = 0; i < nvars; i++ )
       mpq_clear(violation[i]);
    SCIPfreeBufferArray(scip, &violation);
 
-   for( i = 0; i < psdim; i++ )
+   for( i = 0; i < nextendedconss; i++ )
       mpq_clear(costvect[i]);
    SCIPfreeBufferArray(scip, &costvect);
 
-   for( i = 0; i < psdim; i++ )
+   for( i = 0; i < nextendedconss; i++ )
       mpq_clear(approxdualsol[i]);
    SCIPfreeBufferArray(scip, &approxdualsol);
 
@@ -5918,6 +5916,11 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
          "constraints/exactlp/psintpointselection",
          "method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point)",
          &conshdlrdata->psintpointselection, TRUE, DEFAULT_PSINTPOINTSELECTION, "ao", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/exactlp/psuseintpoint",
+         "should correction shift use an interior pt? (otherwise use interior ray of recession cone)",
+         &conshdlrdata->psuseintpoint, TRUE, DEFAULT_PSUSEINTPOINT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
