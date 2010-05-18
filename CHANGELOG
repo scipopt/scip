@@ -2,7 +2,8 @@ SCIP version NEXT
 ===============
 
 interface:
-- new method SCIPbranchruleGetNRelaxCalls() to get the total number of times, a particular branching rule was called on a relaxation solutions
+- new method SCIPbranchruleGetNRelaxCalls() to get the total number of times, a particular branching rule was called 
+  on a relaxation solutions
 - new method SCIPpermuteArray() that randomly shuffles an array using the Fisher-Yates algorithm
 - new method SCIPgetRandomSubset() that draws a random subset of disjoint elements from a given set of disjoint elements
 - new method SCIPpermuteProb() that randomly permutes constraints and variables
@@ -14,7 +15,7 @@ interface:
 - added to the callback method SCIP_DECL_PROBEXITSOL(x) (type_prob.h) the parameter restart; 
   this parameter is set to TRUE if the exit solve call was triggered by a restart?
 - new method SCIPswapPointers()
-- new method SCIPexecRelpscostBranching() in branch_relpscots.{c,h}; this method allows of calling the reliability pseudo cost branching algorithm 
+- new method SCIPexecRelpscostBranching() in branch_relpscost.{c,h}; this method allows of calling the reliability pseudo cost branching algorithm 
   for given set of branching candidates from the outside
 - added SCIPsortRealRealRealPtr() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added to the method SCIPapplyRens() the parameter uselprows, this allows to switch between LP row and SCIP constraints as basis for the subSCIP, 
@@ -27,11 +28,13 @@ interface:
   The old method is now called SCIPgetVarPseudocostVal()
 - method SCIPgetVarPseudocostCurrentRun() now returns the pseudocost value of one branching direction, scaled to a unit interval, 
   old method now called SCIPgetVarPseudocostValCurrentRun()
-- methods SCIPgetVarConflictScore and SCIPgetVarConflictScoreCurrentRun() now called SCIPgetVarVSIDS() and SCIPgetVarVSIDSCurrentRun(), resp.
+- methods SCIPgetVarConflictScore and SCIPgetVarConflictScoreCurrentRun() now called SCIPgetVarVSIDS() and 
+  SCIPgetVarVSIDSCurrentRun(), resp.
 - methods SCIPvarGetNInferences(), SCIPvarGetNInferencesCurrentRun(), SCIPvarGetNCutoffs(), and SCIPvarGetNCutoffsCurrentRun() now called
   SCIPvarGetInferenceSum(), SCIPvarGetInferenceSumCurrentRun(), SCIPvarGetCutoffSum(), and SCIPvarGetCutoffSumCurrentRun(), resp., 
   return SCIP_Real values instead of SCIP_Longint
-- new method SCIPinitVarBranchStats() to initialize the branching statistics (such as pseudo costs, VSIDS, inference values) of a variable
+- new method SCIPinitVarBranchStats() to initialize the branching statistics (such as pseudo costs, VSIDS, inference values) 
+  of a variable
 - new methods SCIPsetHeuristicsAggressive() SCIPsetHeuristicsFast(), and SCIPsetHeuristicsOff() which set the 
   heuristics to aggressive, fast, or off settings, respectively
 - new methods SCIPsetSeparatingAggressive() SCIPsetSeparatingFast(), and SCIPsetSeparatingOff() which sets
@@ -47,11 +50,12 @@ interface:
 - NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into src/nlpi 
 - NLPIs can now be managed like other SCIP plugins, i.e., they can be included into the SCIP core and accessed by methods
   SCIPincludeNlpi(), SCIPfindNlpi(), SCIPgetNNlpis(), SCIPgetNlpis(), SCIPsetNlpiPriority()
-- new data structures and methods to handle nonlinear expressions in NLPI ({type_,struct_,}expression.{h,c}):
+- new data structures and methods to handle nonlinear expressions in NLPI ({type_, struct_}expression.{h,c}):
   nlpioracle can store and evaluate general NLPs now, nlpi_ipopt can solve general NLPs now
 - new API for "expressions interpreter" - code that evaluates expression trees, including first and second derivatives
-- added SCIPsortPtrPtrLongIntInt, SCIPsortLongPtrPtrIntInt and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
-- added SCIPcalcNegatedCliquePartition to scip.c to calculate a clique partition on negations of all given binary variables
+- added SCIPsortPtrPtrLongIntInt(), SCIPsortLongPtrPtrIntInt() and corresponding sorting/inserting/deleting methods 
+  in pub_misc.h and necessary defines in misc.c
+- added SCIPcalcNegatedCliquePartition() to scip.c to calculate a clique partition on negations of all given binary variables
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -71,10 +75,10 @@ features:
   a set of branching variables with a unique high priority
 - the MPS reader can now read MIQPs and MIQCPs where a quadratic objective function can be specified by a QMATRIX or QUADOBJ section and
   the quadratic part of a quadratic constraint by a QCMATRIX
-- the MPS reader can now write quadratic and soc constraints
-- the GAMS reader can now write soc constraints
+- the MPS reader can now write quadratic and SOC constraints
+- the GAMS reader can now write SOC constraints
 - new undercover heuristic for MIQCPs: fixes variables such as to obtain a MIP and solves this
-- modified implementation of separation algorithms in cons_knapsack.c according to results of diploma thesis; including superadditive lifting (disabled) 
+- modified implementation of separation algorithms in cons_knapsack.c according to results of diploma thesis; including super-additive lifting (disabled) 
 - added support for bool_gt, bool_lt, bool_ge, bool_le, bool_ne, bool_not, int_times, int_minus, int_plus, int_negate, 
   float_times, float_minus, float_plus, float_negate constraints to flatzinc reader
 - added scripts check_*.sh, evalcheck_*.sh and check_*.awk for blis, glkp, gurobi and symphony (including targets in Makefile)
@@ -153,10 +157,10 @@ fixed bugs:
 - fixed potential bug in rapid learning with dual reductions
 - fixed bug in sepastore.c in sepastoreApplyLb/Ub being to hard on feasibility decisions
 - fixed bug in presolving while not applying a bound change on a variable in a single-variable constraint (e.g. x1 = 0.03) in cons_linear which is too small, that lead to another bound change in presol_trivial which is not allowed, so now this bound change will be forced
-- fixed  SCIPvarIsTransformedOrigvar() in var.c (variables generated by presol_inttobinary returned false)
+- fixed SCIPvarIsTransformedOrigvar() in var.c (variables generated by presol_inttobinary returned false)
 - fixed bug in heur_nlp.c: objective function had wrong sign for maximization problems
 - fixed potential bug in OCTANE heuristic with nonbasic solutions
-- fixed wrong assert in Cplex LPI: Due to numerical inaccuracies, a few pivtos might be performed after refactorization
+- fixed wrong assert in Cplex LPI: Due to numerical inaccuracies, a few pivots might be performed after refactorization
 - fixed bug in lp.c: if in SCIPlpSolveAndEval() the LP has to be solved from scratch due to numerical troubles, reset SCIP_LPPARAM_FROMSCRATCH to FALSE afterwards
 
 plugins:
