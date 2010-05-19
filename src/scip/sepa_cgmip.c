@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.10 2010/05/15 12:12:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.11 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -533,6 +533,8 @@ SCIP_RETCODE createSubscip(
    int nconsvars;
    char name[SCIP_MAXSTRLEN];
 
+   SCIP_Bool success;
+
    assert( scip != NULL );
    assert( sepadata != NULL );
 
@@ -552,10 +554,10 @@ SCIP_RETCODE createSubscip(
    subscip = mipdata->subscip;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
 #endif
 
    SCIP_CALL( SCIPcreateProb(subscip, "sepa_cgmip separating MIP", NULL , NULL , NULL , NULL , NULL , NULL) );

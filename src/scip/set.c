@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.220 2010/05/07 07:25:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.221 2010/05/19 12:38:31 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -349,7 +349,8 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
    return SCIP_OKAY;
 }
 
-/** copies plugins from sourcescip to targetscip */
+/** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
+ *  cannot be copied, success will return FALSE. Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
    SCIP_SET*             targetset,          /**< target SCIP_SET data structure */
@@ -367,7 +368,9 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
-   SCIP_Bool             copynlpis           /**< should the NLP interfaces be copied */
+   SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
+   SCIP_Bool*            success             /**< pointer to store whether all constraint handlers 
+                                              *   which do not need constraints were successfully copied */
    )
 {
    int p;
@@ -375,193 +378,173 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    assert(sourceset != NULL);
    assert(targetset != NULL);
    assert(sourceset != targetset);
-   assert(sourceset->scip != NULL);
-   assert(targetset->scip != NULL);
-   assert(sourceset->scip != targetset->scip);
+
+   *success = TRUE;
 
    /* copy all reader plugins */
-   if( copyreaders )
+   if( copyreaders && sourceset->readers != NULL )
    {
-      if( sourceset->readers != NULL )
+      for( p = sourceset->nreaders - 1; p >= 0; --p )
       {
-         for( p = sourceset->nreaders - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
-         }
+         SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
       }
    }
 
    /* copy all variable pricer plugins */
-   if( copypricers )
+   if( copypricers && sourceset->pricers != NULL )
    {
-      if( sourceset->pricers != NULL )
+      for( p = sourceset->npricers - 1; p >= 0; --p )
       {
-         for( p = sourceset->npricers - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPpricerCopyInclude(sourceset->pricers[p], targetset) );
-         }
+         SCIP_CALL( SCIPpricerCopyInclude(sourceset->pricers[p], targetset) );
       }
    }
 
    /* copy all constraint handler plugins */
-   if( copyconshdlrs )
-   {
-      if( sourceset->conshdlrs_include != NULL )
+   if( copyconshdlrs && sourceset->conshdlrs != NULL )
+   {	
+      /* copy them in order they were added to the sourcescip */
+      for( p = 0; p < sourceset->nconshdlrs; ++p )
       {
-         /* copy them in order they were added to the sourcescip */
-         for( p = 0; p < sourceset->nconshdlrs; ++p )
+         if( SCIPconshdlrIsClonable(sourceset->conshdlrs[p]) )
          {
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset) );
          }
+         else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs[p]) )
+         {
+            *success = FALSE;
+            SCIPdebugMessage("constraint handler <%s> (which does not need constraints) cannot be copied.", 
+               SCIPconshdlrGetName(sourceset->conshdlrs[p]));
+         }
       }
    }
-
+ 
    /* copy all conflict handler plugins */
-   if( copyconflicthdlrs )
+   if( copyconflicthdlrs && sourceset->conflicthdlrs != NULL )
    {
-      if( sourceset->conflicthdlrs != NULL )
+      for( p = sourceset->nconflicthdlrs - 1; p >= 0; --p )
       {
-         for( p = sourceset->nconflicthdlrs - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPconflicthdlrCopyInclude(sourceset->conflicthdlrs[p], targetset) );
-         }
+         SCIP_CALL( SCIPconflicthdlrCopyInclude(sourceset->conflicthdlrs[p], targetset) );
       }
    }
-
+   
    /* copy all presolver plugins */
-   if( copypresolvers )
+   if( copypresolvers && sourceset->presols != NULL )
    {
-      if( sourceset->presols != NULL )
+      for( p = sourceset->npresols - 1; p >= 0; --p )
       {
-         for( p = sourceset->npresols - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset) );
-         }
+         SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset) );
       }
    }
-
+   
    /* copy all relaxator plugins */
-   if( copyrelaxators )
+   if( copyrelaxators && sourceset->relaxs != NULL )
    {
-      if( sourceset->relaxs != NULL )
+      for( p = sourceset->nrelaxs - 1; p >= 0; --p )
       {
-         for( p = sourceset->nrelaxs - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
-         }
+         SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
       }
    }
-
+   
    /* copy all separator plugins */
-   if( copyseparators )
+   if( copyseparators && sourceset->sepas != NULL )
    {
-      if( sourceset->sepas != NULL )
+      for( p = sourceset->nsepas - 1; p >= 0; --p )
       {
-         for( p = sourceset->nsepas - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
-         }
+         SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
       }
    }
-
+   
    /* copy all propagators plugins */
-   if( copypropagators )
+   if( copypropagators && sourceset->props != NULL )
    {
-      if( sourceset->props != NULL )
+      for( p = sourceset->nprops - 1; p >= 0; --p )
       {
-         for( p = sourceset->nprops - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
-         }
+         SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
       }
    }
-
+   
    /* copy all primal heuristics plugins */
-   if( copyheuristics )
+   if( copyheuristics && sourceset->heurs != NULL )
    {
-      if( sourceset->heurs != NULL )
+      for( p = sourceset->nheurs - 1; p >= 0; --p )
       {
-         for( p = sourceset->nheurs - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
-         }
+         SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
       }
    }
-
+   
    /* copy all event handler plugins */
-   if( copyeventhdlrs )
+   if( copyeventhdlrs && sourceset->eventhdlrs != NULL )
    {
-      if( sourceset->eventhdlrs != NULL )
+      for( p = sourceset->neventhdlrs - 1; p >= 0; --p )
       {
-         for( p = sourceset->neventhdlrs - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
-         }
+         SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
       }
    }
-
+   
    /* copy all node selector plugins */
-   if( copynodeselectors )
+   if( copynodeselectors && sourceset->nodesels != NULL )
    {
-      if( sourceset->nodesels != NULL )
+      for( p = sourceset->nnodesels - 1; p >= 0; --p )
       {
-         for( p = sourceset->nnodesels - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPnodeselCopyInclude(sourceset->nodesels[p], targetset) );
-         }
+         SCIP_CALL( SCIPnodeselCopyInclude(sourceset->nodesels[p], targetset) );
       }
    }
-
+   
    /* copy all branchrule plugins */
-   if( copybranchrules )
+   if( copybranchrules && sourceset->branchrules != NULL )
    {
-      if( sourceset->branchrules != NULL )
+      for( p = sourceset->nbranchrules - 1; p >= 0; --p )
       {
-         for( p = sourceset->nbranchrules - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
-         }
+         SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
       }
    }
-
+   
    /* copy all display plugins */
-   if( copydisplays )
+   if( copydisplays && sourceset->disps != NULL )
    {
-      if( sourceset->disps != NULL )
+      for( p = sourceset->ndisps - 1; p >= 0; --p )
       {
-         for( p = sourceset->ndisps - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
-         }
+         SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
       }
    }
-
+   
    /* copy all dialog plugins */
-   if( copydialogs )
+   if( copydialogs && sourceset->dialogs != NULL )
    {
-      if( sourceset->dialogs != NULL )
+      for( p = sourceset->ndialogs - 1; p >= 0; --p )
       {
-         for( p = sourceset->ndialogs - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
-         }
+         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
 
-   if( copynlpis )
+   /* copy all NLP interfaces */
+   if( copynlpis && sourceset->nlpis != NULL )
    {
-      if( sourceset->nlpis != NULL )
+      for( p = sourceset->nnlpis - 1; p >= 0; --p )
       {
          SCIP_NLPI* nlpicopy;
-         for( p = sourceset->nnlpis - 1; p >= 0; --p )
-         {
-            SCIP_CALL( SCIPnlpiCopy(sourceset->nlpis[p], &nlpicopy) );
-            SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
-         }
+         SCIP_CALL( SCIPnlpiCopy(sourceset->nlpis[p], &nlpicopy) );
+         SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
       }
-   }
+   }   
 
    return SCIP_OKAY;
+}
+
+/** copies parameters from sourcescip to targetscip */
+SCIP_RETCODE SCIPsetCopyParams(
+   SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
+   SCIP_SET*             targetset           /**< target SCIP_SET data structure */
+   )
+{
+   assert(sourceset != NULL);
+   assert(targetset != NULL);
+   assert(sourceset != targetset);
+   assert(targetset->scip != NULL);
+
+   SCIP_CALL( SCIPparamsetCopyParams(sourceset->paramset, targetset->paramset,targetset->scip) );
+
+   return SCIP_OKAY;  
 }
 
 /** creates global SCIP settings */
@@ -1063,7 +1046,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "misc/permutationseed",
          "seed value for permuting the problem after the problem was transformed (-1: no permutation)",
-         &(*set)->misc_permuatationseed, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
+         &(*set)->misc_permutationseed, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
          NULL, NULL) );
 
    /* node selection */
@@ -1457,7 +1440,7 @@ SCIP_RETCODE SCIPsetAddBoolParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetAddBool(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, 
-                   paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -1503,7 +1486,7 @@ SCIP_RETCODE SCIPsetAddLongintParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetAddLongint(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, 
-                   maxvalue, paramchgd, paramdata) );
+         maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -1526,7 +1509,7 @@ SCIP_RETCODE SCIPsetAddRealParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetAddReal(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, 
-                   maxvalue, paramchgd, paramdata) );
+         maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -1569,7 +1552,7 @@ SCIP_RETCODE SCIPsetAddStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetAddString(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, 
-                   paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }

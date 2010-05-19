@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.32 2010/05/03 15:12:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.33 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -356,6 +356,14 @@ SCIP_PARAM** SCIPparamsetGetParams(
 extern
 int SCIPparamsetGetNParams(
    SCIP_PARAMSET*        paramset            /**< parameter set */
+   );
+
+/** copies all parameter values of the source parameter set to the corresponding parameters in the target set */
+extern
+SCIP_RETCODE SCIPparamsetCopyParams(
+ SCIP_PARAMSET*          sourceparamset,     /**< source parameter set */
+ SCIP_PARAMSET*          targetparamset,     /**< target parameter set */
+ SCIP*                   targetscip          /**< target SCIP data structure */
    );
 
 #ifdef __cplusplus

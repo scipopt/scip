@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.197 2010/03/26 15:44:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.198 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3807,6 +3807,16 @@ SCIP_Bool SCIPconshdlrIsInitialized(
    return conshdlr->initialized;
 }
 
+/** does the constraint handler have a copy function? */
+SCIP_Bool SCIPconshdlrIsClonable(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return (conshdlr->conshdlrcopy != NULL);
+}
+
 
 
 
@@ -4511,6 +4521,7 @@ SCIP_RETCODE SCIPconsCopy(
    assert(cons != NULL);
    assert(conshdlr != NULL);
 
+   /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
    (*success) = FALSE;
    
    if( conshdlr->conscopy != NULL )

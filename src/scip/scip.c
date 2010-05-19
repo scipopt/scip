@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.566 2010/05/17 19:32:04 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.567 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -109,16 +109,16 @@ SCIP_RETCODE checkStage(
 {
    assert(scip != NULL);
    assert(method != NULL);
-
+   
    /*SCIPdebugMessage("called method <%s> at stage %d ------------------------------------------------\n",
      method, scip->set->stage);*/
-
+   
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
    assert(scip->interrupt != NULL);
    assert(scip->dialoghdlr != NULL);
    assert(scip->totaltime != NULL);
-
+   
    switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
@@ -135,14 +135,14 @@ SCIP_RETCODE checkStage(
       assert(scip->pricestore == NULL);
       assert(scip->sepastore == NULL);
       assert(scip->cutpool == NULL);
-
+      
       if( !init )
       {
          SCIPerrorMessage("cannot call method <%s> in initialization stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
-
+      
    case SCIP_STAGE_PROBLEM:
       assert(scip->stat != NULL);
       assert(scip->origprob != NULL);
@@ -489,40 +489,6 @@ void SCIPprintError(
 /*
  * general SCIP methods
  */
-
-/** copies plugins from sourcescip to targetscip */
-SCIP_RETCODE SCIPcopyPlugins(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
-   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
-   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
-   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
-   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
-   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
-   SCIP_Bool             copyseparators,     /**< should the separators be copied */
-   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
-   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
-   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
-   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
-   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
-   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
-   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
-   SCIP_Bool             copynlpis           /**< should the NLPIs be copied */
-   )
-{
-   assert(sourcescip != NULL);
-   assert(targetscip != NULL);
-
-   SCIP_CALL( checkStage(sourcescip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
-         copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copynlpis) );
-
-   return SCIP_OKAY;
-}
 
 /** creates and initializes SCIP data structures */
 SCIP_RETCODE SCIPcreate(
@@ -905,8 +871,285 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
    return scip->set->disp_verblevel;
 }
 
+/*
+ * SCIP copy methods
+ */
 
+/** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
+ *  cannot be copied, success will return FALSE. Note that in this case dual reductions might be invalid. */
+SCIP_RETCODE SCIPcopyPlugins(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
+   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
+   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
+   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
+   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
+   SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
+   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
+   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
+   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool*            success             /**< pointer to store whether all constraint handlers 
+                                              *   which do not need constraints were successfully copied */
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(sourcescip->set != NULL);
+   assert(targetscip->set != NULL);
 
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
+         copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copynlpis, success) );
+
+   return SCIP_OKAY;
+}
+
+/** copies parameter settings from sourcescip to targetscip */
+SCIP_RETCODE SCIPcopyParamSettings(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(sourcescip->set != NULL);
+   assert(targetscip->set != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopySettings", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopySettings", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsetCopyParams(sourcescip->set, targetscip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** copies a variable from source to target SCIP and captures it in target SCIP */
+static
+SCIP_RETCODE copyVar(
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR*             sourcevar,          /**< source variable */
+   SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
+   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   )
+{
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyVar", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* create the variable in the target SCIP */
+   SCIP_CALL( SCIPcreateVar(targetscip, targetvar, SCIPvarGetName(sourcevar), SCIPvarGetLbGlobal(sourcevar),
+         SCIPvarGetUbGlobal(sourcevar), SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
+         SCIPvarIsInitial(sourcevar), SCIPvarIsRemovable(sourcevar), NULL, NULL, NULL, NULL) );       
+   SCIP_CALL( SCIPaddVar(targetscip, *targetvar) );
+   
+   /* insert variable into mapping between source SCIP and the target SCIP */
+   if( varmap != NULL )
+   {
+      SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *targetvar) );
+   }
+
+   SCIPdebugMessage("created copy <%s> of variable <%s>\n", SCIPvarGetName(*targetvar), SCIPvarGetName(sourcevar));
+
+   return SCIP_OKAY;
+}
+
+/** copies all active variables from source to target SCIP and captures it in target SCIP */
+SCIP_RETCODE SCIPcopyVars(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   )
+{
+   SCIP_VAR** sourcevars;                          /* source scip variables                    */
+
+   int nvars;   
+   int i;
+  
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+  
+   /* get active variables of the source SCIP */
+   SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* create the variables of the target SCIP */
+   for( i = 0; i < nvars; i++ )
+   {          
+      SCIP_VAR* targetvar;
+      SCIP_CALL( copyVar(targetscip, sourcevars[i], &targetvar, varmap) );
+      assert(targetvar != NULL);
+   }
+
+   /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
+   assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip) );
+   assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) == SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip) );
+   assert(SCIPgetNImplVars(sourcescip) == SCIPgetNImplVars(targetscip) );
+   assert(SCIPgetNContVars(sourcescip) == SCIPgetNContVars(targetscip) );
+
+   return SCIP_OKAY;
+}
+
+/** copies constraints from sourcescip to targetscip; if consmap is not NULL, the constraint will be captured in target SCIP */
+SCIP_RETCODE SCIPcopyConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                              *   variables of the target SCIP, must not be NULL! */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+
+   int nconshdlrs;   
+   int i;
+  
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(varmap != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   
+   *success = TRUE;
+   nconshdlrs = SCIPgetNConshdlrs(sourcescip);
+   conshdlrs = SCIPgetConshdlrs(sourcescip);
+   assert(nconshdlrs == 0 || conshdlrs != NULL);
+   assert(SCIPisTransformed(sourcescip));
+
+   /* copy problem: loop through all constraint handlers */  
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      SCIP_CONS** conss;
+      SCIP_CONS* targetcons;
+      
+      int nconss;
+      int c;         
+      SCIP_Bool succeed;
+   
+      assert(conshdlrs[i] != NULL);
+      nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+      conss = SCIPconshdlrGetConss(conshdlrs[i]);
+      assert(nconshdlrs == 0 || conshdlrs != NULL);
+      
+      if( nconss > 0 )
+      {
+         SCIPdebugMessage("Attempting to copy %d %s constraints\n", nconss, SCIPconshdlrGetName(conshdlrs[i]));
+      }
+      
+      /* copy problem: loop through all constraints of one type */  
+      for( c = 0; c < nconss; ++c )
+      {
+         assert(conss[c] != NULL);
+
+         if( !SCIPconsIsEnabled(conss[c]) )
+            continue;
+         
+         /* use the copy constructor of each constraint handler to create subSCIP */
+         SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, conshdlrs[i], sourcescip, conss[c], varmap,
+               SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]), SCIPconsIsChecked(conss[c]),
+               SCIPconsIsPropagated(conss[c]), SCIPconsIsLocal(conss[c]), SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), 
+               SCIPconsIsRemovable(conss[c]), SCIPconsIsStickingAtNode(conss[c]), &succeed) );
+            
+         /* add the copied constraint to subSCIP, print a warning if conshdlr does not support copying */
+         if( succeed )
+         {
+            SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
+	      
+            /* insert constraint into mapping between source SCIP and the target SCIP */
+            if( consmap != NULL )
+            {
+               SCIP_CALL( SCIPhashmapInsert(consmap, conss[c], targetcons) );
+            }
+            else 
+            {
+               SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
+            }
+
+         }
+         else
+         {
+            *success = FALSE;
+            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(conss[c]));
+         }
+      }
+   }
+  
+   assert(!(*success) || SCIPgetNConss(sourcescip) == SCIPgetNConss(targetscip) );
+  
+   return SCIP_OKAY;
+}
+
+/** copies sourcescip to targetscip */
+SCIP_RETCODE SCIPcopy(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP, might be empty string */          
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   )
+{
+   SCIP_Bool uselocalvarmap;
+   char probname[SCIP_MAXSTRLEN];
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   *success = TRUE;   
+
+   /* copy all plugins and settings */
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+
+   /* create problem in the target SCIP */
+   /* get name of the original problem and add the suffix string */
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
+   SCIP_CALL( SCIPcreateProb(targetscip, probname, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   uselocalvarmap = (varmap == NULL);
+   if( uselocalvarmap )
+   {
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
+   }
+
+   /* copy all variables and constraints */
+   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap) );
+   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, success) );
+
+   if( uselocalvarmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&varmap);
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * parameter settings
@@ -4749,12 +4992,12 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->solvemem, scip->stat) );
 
    /* in case the permutation seed is different to -1, permute the transformed problem */
-   if( scip->set->misc_permuatationseed > -1 )
+   if( scip->set->misc_permutationseed > -1 )
    {
       SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-         "permute problem using random seed %d\n", scip->set->misc_permuatationseed);
+         "permute problem using random seed %d\n", scip->set->misc_permutationseed);
       
-      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permuatationseed, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -10055,7 +10298,7 @@ SCIP_RETCODE SCIPcreateCons(
 
 /** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
- *  a constraint is creates and captures;
+ *  a constraint is created and captured.
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
  *  be declared feasible even if it violates this particular constraint.  This constellation should only be used, if no
  *  LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due to the variable's
@@ -11248,7 +11491,7 @@ SCIP_RETCODE SCIPwriteLP(
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-         scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, &cutoff) );
+            scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, &cutoff) );
    }
 
    SCIP_CALL( SCIPlpWrite(scip->lp, fname) );
@@ -14246,8 +14489,9 @@ SCIP_RETCODE SCIPtrySolFree(
       SCIP_Bool feasible;
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem 
-      *  including modifiable constraints */
+       *  including modifiable constraints */
       SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
+      
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
@@ -17301,8 +17545,8 @@ SCIP_Bool SCIPisEQ(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	   && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
    
    return SCIPsetIsEQ(scip->set, val1, val2);
 }
@@ -17320,8 +17564,8 @@ SCIP_Bool SCIPisLT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsLT(scip->set, val1, val2);
 }
@@ -17339,8 +17583,8 @@ SCIP_Bool SCIPisLE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsLE(scip->set, val1, val2);
 }
@@ -17358,8 +17602,8 @@ SCIP_Bool SCIPisGT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsGT(scip->set, val1, val2);
 }
@@ -17377,8 +17621,8 @@ SCIP_Bool SCIPisGE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsGE(scip->set, val1, val2);
 }
@@ -17517,8 +17761,8 @@ SCIP_Bool SCIPisSumEQ(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	   && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
    
    return SCIPsetIsSumEQ(scip->set, val1, val2);
 }
@@ -17536,8 +17780,8 @@ SCIP_Bool SCIPisSumLT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumLT(scip->set, val1, val2);
 }
@@ -17554,8 +17798,8 @@ SCIP_Bool SCIPisSumLE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumLE(scip->set, val1, val2);
 }
@@ -17573,8 +17817,8 @@ SCIP_Bool SCIPisSumGT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumGT(scip->set, val1, val2);
 }
@@ -17592,8 +17836,8 @@ SCIP_Bool SCIPisSumGE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumGE(scip->set, val1, val2);
 }
@@ -17647,8 +17891,8 @@ SCIP_Bool SCIPisFeasEQ(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasEQ(scip->set, val1, val2);
 }
@@ -17666,8 +17910,8 @@ SCIP_Bool SCIPisFeasLT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasLT(scip->set, val1, val2);
 }
@@ -17685,8 +17929,8 @@ SCIP_Bool SCIPisFeasLE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasLE(scip->set, val1, val2);
 }
@@ -17704,8 +17948,8 @@ SCIP_Bool SCIPisFeasGT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasGT(scip->set, val1, val2);
 }
@@ -17723,8 +17967,8 @@ SCIP_Bool SCIPisFeasGE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasGE(scip->set, val1, val2);
 }
@@ -17864,8 +18108,8 @@ SCIP_Bool SCIPisRelEQ(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelEQ(scip->set, val1, val2);
 }
@@ -17883,8 +18127,8 @@ SCIP_Bool SCIPisRelLT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelLT(scip->set, val1, val2);
 }
@@ -17902,8 +18146,8 @@ SCIP_Bool SCIPisRelLE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelLE(scip->set, val1, val2);
 }
@@ -17921,8 +18165,8 @@ SCIP_Bool SCIPisRelGT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelGT(scip->set, val1, val2);
 }
@@ -17940,8 +18184,8 @@ SCIP_Bool SCIPisRelGE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelGE(scip->set, val1, val2);
 }
@@ -17959,8 +18203,8 @@ SCIP_Bool SCIPisSumRelEQ(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelEQ(scip->set, val1, val2);
 }
@@ -17978,8 +18222,8 @@ SCIP_Bool SCIPisSumRelLT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelLT(scip->set, val1, val2);
 }
@@ -17997,8 +18241,8 @@ SCIP_Bool SCIPisSumRelLE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelLE(scip->set, val1, val2);
 }
@@ -18016,8 +18260,8 @@ SCIP_Bool SCIPisSumRelGT(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelGT(scip->set, val1, val2);
 }
@@ -18035,8 +18279,8 @@ SCIP_Bool SCIPisSumRelGE(
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
    assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-	   || val1 == val2 );    /*lint !e777*/
+         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
 }

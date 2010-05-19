@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.375 2010/05/17 19:32:04 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.376 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -165,28 +165,6 @@ void SCIPprintError(
 /**@name General SCIP Methods */
 /**@{ */
 
-/** copies plugins from sourcescip to targetscip */
-extern
-SCIP_RETCODE SCIPcopyPlugins(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
-   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
-   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
-   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
-   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
-   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
-   SCIP_Bool             copyseparators,     /**< should the separators be copied */
-   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
-   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
-   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
-   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
-   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
-   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
-   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
-   SCIP_Bool             copynlpis           /**< should the NLPIs be copied */
-   );
-
 /** creates and initializes SCIP data structures */
 extern
 SCIP_RETCODE SCIPcreate(
@@ -249,6 +227,94 @@ SCIP_Bool SCIPpressedCtrlC(
 extern
 SCIP_Bool SCIPisStopped(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/**@} */
+
+
+
+/*
+ * SCIP copy methods
+ */
+
+/**@name Copy Methods */
+/**@{ */
+
+/** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
+ *  cannot be copied, success will return FALSE. Note that in this case dual reductions might be invalid. */
+extern
+SCIP_RETCODE SCIPcopyPlugins(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
+   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
+   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
+   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
+   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
+   SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
+   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
+   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
+   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool*            success             /**< pointer to store whether all constraint handlers 
+                                              *   which do not need constraints were successfully copied */
+   );
+
+/** copies parameter settings from sourcescip to targetscip */
+extern
+SCIP_RETCODE SCIPcopyParamSettings(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
+/** copies a variable from source to target SCIP and captures it in target SCIP */
+extern
+SCIP_RETCODE SCIPcopyVar(
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR*             sourcevar,          /**< source variable */
+   SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
+   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   );
+
+/** copies all active variables from source to target SCIP and captures it in target SCIP */
+extern
+SCIP_RETCODE SCIPcopyVars(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   );
+
+/** copies constraints from sourcescip to targetscip; if consmap is not NULL, the constraints will be captured in target SCIP */
+extern
+SCIP_RETCODE SCIPcopyConss(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                              *   variables of the target SCIP, must not be NULL! */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   );
+
+/** copies sourcescip to targetscip */
+extern
+SCIP_RETCODE SCIPcopy(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */          
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    );
 
 /**@} */
@@ -3393,7 +3459,7 @@ SCIP_RETCODE SCIPcreateCons(
 
 /** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
- *  a constraint is creates and captures;
+ *  a constraint is created and captured;
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
  *  be declared feasible even if it violates this particular constraint.  This constellation should only be used, if no
  *  LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due to the variable's

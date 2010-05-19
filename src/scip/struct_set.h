@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.90 2010/05/07 07:25:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.91 2010/05/19 12:38:31 bzfberth Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -234,7 +234,8 @@ struct SCIP_Set
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
-   int                   misc_permuatationseed;/**< seed value for permuting the problem after the problem was tranformed (-1: no permutation) */
+   int                   misc_permutationseed;/**< seed value for permuting the problem after the problem was tranformed 
+                                               *   (-1: no permutation) */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.58 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.59 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1127,13 +1127,15 @@ SCIP_RETCODE createSubProblem(
 
    /* creating ppc SCIP instance */
    SCIP_CALL( SCIPcreate(&ppcscip) );
+   
 #if defined(SCIP_DEBUG) || !defined(NDEBUG)
    SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, success) );
 #endif
+   SCIPdebugMessage("Copying the plugins to subSCIP was %s successful.", success ? "" : "not");
 
    /* create array for ppc variables and solution values */
    SCIP_CALL( SCIPallocBufferArray(scip, &ppcvars, nvars) );
@@ -1661,14 +1663,16 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
 #endif
 
+   success = FALSE;
 #if defined(SCIP_DEBUG) || !defined(NDEBUG)
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
-
+   SCIPdebugMessage("Copying the plugins to subSCIP was %s successful.", success ? "" : "not");
+  
 #ifdef WITH_UNIVARDEFINITE
    SCIP_CALL( SCIPincludeConshdlrUnivardefinite(subscip) );
 #endif

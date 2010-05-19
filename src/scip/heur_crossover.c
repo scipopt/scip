@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.46 2010/05/17 12:53:37 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.47 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -40,18 +40,21 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 
-#define DEFAULT_MAXNODES      5000LL        /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINIMPROVE    0.01          /* factor by which Crossover should at least improve the incumbent     */
-#define DEFAULT_MINNODES      500LL         /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.666         /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NODESOFS      500LL         /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_NODESQUOT     0.1           /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_NUSEDSOLS     3             /* number of solutions that will be taken into account                 */
-#define DEFAULT_NWAITINGNODES 200LL         /* number of nodes without incumbent change heuristic should wait      */
-#define DEFAULT_RANDOMIZATION TRUE          /* should the choice which sols to take be randomized?                 */ 
-#define DEFAULT_DONTWAITATROOT FALSE        /* should the nwaitingnodes parameter be ignored at the root node?     */ 
-
-#define HASHSIZE_SOLS         11113         /* size of hash table for solution tuples in crossover heuristic       */
+#define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINIMPROVE    0.01           /* factor by which Crossover should at least improve the incumbent     */
+#define DEFAULT_MINNODES      500LL          /* minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINFIXINGRATE 0.666          /* minimum percentage of integer variables that have to be fixed       */
+#define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes          */
+#define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem       */
+#define DEFAULT_NUSEDSOLS     3              /* number of solutions that will be taken into account                 */
+#define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait      */
+#define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                 */ 
+#define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?     */ 
+#define DEFAULT_USELPROWS     TRUE           /* should subproblem be created out of the rows in the LP rows, 
+                                              * otherwise, the copy constructors of the constraints handlers are used 
+					      */
+                                            
+#define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic       */
 
 
 /*
@@ -84,6 +87,7 @@ struct SCIP_HeurData
    unsigned int          randseed;          /**< seed value for random number generator                            */
    SCIP_HASHTABLE* 	 hashtable;         /**< hashtable used to store the solution tuples already used          */
    SOLTUPLE*             lasttuple;         /**< last tuple of solutions created by crossover                      */ 
+   SCIP_Bool             uselprows;         /**< should subproblem be created out of the rows in the LP rows?      */
 };
 
 /** n-tuple of solutions and their hashkey */
@@ -272,7 +276,7 @@ SCIP_RETCODE selectSolsRandomized(
 
 
 /** creates the all variables of the subproblem */
-static SCIP_RETCODE createVariables(
+static SCIP_RETCODE fixVariables(
    SCIP*                 scip,               /**< original SCIP data structure                                  */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
@@ -305,8 +309,6 @@ static SCIP_RETCODE createVariables(
    for( i = 0; i < nbinvars + nintvars; i++ )
    {
       SCIP_Real solval;
-      SCIP_Real lb;
-      SCIP_Real ub;
       SCIP_Bool fixable;
 
       fixable = TRUE;      
@@ -323,50 +325,25 @@ static SCIP_RETCODE createVariables(
             break;
          }
       }
-
-      /* get variable's global bounds */
-      lb = SCIPvarGetLbGlobal(vars[i]);
-      ub = SCIPvarGetUbGlobal(vars[i]);
-
+      
       /* original solval can be outside transformed global bounds */
-      if( fixable && (lb > solval || solval > ub) )
-         fixable = FALSE;
-
-      /* if solutions' values are equal, variable is fixed in the subproblem, otherwise it is just copied */
+      fixable = fixable && SCIPvarGetLbGlobal(vars[i]) <= solval && solval <= SCIPvarGetUbGlobal(vars[i]);
+      
+      /* if solutions' values are equal, variable is fixed in the subproblem */
       if( fixable )
       {
-         SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), solval,
-               solval, SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
          fixingcounter++;
       }
-      else 
-      {
-         SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), lb, ub, SCIPvarGetObj(vars[i]), 
-               SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), 
-               NULL, NULL, NULL, NULL) );
-      }
-      SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
    }
 
    fixingrate = (SCIP_Real)fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1));
   
    /* if all variables were fixed or amount of fixed variables is insufficient, skip residual part of 
     * subproblem creation ans abort immediately */
-   if( fixingcounter == nbinvars + nintvars || fixingrate < heurdata->minfixingrate )
-      *success = FALSE;
-   else
-   {
-      /* create the continuous variables of the subproblem */  
-      for( i = nbinvars + nintvars; i < nvars; i++ )
-      {
-         SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
-               SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
-         SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
-      }
-      *success = TRUE;
-   }
+   *success = fixingcounter < nbinvars + nintvars && fixingrate >= heurdata->minfixingrate;
+
    return SCIP_OKAY;
 }
 
@@ -433,7 +410,7 @@ SCIP_RETCODE createRows(
 
 /** creates a subproblem for subscip by fixing a number of variables */
 static
-SCIP_RETCODE createSubproblem(
+SCIP_RETCODE setupSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure                                  */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */ 
@@ -498,14 +475,12 @@ SCIP_RETCODE createSubproblem(
    /* get name of the original problem and add the string "_crossoversub" */
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
 
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-   /* create the variables of the subproblem */
-   SCIP_CALL( createVariables(scip, subscip, subvars, selection, heurdata, success) );
+   /* set up the variables of the subproblem */
+   SCIP_CALL( fixVariables(scip, subscip, subvars, selection, heurdata, success) );
   
-   /* if the enough variables could be fixed, create rows of the subproblem */
-   if( *success )
+   /* we copy the rows of the LP, if the enough variables could be fixed and we work on the MIP
+      relaxation of the problem */
+   if( *success && heurdata->uselprows )
    {
       SCIP_CALL( createRows(scip, subscip, subvars) );
    }
@@ -690,6 +665,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;                  /* primal heuristic data                               */
    SCIP* subscip;                            /* the subproblem created by crossover                 */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to subSCIP variables */    
+
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
    SCIP_SOL** sols;
@@ -788,21 +765,50 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* initializing the subproblem */  
    SCIP_CALL( SCIPcreate(&subscip) );
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+   success = FALSE;
+
+   if( heurdata->uselprows )
+   {
+      char probname[SCIP_MAXSTRLEN];
+
+      /* copy all plugins */
 #ifndef NDEBUG
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
 #else
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
-#endif
+      SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
+#endif      
+      /* get name of the original problem and add the string "_crossoversub" */
+      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
+      
+      /* create the subproblem */
+      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL) );
+      
+      /* copy all variables */
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "crossover", &success) );
+   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
-   SCIP_CALL( SCIPallocBufferArray(scip, &selection,nusedsols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &selection, nusedsols) );
+
+   for( i = 0; i < nvars; i++ )
+     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+   
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
    
    success = FALSE;
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
+   SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
       
    heurdata->prevbestsol = SCIPgetBestSol(scip);
    heurdata->prevlastsol = SCIPgetSols(scip)[heurdata->nusedsols-1];
@@ -1059,6 +1065,10 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/dontwaitatroot",
          "should the nwaitingnodes parameter be ignored at the root node?",
          &heurdata->dontwaitatroot, TRUE, DEFAULT_DONTWAITATROOT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/uselprows",
+         "should subproblem be created out of the rows in the LP rows?",
+         &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

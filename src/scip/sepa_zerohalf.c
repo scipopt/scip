@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.27 2010/05/15 12:12:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.28 2010/05/19 12:38:31 bzfberth Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -4859,6 +4859,8 @@ SCIP_RETCODE createSubscip(
    int                   rowsbind;
    BITARRAYBITMASKTYPE   rowsbmask;
 
+   SCIP_Bool success;
+
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(lpdata != NULL);
@@ -4933,15 +4935,17 @@ SCIP_RETCODE createSubscip(
 
    /* create and initialize framework */
 
-   SCIP_CALL( SCIPcreate(&(auxipdata->subscip)) );
+   SCIP_CALL( SCIPcreate(&(auxipdata->subscip)) ); 
+success = FALSE;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
 #endif
-
+   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
+  
    SCIP_CALL( SCIPcreateProb(auxipdata->subscip, "sepa_zerohalf auxiliary IP (AuxIP)",
          NULL , NULL , NULL , NULL , NULL , NULL) );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.40 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.41 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   pub_cons.h
  * @ingroup PUBLICMETHODS
@@ -349,6 +349,11 @@ SCIP_Bool SCIPconshdlrIsInitialized(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** does the constraint handler have a copy function? */
+extern
+SCIP_Bool SCIPconshdlrIsClonable(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+				 );
 
 
 

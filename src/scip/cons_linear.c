@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.361 2010/05/17 19:32:04 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.362 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -10162,7 +10162,7 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
       
       /* insert linear constraint update method into constraint handler data */
       SCIP_CALL( conshdlrdataIncludeUpgrade(scip, conshdlrdata, linconsupgrade) );
-      
+    
       /* adds parameter to turn on and off the upgrading step */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/linear/upgrade/%s", conshdlrname);
       (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable linear upgrading for constraint handler <%s>", conshdlrname);

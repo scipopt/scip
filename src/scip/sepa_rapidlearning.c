@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.8 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.9 2010/05/19 12:38:31 bzfberth Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -345,14 +345,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* initializing the subproblem */  
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
+
+   success = FALSE;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
-
+   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
+   
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );

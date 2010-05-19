@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.40 2010/05/17 12:53:37 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.41 2010/05/19 12:38:30 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -368,6 +368,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    int nvars;
    int i;
  
+   SCIP_Bool success;
+
 #ifdef NDEBUG
    SCIP_RETCODE retstat;
 #endif
@@ -454,14 +456,17 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* initializing the subproblem */  
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
+
+   success = FALSE;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
- 
+   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
  
@@ -566,7 +571,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    {
       SCIP_SOL** subsols;
       int nsubsols;
-      SCIP_Bool success;
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
