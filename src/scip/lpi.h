@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.70 2010/01/04 20:35:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.71 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   lpi.h
  * @ingroup PUBLICMETHODS
@@ -774,7 +774,7 @@ SCIP_Real SCIPlpiInfinity(
 extern
 SCIP_Bool SCIPlpiIsInfinity(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< value to be checked for infinity */
    );
 
 /**@} */

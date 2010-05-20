@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.16 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.17 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   reader_sos.c
  * @ingroup FILEREADERS 
@@ -434,7 +434,7 @@ SCIP_RETCODE readName(
 /* Process SOS section. */
 static
 SCIP_RETCODE readSOS(
-   SOSINPUT*             sosi,
+   SOSINPUT*             sosi,               /**< SOS input data structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

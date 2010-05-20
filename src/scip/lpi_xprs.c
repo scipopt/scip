@@ -1740,7 +1740,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
 
 static SCIP_RETCODE lpiSolve(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   const char *method
+   const char*           method              /**< solution method to use (p, d, or b) */
    )
 {
    int ncols, nrows;
@@ -3248,7 +3248,7 @@ SCIP_Real SCIPlpiInfinity(
 /** checks if given value is treated as infinity in the LP solver */
 SCIP_Bool SCIPlpiIsInfinity(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);

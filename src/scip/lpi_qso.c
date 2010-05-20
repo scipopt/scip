@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.8 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.9 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -2759,7 +2759,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 
 /** returns value treated as infinity in the LP solver */
 SCIP_Real SCIPlpiInfinity(
-   SCIP_LPI*             lpi             /**< LP interface structure */
+   SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715} */
    return QS_MAXDOUBLE;
@@ -2767,8 +2767,8 @@ SCIP_Real SCIPlpiInfinity(
 
 /** checks if given value is treated as infinity in the LP solver */
 SCIP_Bool SCIPlpiIsInfinity(
-   SCIP_LPI*             lpi,            /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715} */
    return (val >= QS_MAXDOUBLE);

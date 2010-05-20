@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.234 2010/05/04 13:28:33 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.235 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5563,7 +5563,7 @@ void SCIPnodeGetAncestorBranchingPath(
    int*                  nodeswitches,        /**< marks, where in the arrays the branching decisions of the next node on the path start 
                                                * branchings performed at the parent of node always start at position 0. For single variable branching,
                                                * nodeswitches[i] = i holds */
-   int*                  nnodes,              /* number of nodes in the nodeswitch array */
+   int*                  nnodes,              /**< number of nodes in the nodeswitch array */
    int                   nodeswitchsize       /**< available slots in node switch array */                                                                    
  )
 {

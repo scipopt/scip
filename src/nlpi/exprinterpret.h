@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret.h,v 1.2 2010/05/10 19:03:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret.h,v 1.3 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   exprinterpret.h
  * @brief  methods to interpret (evaluate) an expression tree "fast"
@@ -63,14 +63,14 @@ SCIP_RETCODE SCIPexprintFree(
 /** compiles an expression tree and stores compiled data in expression tree */
 extern
 SCIP_RETCODE SCIPexprintCompile(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree                /** expression tree */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
 /** frees interpreter data */
 extern
 SCIP_RETCODE SCIPexprintFreeData(
-   SCIP_EXPRINTDATA**    interpreterdata     /** interpreter data that should freed */
+   SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
 );
 
 /** notify expression interpreter that a new parameterization is used
@@ -78,77 +78,77 @@ SCIP_RETCODE SCIPexprintFreeData(
  */
 extern
 SCIP_RETCODE SCIPexprintNewParametrization(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree                /** expression tree */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
 /** evaluates an expression tree */
 extern
 SCIP_RETCODE SCIPexprintEval(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   SCIP_Real*            varvals,            /** values of variables */
-   SCIP_Real*            val                 /** buffer to store value of expression */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values of variables */
+   SCIP_Real*            val                 /**< buffer to store value of expression */
 );
 
 /** evaluates an expression tree on intervals */
 extern
 SCIP_RETCODE SCIPexprintEvalInt(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   SCIP_Real             infinity,           /** value for infinity */
-   SCIP_INTERVAL*        varvals,            /** interval values of variables */
-   SCIP_INTERVAL*        val                 /** buffer to store interval value of expression */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        varvals,            /**< interval values of variables */
+   SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
 );
 
 /** gets number of nonzeros in gradient of expression tree */
 extern
 SCIP_RETCODE SCIPexprintGetNGradPattern(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   int*                  nnz                 /** buffer to store number of nonzeros */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int*                  nnz                 /**< buffer to store number of nonzeros */
 );
 
 /** gets sparsity pattern of expression trees gradient */
 extern
 SCIP_RETCODE SCIPexprintGetGradPattern(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   int*                  gradidx             /** buffer to store gradient indices */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int*                  gradidx             /**< buffer to store gradient indices */
 );
 
 /** computes value and gradient of an expression tree */
 extern
 SCIP_RETCODE SCIPexprintGrad(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   SCIP_Real*            varvals,            /** values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /** have variable values changed since last call to an evaluation routine? */
-   SCIP_Real*            val,                /** buffer to store value */
-   SCIP_Real*            gradvals            /** buffer to store gradient values */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
+   SCIP_Real*            val,                /**< buffer to store value */
+   SCIP_Real*            gradvals            /**< buffer to store gradient values */
 );
 
 /** computes value and dense gradient of an expression tree */
 extern
 SCIP_RETCODE SCIPexprintGradDense(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   SCIP_Real*            varvals,            /** values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /** have variable values changed since last call to a point evaluation routine? */
-   SCIP_Real*            val,                /** buffer to store expression value */
-   SCIP_Real*            gradient            /** buffer to store expression gradient */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
+   SCIP_Real*            val,                /**< buffer to store expression value */
+   SCIP_Real*            gradient            /**< buffer to store expression gradient */
 );
 
 /** computes interval value and dense interval gradient of an expression tree */
 extern
 SCIP_RETCODE SCIPexprintGradDenseInt(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   SCIP_Real             infinity,           /** value for infinity */
-   SCIP_INTERVAL*        varvals,            /** interval values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /** have variable values changed since last call to an interval evaluation routine? */
-   SCIP_INTERVAL*        val,                /** buffer to store expression interval value */
-   SCIP_INTERVAL*        gradient            /** buffer to store expression interval gradient */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        varvals,            /**< interval values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an interval evaluation routine? */
+   SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
+   SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient */
 );
 
 /** gives sparsity pattern of hessian
@@ -157,10 +157,10 @@ SCIP_RETCODE SCIPexprintGradDenseInt(
  */
 extern
 SCIP_RETCODE SCIPexprintHessianSparsityDense(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   SCIP_Real*            varvals,            /** values of variables */
-   SCIP_Bool*            sparsity            /** buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */ 
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values of variables */
+   SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
 );
 
 /** computes value and dense hessian of an expression tree
@@ -168,12 +168,12 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
  */
 extern
 SCIP_RETCODE SCIPexprintHessianDense(
-   SCIP_EXPRINT*         exprint,            /** interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /** expression tree */
-   SCIP_Real*            varvals,            /** values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /** have variable values changed since last call to an evaluation routine? */
-   SCIP_Real*            val,                /** buffer to store function value */
-   SCIP_Real*            hessian             /** buffer to store hessian values, need to have size at least n*n */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
+   SCIP_Real*            val,                /**< buffer to store function value */
+   SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
 );
 
 #ifdef __cplusplus

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.35 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.36 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -80,7 +80,7 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
-   unsigned int*         randseed
+   unsigned int*         randseed            /**< a seed value for the random number generator                  */
    )
 {
    SCIP_VAR** vars;                          /* original scip variables                    */

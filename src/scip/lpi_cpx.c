@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.128 2010/05/11 19:25:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.129 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -3461,7 +3461,7 @@ SCIP_Real SCIPlpiInfinity(
 /** checks if given value is treated as infinity in the LP solver */
 SCIP_Bool SCIPlpiIsInfinity(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
    return (val >= CPX_INFBOUND);

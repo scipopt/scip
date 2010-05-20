@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.29 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.30 2010/05/20 15:28:42 bzfviger Exp $"
 
 /**@file   pub_tree.h
  * @ingroup PUBLICMETHODS
@@ -85,7 +85,7 @@ void SCIPnodeGetAncestorBranchingPath(
                                                * branchings performed at the parent of node always start at position 0. For single variable branching,
                                                * nodeswitches[i] = i holds
                                                */
-   int*                  nnodes,              /* number of nodes in the nodeswitch array */
+   int*                  nnodes,              /**< number of nodes in the nodeswitch array */
    int                   nodeswitchsize       /**< available slots in node switch array */   
    );
 
