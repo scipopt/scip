@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.45 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.46 2010/05/20 15:28:54 bzfviger Exp $"
 
 /**@file   pub_lp.h
  * @ingroup PUBLICMETHODS
@@ -247,7 +247,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
  * Row methods
  */
 
-/** comparison method for sorting variables by non-decreasing index */
+/** comparison method for sorting rows by non-decreasing index */
 extern
 SCIP_DECL_SORTPTRCOMP(SCIProwComp);
 

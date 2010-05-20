@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.338 2010/05/14 17:46:41 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.339 2010/05/20 15:28:54 bzfviger Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4512,7 +4512,7 @@ SCIP_Real SCIProwGetPseudoActivity(
    assert(stat != NULL);
    assert(row->validpsactivitydomchg <= stat->domchgcount);
 
-   /* check, if activity bounds has to be calculated */
+   /* check, if pseudo activity has to be calculated */
    if( row->validpsactivitydomchg != stat->domchgcount )
       SCIProwRecalcPseudoActivity(row, stat);
    assert(row->validpsactivitydomchg == stat->domchgcount);
