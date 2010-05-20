@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.26 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.27 2010/05/20 16:05:06 bzfviger Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -33,6 +33,7 @@
 #include "scip/type_mem.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_nlp.h"
 #include "scip/type_implics.h"
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
@@ -67,6 +68,7 @@ struct Scip
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
+   SCIP_NLP*             nlp;                /**< NLP data */
    SCIP_RELAXATION*      relaxation;         /**< global relaxation data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
    SCIP_TREE*            tree;               /**< branch and bound tree */

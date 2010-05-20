@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.344 2010/05/17 07:27:37 bzfheinz Exp $
+# $Id: Makefile,v 1.345 2010/05/20 16:05:05 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -444,6 +444,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/lp.o \
 			scip/mem.o \
 			scip/misc.o \
+			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \

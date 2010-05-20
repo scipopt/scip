@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.106 2010/05/07 07:25:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.107 2010/05/20 16:05:05 bzfviger Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -3053,6 +3053,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
+   /* set nlp */
+   if( !SCIPdialogHasEntry(setmenu, "nlp") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "nlp", "change parameters for nonlinear programming relaxations", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
    /* set memory */
    if( !SCIPdialogHasEntry(setmenu, "memory") )
    {
@@ -3081,7 +3092,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
-            "nlpi", "change parameters for NLP interfaces", TRUE, NULL) );
+            "nlpi", "change parameters for NLP solver interfaces", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

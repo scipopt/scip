@@ -1,0 +1,166 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: struct_nlp.h,v 1.1 2010/05/20 16:05:06 bzfviger Exp $"
+
+/**@file   struct_nlp.h
+ * @brief  datastructures for NLP management
+ * @author Thorsten Gellermann
+ * @author Stefan Vigerske
+ *
+ *  In SCIP, the NLP is defined as follows:
+ *
+ *   min         obj * x + <x, Qx> + f(x)
+ *        lhs <=   A * x + const          <= rhs
+ *        lhs <=   A * x + <x, Qx> + f(x) <= rhs
+ *        lb  <=       x                  <= ub
+ *
+ *  where the linear rows and variable bounds are managed by the LP
+ *  and the nonlinear rows are managed by the NLP.
+ *
+ *  The row activities are defined as
+ *     activity = A * x + const
+ *  for a linear row and as
+ *     activity = f(x) + <x, Qx> + A * x
+ *  for a nonlinear row.
+ *  The activities must therefore be in the range of [lhs,rhs].
+ *
+ *  The main datastructures for storing an NLP are the nonlinear rows.
+ *  A nonlinear row can live on its own (if it was created by a separator),
+ *  or as relaxation of a constraint. Thus, it has a nuses-counter, and is
+ *  deleted, if not needed any more.
+ *  In difference to columns of an LP, nonlinear rows are defined
+ *  with respect SCIP variables.
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_STRUCT_NLP_H__
+#define __SCIP_STRUCT_NLP_H__
+
+#include "scip/def.h"
+#include "scip/type_nlp.h"
+#include "scip/type_var.h"
+#include "nlpi/type_nlpi.h"
+#include "nlpi/type_expression.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** NLP row */
+struct SCIP_NlRow
+{
+   /* sides */
+   SCIP_Real             lhs;                /**< left hand side */
+   SCIP_Real             rhs;                /**< right hand side */
+
+   /* linear part */
+   int                   nlinvars;           /**< number of linear variables */
+   int                   linvarssize;        /**< size of arrays storing linear part of row */
+   SCIP_VAR**            linvars;            /**< linear variables */
+   double*               lincoefs;           /**< coefficients of linear variables */
+   int*                  linvarsnlpiidx;     /**< indices of linear variables in NLPI problem, or NULL if row is not in NLPI yet */
+   SCIP_Bool             linvarssorted;      /**< are the linear coefficients sorted (by variable indices?) */
+
+   /* quadratic part */
+   int                   nquadvars;          /**< number of variables in quadratic terms */
+   SCIP_VAR**            quadvars;           /**< variables in quadratic term */
+   int*                  quadoffsets;        /**< row offsets of quadratic entries */
+   int*                  quadindices;        /**< column indices (w.r.t. quadvars) of quadratic entries */
+   SCIP_Real*            quadcoefs;          /**< coefficients of quadratic entries */
+   int*                  quadvarsnlpiidx;    /**< indices of quadratic variables in NLPI problem, or NULL if row is not in NLPI yet */
+
+   /* nonquadratic part */
+   SCIP_EXPRTREE*        exprtree;           /**< expression tree representing nonquadratic part */
+   int*                  exprtreenlpiidx;    /**< indices of nonlinear variables from expression tree in NLPI problem, or NULL if row is not in NLPI problem yet */
+
+   /* miscellaneous */
+   const char*           name;               /**< name */
+   int                   nuses;              /**< number of times, this row is referenced */
+   SCIP_Real             activity;           /**< row activity value in NLP, or SCIP_INVALID if not yet calculated */
+   int                   validactivitynlp;   /**< NLP number for which activity value is valid */
+   SCIP_Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
+   SCIP_Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
+   SCIP_Real             minactivity;        /**< minimal activity value w.r.t. the variables's bounds, or SCIP_INVALID */
+   SCIP_Real             maxactivity;        /**< maximal activity value w.r.t. the variables's bounds, or SCIP_INVALID */
+   SCIP_Longint          validactivitybdsdomchg; /**< domain change number for which activity bound values are valid */
+   int                   nlpindex;           /**< index of this row in NLP, or -1 if used as objective, or -2 if not added */
+   int                   nlpiindex;          /**< index of this row in NLPI problem, or -1 if used as objective, or -2 if not in there */
+};
+
+/** current NLP data */
+struct SCIP_Nlp
+{
+   /* NLP solver */
+   SCIP_NLPI*            solver;             /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     problem;            /**< problem in NLP solver */
+
+   /* status */
+   int                   nunflushedvaradd;   /**< number of variable additions not flushed to NLPI problem yet */
+   int                   nunflushedvardel;   /**< number of variable deletions not flushed to NLPI problem yet */
+   int                   nunflushednlrowadd; /**< number of nonlinear row additions not flushed to NLPI problem yet */
+   int                   nunflushednlrowdel; /**< number of nonlinear row deletions not flushed to NLPI problem yet */
+   SCIP_Bool             isrelax;            /**< is the current NLP a relaxation of a SCIP problem? */
+   SCIP_Bool             isconvex;           /**< is the current NLP a convex problem? */
+   SCIP_Bool             indiving;           /**< are we currently in diving mode? */
+
+   /* variables in problem */
+   int                   nvars;              /**< number of variables */
+   int                   sizevars;           /**< size allocated space for variables */
+   SCIP_VAR**            vars;               /**< allocated space for variables */
+   SCIP_HASHMAP*         varhash;            /**< variable hash: map SCIP_VAR* to index of variable in NLP */
+   /* variables in NLPI problem */
+   int                   nvars_solver;       /**< number of variables in NLPI problem */
+   int                   sizevars_solver;    /**< allocated space for variables in NLPI problem */
+   int*                  varmap_nlp2nlpi;    /**< index of variables in NLPI problem, or -1 if variable has not been added to NLPI problem yet */
+   int*                  varmap_nlpi2nlp;    /**< index of a NLPI problem variable in NLP (varmap_nlp2nlpi[varmap_nlpi2nlp[i]] == i for i = 0..nvarssolver-1), or -1 if variable has been deleted from NLP */
+
+   /* nonlinear rows in problem */
+   int                   nnlrows;            /**< number of nonlinear rows */
+   int                   sizenlrows;         /**< allocated space for nonlinear rows */
+   SCIP_NLROW**          nlrows;             /**< nonlinear rows */
+   /* nonlinear rows in NLPI problem */
+   int                   nnlrows_solver;     /**< number of nonlinear rows in solver */
+   int                   sizenlrows_solver;  /**< allocated space for nonlinear rows in solver */
+   int*                  nlrowmap_nlpi2nlp;  /**< index of a NLPI row in NLP (nlrows[nlrowmap_nlpi2nlp[i]]->nlpiidx == i for i = 0..nnlrows_solver-1), or -1 if row has been deleted from NLP */
+
+   /* objective function */
+   SCIP_NLROW*           objective;          /**< objective function, NULL for using SCIP objective */
+   SCIP_Bool             objflushed;         /**< is the objective in the NLPI up to date? */
+   SCIP_NLROW*           divingobj;          /**< objective function during diving */
+
+   /* initial guess */
+   SCIP_Bool             haveinitguess;      /**< is an initial guess available? */
+   SCIP_Real*            initialguess;       /**< initial guess of primal values to use in next NLP solve, if available */
+
+   /* solution of NLP */
+   SCIP_Real*            primalsolution;     /**< current primal solution of NLP, if available */
+   SCIP_Real             primalsolobjval;    /**< objective function value of primal solution */
+   SCIP_NLPSOLSTAT       solstat;            /**< status of NLP solution (feasible, optimal, unknown...) */
+   SCIP_NLPTERMSTAT      termstat;           /**< termination status of NLP (normal, some limit reached, ...) */
+
+   /* event handling */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   int                   globalfilterpos;    /**< position of event handler in event handler filter */
+
+   /* miscellaneous */
+   const char*           name;               /**< problem name */
+};
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __SCIP_STRUCT_NLP_H__ */

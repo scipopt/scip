@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.221 2010/05/19 12:38:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.222 2010/05/20 16:05:06 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -167,6 +167,10 @@
 #define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_SIMPLEXROWREP     FALSE /**< should simplex algorithm use row representation of the basis? */
+
+/* NLP */
+
+#define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be choosen by priority */
 
 /* Memory */
 
@@ -625,6 +629,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->vbc_filename = NULL;
+   (*set)->nlp_solver = NULL;
 
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
@@ -973,6 +978,13 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/simplexrowrep",
          "should simplex algorithm use row representation of the basis?",
          &(*set)->lp_simplexrowrep, TRUE, SCIP_DEFAULT_LP_SIMPLEXROWREP,
+         NULL, NULL) );
+
+   /* NLP parameters */
+   SCIP_CALL( SCIPsetAddStringParam(*set, blkmem,
+         "nlp/solver",
+         "solver to use for solving NLPs; leave empty to select NLPI with highest priority",
+         &(*set)->nlp_solver, FALSE, SCIP_DEFAULT_NLP_SOLVER,
          NULL, NULL) );
 
    /* memory parameters */

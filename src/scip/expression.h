@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.3 2010/05/06 18:30:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.4 2010/05/20 16:05:05 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  more methods for expressions and expression trees
@@ -73,6 +73,20 @@ SCIP_RETCODE SCIPexprtreeEvalIntLocalBounds(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             infinity,           /**< value to use for infinity */
    SCIP_INTERVAL*        val                 /**< buffer to store result */
+);
+
+/** prints an expression tree using variable names from variables array */
+SCIP_RETCODE SCIPexprtreePrintWithNames(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   FILE*                 file                /**< file for printing, or NULL for stdout */
+);
+
+/** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
+ * Note that this is an O(n) operation!
+ */
+int SCIPexprtreeFindVar(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_VAR*             var                 /**< variable to search for */
 );
 
 #ifdef __cplusplus

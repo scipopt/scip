@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.3 2010/05/06 18:30:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.4 2010/05/20 16:05:05 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  more methods for expressions and expression trees
@@ -176,4 +176,54 @@ SCIP_RETCODE SCIPexprtreeEvalIntLocalBounds(
    SCIPfreeBufferArray(scip, &varvals);
 
    return SCIP_OKAY;
+}
+
+/** prints an expression tree using variable names from variables array */
+SCIP_RETCODE SCIPexprtreePrintWithNames(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   FILE*                 file                /**< file for printing, or NULL for stdout */
+)
+{
+   const char** varnames;
+   int i;
+
+   assert(tree != NULL);
+
+   if( tree->nvars == 0 )
+   {
+      SCIPexprtreePrint(tree, file, NULL, NULL);
+      return SCIP_OKAY;
+   }
+
+   assert(tree->vars != NULL);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&varnames, tree->nvars) );
+   for( i = 0; i < tree->nvars; ++i )
+      varnames[i] = SCIPvarGetName(tree->vars[i]);
+
+   SCIPexprtreePrint(tree, file, varnames, NULL);
+
+   BMSfreeMemoryArray(&varnames);
+
+   return SCIP_OKAY;
+}
+
+/** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
+ * Note that this is an O(n) operation!
+ */
+int SCIPexprtreeFindVar(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_VAR*             var                 /**< variable to search for */
+)
+{
+   int i;
+
+   assert(tree != NULL);
+   assert(var  != NULL);
+
+   for( i = 0; i < tree->nvars; ++i )
+      if( tree->vars[i] == var )
+         return i;
+
+   return -1;
 }

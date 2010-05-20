@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.58 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.59 2010/05/20 16:05:06 bzfviger Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -92,6 +92,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
+   SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
@@ -127,6 +128,7 @@ struct SCIP_Stat
    int                   nstrongbranchs;     /**< number of strong branching calls */
    int                   nrootstrongbranchs; /**< number of strong branching calls at the root node */
    int                   nconflictlps;       /**< number of LPs solved during conflict analysis */
+   int                   nnlps;              /**< number of NLPs solved */
    int                   npricerounds;       /**< number of pricing rounds performed in current node */
    int                   nseparounds;        /**< number of separation rounds performed in current node */
    int                   ndisplines;         /**< number of displayed information lines */

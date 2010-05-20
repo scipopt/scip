@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.91 2010/05/19 12:38:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.92 2010/05/20 16:05:06 bzfviger Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -218,6 +218,9 @@ struct SCIP_Set
    int                   lp_lexdualmaxrounds;/**< maximum number of rounds in the lexicographic dual algorithm */
    SCIP_Bool             lp_lexdualbasic;    /**< choose fractional basic variables in lexicographic dual algorithm */
    SCIP_Bool             lp_simplexrowrep;   /**< should simplex algorithm use row representation of the basis? */
+
+   /* NLP settings */
+   char*                 nlp_solver;         /**< name of NLP solver to use */
 
    /* memory settings */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */

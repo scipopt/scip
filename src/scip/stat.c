@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.86 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.87 2010/05/20 16:05:06 bzfviger Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -58,6 +58,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
@@ -96,6 +97,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
+   SCIPclockFree(&(*stat)->nlpsoltime);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -121,6 +123,7 @@ void SCIPstatMark(
    assert(stat->nduallps == 0);
    assert(stat->nlexduallps == 0);
    assert(stat->nbarrierlps == 0);
+   assert(stat->nnlps == 0);
 
    stat->marked_nvaridx = stat->nvaridx;
    stat->marked_ncolidx = stat->ncolidx;
@@ -200,6 +203,7 @@ void SCIPstatReset(
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
+   stat->nnlps = 0;
    stat->maxtotaldepth = -1;
    stat->nactiveconss = 0;
    stat->nenabledconss = 0;

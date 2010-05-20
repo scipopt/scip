@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.376 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.377 2010/05/20 16:05:06 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -41,6 +41,7 @@
 #include "scip/type_paramset.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_tree.h"
@@ -73,6 +74,7 @@
 #include "scip/pub_heur.h"
 #include "scip/pub_implics.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_nlp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_nodesel.h"
@@ -4096,7 +4098,6 @@ SCIP_RETCODE SCIPgetLPI(
 
 
 
-
 /*
  * LP column methods
  */
@@ -4382,6 +4383,376 @@ extern
 SCIP_RETCODE SCIPprintRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/**@} */
+
+
+/*
+ * NLP methods
+ */
+
+/**@name NLP Methods */
+/**@{ */
+
+/** returns, whether an NLP has been constructed */
+extern
+SCIP_Bool SCIPisNLPConstructed(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** makes sure that the NLP is loaded and may be accessed through the NLP information methods */
+extern
+SCIP_RETCODE SCIPconstructNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns pointer to NLP */
+extern
+SCIP_NLP* SCIPgetNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** makes sure that the NLP of the current node is flushed */
+extern
+SCIP_RETCODE SCIPflushNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current NLP variables along with the current number of NLP variables */
+extern
+SCIP_RETCODE SCIPgetNLPVarsData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< pointer to store the array of NLP variables, or NULL */
+   int*                  nvars               /**< pointer to store the number of NLP variables, or NULL */
+   );
+
+/** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */
+extern
+SCIP_RETCODE SCIPgetNLPNlRowsData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW***         nlrows,             /**< pointer to store the array of NLP nonlinear rows, or NULL */
+   int*                  nnlrows             /**< pointer to store the number of NLP nonlinear rows, or NULL */
+   );
+
+/** adds a nonlinear row to the NLP
+ * row is captured by NLP */
+extern
+SCIP_RETCODE SCIPaddNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow               /**< nonlinear row to add to NLP */
+   );
+
+/** sets or clears initial primal guess for NLP solution (startpoint for NLP solver) */
+extern
+SCIP_RETCODE SCIPsetNLPInitialGuess(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            initialguess        /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no startpoint */
+   );
+
+/** sets initial primal guess for NLP solution (startpoint for NLP solver) */
+extern
+SCIP_RETCODE SCIPsetNLPInitialGuessSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution which values should be taken as initial guess, or NULL for LP solution */
+   );
+
+/** solves the current NLP */
+extern
+SCIP_RETCODE SCIPsolveNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets solution status of current NLP */
+extern
+SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets SCIP solution set to values of current NLP, if available
+ * *sol is set to NULL if no solution is available */
+extern
+SCIP_RETCODE SCIPcreateNLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< buffer where to store point to new SCIP solution */
+   SCIP_HEUR*            heur                /**< heuristic that solved NLP, or NULL */
+   );
+
+/** gets objective value of current NLP */
+extern
+SCIP_Real SCIPgetNLPObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** writes current NLP to a file */
+extern
+SCIP_RETCODE SCIPwriteNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           fname               /**< file name */
+   );
+
+/** gets the NLP interface of SCIP;
+ *  with the NLPI you can use all of the methods defined in nlpi/nlpi.h;
+ *  Warning! You have to make sure, that the full internal state of the NLPI does not change or is recovered completely after
+ *  the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution (e.g. by calling one of the
+ *  SCIPnlpiAdd...() or the SCIPnlpiSolve() method), you have to check in advance whether the NLP is currently solved.
+ *  If this is the case, you have to make sure, the internal solution status is recovered completely at the
+ *  end of your method. Additionally you have to resolve the NLP with SCIPnlpiSolve() in order to reinstall the internal solution status.
+ *  Make also sure, that all parameter values that you have changed are set back to their original values.
+ */
+extern
+SCIP_RETCODE SCIPgetNLPI(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI**           nlpi                /**< pointer to store the NLP solver interface */
+   );
+
+/**@} */
+
+
+/*
+ * NLP diving methods
+ */
+
+/**@name NLP Diving Methods */
+/**@{ */
+
+/** initiates NLP diving
+ * making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available */
+extern
+SCIP_RETCODE SCIPstartDiveNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** ends NLP diving
+ * resets changes made by SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), and SCIPchgVarsBoundsDiveNLP() */
+extern
+SCIP_RETCODE SCIPendDiveNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** changes linear objective coefficient of a variable in diving NLP */
+extern
+SCIP_RETCODE SCIPchgVarObjDiveNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which coefficient to change */
+   SCIP_Real             coef                /**< new value for coefficient */
+   );
+
+/** changes bounds of a variable in diving NLP */
+extern
+SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which bounds to change */
+   SCIP_Real             lb,                 /**< new lower bound */
+   SCIP_Real             ub                  /**< new upper bound */
+   );
+
+/** changes bounds of a set of variables in diving NLP */
+extern
+SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables which bounds to changes */
+   SCIP_VAR**            vars,               /**< variables which bounds to change */
+   SCIP_Real*            lbs,                /**< new lower bounds */
+   SCIP_Real*            ubs                 /**< new upper bounds */
+   );
+
+/** solves diving NLP */
+extern
+SCIP_RETCODE SCIPsolveDiveNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+
+/*
+ * NLP nonlinear row methods
+ */
+
+/**@name NLP Nonlinear Row Methods */
+/**@{ */
+
+/** creates and captures an NLP row */
+extern
+SCIP_RETCODE SCIPcreateNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   const char*           name,               /**< name of nonlinear row */
+   int                   nlinvars,           /**< number of linear variables */
+   SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
+   SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
+   int                   nquadvars,          /**< number variables in quadratic terms */
+   SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
+   int*                  quadoffsets,        /**< row offsets in quadratic term matrix, or NULL if nquadvars == 0 */
+   int*                  quadindices,        /**< column index of each quadratic term, or NULL if nquadvars == 0 */
+   SCIP_Real*            quadcoefs,          /**< coefficients of quadratic terms, or NULL if nquadvars == 0 */
+   SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs                 /**< right hand side */
+   );
+
+/** creates and captures an NLP nonlinear row without any coefficients */
+extern
+SCIP_RETCODE SCIPcreateEmptyNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   const char*           name,               /**< name of nonlinear row */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs                 /**< right hand side */
+   );
+
+/** increases usage counter of NLP nonlinear row */
+extern
+SCIP_RETCODE SCIPcaptureNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow               /**< nonlinear row to capture */
+   );
+
+/** decreases usage counter of NLP nonlinear row, and frees memory if necessary */
+extern
+SCIP_RETCODE SCIPreleaseNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW**          nlrow               /**< nonlinear row to release */
+);
+
+/** changes left hand side of NLP nonlinear row */
+extern
+SCIP_RETCODE SCIPchgNlRowLhs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real             lhs                 /**< new left hand side */
+   );
+
+/** changes right hand side of NLP nonlinear row */
+extern
+SCIP_RETCODE SCIPchgNlRowRhs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real             rhs                 /**< new right hand side */
+   );
+
+/** adds variable with a linear coefficient to the nonlinear row */
+extern
+SCIP_RETCODE SCIPaddLinearCoefToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             val                 /**< value of coefficient in linear part of row */
+   );
+
+/** adds variables with linear coefficients to the row */
+extern
+SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   nvars,              /**< number of variables to add to the row */
+   SCIP_VAR**            vars,               /**< problem variables to add */
+   SCIP_Real*            vals                /**< values of coefficients in linear part of row */
+   );
+
+/** recalculates the activity of a nonlinear row in the last NLP solution */
+extern
+SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
+   );
+
+/** returns the activity of a nonlinear row in the last NLP solution */
+extern
+SCIP_RETCODE SCIPgetNlRowNLPActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real*            activity            /**< buffer to store activity value */
+   );
+
+/** gives the feasibility of a nonlinear row in the last NLP solution: negative value means infeasibility */
+extern
+SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   );
+
+/** recalculates the activity of a nonlinear row for the current pseudo solution */
+extern
+SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
+   );
+
+/** gives the activity of a nonlinear row for the current pseudo solution */
+extern
+SCIP_RETCODE SCIPgetNlRowPseudoActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real*            pseudoactivity      /**< buffer to store pseudo activity value */
+   );
+
+/** gives the feasibility of a nonlinear row for the current pseudo solution: negative value means infeasibility */
+extern
+SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real*            pseudofeasibility   /**< buffer to store pseudo feasibility value */
+   );
+
+/** recalculates the activity of a nonlinear row in the last NLP or pseudo solution */
+extern
+SCIP_RETCODE SCIPrecalcNlRowActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
+   );
+
+/** gives the activity of a nonlinear row in the last NLP or pseudo solution */
+extern
+SCIP_RETCODE SCIPgetNlRowActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real*            activity            /**< buffer to store activitiy value */
+   );
+
+/** gives the feasibility of a nonlinear row in the last NLP or pseudo solution */
+extern
+SCIP_RETCODE SCIPgetNlRowFeasibility(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   );
+
+/** gives the activity of a nonlinear row for the given primal solution */
+extern
+SCIP_RETCODE SCIPgetNlRowSolActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for NLP solution of pseudo solution */
+   SCIP_Real*            activity            /**< buffer to store activitiy value */
+   );
+
+/** gives the feasibility of a nonlinear row for the given primal solution */
+extern
+SCIP_RETCODE SCIPgetNlRowSolFeasibility(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            feasibility         /**< buffer to store feasibility value */
+   );
+
+/** gives the minimal and maximal activity of a nonlinear row w.r.t. the variable's bounds */
+extern
+SCIP_RETCODE SCIPgetNlRowActivityBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_Real*            minactivity,        /**< buffer to store minimal activity, or NULL */
+   SCIP_Real*            maxactivity         /**< buffer to store maximal activity, or NULL */
+   );
+
+/** output nonlinear row to file stream */
+extern
+SCIP_RETCODE SCIPprintNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
