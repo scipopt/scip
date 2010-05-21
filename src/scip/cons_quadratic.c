@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.93 2010/05/20 19:52:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.94 2010/05/21 14:58:49 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -169,6 +169,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
    SCIP_Bool             upgrades;                  /**< whether upgrade methods should be tried */
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
+   SCIP_Bool             feasibilityheur;           /**< whether to make solutions in check feasible if possible */
 
    SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
    SCIP_HEUR*            rensnlheur;                /**< a pointer to the RENSNL heuristic, if available */
@@ -5486,6 +5487,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    {
       SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
    }
+   SCIP_CALL( SCIPunlinkSol(scip, newsol) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5511,19 +5513,23 @@ SCIP_RETCODE proposeFeasibleSolution(
            ((viol > 0.0 && consdata->lincoefs[consdata->linvar_mayincrease] > 0.0) ||
             (viol < 0.0 && consdata->lincoefs[consdata->linvar_mayincrease] < 0.0)) )
       {
-         /* have variable where increasing makes the constraint more satisfied */
+         /* have variable where increasing makes the constraint less violated */
          var = consdata->linvars[consdata->linvar_mayincrease];
          /* compute how much we would like to increase var */
          delta = viol / consdata->lincoefs[consdata->linvar_mayincrease];
          assert(delta > 0.0);
          /* if var has an upper bound, may need to reduce delta */
-         if( !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+         if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
          {
-            gap = SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, newsol, var);
+            gap = SCIPvarGetUbGlobal(var) - SCIPgetSolVal(scip, newsol, var);
             delta = MIN(MAX(0.0, gap), delta);
          }
          if( SCIPisPositive(scip, delta) )
          {
+            /* if variable is integral, round delta up so that it will still have an integer value */
+            if( SCIPvarIsIntegral(var) )
+               delta = SCIPceil(scip, delta);
+
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMessage("increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
 
@@ -5539,19 +5545,22 @@ SCIP_RETCODE proposeFeasibleSolution(
          ((viol > 0.0 && consdata->lincoefs[consdata->linvar_maydecrease] < 0.0) ||
           (viol < 0.0 && consdata->lincoefs[consdata->linvar_maydecrease] > 0.0)) )
       {
-         /* have variable where decreasing makes constraint more satisfied */
+         /* have variable where decreasing makes constraint less violated */
          var = consdata->linvars[consdata->linvar_mayincrease];
          /* compute how much we would like to decrease var */
          delta = viol / consdata->lincoefs[consdata->linvar_mayincrease];
          assert(delta < 0.0);
          /* if var has a lower bound, may need to reduce delta */
-         if( !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
          {
-            gap = SCIPgetSolVal(scip, newsol, var) - SCIPvarGetLbLocal(var);
+            gap = SCIPgetSolVal(scip, newsol, var) - SCIPvarGetLbGlobal(var);
             delta = MAX(MIN(0.0, gap), delta);
          }
          if( SCIPisNegative(scip, delta) )
          {
+            /* if variable is integral, round delta down so that it will still have an integer value */
+            if( SCIPvarIsIntegral(var) )
+               delta = SCIPfloor(scip, delta);
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMessage("increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
 
@@ -5570,13 +5579,19 @@ SCIP_RETCODE proposeFeasibleSolution(
       /* if still violated, we give up */
       if( SCIPisFeasPositive(scip, ABS(norm)) )
          break;
+
+      /* if objective value is not better than current upper bound, we give up */
+      if( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && !SCIPisSumLT(scip, SCIPgetSolTransObj(scip, newsol), SCIPgetUpperbound(scip)) )
+         break;
    }
 
-   /* looks like we have a solution that should satisfy all quadratic constraints
-    * pass it to the trysol heuristic */
+   /* if we have a solution that should satisfy all quadratic constraints and has a better objective than the current upper bound,
+    * then pass it to the trysol heuristic */
    if( c == nconss )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
+
+      SCIPdebugMessage("pass solution with objective val %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
 
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
@@ -7307,7 +7322,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
    *result = SCIP_FEASIBLE;
 
    maxviol = 0.0;
-   maypropfeasible = FALSE; /* (conshdlrdata->trysolheur != NULL); */
+   maypropfeasible = conshdlrdata->feasibilityheur && (conshdlrdata->trysolheur != NULL);
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -7900,6 +7915,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "whether multivariate quadratic functions should be checked for convexity/concavity",
          &conshdlrdata->checkcurvature, FALSE, TRUE, NULL, NULL) );
    
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/feasibilityheur",
+         "whether to try to make solutions in check function feasible by moving a linear variable (esp. useful if constraint was actually objective function)",
+         &conshdlrdata->feasibilityheur, FALSE, TRUE, NULL, NULL) );
+
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
