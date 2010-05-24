@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expression.h,v 1.4 2010/05/05 17:53:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expression.h,v 1.5 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   type_expression.h
  * @brief  type definitions for expressions and expression trees
@@ -79,10 +79,23 @@ enum SCIP_ExprOp {
    SCIP_EXPR_LAST      = 70   /**< no expression, used for counting reasons */
 };
 
-typedef enum   SCIP_ExprOp     SCIP_EXPROP;     /**< expression operand */
-typedef union  SCIP_ExprOpData SCIP_EXPROPDATA; /**< expression operand data */
-typedef struct SCIP_Expr       SCIP_EXPR;       /**< expression */
-typedef struct SCIP_ExprTree   SCIP_EXPRTREE;   /**< expression tree */
+typedef enum   SCIP_ExprOp      SCIP_EXPROP;     /**< expression operand */
+typedef union  SCIP_ExprOpData  SCIP_EXPROPDATA; /**< expression operand data */
+typedef struct SCIP_Expr        SCIP_EXPR;       /**< expression */
+typedef struct SCIP_ExprTree    SCIP_EXPRTREE;   /**< expression tree */
+
+/** An element of a quadratic term: two variable indices and a coefficient.
+ * The convention is to have idx1 <= idx2.
+ */
+struct SCIP_QuadElement
+{
+   int                   idx1;             /**< index of first variable */
+   int                   idx2;             /**< index of second variable */
+   SCIP_Real             coef;             /**< value of coefficient at position (idx1, idx2) */
+};
+/* We have defined struct SCIP_QuadElement here (instead of type_expression.h) to allow fast access, allocation, and copying. (similar to SCIP_INTERVAL) */
+
+typedef struct SCIP_QuadElement SCIP_QUADELEM;   /**< element of a quadratic term */
 
 #ifdef __cplusplus
 }

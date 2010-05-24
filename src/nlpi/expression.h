@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.5 2010/05/06 18:30:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.6 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -238,6 +238,29 @@ void SCIPexprtreePrint(
    FILE*                 file,               /**< file for printing, or NULL for stdout */
    const char**          varnames,           /**< names of variables, or NULL for default names */
    const char**          paramnames          /**< names of parameters, or NULL for default names */
+);
+
+/** sorts an array of quadratic elements
+ * The elements are sorted such that the first index is increasing and
+ * such that among elements with the same first index, the second index is increasing.
+ * For elements with same first and second index, the order is not defined.
+ */
+void SCIPquadelemSort(
+   SCIP_QUADELEM*        quadelems,          /**< array of quadratic elements */
+   int                   nquadelems          /**< number of quadratic elements */
+);
+
+/** Finds an index pair in a sorted array of quadratic elements.
+ * If (idx1,idx2) is found in quadelems, then returns TRUE and stores position of quadratic element in *pos.
+ * If (idx1,idx2) is not found in quadelems, then returns FALSE and stores position where a quadratic element with these indices would be inserted in *pos.
+ * Assumes that idx1 <= idx2.
+ */
+SCIP_Bool SCIPquadelemSortedFind(
+   SCIP_QUADELEM*        quadelems,          /**< array of quadratic elements */
+   int                   idx1,               /**< index of first  variable in element to search for */
+   int                   idx2,               /**< index of second variable in element to search for */
+   int                   nquadelems,         /**< number of quadratic elements in array */
+   int*                  pos                 /**< buffer to store position of found quadratic element, or position where it would be inserted */
 );
 
 #ifdef __cplusplus

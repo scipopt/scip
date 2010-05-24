@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.24 2010/04/21 18:23:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.25 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2670,16 +2670,13 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    int*           nlininds = NULL;
    int**          lininds  = NULL;
    SCIP_Real**    linvals  = NULL;
-   int*           nquadrows;
-   int**          quadrowidx;
-   int**          quadoffset;
-   int**          quadindex;
-   SCIP_Real**    quadcoeff;
+   int*           nquadelems;
+   SCIP_QUADELEM** quadelems;
    int            quadnnz;
    int            i, j;
    int            lincnt;
    SCIP_Bool      havelin;
-      
+
    assert(scip     != NULL);
    assert(conshdlr != NULL);
    assert(nlpi     != NULL);
@@ -2724,11 +2721,8 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       BMSclearMemoryArray(linvals,  nconss);
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &nquadrows,  nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadrowidx, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadoffset, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadindex,  nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadcoeff,  nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems,  nconss) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -2740,11 +2734,8 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       {
          if (nlininds)
             nlininds[i] = 0;
-         nquadrows[i] = 0;
-         quadrowidx[i] = NULL;
-         quadoffset[i] = NULL;
-         quadindex[i] = NULL;
-         quadcoeff[i] = NULL;
+         nquadelems[i] = 0;
+         quadelems[i]  = NULL;
          lhs[i] = -SCIPinfinity(scip);
          rhs[i] =  SCIPinfinity(scip);
          continue;
@@ -2755,11 +2746,8 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       
       quadnnz = consdata->nvars + 1;
 
-      nquadrows[i] = consdata->nvars + 1;
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadrowidx[i], consdata->nvars + 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadoffset[i], consdata->nvars + 2) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadindex[i],  consdata->nvars + 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoeff[i],  consdata->nvars + 1) );
+      nquadelems[i] = consdata->nvars + 1;
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[i], consdata->nvars + 1) );
       
       if( nlininds )
          nlininds[i] = consdata->rhsoffset ? 1 : 0;
@@ -2784,52 +2772,45 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       lincnt = 0;
       for( j = 0; j < consdata->nvars; ++j )
       {
-         quadrowidx[i][j] = (int) (size_t) SCIPhashmapGetImage(var_scip2nlp, consdata->vars[j]);
-         quadoffset[i][j] = j;
-         quadindex [i][j] = j;
-         quadcoeff [i][j] = consdata->coefs ? (consdata->coefs[j] * consdata->coefs[j]) : 1.0;
+         quadelems[i][j].idx1 = (int) (size_t) SCIPhashmapGetImage(var_scip2nlp, consdata->vars[j]);
+         quadelems[i][j].idx2 = quadelems[i][j].idx1;
+         quadelems[i][j].coef = consdata->coefs ? (consdata->coefs[j] * consdata->coefs[j]) : 1.0;
          
          if( consdata->offsets && consdata->offsets[j] )
          {
-            lininds[i][lincnt] = quadrowidx[i][j];
-            linvals[i][lincnt] = 2 * quadcoeff[i][j] * consdata->offsets[j];
+            lininds[i][lincnt] = quadelems[i][j].idx1;
+            linvals[i][lincnt] = 2 * quadelems[i][j].coef * consdata->offsets[j];
             ++lincnt;
             
-            rhs[i] -= quadcoeff[i][j] * consdata->offsets[j] * consdata->offsets[j];
+            rhs[i] -= quadelems[i][j].coef * consdata->offsets[j] * consdata->offsets[j];
          }
       }
-      quadrowidx[i][consdata->nvars] = (int) (size_t) SCIPhashmapGetImage(var_scip2nlp, consdata->rhsvar);
-      quadoffset[i][consdata->nvars] = consdata->nvars;
-      quadindex [i][consdata->nvars] = consdata->nvars;
-      quadcoeff [i][consdata->nvars] = - consdata->rhscoeff * consdata->rhscoeff;
+      quadelems[i][consdata->nvars].idx1 = (int) (size_t) SCIPhashmapGetImage(var_scip2nlp, consdata->rhsvar);
+      quadelems[i][consdata->nvars].idx2 = quadelems[i][consdata->nvars].idx1;
+      quadelems[i][consdata->nvars].coef = - consdata->rhscoeff * consdata->rhscoeff;
       
       if( consdata->rhsoffset )
       {
          assert(lininds != NULL);
          assert(linvals != NULL);
-         lininds[i][lincnt] = quadrowidx[i][consdata->nvars];
+         lininds[i][lincnt] = quadelems[i][consdata->nvars].idx1;
          linvals[i][lincnt] = - 2 * consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset;
          ++lincnt;
          
          rhs[i] += consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset * consdata->rhsoffset;
       }
       assert(nlininds == NULL || lincnt == nlininds[i]);
-      
-      quadoffset[i][consdata->nvars + 1] = consdata->nvars + 1;
    }
 
    SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss,
       lhs, rhs,
       nlininds, lininds, linvals,
-      nquadrows, quadrowidx, quadoffset, quadindex, quadcoeff,
+      nquadelems, quadelems,
       NULL, NULL, NULL) );
 
    for( i = 0; i < nconss; ++i )
    {
-      SCIPfreeBufferArrayNull(scip, &quadrowidx[i]);
-      SCIPfreeBufferArrayNull(scip, &quadoffset[i]);
-      SCIPfreeBufferArrayNull(scip, &quadindex[i]);
-      SCIPfreeBufferArrayNull(scip, &quadcoeff[i]);
+      SCIPfreeBufferArrayNull(scip, &quadelems[i]);
       if( havelin )
       {
          SCIPfreeBufferArrayNull(scip, &lininds[i]);
@@ -2847,11 +2828,8 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       SCIPfreeBufferArray(scip, &linvals);
    }
 
-   SCIPfreeBufferArray(scip, &nquadrows);
-   SCIPfreeBufferArray(scip, &quadrowidx);
-   SCIPfreeBufferArray(scip, &quadoffset);
-   SCIPfreeBufferArray(scip, &quadindex);
-   SCIPfreeBufferArray(scip, &quadcoeff);
+   SCIPfreeBufferArray(scip, &nquadelems);
+   SCIPfreeBufferArray(scip, &quadelems);
 
    return SCIP_OKAY;
 }

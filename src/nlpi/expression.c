@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.6 2010/05/06 18:30:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.7 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -1597,4 +1597,190 @@ void SCIPexprtreePrint(
    assert(tree != NULL);
 
    SCIPexprPrint(tree->root, file, varnames, paramnames);
+}
+
+/** comparing two quadratic elements
+ * a is better than b if index1 of a is smaller than index1 of b or index1 of both is equal but index2 of a is smaller than index2 of b
+ */
+#define QUADELEMS_ISBETTER(a, b) ( ((a).idx1 < (b).idx1) || ((a).idx1 == (b).idx1 && (a).idx2 < (b).idx2) )
+/** swaps two quadratic elements */
+#define QUADELEMS_SWAP(x,y) \
+   {                \
+      SCIP_QUADELEM temp = x;   \
+      x = y;        \
+      y = temp;     \
+   }
+
+/** quicksort an array of quadratic elements; pivot is the medial element
+ * taken from scip/sorttpl.c */
+static
+void quadelemsQuickSort(
+   SCIP_QUADELEM*       elems,               /**< array to be sorted */
+   int                  start,               /**< starting index */
+   int                  end                  /**< ending index */
+   )
+{
+   assert(start <= end);
+
+   /* use quick sort for long lists */
+   while( end - start >= 25 ) /* 25 was SORTTPL_SHELLSORTMAX in sorttpl.c */
+   {
+      SCIP_QUADELEM pivotkey;
+      int lo;
+      int hi;
+      int mid;
+
+      /* select pivot element */
+      mid = (start+end)/2;
+      pivotkey = elems[mid];
+
+      /* partition the array into elements < pivot [start,hi] and elements >= pivot [lo,end] */
+      lo = start;
+      hi = end;
+      for( ;; )
+      {
+         while( lo < end   &&  QUADELEMS_ISBETTER(elems[lo], pivotkey) )
+            lo++;
+         while( hi > start && !QUADELEMS_ISBETTER(elems[hi], pivotkey) )
+            hi--;
+
+         if( lo >= hi )
+            break;
+
+         QUADELEMS_SWAP(elems[lo], elems[hi]);
+
+         lo++;
+         hi--;
+      }
+      assert(hi == lo-1 || hi == start);
+
+      /* skip entries which are equal to the pivot element (three partitions, <, =, > than pivot)*/
+      while( lo < end && !QUADELEMS_ISBETTER(pivotkey, elems[lo]) )
+         lo++;
+
+      /* make sure that we have at least one element in the smaller partition */
+      if( lo == start )
+      {
+         /* everything is greater or equal than the pivot element: move pivot to the left (degenerate case) */
+         assert(!QUADELEMS_ISBETTER(elems[mid], pivotkey)); /* the pivot element did not change its position */
+         assert(!QUADELEMS_ISBETTER(pivotkey, elems[mid]));
+         QUADELEMS_SWAP(elems[lo], elems[mid]);
+         lo++;
+      }
+
+      /* sort the smaller partition by a recursive call, sort the larger part without recursion */
+      if( hi - start <= end - lo )
+      {
+         /* sort [start,hi] with a recursive call */
+         if( start < hi )
+            quadelemsQuickSort(elems, start, hi);
+
+         /* now focus on the larger part [lo,end] */
+         start = lo;
+      }
+      else
+      {
+         /* sort [lo,end] with a recursive call */
+         if( lo < end )
+            quadelemsQuickSort(elems, lo, end);
+
+         /* now focus on the larger part [start,hi] */
+         end = hi;
+      }
+   }
+
+   /* use shell sort on the remaining small list */
+   if( end - start >= 1 )
+   {
+      static const int incs[3] = {1, 5, 19}; /* sequence of increments */
+      int k;
+
+      for( k = 2; k >= 0; --k )
+      {
+         int h;
+         int i;
+
+         for( h = incs[k], i = h + start; i <= end; ++i )
+         {
+            int j;
+            SCIP_QUADELEM tempkey = elems[i];
+
+            j = i;
+            while( j >= h && QUADELEMS_ISBETTER(tempkey, elems[j-h]) )
+            {
+               elems[j] = elems[j-h];
+               j -= h;
+            }
+
+            elems[j] = tempkey;
+         }
+      }
+   }
+}
+
+/** sorts an array of quadratic elements
+ * The elements are sorted such that the first index is increasing and
+ * such that among elements with the same first index, the second index is increasing.
+ * For elements with same first and second index, the order is not defined.
+ */
+void SCIPquadelemSort(
+   SCIP_QUADELEM*        quadelems,          /**< array of quadratic elements */
+   int                   nquadelems          /**< number of quadratic elements */
+)
+{
+   if( nquadelems == 0 )
+      return;
+
+   quadelemsQuickSort(quadelems, 0, nquadelems-1);
+}
+
+/** Finds an index pair in a sorted array of quadratic elements.
+ * If (idx1,idx2) is found in quadelems, then returns TRUE and stores position of quadratic element in *pos.
+ * If (idx1,idx2) is not found in quadelems, then returns FALSE and stores position where a quadratic element with these indices would be inserted in *pos.
+ * Assumes that idx1 <= idx2.
+ */
+SCIP_Bool SCIPquadelemSortedFind(
+   SCIP_QUADELEM*        quadelems,          /**< array of quadratic elements */
+   int                   idx1,               /**< index of first  variable in element to search for */
+   int                   idx2,               /**< index of second variable in element to search for */
+   int                   nquadelems,         /**< number of quadratic elements in array */
+   int*                  pos                 /**< buffer to store position of found quadratic element, or position where it would be inserted */
+)
+{
+   int left;
+   int right;
+
+   assert(quadelems != NULL || nquadelems == 0);
+   assert(idx1 <= idx2);
+   assert(pos != NULL);
+
+   if( nquadelems == 0 )
+   {
+      *pos = 0;
+      return FALSE;
+   }
+
+   left = 0;
+   right = nquadelems - 1;
+   while( left <= right )
+   {
+      int middle;
+
+      middle = (left+right)/2;
+      assert(0 <= middle && middle < nquadelems);
+
+      if( idx1 < quadelems[middle].idx1 || (idx1 == quadelems[middle].idx1 && idx2 < quadelems[middle].idx2) )
+         right = middle - 1;
+      else if( quadelems[middle].idx1 < idx1 || (quadelems[middle].idx1 == idx1 && quadelems[middle].idx2 < idx2) )
+         left  = middle + 1;
+      else
+      {
+         *pos = middle;
+         return TRUE;
+      }
+   }
+   assert(left == right+1);
+
+   *pos = left;
+   return FALSE;
 }

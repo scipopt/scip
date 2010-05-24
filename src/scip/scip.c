@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.568 2010/05/20 16:05:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.569 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12572,9 +12572,8 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
    int                   nquadvars,          /**< number variables in quadratic terms */
    SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
-   int*                  quadoffsets,        /**< row offsets in quadratic term matrix, or NULL if nquadvars == 0 */
-   int*                  quadindices,        /**< column index of each quadratic term, or NULL if nquadvars == 0 */
-   SCIP_Real*            quadcoefs,          /**< coefficients of quadratic terms, or NULL if nquadvars == 0 */
+   int                   nquadelems,         /**< number of elements in quadratic term */
+   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monoms) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */
@@ -12583,7 +12582,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP_CALL( checkStage(scip, "SCIPcreateNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->solvemem, scip->set,
-         name, nlinvars, linvars, lincoefs, nquadvars, quadvars, quadoffsets, quadindices, quadcoefs, expression, lhs, rhs) );
+         name, nlinvars, linvars, lincoefs, nquadvars, quadvars, nquadelems, quadelems, expression, lhs, rhs) );
 
    return SCIP_OKAY;
 }
@@ -12600,7 +12599,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->solvemem, scip->set,
-         name, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, lhs, rhs) );
+         name, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs) );
 
    return SCIP_OKAY;
 }

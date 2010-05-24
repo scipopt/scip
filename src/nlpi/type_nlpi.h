@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.4 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.5 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -166,21 +166,10 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *    may be NULL in case of no linear part
  *  - linvals values of linear coefficient for each constraint
  *    may be NULL in case of no linear part
- *  - nquadrows number of columns in matrix of quadratic part for each constraint
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadrowidxs indices of variables for which a quadratic part is specified
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadoffsets start index of each rows quadratic coefficients in quadinds[.] and quadvals[.]
- *    indices are given w.r.t. quadrowidxs., i.e., quadoffsets[.][i] gives the start index of row quadrowidxs[.][i] in quadvals[.]
- *    quadoffsets[.][nquadrows[.]] gives length of quadinds[.] and quadvals[.]
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadinds column indices w.r.t. quadrowidxs, i.e., quadrowidxs[quadinds[.][i]] gives the index of the variable corresponding
- *    to entry i, entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadvals coefficient values
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
+ *  - nquadelems number of quadratic elements for each constraint
+ *    may be NULL in case of no quadratic part
+ *  - quadelems quadratic elements for each constraint
+ *    may be NULL in case of no quadratic part
  *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    entry of array may be NULL in case of no expression tree
  *    may be NULL in case of no expression tree in any constraint
@@ -190,9 +179,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - names of constraints, may be NULL or entries may be NULL
  */
 #define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int ncons, const SCIP_Real* lhss, \
-   const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, const int* nquadrows, \
-   int* const* quadrowidxs, int* const* quadoffsets, int* const* quadinds, SCIP_Real* const* quadvals, \
-   int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
+   const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, const int* nquadelems, \
+   SCIP_QUADELEM* const* quadelems, int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
@@ -205,15 +193,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *    may be NULL in case of no linear part
  *  - linvals coefficient values
  *    may be NULL in case of no linear part
- *  - nquadcols number of columns in matrix of quadratic part
- *  - quadcols indices of variables for which a quadratic part is specified
- *    may be NULL in case of no quadratic part
- *  - quadoffsets start index of each rows quadratic coefficients in quadinds and quadvals
- *    quadoffsets[.][nquadcols] gives length of quadinds and quadvals
- *    may be NULL in case of no quadratic part
- *  - quadinds column indices
- *    may be NULL in case of no quadratic part
- *  - quadvals coefficient values
+ *  - nquadelems number of elements in matrix of quadratic part
+ *  - quadelems elements of quadratic part
  *    may be NULL in case of no quadratic part
  *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    may be NULL in case of no expression tree
@@ -222,8 +203,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - constant objective value offset
  */
 #define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nlins, const int* lininds, \
-   const SCIP_Real* linvals, int nquadcols, const int* quadcols, const int* quadoffsets, const int* quadinds, \
-   const SCIP_Real* quadvals, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, const SCIP_Real constant)
+   const SCIP_Real* linvals, int nquadelems, const SCIP_QUADELEM* quadelems, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, \
+   const SCIP_Real constant)
 
 /** change variable bounds
  * 
@@ -294,13 +275,11 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idx index of constraint or -1 for objective
- *  - nentries number of entries in quadratic matrix to change
- *  - rows row indices of entries in quadratic matrix where values should be changed
- *  - cols column indices of entries in quadratic matrix where values should be changed
- *  - values new values for entries in quadratic matrix
+ *  - nquadelems number of entries in quadratic matrix to change
+ *  - quadelems new elements in quadratic matrix (replacing already existing ones or adding new ones)
  */
-#define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int idx, const int nentries, \
-   const int* rows, const int* cols, SCIP_Real* values)
+#define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int idx, const int nquadelems, \
+   const SCIP_QUADELEM* quadelems)
 
 /** change the value of one parameter in the nonlinear part
  * 

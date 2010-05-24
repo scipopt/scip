@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.4 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -143,19 +143,9 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   const int*            nquadrows,          /**< number of columns in matrix of quadratic part for each constraint, may be
-                                              * NULL in case of no quadratic part in any constraint */
-   int* const*           quadrowidxs,        /**< indices of variables for which a quadratic part is specified, may be NULL
-                                              * in case of no quadratic part in any constraint */
-   int* const*           quadoffsets,        /**< start index of each rows quadratic coefficients in quadinds[.] and quadvals[.],
-                                              * indices are given w.r.t. quadrowidxs., i.e., quadoffsets[.][i] gives the start
-                                              * index of row quadrowidxs[.][i] in quadvals[.], quadoffsets[.][nquadrows[.]] gives
-                                              * length of quadinds[.] and quadvals[.], entry of array may be NULL in case of no
-                                              * quadratic part, may be NULL in case of no quadratic part in any constraint */
-   int* const*           quadinds,           /**< column indices w.r.t. quadrowidxs, i.e., quadrowidxs[quadinds[.][i]] gives the
-                                              * index of the variable corresponding to entry i, entry of array may be NULL in
-                                              * case of no quadratic part, may be NULL in case of no quadratic part in any constraint */
-   SCIP_Real* const*     quadvals,           /**< coefficient values, entry of array may be NULL in case of no quadratic part,
+   const int*            nquadelems,         /**< number of elements in matrix of quadratic part for each constraint,
+                                              * may be NULL in case of no quadratic part in any constraint */
+   SCIP_QUADELEM* const* quadelems,          /**< quadratic elements specifying quadratic part for each constraint, entry of array may be NULL in case of no quadratic part,
                                               * may be NULL in case of no quadratic part in any constraint */
    int* const*           exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression
                                               * tree to indices in nlp, entry of array may be NULL in case of no expression
@@ -175,14 +165,8 @@ SCIP_RETCODE SCIPnlpiSetObjective(
    int                   nlins,              /**< number of linear variables */
    const int*            lininds,            /**< variable indices, may be NULL in case of no linear part */
    const SCIP_Real*      linvals,            /**< coefficient values, may be NULL in case of no linear part */
-   int                   nquadcols,          /**< number of columns in matrix of quadratic part */
-   const int*            quadcols,           /**< indices of variables for which a quadratic part is specified, may be NULL in
-                                              * case of no quadratic part */
-   const int*            quadoffsets,        /**< start index of each rows quadratic coefficients in quadinds and quadvals,
-                                              * quadoffsets[.][nquadcols] gives length of quadinds and quadvals, may be NULL in
-                                              * case of no quadratic part */
-   const int*            quadinds,           /**< column indices, may be NULL in case of no quadratic part */
-   const SCIP_Real*      quadvals,           /**< coefficient values, may be NULL in case of no quadratic part */
+   int                   nquadelems,         /**< number of entries in matrix of quadratic part */
+   const SCIP_QUADELEM*  quadelems,          /**< entries in matrix of quadratic part, may be NULL in case of no quadratic part */
    const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression
                                               * tree to indices in nlp, may be NULL in case of no expression tree */
    const SCIP_EXPRTREE*  exprtree,           /**< expression tree for nonquadratic part of objective function, may be NULL in
@@ -246,12 +230,9 @@ extern
 SCIP_RETCODE SCIPnlpiChgQuadCoefs(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   const int             idx,                /**< index of constraint or -1 for objective */
-   const int             nentries,           /**< nentries number of values in quadratic constraint */
-   const int*            rows,               /**< row offset containing modified indices */
-   const int*            cols,               /**< cols containing modified indices to the corresponding row offset */
-   SCIP_Real*            values              /**< coefficients corresponding to same indices as used when constraint/objective
-                                              * was constructed */
+   int                   idx,                /**< index of constraint or -1 for objective */
+   int                   nquadelems,         /**< number of entries in quadratic constraint to change */
+   const SCIP_QUADELEM*  quadelems           /**< new elements in quadratic matrix (replacing already existing ones or adding new ones) */
 );
 
 /** change the value of one parameter in the nonlinear part */

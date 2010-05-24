@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.62 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.63 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -189,7 +189,7 @@ SCIP_RETCODE addLinearConstraints(
    
    SCIP_CALL( SCIPnlpiAddConstraints(heurdata->nlpi, heurdata->nlpiprob, nuseconss,
          lhs, rhs, nlininds, lininds, linvals,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+         NULL, NULL, NULL, NULL, NULL) );
    
    for( i = 0; i < nuseconss; ++i )
    {
@@ -320,7 +320,7 @@ SCIP_RETCODE collectVarBoundConstraints(
       
       SCIP_CALL( SCIPnlpiAddConstraints(heurdata->nlpi, heurdata->nlpiprob, nconss4nlp,
             lhs, rhs, nlininds, lininds, linvals,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+            NULL, NULL, NULL, NULL, NULL) );
       
       for( k = 0; k < nconss4nlp; ++k )
       {
@@ -452,7 +452,7 @@ SCIP_RETCODE setupNLP(
       }
    }
    /* add (linear) objective to NLP solver */
-   SCIP_CALL( SCIPnlpiSetObjective(heurdata->nlpi, heurdata->nlpiprob, cnt, objvar, objcoeff, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(heurdata->nlpi, heurdata->nlpiprob, cnt, objvar, objcoeff, 0, NULL, NULL, NULL, 0.0) );
    
    SCIPfreeBufferArray(scip, &objvar);
    SCIPfreeBufferArray(scip, &objcoeff);

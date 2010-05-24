@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.377 2010/05/20 16:05:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.378 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4583,11 +4583,10 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   int                   nquadvars,          /**< number variables in quadratic terms */
+   int                   nquadvars,          /**< number of variables in quadratic term */
    SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
-   int*                  quadoffsets,        /**< row offsets in quadratic term matrix, or NULL if nquadvars == 0 */
-   int*                  quadindices,        /**< column index of each quadratic term, or NULL if nquadvars == 0 */
-   SCIP_Real*            quadcoefs,          /**< coefficients of quadratic terms, or NULL if nquadvars == 0 */
+   int                   nquadelems,         /**< number of elements in quadratic term */
+   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monoms) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */

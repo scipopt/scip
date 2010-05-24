@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.1 2010/05/20 16:05:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.2 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -77,15 +77,32 @@ int SCIPnlrowGetNQuadVars(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
+/** gets quadratic variables in quadratic part */
+extern
+SCIP_VAR** SCIPnlrowGetQuadVars(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   );
+
+/** gets number of quadratic elements in quadratic part */
+extern
+int SCIPnlrowGetNQuadElems(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   );
+
+/** gets quadratic elements in quadratic part */
+extern
+SCIP_QUADELEM* SCIPnlrowGetQuadElems(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   );
+
 /** gets array with coefficients in linear part */
 extern
 void SCIPnlrowGetQuadData(
    SCIP_NLROW*           nlrow,              /**< NLP row */
-   int*                  nquadvars,          /**< buffer to store number of variables in quadratic term */
-   SCIP_VAR***           quadvars,           /**< buffer to store pointer to array of variables in quadratic term */
-   int**                 quadoffsets,        /**< buffer to store pointer to row offsets of quadratic entries */
-   int**                 quadindices,        /**< buffer to store pointer to column indices (w.r.t. quadvars) of quadratic entries */
-   SCIP_Real**           quadcoefs           /**< buffer to store pointer to coefficients of quadratic entries */
+   int*                  nquadvars,          /**< buffer to store number of variables in quadratic term, or NULL if not of interest */
+   SCIP_VAR***           quadvars,           /**< buffer to store pointer to array of variables in quadratic term, or NULL if not of interest */
+   int*                  nquadelems,         /**< buffer to store number of entries in quadratic term, or NULL if not of interest */
+   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to arrau of entries in quadratic term, or NULL if not of interest */
    );
 
 /** gets expression tree */

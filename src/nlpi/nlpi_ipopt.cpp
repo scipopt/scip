@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.6 2010/05/06 12:48:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.7 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -533,21 +533,10 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
  *    may be NULL in case of no linear part
  *  - linvals coefficient values
  *    may be NULL in case of no linear part
- *  - nquadrows number of columns in matrix of quadratic part for each constraint
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadrowidxs indices of variables for which a quadratic part is specified
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadoffsets start index of each rows quadratic coefficients in quadinds[.] and quadvals[.]
- *    indices are given w.r.t. quadrowidxs., i.e., quadoffsets[.][i] gives the start index of row quadrowidxs[.][i] in quadvals[.]
- *    quadoffsets[.][nquadrows[.]] gives length of quadinds[.] and quadvals[.]
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadinds column indices w.r.t. quadrowidxs, i.e., quadrowidxs[quadinds[.][i]] gives the index of the variable corresponding
- *    to entry i, entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadvals coefficient values
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
+ *  - nquadelems number of quadratic elements for each constraint
+ *    may be NULL in case of no quadratic part
+ *  - quadelems quadratic elements for each constraint
+ *    may be NULL in case of no quadratic part
  *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    entry of array may be NULL in case of no expression tree
  *    may be NULL in case of no expression tree in any constraint
@@ -566,7 +555,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
    SCIP_CALL( SCIPnlpiOracleAddConstraints(problem->oracle,
       ncons, lhss, rhss,
       nlininds, lininds, linvals,
-      nquadrows, quadrowidxs, quadoffsets, quadinds, quadvals,
+      nquadelems, quadelems,
       exprvaridxs, exprtrees, names) );
 
    problem->firstrun = TRUE;
@@ -586,15 +575,8 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
  *    may be NULL in case of no linear part
  *  - linvals coefficient values
  *    may be NULL in case of no linear part
- *  - nquadcols number of columns in matrix of quadratic part
- *  - quadcols indices of variables for which a quadratic part is specified
- *    may be NULL in case of no quadratic part
- *  - quadoffsets start index of each rows quadratic coefficients in quadinds and quadvals
- *    quadoffsets[.][nquadcols] gives length of quadinds and quadvals
- *    may be NULL in case of no quadratic part
- *  - quadinds column indices
- *    may be NULL in case of no quadratic part
- *  - quadvals coefficient values
+ *  - nquadelems number of elements in matrix of quadratic part
+ *  - quadelems elements of quadratic part
  *    may be NULL in case of no quadratic part
  *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    may be NULL in case of no expression tree
@@ -611,7 +593,7 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
       constant, nlins, lininds, linvals,
-      nquadcols, quadcols, quadoffsets, quadinds, quadvals,
+      nquadelems, quadelems,
       exprvaridxs, exprtree) );
 
    problem->firstrun = TRUE;
@@ -753,10 +735,8 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idx index of constraint or -1 for objective
- *  - nentries number of values in quadratic constraint
- *  - rows row offset containing modified indices
- *  - cols cols containing modified indices to the corresponding row offset
- *  - values coefficients corresponding to same indices as used when constraint/objective was constructed
+ *  - nquadelems number of entries in quadratic matrix to change
+ *  - quadelems new elements in quadratic matrix (replacing already existing ones or adding new ones)
  *
  * return: Error if coefficient did not exist before
  */
@@ -767,7 +747,7 @@ SCIP_DECL_NLPICHGQUADCOEFS(nlpiChgQuadraticCoefsIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
    
-   SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nentries, rows, cols, values) );
+   SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
    SCIPnlpiIpoptInvalidateSolution(problem);
 
    return SCIP_OKAY;

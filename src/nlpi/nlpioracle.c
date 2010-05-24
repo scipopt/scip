@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.3 2010/05/05 16:20:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.4 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -50,9 +50,7 @@ struct SCIP_NlpiOracle
    int**                 conslinidxs;        /**< linidxs[.] gives the variable indices in linear part, or NULL if no linear part in this constraint */
    SCIP_Real**           conslincoefs;       /**< lincoefs[.] gives the variable coefficients in linear part, or NULL if no linear part in this constraint */
    int*                  consquadlens;       /**< quadlens[.] gives length of quadratic part, or 0 if no quadratic part in this constraint */
-   int**                 consquadrows;       /**< quadrows[.] gives row indices for quadratic part, or NULL if no quadratic part in this constraint */
-   int**                 consquadcols;       /**< quadcols[.] gives column indices for quadratic part, or NULL if no quadratic part in this constraint */
-   SCIP_Real**           consquadvals;       /**< quadvals[.] gives coefficients in quadratic part, or NULL if no quadratic part in this constraint */
+   SCIP_QUADELEM**       consquadelems;      /**< quadelems[.] gives elements of quadratic part, or NULL if no quadratic part in this constraint */
    int**                 consexprvaridxs;    /**< exprvaridx[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in this constraint */
    SCIP_EXPRTREE**       consexprtrees;      /**< exprtrees[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
    char**                consnames;          /**< array with constraint names */
@@ -62,9 +60,7 @@ struct SCIP_NlpiOracle
    int*                  objlinidxs;         /**< array with indices of linear variables in objective, or NULL if no linear part */
    SCIP_Real*            objlinvals;         /**< array with coefficients of linear variables in objective, or NULL if no linear part */
    int                   objquadlen;         /**< length of quadratic part of objective, or 0 if no quadratic part in objective */
-   int*                  objquadrows;        /**< array with row indices in quadratic part of objective, or NULL if no quadratic part in objective */
-   int*                  objquadcols;        /**< array with column indices in quadratic part in objective, or NULL if no quadratic part in objective */ 
-   SCIP_Real*            objquadvals;        /**< array with coefficients in quadratic part in objective, or NULL if no quadratic part in objective */
+   SCIP_QUADELEM*        objquadelems;       /**< array with elements of quadratic part in objective, or NULL if no quadratic part in objective */
    int*                  objexprvaridxs;     /**< exprvaridxs[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in objective */
    SCIP_EXPRTREE*        objexprtree;        /**< expression tree of nonquadratic part in objective, or NULL if no nonquadratic part in objective */
 
@@ -166,15 +162,11 @@ SCIP_RETCODE moveConstraint(
 
    if( oracle->consquadlens )
    {
-      oracle->consquadlens[toidx] = oracle->consquadlens[fromidx];
-      oracle->consquadrows[toidx] = oracle->consquadrows[fromidx];
-      oracle->consquadcols[toidx] = oracle->consquadcols[fromidx];
-      oracle->consquadvals[toidx] = oracle->consquadvals[fromidx];
+      oracle->consquadlens [toidx] = oracle->consquadlens [fromidx];
+      oracle->consquadelems[toidx] = oracle->consquadelems[fromidx];
       
-      oracle->consquadlens[fromidx] = 0;
-      oracle->consquadrows[fromidx] = NULL;
-      oracle->consquadcols[fromidx] = NULL;
-      oracle->consquadvals[fromidx] = NULL;
+      oracle->consquadlens [fromidx] = 0;
+      oracle->consquadelems[fromidx] = NULL;
    }
 
    if( oracle->consexprtrees )
@@ -221,9 +213,7 @@ SCIP_RETCODE freeConstraint(
    
    if( oracle->consquadlens )
    {
-      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadrows[considx], oracle->consquadlens[considx]);
-      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadcols[considx], oracle->consquadlens[considx]);
-      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadvals[considx], oracle->consquadlens[considx]);
+      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadelems[considx], oracle->consquadlens[considx]);
       oracle->consquadlens[considx] = 0;
    }
    
@@ -265,9 +255,7 @@ SCIP_RETCODE freeConstraints(
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->conslincoefs,    oracle->nconss);
 
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadlens,    oracle->nconss);
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadrows,    oracle->nconss);
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadcols,    oracle->nconss);
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadvals,    oracle->nconss);
+   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consquadelems,   oracle->nconss);
 
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consexprtrees,   oracle->nconss);
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consexprvaridxs, oracle->nconss);
@@ -391,6 +379,7 @@ void mapIndices(
    }
 }
 
+#if 0
 /** applies a mapping of indices to two array of indices (of the same length) */
 static
 void mapIndices2(
@@ -412,6 +401,34 @@ void mapIndices2(
       *indices2 = indexmap[*indices2];
    }
 }
+#endif
+
+/** applies a mapping of indices to an array of quadratic elements */
+static
+void mapIndicesQuad(
+   int*                  indexmap,           /**< mapping from old variable indices to new indices */
+   int                   nelems,             /**< number of quadratic elements */
+   SCIP_QUADELEM*        elems               /**< array of quadratic elements to adjust */
+   )
+{
+   assert(indexmap != NULL);
+   assert(nelems == 0 || elems != NULL);
+
+   for( ; nelems ; --nelems, ++elems )
+   {
+      assert(indexmap[elems->idx1] >= 0);
+      assert(indexmap[elems->idx2] >= 0);
+      elems->idx1 = indexmap[elems->idx1];
+      elems->idx2 = indexmap[elems->idx2];
+      /* swap indices if not idx1 <= idx2 */
+      if( elems->idx1 > elems->idx2 )
+      {
+         int tmp = elems->idx2;
+         elems->idx2 = elems->idx1;
+         elems->idx1 = tmp;
+      }
+   }
+}
 
 /** computes the value of a function */
 static
@@ -421,9 +438,7 @@ SCIP_RETCODE evalFunctionValue(
    const int*            lininds,            /**< indices of linear variables */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables */
    int                   quadlen,            /**< length of quadratic part matrix */
-   int*                  quadrows,           /**< indices of rows in quadratic part matrix */
-   int*                  quadcols,           /**< indices of columns in quadratic part matrix */
-   SCIP_Real*            quadvals,           /**< coefficients in quadratic part matrix */
+   const SCIP_QUADELEM*  quadelems,          /**< elements of quadratic part matrix */
    int*                  exprvaridxs,        /**< indices of variables in nonquadratic part */
    SCIP_EXPRTREE*        exprtree,           /**< nonquadratic part */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
@@ -448,13 +463,11 @@ SCIP_RETCODE evalFunctionValue(
    
    if( quadlen != 0 )
    {
-      assert(quadrows != NULL);
-      assert(quadcols != NULL);
-      assert(quadvals != NULL);
+      assert(quadelems != NULL);
       assert(x != NULL);
       
-      for( ; quadlen > 0; --quadlen, ++quadrows, ++quadcols, ++quadvals )
-         *val += *quadvals * x[*quadrows] * x[*quadcols];
+      for( ; quadlen > 0; --quadlen, ++quadelems )
+         *val += quadelems->coef * x[quadelems->idx1] * x[quadelems->idx2];
    }
    
    if( exprtree != NULL )
@@ -494,9 +507,7 @@ SCIP_RETCODE evalFunctionGradient(
    const int*            lininds,            /**< indices of linear variables */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables */
    int                   quadlen,            /**< length of quadratic part matrix */
-   int*                  quadrows,           /**< indices of rows in quadratic part matrix */
-   int*                  quadcols,           /**< indices of columns in quadratic part matrix */
-   SCIP_Real*            quadvals,           /**< coefficients in quadratic part matrix */
+   const SCIP_QUADELEM*  quadelems,          /**< elements of quadratic part matrix */
    int*                  exprvaridxs,        /**< indices of variables in nonquadratic part */
    SCIP_EXPRTREE*        exprtree,           /**< nonquadratic part */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
@@ -530,17 +541,15 @@ SCIP_RETCODE evalFunctionGradient(
    if( quadlen != 0 )
    {
       SCIP_Real tmp;
-      assert(quadrows != NULL);
-      assert(quadcols != NULL);
-      assert(quadvals != NULL);
+      assert(quadelems != NULL);
       assert(x != NULL);
       
-      for( ; quadlen > 0; --quadlen, ++quadrows, ++quadcols, ++quadvals )
+      for( ; quadlen > 0; --quadlen, ++quadelems )
       {
-         tmp = *quadvals * x[*quadrows];
-         *val += tmp * x[*quadcols];
-         grad[*quadcols] += tmp;
-         grad[*quadrows] += *quadvals * x[*quadcols];
+         tmp = quadelems->coef * x[quadelems->idx1];
+         *val += tmp * x[quadelems->idx2];
+         grad[quadelems->idx2] += tmp;
+         grad[quadelems->idx1] += quadelems->coef * x[quadelems->idx2];
       }
    }
 
@@ -656,14 +665,13 @@ SCIP_RETCODE increaseIntArraySize(
 /** collects nonzeros entries in colnz and increases the nzcount given indices of quadratic terms */
 static
 SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
-   SCIP_NLPIORACLE*      oracle,     /**< NLPI oracle */
+   SCIP_NLPIORACLE*      oracle,             /**< NLPI oracle */
    int**                 colnz,              /**< indices of nonzero entries for each column */
    int*                  collen,             /**< space allocated to store indices of nonzeros for each column */
    int*                  colnnz,             /**< number of nonzero entries for each column */
    int*                  nzcount,            /**< counter for total number of nonzeros; should be increased whenever some colnnz is increased */
-   int*                  rowidx,             /**< row indices */
-   int*                  colidx,             /**< column indices */
-   int                   length              /**< length of quadratic part */
+   int                   length,             /**< length of quadratic part */
+   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
    )
 {
    int pos;
@@ -673,23 +681,22 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
    assert(collen != NULL);
    assert(colnnz != NULL);
    assert(nzcount != NULL);
-   assert(rowidx != NULL);
-   assert(colidx != NULL);
+   assert(quadelems != NULL);
    assert(length >= 0);
 
-   for( ; length > 0; --length, ++rowidx, ++colidx )
+   for( ; length > 0; --length, ++quadelems )
    {
-      assert(*colidx <= *rowidx);
+      assert(quadelems->idx1 <= quadelems->idx2);
       
-      if( colnz[*rowidx] == NULL || !SCIPsortedvecFindInt(colnz[*rowidx], *colidx, colnnz[*rowidx], &pos) )
+      if( colnz[quadelems->idx2] == NULL || !SCIPsortedvecFindInt(colnz[quadelems->idx2], quadelems->idx1, colnnz[quadelems->idx2], &pos) )
       {
-         if( colnnz[*rowidx] >= collen[*rowidx] )
+         if( colnnz[quadelems->idx2] >= collen[quadelems->idx2] )
          { /* allocate more space so that we can insert one more element */
-            SCIP_CALL( increaseIntArraySize(oracle->blkmem, &colnz[*rowidx], &collen[*rowidx]) );
+            SCIP_CALL( increaseIntArraySize(oracle->blkmem, &colnz[quadelems->idx2], &collen[quadelems->idx2]) );
          }
-         assert(collen[*rowidx] > colnnz[*rowidx]);
+         assert(collen[quadelems->idx2] > colnnz[quadelems->idx2]);
          
-         SCIPsortedvecInsertInt(colnz[*rowidx], *colidx, &colnnz[*rowidx]);
+         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2]);
          ++(*nzcount);
       }
    }
@@ -770,10 +777,8 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
 static
 SCIP_RETCODE hessLagAddQuad(
    SCIP_Real             weight,             /**< weight of quadratic part */
-   int*                  rowidx,             /**< row indices in matrix of quadratic part */
-   int*                  colidx,             /**< column indices in matrix of quadratic part */
-   SCIP_Real*            coeff,              /**< coefficients in matrix of quadratic part */
-   int                   length,             /**< number of coefficients */
+   int                   length,             /**< number of elements in matrix of quadratic part */
+   SCIP_QUADELEM*        quadelems,          /**< elements in matrix of quadratic part */
    int*                  hesoffset,          /**< row offsets in sparse matrix that is to be filled */ 
    int*                  hescol,             /**< column indices in sparse matrix that is to be filled */
    SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
@@ -781,22 +786,21 @@ SCIP_RETCODE hessLagAddQuad(
 {
    int idx;
 
-   assert(rowidx != NULL);
-   assert(colidx != NULL);
    assert(length >= 0);
+   assert(quadelems != NULL);
    assert(hesoffset != NULL);
    assert(hescol != NULL);
    assert(values != NULL);
 
-   for( ; length > 0; --length, ++rowidx, ++colidx, ++coeff )
+   for( ; length > 0; --length, ++quadelems )
    {
-      assert(*colidx <= *rowidx);
-      if( !SCIPsortedvecFindInt(&hescol[hesoffset[*rowidx]], *colidx, hesoffset[*rowidx+1] - hesoffset[*rowidx], &idx) )
+      assert(quadelems->idx1 <= quadelems->idx2);
+      if( !SCIPsortedvecFindInt(&hescol[hesoffset[quadelems->idx2]], quadelems->idx1, hesoffset[quadelems->idx2 + 1] - hesoffset[quadelems->idx2], &idx) )
       {
          SCIPerrorMessage("Could not find entry in hessian sparsity\n");
          return SCIP_ERROR;
       }
-      values[hesoffset[*rowidx] + idx] += weight * ((*colidx == *rowidx) ? 2 * *coeff : *coeff);
+      values[hesoffset[quadelems->idx2] + idx] += weight * ((quadelems->idx1 == quadelems->idx2) ? 2 * quadelems->coef : quadelems->coef);
    }
 
    return SCIP_OKAY;
@@ -901,9 +905,7 @@ SCIP_RETCODE printFunction(
    const int*            lininds,            /**< indices of linear variables */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables */
    int                   quadlen,            /**< number of indices in quadratic part matrix */
-   int*                  quadrows,            /**< indices of rows in quadratic part matrix */
-   int*                  quadcols,            /**< indices of columns in quadratic part matrix */
-   SCIP_Real*            quadvals,            /**< coefficients in quadratic part matrix */
+   const SCIP_QUADELEM*  quadelems,          /**< elements in quadratic part matrix */
    SCIP_EXPRTREE*        exprtree            /**< nonquadratic part */
    )
 {  /*lint --e{715}*/
@@ -927,16 +929,16 @@ SCIP_RETCODE printFunction(
       j = 0;
       for( i = 0; i < quadlen; ++i )
       {
-         SCIPmessageFPrintInfo(file, "%+g*", quadvals[j]);
-         if( oracle->varnames != NULL && oracle->varnames[quadrows[i]] != NULL )
-            SCIPmessageFPrintInfo(file, oracle->varnames[quadrows[i]]);
+         SCIPmessageFPrintInfo(file, "%+g*", quadelems[j].coef);
+         if( oracle->varnames != NULL && oracle->varnames[quadelems[i].idx1] != NULL )
+            SCIPmessageFPrintInfo(file, oracle->varnames[quadelems[i].idx1]);
          else
-            SCIPmessageFPrintInfo(file, "x%d", quadrows[i]);
+            SCIPmessageFPrintInfo(file, "x%d", quadelems[i].idx1);
          SCIPmessageFPrintInfo(file, "*");
-         if( oracle->varnames != NULL && oracle->varnames[quadcols[i]] != NULL )
-            SCIPmessageFPrintInfo(file, oracle->varnames[quadcols[i]]);
+         if( oracle->varnames != NULL && oracle->varnames[quadelems[i].idx2] != NULL )
+            SCIPmessageFPrintInfo(file, oracle->varnames[quadelems[i].idx2]);
          else
-            SCIPmessageFPrintInfo(file, "x%d", quadcols[i]);
+            SCIPmessageFPrintInfo(file, "x%d", quadelems[i].idx2);
       }
    }
 
@@ -987,11 +989,9 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    invalidateJacobiSparsity(*oracle);
    invalidateHessianLagSparsity(*oracle);
    
-   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objlinidxs,  (*oracle)->objnlin);
-   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objlinvals,  (*oracle)->objnlin);
-   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objquadrows, (*oracle)->objquadlen);
-   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objquadcols, (*oracle)->objquadlen);
-   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objquadvals, (*oracle)->objquadlen);
+   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objlinidxs,   (*oracle)->objnlin);
+   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objlinvals,   (*oracle)->objnlin);
+   BMSfreeBlockMemoryArrayNull((*oracle)->blkmem, &(*oracle)->objquadelems, (*oracle)->objquadlen);
    if( (*oracle)->objexprtree != NULL )
    {
       BMSfreeBlockMemoryArray((*oracle)->blkmem, &(*oracle)->objexprvaridxs, SCIPexprtreeGetNVars((*oracle)->objexprtree));
@@ -1137,17 +1137,10 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   const int*            nquadrows,          /**< NULL if no quadratic parts, otherwise nquadrows[.] gives the number of columns in the matrix 
-                                              *   of the quadratic part, or 0 if no quadratic part in this constraint */
-   int* const*           quadrowidxs,        /**< NULL if no quadratic parts, otherwise quadrowidx[.] gives the indices of variables 
-                                              *   for which a quadratic part is specified, or NULL if no quadratic part in this constraint */
-   int* const*           quadoffsets,        /**< NULL if no quadratic parts, otherwise quadoffsets[.] gives start index of each rows quadratic coefficients 
-                                              *   in quadidxs[.] and quadvals[.] (quadoffsets[.][nvars] gives length of quadidxs[.] and quadvals[.]), 
-                                              *   or NULL if no quadratic part in this constraint */
-   int* const*           quadidxs,           /**< NULL if no quadratic parts, otherwise quadidxs[.] gives column indices for quadratic part, 
-                                              *   or NULL if no quadratic part in this constraint */
-   SCIP_Real* const*     quadvals,           /**< NULL if no quadratic parts, otherwise quadvals[.] gives coefficients in quadratic part, 
-                                              *   or NULL if no quadratic part in this constraint */
+   const int*            nquadelems,         /**< number of elements in matrix of quadratic part for each constraint,
+                                              * may be NULL in case of no quadratic part in any constraint */
+   SCIP_QUADELEM* const* quadelems,          /**< quadratic elements specifying quadratic part for each constraint, entry of array may be NULL in case of no quadratic part,
+                                              * may be NULL in case of no quadratic part in any constraint */
    int* const*           exprvaridxs,        /**< NULL if no nonquadratic parts, otherwise epxrvaridxs[.] maps variable indices in expression tree to indices in nlp */
    SCIP_EXPRTREE* const* exprtrees,          /**< NULL if no nonquadratic parts, otherwise exprtrees[.] gives nonquadratic part, 
                                               *   or NULL if no nonquadratic part in this constraint */
@@ -1168,10 +1161,8 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 
    invalidateJacobiSparsity(oracle); /* @TODO we could also update (extend) the sparsity pattern */
 
-   if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslhss, oracle->nconss, oracle->nconss + nconss) == NULL )
-      return SCIP_NOMEMORY;
-   if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consrhss, oracle->nconss, oracle->nconss + nconss) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslhss, oracle->nconss, oracle->nconss + nconss) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consrhss, oracle->nconss, oracle->nconss + nconss) );
 
    if( lhss != NULL )
    {
@@ -1196,21 +1187,15 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 
       if( oracle->conslinlens != NULL || oracle->nconss == 0 )
       {
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss, oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss, oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss, oracle->nconss + nconss) );
       }
       else
       { /* had no linear parts so far */
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss + nconss) );
          BMSclearMemoryArray(oracle->conslinlens,  oracle->nconss);
          BMSclearMemoryArray(oracle->conslinidxs,  oracle->nconss);
          BMSclearMemoryArray(oracle->conslincoefs, oracle->nconss);
@@ -1221,10 +1206,8 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
          oracle->conslinlens[oracle->nconss+i] = nlininds[i];
          if( oracle->conslinlens[oracle->nconss+i] )
          {
-            if( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs [oracle->nconss+i], lininds[i], oracle->conslinlens[oracle->nconss+i]) == NULL )
-               return SCIP_NOMEMORY;
-            if( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs[oracle->nconss+i], linvals[i], oracle->conslinlens[oracle->nconss+i]) == NULL )
-               return SCIP_NOMEMORY;
+            SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs [oracle->nconss+i], lininds[i], oracle->conslinlens[oracle->nconss+i]) );
+            SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs[oracle->nconss+i], linvals[i], oracle->conslinlens[oracle->nconss+i]) );
             SCIPsortIntReal(oracle->conslinidxs[oracle->nconss+i], oracle->conslincoefs[oracle->nconss+i], oracle->conslinlens[oracle->nconss+i]);
             for( j = 0; j < nlininds[i]; ++j )
             {
@@ -1242,146 +1225,76 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    }
    else if( oracle->conslinlens != NULL )
    { /* no new linear parts, but we had linear parts before */
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss, oracle->nconss + nconss) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss, oracle->nconss + nconss) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss, oracle->nconss + nconss) );
       BMSclearMemoryArray(&oracle->conslinlens [oracle->nconss], nconss);
       BMSclearMemoryArray(&oracle->conslinidxs [oracle->nconss], nconss);
       BMSclearMemoryArray(&oracle->conslincoefs[oracle->nconss], nconss);
    }
    
-   if( quadoffsets != NULL )
+   if( nquadelems != NULL )
    {
-      assert(nquadrows != NULL);
-      assert(quadrowidxs != NULL);
-      assert(quadidxs != NULL);
-      assert(quadvals != NULL);
+      assert(quadelems != NULL);
       if( (oracle->consquadlens == NULL) && (oracle->nconss != 0) )
       {
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens), oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadrows), oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadcols), oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadvals), oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         BMSclearMemoryArray(oracle->consquadlens, oracle->nconss);
-         BMSclearMemoryArray(oracle->consquadrows, oracle->nconss);
-         BMSclearMemoryArray(oracle->consquadcols, oracle->nconss);
-         BMSclearMemoryArray(oracle->consquadvals, oracle->nconss);
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens),  oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadelems), oracle->nconss + nconss) );
+         BMSclearMemoryArray(oracle->consquadlens,  oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadelems, oracle->nconss);
       }
       else
       {
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens), oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadrows), oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadcols), oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadvals), oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens),  oracle->nconss, oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadelems), oracle->nconss, oracle->nconss + nconss) );
       }
       for( i = 0; i < nconss; ++i )
       {
-         if( quadoffsets[i] != NULL && nquadrows[i] != 0 )
+         if( quadelems[i] != NULL && nquadelems[i] != 0 )
          {
-            int k;
-
-            assert(quadrowidxs[i] != NULL);
-            assert(quadidxs[i] != NULL);
-            assert(quadvals[i] != NULL);
-            oracle->consquadlens[oracle->nconss + i] = quadoffsets[i][nquadrows[i]];
-            if( BMSallocBlockMemoryArray(oracle->blkmem, &((oracle->consquadrows)[oracle->nconss + i]), quadoffsets[i][nquadrows[i]]) == NULL )
-               return SCIP_NOMEMORY;
-            if( BMSallocBlockMemoryArray(oracle->blkmem, &((oracle->consquadcols)[oracle->nconss + i]), quadoffsets[i][nquadrows[i]]) == NULL )
-               return SCIP_NOMEMORY;
-            if( BMSduplicateBlockMemoryArray(oracle->blkmem, &((oracle->consquadvals)[oracle->nconss + i]), quadvals[i], quadoffsets[i][nquadrows[i]]) == NULL )
-               return SCIP_NOMEMORY;
+            oracle->consquadlens[oracle->nconss + i] = nquadelems[i];
+            SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->consquadelems[oracle->nconss + i], quadelems[i], nquadelems[i]) );
             
-            k = quadoffsets[i][0];
-            for( j = 0; j < nquadrows[i]; ++j )
+            /* update variable degress for variables in quadratic part */
+            for( j = 0; j < nquadelems[i]; ++j )
             {
-               if( quadoffsets[i][j] == quadoffsets[i][j+1] )
-                  continue;
-               for( ; k < quadoffsets[i][j+1]; ++k )
-               {
-                  assert(quadidxs[i][k] < nquadrows[i]);
-                  if( quadrowidxs[i][j] > quadrowidxs[i][quadidxs[i][k]] )
-                  {
-                     oracle->consquadrows[oracle->nconss + i][k] = quadrowidxs[i][j];
-                     oracle->consquadcols[oracle->nconss + i][k] = quadrowidxs[i][quadidxs[i][k]];
-                  }
-                  else
-                  {
-                     oracle->consquadrows[oracle->nconss + i][k] = quadrowidxs[i][quadidxs[i][k]];
-                     oracle->consquadcols[oracle->nconss + i][k] = quadrowidxs[i][j];
-                  }
-                  oracle->vardegrees[quadrowidxs[i][quadidxs[i][k]]] = MAX(2, oracle->vardegrees[quadrowidxs[i][quadidxs[i][k]]]);
-               }
-               oracle->vardegrees[quadrowidxs[i][j]] = MAX(2, oracle->vardegrees[quadrowidxs[i][j]]);
+               oracle->vardegrees[quadelems[i][j].idx1] = MAX(2, oracle->vardegrees[quadelems[i][j].idx1]);
+               oracle->vardegrees[quadelems[i][j].idx2] = MAX(2, oracle->vardegrees[quadelems[i][j].idx2]);
             }
-            assert(k == oracle->consquadlens[oracle->nconss + i]);
             
-            /* sort quadrows and quadcols */
-            SCIPsortIntIntReal(oracle->consquadrows[oracle->nconss+i], oracle->consquadcols[oracle->nconss+i], oracle->consquadvals[oracle->nconss+i], oracle->consquadlens[oracle->nconss+i]);
-            j = 0;
-            k = 0;
-            while( j < oracle->consquadlens[oracle->nconss+i] )
-            {
-               while( k < oracle->consquadlens[oracle->nconss+i] && oracle->consquadrows[oracle->nconss+i][j] == oracle->consquadrows[oracle->nconss+i][k] )
-                  ++k;
-               SCIPsortIntReal(&oracle->consquadcols[oracle->nconss+i][j], &oracle->consquadvals[oracle->nconss+i][j], k-j);
-               j = k;
-            }
+            /* sort quadratic part */
+            SCIPquadelemSort(oracle->consquadelems[oracle->nconss+i], nquadelems[i]);
             
             addednlcon = TRUE;
          }
          else
          {
-            oracle->consquadlens[oracle->nconss + i] = 0;
-            oracle->consquadrows[oracle->nconss + i] = NULL;
-            oracle->consquadcols[oracle->nconss + i] = NULL;
-            oracle->consquadvals[oracle->nconss + i] = NULL;
+            oracle->consquadlens [oracle->nconss + i] = 0;
+            oracle->consquadelems[oracle->nconss + i] = NULL;
          }
       }
    }
    else if( oracle->consquadlens != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens), oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadrows), oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadcols), oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadvals), oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
-      BMSclearMemoryArray(&((oracle->consquadlens)[oracle->nconss]), nconss);
-      BMSclearMemoryArray(&((oracle->consquadrows)[oracle->nconss]), nconss);
-      BMSclearMemoryArray(&((oracle->consquadcols)[oracle->nconss]), nconss);
-      BMSclearMemoryArray(&((oracle->consquadvals)[oracle->nconss]), nconss);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens),  oracle->nconss, oracle->nconss + nconss) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadelems), oracle->nconss, oracle->nconss + nconss) );
+      BMSclearMemoryArray(&((oracle->consquadlens) [oracle->nconss]), nconss);
+      BMSclearMemoryArray(&((oracle->consquadelems)[oracle->nconss]), nconss);
    }
    
    if( exprtrees != NULL )
    {
       if( oracle->consexprtrees == NULL && oracle->nconss != 0 )
       {
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprtrees),   oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprtrees),   oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprvaridxs), oracle->nconss + nconss) );
          BMSclearMemoryArray(oracle->consexprtrees,   oracle->nconss);
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprvaridxs), oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
          BMSclearMemoryArray(oracle->consexprvaridxs, oracle->nconss);
       }
       else
       {
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprtrees),   oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprvaridxs), oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprtrees),   oracle->nconss, oracle->nconss + nconss) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprvaridxs), oracle->nconss, oracle->nconss + nconss) );
       }
       for( i = 0; i < nconss; ++i )
          if( exprtrees[i] != NULL )
@@ -1392,8 +1305,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             
             SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->consexprtrees[oracle->nconss + i]) );
             
-            if( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs[oracle->nconss + i], exprvaridxs[i], SCIPexprtreeGetNVars(exprtrees[i])) == NULL )
-               return SCIP_NOMEMORY;
+            SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs[oracle->nconss + i], exprvaridxs[i], SCIPexprtreeGetNVars(exprtrees[i])) );
             for (j = 0; j < SCIPexprtreeGetNVars(exprtrees[i]); ++j)
             {
                assert(exprvaridxs[i][j] >= 0);
@@ -1409,11 +1321,9 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    }
    else if( oracle->consexprtrees != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprtrees),   oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
-      BMSclearMemoryArray(&((oracle->consexprtrees)[oracle->nconss]), nconss);
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprvaridxs), oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprtrees),   oracle->nconss, oracle->nconss + nconss) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consexprvaridxs), oracle->nconss, oracle->nconss + nconss) );
+      BMSclearMemoryArray(&((oracle->consexprtrees)  [oracle->nconss]), nconss);
       BMSclearMemoryArray(&((oracle->consexprvaridxs)[oracle->nconss]), nconss);
    }
 
@@ -1421,28 +1331,24 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    {
       if( oracle->consnames == NULL && oracle->nconss != 0 )
       {
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consnames), oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consnames), oracle->nconss + nconss) );
          BMSclearMemoryArray(oracle->consnames, oracle->nconss);
       }
       else
       {
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consnames), oracle->nconss, oracle->nconss + nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consnames), oracle->nconss, oracle->nconss + nconss) );
       }
       for( i = 0; i < nconss; ++i )
          if( consnames[i] != NULL )
          {
-            if( BMSduplicateBlockMemoryArray(oracle->blkmem, &((oracle->consnames)[oracle->nconss + i]), consnames[i], strlen(consnames[i])+1) == NULL )
-               return SCIP_NOMEMORY;
+            SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &((oracle->consnames)[oracle->nconss + i]), consnames[i], strlen(consnames[i])+1) );
          }
          else
             oracle->consnames[oracle->nconss + i] = NULL;
    }
    else if( oracle->consnames != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consnames), oracle->nconss, oracle->nconss + nconss) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &(oracle->consnames), oracle->nconss, oracle->nconss + nconss) );
       BMSclearMemoryArray(&((oracle->consnames)[oracle->nconss]), nconss);
    }
    
@@ -1464,12 +1370,8 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    int                   nlin,               /**< number of linear variable coefficients */ 
    const int*            lininds,            /**< indices of linear variables, or NULL if no linear part */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables, or NULL if no linear part */
-   int                   nquadrows,          /**< number of columns in the matrix of the quadratic part */
-   const int*            quadrowidxs,        /**< indices of variables appearing in quadratic part, or NULL if no quadratic part */
-   const int*            quadoffsets,        /**< start index of each rows quadratic coefficients in quadidxs and quadvals 
-                                              *   (quadoffsets[.][nvars] gives length of quadidxs and quadvals), or NULL if no quadratic part */
-   const int*            quadidxs,           /**< column indices in quadratic part, or NULL if no quadratic part */ 
-   const SCIP_Real*      quadvals,           /**< coefficients in quadratic part, or NULL if no quadratic part */
+   int                   nquadelems,         /**< number of entries in matrix of quadratic part */
+   const SCIP_QUADELEM*  quadelems,          /**< entries in matrix of quadratic part, may be NULL in case of no quadratic part */
    const int*            exprvaridxs,        /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
    const SCIP_EXPRTREE*  exprtree            /**< expression tree of nonquadratic part, or NULL if no nonquadratic part */
    )
@@ -1477,11 +1379,9 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    assert(oracle != NULL);
    
    /* clear previous objective */
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objlinidxs,  oracle->objnlin);
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objlinvals,  oracle->objnlin);
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objquadrows, oracle->objquadlen);
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objquadcols, oracle->objquadlen);
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objquadvals, oracle->objquadlen);
+   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objlinidxs,   oracle->objnlin);
+   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objlinvals,   oracle->objnlin);
+   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objquadelems, oracle->objquadlen);
    if( oracle->objexprtree != NULL )
    {
       BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->objexprvaridxs, SCIPexprtreeGetNVars(oracle->objexprtree));
@@ -1490,7 +1390,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       /* @TODO this does not clear the vardegrees's */
    }
    
-   if( nquadrows != 0 || oracle->objquadlen != 0 || exprtree != NULL || oracle->objexprtree != NULL )
+   if( nquadelems != 0 || oracle->objquadlen != 0 || exprtree != NULL || oracle->objexprtree != NULL )
       invalidateHessianLagSparsity(oracle);
    
    oracle->objconstant = constant;
@@ -1502,10 +1402,8 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       assert(lininds != NULL);
       assert(linvals != NULL);
 
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objlinidxs, lininds, nlin) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objlinvals, linvals, nlin) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objlinidxs, lininds, nlin) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objlinvals, linvals, nlin) );
       oracle->objnlin = nlin;
       for( i = 0; i < nlin; ++i )
          oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
@@ -1515,58 +1413,24 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    else
       oracle->objnlin = 0;
    
-   if( nquadrows != 0 && quadoffsets != NULL )
+   if( nquadelems != 0 )
    {
       int j;
-      int k;
 
-      assert(quadrowidxs != NULL);
-      assert(quadidxs != NULL);
-      assert(quadvals != NULL);
+      assert(quadelems != NULL);
       
-      oracle->objquadlen = quadoffsets[nquadrows];
-      if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->objquadrows, oracle->objquadlen) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->objquadcols, oracle->objquadlen) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objquadvals, quadvals, oracle->objquadlen) == NULL )
-         return SCIP_NOMEMORY;
+      oracle->objquadlen = nquadelems;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objquadelems, quadelems, oracle->objquadlen) );
       
-      k = quadoffsets[0];
-      for( j = 0; j < nquadrows; ++j )
+      /* update variable degrees for variables in quadratic part */
+      for( j = 0; j < nquadelems; ++j )
       {
-         if( quadoffsets[j] == quadoffsets[j+1] )
-            continue;
-         for( ; k < quadoffsets[j+1]; ++k )
-         {
-            assert(quadidxs[k] < nquadrows);
-            if( quadrowidxs[j] > quadrowidxs[quadidxs[k]] )
-            {
-               oracle->objquadrows[k] = quadrowidxs[j];
-               oracle->objquadcols[k] = quadrowidxs[quadidxs[k]];
-            }
-            else
-            {
-               oracle->objquadrows[k] = quadrowidxs[quadidxs[k]];
-               oracle->objquadcols[k] = quadrowidxs[j];
-            }
-            oracle->vardegrees[quadrowidxs[quadidxs[k]]] = MAX(2, oracle->vardegrees[quadrowidxs[quadidxs[k]]]);
-         }
-         oracle->vardegrees[quadrowidxs[j]] = MAX(2, oracle->vardegrees[quadrowidxs[j]]);
+         oracle->vardegrees[quadelems[j].idx1] = MAX(2, oracle->vardegrees[quadelems[j].idx1]);
+         oracle->vardegrees[quadelems[j].idx2] = MAX(2, oracle->vardegrees[quadelems[j].idx2]);
       }
-      assert(k == oracle->objquadlen);
 
-      /* sort quadrows and quadcols */
-      SCIPsortIntIntReal(oracle->objquadrows, oracle->objquadcols, oracle->objquadvals, oracle->objquadlen);
-      j = 0;
-      k = 0;
-      while( j < oracle->objquadlen )
-      {
-         while( k < oracle->objquadlen && oracle->objquadrows[j] == oracle->objquadrows[k] )
-            ++k;
-         SCIPsortIntReal(&oracle->objquadcols[j], &oracle->objquadvals[j], k-j);
-         j = k;
-      }
+      /* sort quadratic elements */
+      SCIPquadelemSort(oracle->objquadelems, oracle->objquadlen);
    }
    else
       oracle->objquadlen = 0;
@@ -1661,7 +1525,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
                                               *   new position of var in output (-1 if var was deleted) */
    )
 {  /*lint --e{715}*/
-   int c, j, k;
+   int c;
    int lastgood; /* index of the last variable that should be kept */ 
    
    assert(oracle != NULL);
@@ -1729,18 +1593,8 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    mapIndices(delstats, oracle->objnlin, oracle->objlinidxs); /* TODO delete entries for deleted variables */
    SCIPsortIntReal(oracle->objlinidxs, oracle->objlinvals, oracle->objnlin);
    
-   mapIndices2(delstats, oracle->objquadlen, oracle->objquadrows, oracle->objquadcols);
-   /* sort quadrows and quadcols */
-   SCIPsortIntIntReal(oracle->objquadrows, oracle->objquadcols, oracle->objquadvals, oracle->objquadlen);
-   j = 0;
-   k = 0;
-   while( j < oracle->objquadlen )
-   {
-      while( k < oracle->objquadlen && oracle->objquadrows[j] == oracle->objquadrows[k] )
-         ++k;
-      SCIPsortIntReal(&oracle->objquadcols[j], &oracle->objquadvals[j], k-j);
-      j = k;
-   }
+   mapIndicesQuad(delstats, oracle->objquadlen, oracle->objquadelems); /* TODO delete entries for deleted variables */
+   SCIPquadelemSort(oracle->objquadelems, oracle->objquadlen);
 
    if( oracle->objexprtree )
       mapIndices(delstats, SCIPexprtreeGetNVars(oracle->objexprtree), oracle->objexprvaridxs);
@@ -1755,37 +1609,23 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
       
       if( oracle->consquadlens )
       {
-         mapIndices2(delstats, oracle->consquadlens[c], oracle->consquadrows[c], oracle->consquadcols[c]);
-         /* sort quadrows and quadcols */
-         SCIPsortIntIntReal(oracle->consquadrows[c], oracle->consquadcols[c], oracle->consquadvals[c], oracle->consquadlens[c]);
-         j = 0;
-         k = 0;
-         while( j < oracle->consquadlens[c] )
-         {
-            while( k < oracle->consquadlens[c] && oracle->consquadrows[c][j] == oracle->consquadrows[c][k] )
-               ++k;
-            SCIPsortIntReal(&oracle->consquadcols[c][j], &oracle->consquadvals[c][j], k-j);
-            j = k;
-         }
+         mapIndicesQuad(delstats, oracle->consquadlens[c], oracle->consquadelems[c]);
+         SCIPquadelemSort(oracle->consquadelems[c], oracle->consquadlens[c]);
       }
       
       if( oracle->consexprtrees )
          mapIndices(delstats, SCIPexprtreeGetNVars(oracle->consexprtrees[c]), oracle->consexprvaridxs[c]);
    }
    
-   if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->varlbs, oracle->nvars, lastgood+1) == NULL )
-      return SCIP_NOMEMORY;
-   if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->varubs, oracle->nvars, lastgood+1) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->varlbs, oracle->nvars, lastgood+1) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->varubs, oracle->nvars, lastgood+1) );
    
    if( oracle->varnames != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->varnames, oracle->nvars, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->varnames, oracle->nvars, lastgood+1) );
    }
 
-   if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->vardegrees, oracle->nvars, lastgood+1) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->vardegrees, oracle->nvars, lastgood+1) );
 
    oracle->nvars = lastgood+1;
 
@@ -1856,45 +1696,31 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    assert(c == lastgood);
    
    /* free memory */
-   if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslhss, oracle->nconss, lastgood+1) == NULL )
-      return SCIP_NOMEMORY;
-   if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consrhss, oracle->nconss, lastgood+1) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslhss, oracle->nconss, lastgood+1) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consrhss, oracle->nconss, lastgood+1) );
 
    if( oracle->conslinlens != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss, lastgood+1) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss, lastgood+1) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss, lastgood+1) );
    }
 
    if( oracle->consquadlens != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadlens, oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadrows, oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadcols, oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadvals, oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadlens,  oracle->nconss, lastgood+1) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadelems, oracle->nconss, lastgood+1) );
    }
    
    if( oracle->consexprvaridxs != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs, oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consexprtrees,   oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs, oracle->nconss, lastgood+1) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consexprtrees,   oracle->nconss, lastgood+1) );
    }
    
    if( oracle->consnames != NULL )
    {
-      if( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consnames, oracle->nconss, lastgood+1) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consnames, oracle->nconss, lastgood+1) );
    }
 
    oracle->nconss = lastgood+1;
@@ -1940,12 +1766,9 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    {
       if( oracle->conslinlens == NULL )
       { /* first time we have linear coefficients in a constraint */
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinlens,  oracle->nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslinidxs,  oracle->nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->conslincoefs, oracle->nconss) );
          BMSclearMemoryArray(oracle->conslinlens,  oracle->nconss);
          BMSclearMemoryArray(oracle->conslinidxs,  oracle->nconss);
          BMSclearMemoryArray(oracle->conslincoefs, oracle->nconss);
@@ -1961,12 +1784,10 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
       assert(*linidxs == NULL);
       assert(*lincoefs == NULL);
       
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, linidxs,  varidxs,  nentries) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, lincoefs, newcoefs, nentries) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, linidxs,  varidxs,  nentries) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, lincoefs, newcoefs, nentries) );
       SCIPsortIntReal(*linidxs, *lincoefs, nentries);
-            
+
       addednew = TRUE;
    }
    else
@@ -2004,10 +1825,8 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
       if( addednew )
       {
          /* shrink to actual needed size */
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, linidxs , *linlen + (nentries-i), len) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, lincoefs, *linlen + (nentries-i), len) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, linidxs , *linlen + (nentries-i), len) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, lincoefs, *linlen + (nentries-i), len) );
          *linlen = len;
          
          SCIPsortIntReal(*linidxs, *lincoefs, len);
@@ -2028,168 +1847,101 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
-   const int             nentries,           /**< number of coefficients to change */
-   const int*            rowidxs,            /**< array with row indices of quadratic matrix entries for which new values are provided */
-   const int*            colidxs,            /**< array with column indices of quadratic matrix entries for which new values are provided */
-   SCIP_Real*            newcoefs            /**< new quadratic coefficients */ 
+   int                   nquadelems,         /**< number of entries in quadratic constraint to change */
+   const SCIP_QUADELEM*  quadelems           /**< new elements in quadratic matrix (replacing already existing ones or adding new ones) */
    )
 {  /*lint --e{715}*/
    SCIP_Bool addednew;
    int       i;
    
-   int**       quadrowidxs;
-   int**       quadcolidxs;
-   SCIP_Real** quadcoefs;
-   int*        quadlen;
+   SCIP_QUADELEM** myquadelems;
+   int*            myquadlen;
    
    assert(oracle != NULL);
-   assert(rowidxs != NULL || nentries == 0);
-   assert(colidxs != NULL || nentries == 0);
-   assert(newcoefs != NULL || nentries == 0);
+   assert(quadelems != NULL || nquadelems == 0);
    assert(considx >= -1);
    assert(considx < oracle->nconss);
    
-   if( nentries == 0 )
+   if( nquadelems == 0 )
       return SCIP_OKAY;
    
    addednew = FALSE;
    
    if( considx == -1 )
    {
-      quadrowidxs = &oracle->objquadrows;
-      quadcolidxs = &oracle->objquadcols;
-      quadcoefs   = &oracle->objquadvals;
-      quadlen     = &oracle->objquadlen;
+      myquadelems = &oracle->objquadelems;
+      myquadlen   = &oracle->objquadlen;
    }
    else
    {
       if( oracle->consquadlens == NULL )
       { /* first time we have quadratic coefficients in a constraint */
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens), oracle->nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadrows), oracle->nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadcols), oracle->nconss) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadvals), oracle->nconss) == NULL )
-            return SCIP_NOMEMORY;
-         BMSclearMemoryArray(oracle->consquadlens, oracle->nconss);
-         BMSclearMemoryArray(oracle->consquadrows, oracle->nconss);
-         BMSclearMemoryArray(oracle->consquadcols, oracle->nconss);
-         BMSclearMemoryArray(oracle->consquadvals, oracle->nconss);
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadlens),  oracle->nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &(oracle->consquadelems), oracle->nconss) );
+         BMSclearMemoryArray(oracle->consquadlens,  oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadelems, oracle->nconss);
       }
       
-      quadrowidxs = &oracle->consquadrows[considx];
-      quadcolidxs = &oracle->consquadcols[considx];
-      quadcoefs   = &oracle->consquadvals[considx];
-      quadlen     = &oracle->consquadlens[considx];
+      myquadelems = &oracle->consquadelems[considx];
+      myquadlen   = &oracle->consquadlens [considx];
    }
    
-   if( *quadlen == 0 )
+   if( *myquadlen == 0 )
    { /* first time we have quadratic coefficients in this constraint (or objective) */
-      assert(*quadrowidxs == NULL);
-      assert(*quadcolidxs == NULL);
-      assert(*quadcoefs   == NULL);
+      assert(*myquadelems == NULL);
       
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, quadrowidxs, rowidxs,  nentries) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, quadcolidxs, colidxs,  nentries) == NULL )
-         return SCIP_NOMEMORY;
-      if( BMSduplicateBlockMemoryArray(oracle->blkmem, quadcoefs,   newcoefs, nentries) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, myquadelems, quadelems, nquadelems) );
             
       addednew = TRUE;
    }
    else
    {
-      int rowpos;
-      int colpos;
-      int len = *quadlen;
+      int pos;
+      int len = *myquadlen;
       
-      for( i = 0; i < nentries; ++i )
+      for( i = 0; i < nquadelems; ++i )
       {
-         assert(rowidxs[i] >= 0);
-         assert(colidxs[i] >= 0);
-         assert(rowidxs[i] < oracle->nvars);
-         assert(colidxs[i] < oracle->nvars);
+         assert(quadelems[i].idx1 >= 0);
+         assert(quadelems[i].idx2 >= 0);
+         assert(quadelems[i].idx1 < oracle->nvars);
+         assert(quadelems[i].idx2 < oracle->nvars);
          
          /* we assume that index pairs are not repeating */
-         /* see if we already have an entry for (rowidxs[i], colidxs[i]) */
-         if( SCIPsortedvecFindInt(*quadrowidxs, rowidxs[i], *quadlen, &rowpos) )
+         /* if we already have an entry for quadelems[i], then just replace the coefficient, otherwise append new entry */
+         if( SCIPquadelemSortedFind(*myquadelems, quadelems[i].idx1, quadelems[i].idx2, *myquadlen, &pos) )
          {
-            int nextrowpos;
-            if( !SCIPsortedvecFindInt(&((*quadrowidxs)[rowpos+1]), rowidxs[i]+1, *quadlen-rowpos, &nextrowpos) )
-               nextrowpos = *quadlen;
-            if( !SCIPsortedvecFindInt(&((*quadcolidxs)[rowpos]), colidxs[i], nextrowpos-rowpos, &colpos) )
-               colpos = -1;
-         }
-         else
-            colpos = -1;
-         
-         if( colpos >= 0 )
-         {
-            (*quadcoefs)[colpos] = newcoefs[i];
+            (*myquadelems)[pos].coef = quadelems[i].coef;
          }
          else
          {
             if( !addednew )
             { /* first coefficient that is added new, realloc memory */
-               int newsize = *quadlen + (nentries-i); /* new size for arrays (upper bound) */
-               if( BMSreallocBlockMemoryArray(oracle->blkmem, quadrowidxs, *quadlen, newsize) == NULL )
-                  return SCIP_NOMEMORY;
-               if( BMSreallocBlockMemoryArray(oracle->blkmem, quadcolidxs, *quadlen, newsize) == NULL )
-                  return SCIP_NOMEMORY;
-               if( BMSreallocBlockMemoryArray(oracle->blkmem, quadcoefs,   *quadlen, newsize) == NULL )
-                  return SCIP_NOMEMORY;
+               int newsize = *myquadlen + (nquadelems - i); /* new size for arrays (upper bound) */
+               SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, myquadelems, *myquadlen, newsize) );
             }
-            /* append new entries */
-            (*quadrowidxs)[len] = rowidxs[i];
-            (*quadcolidxs)[len] = colidxs[i];
-            (*quadcoefs)  [len] = newcoefs[i];
+            /* append new entry */
+            (*myquadelems)[len] = quadelems[i];
             ++len;
             addednew = TRUE;
-            /* increase degree of variable to 1 */
-            oracle->vardegrees[rowidxs[i]] = MAX(2, oracle->vardegrees[rowidxs[i]]);
-            oracle->vardegrees[colidxs[i]] = MAX(2, oracle->vardegrees[colidxs[i]]);
+            /* increase degree of variables to 2 */
+            oracle->vardegrees[quadelems[i].idx1] = MAX(2, oracle->vardegrees[quadelems[i].idx1]);
+            oracle->vardegrees[quadelems[i].idx2] = MAX(2, oracle->vardegrees[quadelems[i].idx2]);
          }
       }
       
       if( addednew )
       {
          /* shrink to actual needed size */
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, quadrowidxs, *quadlen + (nentries-i), len) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, quadcolidxs, *quadlen + (nentries-i), len) == NULL )
-            return SCIP_NOMEMORY;
-         if( BMSreallocBlockMemoryArray(oracle->blkmem, quadcoefs,   *quadlen + (nentries-i), len) == NULL )
-            return SCIP_NOMEMORY;
-         *quadlen = len;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, myquadelems, *myquadlen + (nquadelems-i), len) );
+         *myquadlen = len;
       }
    }
    
    if( addednew )
    {
-      int j, k;
-      
       invalidateJacobiSparsity(oracle);
-      
-      /* sort quadrows and quadcols */
-      SCIPsortIntIntReal(*quadrowidxs, *quadcolidxs, *quadcoefs, *quadlen);
-      j = 0;
-      k = 0;
-      while( j < *quadlen )
-      {
-         while( k < *quadlen && (*quadrowidxs)[j] == (*quadrowidxs)[k] )
-            ++k;
-         SCIPsortIntReal(&((*quadcolidxs)[j]), &((*quadcoefs)[j]), k-j);
-         j = k;
-      }
+      SCIPquadelemSort(*myquadelems, *myquadlen);
    }
-   
-   assert(*quadlen == 0 || (*quadrowidxs)[0] >= 0);
-   assert(*quadlen == 0 || (*quadrowidxs)[*quadlen-1] < oracle->nvars);
-   assert(*quadlen == 0 || (*quadcolidxs)[0] >= 0);
-   assert(*quadlen == 0 || (*quadcolidxs)[*quadlen-1] < oracle->nvars);
    
    return SCIP_OKAY;
 }
@@ -2316,7 +2068,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    
    SCIP_CALL( evalFunctionValue(oracle,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
-      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
+      oracle->objquadlen, oracle->objquadelems,
       oracle->objexprvaridxs, oracle->objexprtree,
       x, objval) );
    
@@ -2338,15 +2090,13 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    assert(conval != NULL);
    
    SCIP_CALL( evalFunctionValue(oracle,
-      (oracle->conslinlens   != NULL ? oracle->conslinlens [considx] : 0),
-      (oracle->conslinlens   != NULL ? oracle->conslinidxs [considx] : NULL),
-      (oracle->conslinlens   != NULL ? oracle->conslincoefs[considx] : NULL),
-      (oracle->consquadlens  != NULL ? oracle->consquadlens[considx] : 0),
-      (oracle->consquadlens  != NULL ? oracle->consquadrows[considx] : NULL),
-      (oracle->consquadlens  != NULL ? oracle->consquadcols[considx] : NULL),
-      (oracle->consquadlens  != NULL ? oracle->consquadvals[considx] : NULL),
+      (oracle->conslinlens   != NULL ? oracle->conslinlens    [considx] : 0),
+      (oracle->conslinlens   != NULL ? oracle->conslinidxs    [considx] : NULL),
+      (oracle->conslinlens   != NULL ? oracle->conslincoefs   [considx] : NULL),
+      (oracle->consquadlens  != NULL ? oracle->consquadlens   [considx] : 0),
+      (oracle->consquadlens  != NULL ? oracle->consquadelems  [considx] : NULL),
       (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[considx] : NULL),
-      (oracle->consexprtrees != NULL ? oracle->consexprtrees[considx] : NULL),
+      (oracle->consexprtrees != NULL ? oracle->consexprtrees  [considx] : NULL),
       x, conval) );
    
    return SCIP_OKAY;
@@ -2386,7 +2136,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    
    SCIP_CALL( evalFunctionGradient(oracle,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
-      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
+      oracle->objquadlen, oracle->objquadelems,
       oracle->objexprvaridxs, oracle->objexprtree,
       x, newx, objval, objgrad) );
    
@@ -2410,15 +2160,13 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    assert(conval != NULL);
    
    SCIP_CALL( evalFunctionGradient(oracle,
-      (oracle->conslinlens   != NULL ? oracle->conslinlens [considx] : 0),
-      (oracle->conslinlens   != NULL ? oracle->conslinidxs [considx] : NULL),
-      (oracle->conslinlens   != NULL ? oracle->conslincoefs[considx] : NULL),
-      (oracle->consquadlens  != NULL ? oracle->consquadlens[considx] : 0),
-      (oracle->consquadlens  != NULL ? oracle->consquadrows[considx] : NULL),
-      (oracle->consquadlens  != NULL ? oracle->consquadcols[considx] : NULL),
-      (oracle->consquadlens  != NULL ? oracle->consquadvals[considx] : NULL),
+      (oracle->conslinlens   != NULL ? oracle->conslinlens    [considx] : 0),
+      (oracle->conslinlens   != NULL ? oracle->conslinidxs    [considx] : NULL),
+      (oracle->conslinlens   != NULL ? oracle->conslincoefs   [considx] : NULL),
+      (oracle->consquadlens  != NULL ? oracle->consquadlens   [considx] : 0),
+      (oracle->consquadlens  != NULL ? oracle->consquadelems  [considx] : NULL),
       (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[considx] : NULL),
-      (oracle->consexprtrees != NULL ? oracle->consexprtrees[considx] : NULL),
+      (oracle->consexprtrees != NULL ? oracle->consexprtrees  [considx] : NULL),
       x, newx, conval, congrad) );
    
    return SCIP_OKAY;
@@ -2509,14 +2257,12 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       
       if( oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
       {
-         assert(oracle->consquadrows    != NULL );
-         assert(oracle->consquadrows[i] != NULL );
-         assert(oracle->consquadcols    != NULL );
-         assert(oracle->consquadcols[i] != NULL );
+         assert(oracle->consquadelems    != NULL );
+         assert(oracle->consquadelems[i] != NULL );
          for( j = 0; j < oracle->consquadlens[i]; ++j )
          {
-            nzflag[oracle->consquadrows[i][j]] = TRUE;
-            nzflag[oracle->consquadcols[i][j]] = TRUE;
+            nzflag[oracle->consquadelems[i][j].idx1] = TRUE;
+            nzflag[oracle->consquadelems[i][j].idx2] = TRUE;
          }
       }
       
@@ -2661,16 +2407,12 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
       return SCIP_OKAY;
    }
 
-   if( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->heslagoffsets, oracle->nvars + 1) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->heslagoffsets, oracle->nvars + 1) );
    nnz = 0;
    
-   if( BMSallocBlockMemoryArray(oracle->blkmem, &colnz,  oracle->nvars) == NULL )
-      return SCIP_NOMEMORY;
-   if( BMSallocBlockMemoryArray(oracle->blkmem, &collen, oracle->nvars) == NULL )
-      return SCIP_NOMEMORY;
-   if( BMSallocBlockMemoryArray(oracle->blkmem, &colnnz, oracle->nvars) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &colnz,  oracle->nvars) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &collen, oracle->nvars) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &colnnz, oracle->nvars) );
    BMSclearMemoryArray(colnz,  oracle->nvars);
    BMSclearMemoryArray(collen, oracle->nvars);
    BMSclearMemoryArray(colnnz, oracle->nvars);
@@ -2678,7 +2420,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    
    if( oracle->objquadlen != 0 )
    {
-      SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->objquadrows, oracle->objquadcols, oracle->objquadlen) );
+      SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->objquadlen, oracle->objquadelems) );
    }
 
    if( oracle->objexprtree != NULL )
@@ -2690,7 +2432,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    {
       if( oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
       {
-         SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->consquadrows[i], oracle->consquadcols[i], oracle->consquadlens[i]) );
+         SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->consquadlens[i], oracle->consquadelems[i]) );
       }
       
       if( oracle->consexprtrees != NULL && oracle->consexprtrees[i] != NULL )
@@ -2762,11 +2504,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    {
       if( oracle->objquadlen != 0 )
       {
-         assert(oracle->objquadrows != NULL);
-         assert(oracle->objquadcols != NULL);
-         assert(oracle->objquadvals != NULL);
-         SCIP_CALL( hessLagAddQuad(objfactor, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals, 
-               oracle->objquadlen, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+         assert(oracle->objquadelems != NULL);
+         SCIP_CALL( hessLagAddQuad(objfactor, oracle->objquadlen, oracle->objquadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
       }
       
       if( oracle->objexprtree != NULL )
@@ -2782,14 +2521,9 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
          continue;
       if( oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
       {
-         assert(oracle->consquadrows != NULL);
-         assert(oracle->consquadrows[i] != NULL);
-         assert(oracle->consquadcols != NULL);
-         assert(oracle->consquadcols[i] != NULL);
-         assert(oracle->consquadvals != NULL);
-         assert(oracle->consquadvals[i] != NULL);
-         SCIP_CALL( hessLagAddQuad(lambda[i], oracle->consquadrows[i], oracle->consquadcols[i], oracle->consquadvals[i], 
-               oracle->consquadlens[i], oracle->heslagoffsets, oracle->heslagcols, hessian) );
+         assert(oracle->consquadelems    != NULL);
+         assert(oracle->consquadelems[i] != NULL);
+         SCIP_CALL( hessLagAddQuad(lambda[i], oracle->consquadlens[i], oracle->consquadelems[i], oracle->heslagoffsets, oracle->heslagcols, hessian) );
       }
       
       if( oracle->consexprtrees != NULL && oracle->consexprtrees[i] != NULL )
@@ -2829,7 +2563,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIPmessageFPrintInfo(file, "objective: ");
    SCIP_CALL( printFunction(oracle, file,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
-      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
+      oracle->objquadlen, oracle->objquadelems,
       oracle->objexprtree) );
    if( oracle->objconstant != 0.0 )
       SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
@@ -2847,13 +2581,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
          SCIPmessageFPrintInfo(file, "%g <= ", oracle->conslhss[i]);
       
       SCIP_CALL( printFunction(oracle, file,
-         (oracle->conslinlens   != NULL ? oracle->conslinlens [i] : 0),
-         (oracle->conslinlens   != NULL ? oracle->conslinidxs [i] : NULL),
-         (oracle->conslinlens   != NULL ? oracle->conslincoefs[i] : NULL),
-         (oracle->consquadlens  != NULL ? oracle->consquadlens[i] : 0),
-         (oracle->consquadlens  != NULL ? oracle->consquadrows[i] : NULL),
-         (oracle->consquadlens  != NULL ? oracle->consquadcols[i] : NULL),
-         (oracle->consquadlens  != NULL ? oracle->consquadvals[i] : NULL),
+         (oracle->conslinlens   != NULL ? oracle->conslinlens  [i] : 0),
+         (oracle->conslinlens   != NULL ? oracle->conslinidxs  [i] : NULL),
+         (oracle->conslinlens   != NULL ? oracle->conslincoefs [i] : NULL),
+         (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
+         (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
          (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
       
       if( oracle->conslhss[i] == oracle->consrhss[i] )
@@ -2956,7 +2688,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIPmessageFPrintInfo(file, "OBJ.. OBJVAR =E= ");
    SCIP_CALL( printFunction(oracle, file,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
-      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
+      oracle->objquadlen, oracle->objquadelems,
       oracle->objexprtree) );
    if( oracle->objconstant != 0.0 )
       SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
@@ -2971,13 +2703,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       SCIPmessageFPrintInfo(file, ".. ");
       
       SCIP_CALL( printFunction(oracle, file,
-         (oracle->conslinlens   != NULL ? oracle->conslinlens [i] : 0),
-         (oracle->conslinlens   != NULL ? oracle->conslinidxs [i] : NULL),
-         (oracle->conslinlens   != NULL ? oracle->conslincoefs[i] : NULL),
-         (oracle->consquadlens  != NULL ? oracle->consquadlens[i] : 0),
-         (oracle->consquadlens  != NULL ? oracle->consquadrows[i] : NULL),
-         (oracle->consquadlens  != NULL ? oracle->consquadcols[i] : NULL),
-         (oracle->consquadlens  != NULL ? oracle->consquadvals[i] : NULL),
+         (oracle->conslinlens   != NULL ? oracle->conslinlens  [i] : 0),
+         (oracle->conslinlens   != NULL ? oracle->conslinidxs  [i] : NULL),
+         (oracle->conslinlens   != NULL ? oracle->conslincoefs [i] : NULL),
+         (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
+         (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
          (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
 
       if( oracle->conslhss[i] == oracle->consrhss[i] )
@@ -2999,13 +2729,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          SCIPmessageFPrintInfo(file, "_RNG.. ");
         
          SCIP_CALL( printFunction(oracle, file,
-            (oracle->conslinlens   != NULL ? oracle->conslinlens [i] : 0),
-            (oracle->conslinlens   != NULL ? oracle->conslinidxs [i] : NULL),
-            (oracle->conslinlens   != NULL ? oracle->conslincoefs[i] : NULL),
-            (oracle->consquadlens  != NULL ? oracle->consquadlens[i] : 0),
-            (oracle->consquadlens  != NULL ? oracle->consquadrows[i] : NULL),
-            (oracle->consquadlens  != NULL ? oracle->consquadcols[i] : NULL),
-            (oracle->consquadlens  != NULL ? oracle->consquadvals[i] : NULL),
+            (oracle->conslinlens   != NULL ? oracle->conslinlens  [i] : 0),
+            (oracle->conslinlens   != NULL ? oracle->conslinidxs  [i] : NULL),
+            (oracle->conslinlens   != NULL ? oracle->conslincoefs [i] : NULL),
+            (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
+            (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
             (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
          
          SCIPmessageFPrintInfo(file, " =G= %g;\n", oracle->conslhss[i]);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.1 2010/05/20 16:05:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.2 2010/05/24 17:01:36 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -62,9 +62,8 @@ SCIP_RETCODE SCIPnlrowCreate(
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
    int                   nquadvars,          /**< number variables in quadratic terms */
    SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
-   int*                  quadoffsets,        /**< row offsets in quadratic term matrix, or NULL if nquadvars == 0 */
-   int*                  quadindices,        /**< column index of each quadratic term, or NULL if nquadvars == 0 */
-   SCIP_Real*            quadcoefs,          /**< coefficients of quadratic terms, or NULL if nquadvars == 0 */
+   int                   nquadelems,         /**< number of entries in quadratic term matrix */
+   SCIP_QUADELEM*        quadelems,          /**< elements of quadratic term matrix, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        exprtree,           /**< expression tree, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */
@@ -391,8 +390,7 @@ SCIP_RETCODE SCIPnlpSetObjective(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLROW*           obj,                /**< new objective as nonlinear row, or NULL for SCIP objective */
-   SCIP_Bool             addvars             /**< whether to add variables of objective function to NLP (if not existing yet); need to be FALSE if obj == NULL */
+   SCIP_NLROW*           obj                 /**< new objective as nonlinear row, or NULL for SCIP objective */
    );
 
 /** applies all cached changes to the NLP solver */
