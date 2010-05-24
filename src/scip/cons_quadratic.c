@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.94 2010/05/21 14:58:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.95 2010/05/24 09:31:20 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -169,7 +169,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
    SCIP_Bool             upgrades;                  /**< whether upgrade methods should be tried */
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
-   SCIP_Bool             feasibilityheur;           /**< whether to make solutions in check feasible if possible */
+   SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
 
    SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
    SCIP_HEUR*            rensnlheur;                /**< a pointer to the RENSNL heuristic, if available */
@@ -7322,7 +7322,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
    *result = SCIP_FEASIBLE;
 
    maxviol = 0.0;
-   maypropfeasible = conshdlrdata->feasibilityheur && (conshdlrdata->trysolheur != NULL);
+   maypropfeasible = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL);
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -7915,9 +7915,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "whether multivariate quadratic functions should be checked for convexity/concavity",
          &conshdlrdata->checkcurvature, FALSE, TRUE, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/feasibilityheur",
-         "whether to try to make solutions in check function feasible by moving a linear variable (esp. useful if constraint was actually objective function)",
-         &conshdlrdata->feasibilityheur, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
+         "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
+         &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,
