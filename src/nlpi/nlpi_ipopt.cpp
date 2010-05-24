@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.7 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.8 2010/05/24 17:58:54 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -161,6 +161,15 @@ public:
    bool get_constraints_linearity(
       Index              m,                  /**< number of constraints */
       LinearityType*     const_types         /**< buffer to store linearity types of constraints */
+   );
+
+   /** Method to return the number of nonlinear variables. */
+   Index get_number_of_nonlinear_variables();
+
+   /** Method to return the indices of the nonlinear variables */
+   bool get_list_of_nonlinear_variables(
+      Index              num_nonlin_vars,    /**< number of nonlinear variables */
+      Index*             pos_nonlin_vars     /**< array to fill with indices of nonlinear variables */
    );
 
    /** Method to return the objective value */
@@ -1791,6 +1800,53 @@ bool ScipNLP::get_constraints_linearity(
    for( i = 0; i < m; ++i )
       const_types[i] = (SCIPnlpiOracleGetConstraintDegree(nlpiproblem->oracle, i) <= 1 ? LINEAR : NON_LINEAR);
    
+   return true;
+}
+
+
+/** Method to return the number of nonlinear variables. */
+Index ScipNLP::get_number_of_nonlinear_variables()
+{
+   int count;
+   int n;
+
+   assert(nlpiproblem != NULL);
+   assert(nlpiproblem->oracle != NULL);
+
+   n = SCIPnlpiOracleGetNVars(nlpiproblem->oracle);
+
+   count = 0;
+   for( int i = 0; i < n; ++i )
+      if (SCIPnlpiOracleGetVarDegree(nlpiproblem->oracle, i) <= 1)
+         ++count;
+
+   return count;
+}
+
+/** Method to return the indices of the nonlinear variables */
+bool ScipNLP::get_list_of_nonlinear_variables(
+   Index              num_nonlin_vars,    /**< number of nonlinear variables */
+   Index*             pos_nonlin_vars     /**< array to fill with indices of nonlinear variables */
+)
+{
+   int count;
+   int n;
+
+   assert(nlpiproblem != NULL);
+   assert(nlpiproblem->oracle != NULL);
+
+   n = SCIPnlpiOracleGetNVars(nlpiproblem->oracle);
+
+   count = 0;
+   for( int i = 0; i < n; ++i )
+      if (SCIPnlpiOracleGetVarDegree(nlpiproblem->oracle, i) <= 1)
+      {
+         assert(count < num_nonlin_vars);
+         pos_nonlin_vars[count++] = i;
+      }
+
+   assert(count == num_nonlin_vars);
+
    return true;
 }
 
