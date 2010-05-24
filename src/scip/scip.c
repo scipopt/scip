@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.569 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.570 2010/05/24 17:38:01 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12319,7 +12319,7 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
    else
    {
       SCIPerrorMessage("NLP has not been not constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_NLPSOLSTAT_UNKNOWN;
    }
 }
 
