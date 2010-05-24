@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.95 2010/05/24 09:31:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.96 2010/05/24 13:14:36 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2189,7 +2189,9 @@ SCIP_RETCODE presolveDisaggregate(
       blockconsdata->linbndchgeventdata = NULL;
       blockconsdata->quadbndchgeventdata = NULL;
       blockconsdata->bilinrange = NULL;
-
+      blockconsdata->linvar_mayincrease = -1;
+      blockconsdata->linvar_maydecrease = -1;
+      
       SCIP_CALL( consdataSetFunctionData(scip, blockconsdata, terms, k) );
       assert(blockconsdata->nlinvars == 0);
       assert(blockconsdata->linvars == NULL);
@@ -2389,7 +2391,9 @@ SCIP_RETCODE presolveDisaggregate(
       blockconsdata->linbndchgeventdata = NULL;
       blockconsdata->quadbndchgeventdata = NULL;
       blockconsdata->bilinrange = NULL;
-
+      blockconsdata->linvar_mayincrease = -1;
+      blockconsdata->linvar_maydecrease = -1;
+      
       SCIP_CALL( consdataSetFunctionData(scip, blockconsdata, terms, k) );
       assert(blockconsdata->nlinvars == 0);
       assert(blockconsdata->linvars == NULL);
@@ -4281,6 +4285,7 @@ SCIP_RETCODE separatePoint(
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+            SCIPdebugMessage("add cut with efficacy %g\n", efficacy);
          }
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
