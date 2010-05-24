@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.35 2010/05/06 15:15:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.36 2010/05/24 17:32:48 bzfpfets Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -60,7 +60,7 @@ void getBranchInfo(
 
    (*var) = domchgbound->boundchgs[0].var;
    (*bound) = domchgbound->boundchgs[0].newbound;
-   (*boundtype) = domchgbound->boundchgs[0].boundtype;
+   (*boundtype) = (SCIP_BOUNDTYPE) domchgbound->boundchgs[0].boundtype;
 }
 
 /** creates VBC Tool data structure */
