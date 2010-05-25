@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.6 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.7 2010/05/25 13:06:57 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -267,9 +267,9 @@ void evalSignPower(
  */
 template<>
 void evalSignPower(
-   SCIP_Real&            resultant,          /**< resultant */
-   SCIP_Real&            arg1,               /**< first operand */
-   SCIP_Real&            arg2                /**< second operand */
+   CppAD::AD<double>&    resultant,          /**< resultant */
+   CppAD::AD<double>&    arg1,               /**< first operand */
+   CppAD::AD<double>&    arg2                /**< second operand */
    )
 {
    if( arg1 == 0.0 )
@@ -300,9 +300,9 @@ void evalMin(
  */
 template<>
 void evalMin(
-   SCIP_Real&            resultant,          /**< resultant */
-   SCIP_Real&            arg1,               /**< first operand */
-   SCIP_Real&            arg2                /**< second operand */
+   CppAD::AD<double>&    resultant,          /**< resultant */
+   CppAD::AD<double>&    arg1,               /**< first operand */
+   CppAD::AD<double>&    arg2                /**< second operand */
    )
 {
    resultant = MIN(arg1, arg2);
@@ -327,9 +327,9 @@ void evalMax(
  */
 template<>
 void evalMax(
-   SCIP_Real&            resultant,          /**< resultant */
-   SCIP_Real&            arg1,               /**< first operand */
-   SCIP_Real&            arg2                /**< second operand */
+   CppAD::AD<double>&    resultant,          /**< resultant */
+   CppAD::AD<double>&    arg1,               /**< first operand */
+   CppAD::AD<double>&    arg2                /**< second operand */
    )
 {
    resultant = MAX(arg1, arg2);
