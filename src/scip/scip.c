@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.570 2010/05/24 17:38:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.571 2010/05/25 12:46:24 bzfgleix Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1096,6 +1096,14 @@ SCIP_RETCODE SCIPcopyConss(
          /* add the copied constraint to subSCIP, print a warning if conshdlr does not support copying */
          if( succeed )
          {
+            if( targetcons == NULL )
+            {
+#ifndef NDEBUG
+               ++nskipped;
+#endif
+               continue;
+            }
+
             SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
 	      
             /* insert constraint into mapping between source SCIP and the target SCIP */
