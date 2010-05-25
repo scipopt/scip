@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.39 2010/05/20 17:50:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.40 2010/05/25 16:12:24 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1428,6 +1428,9 @@ SCIP_RETCODE SCIPwriteGms(
          else
             SCIPinfoMessage(scip, file, " %s.fx = %.15g;\n", varname, lb);
          nondefbounds = TRUE;
+
+         /* no need to write lower and upper bounds additionally */
+         continue;
       }
 
       /* lower bound */
