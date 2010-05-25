@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.97 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.98 2010/05/25 11:06:05 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5551,9 +5551,9 @@ SCIP_RETCODE proposeFeasibleSolution(
           (viol < 0.0 && consdata->lincoefs[consdata->linvar_maydecrease] > 0.0)) )
       {
          /* have variable where decreasing makes constraint less violated */
-         var = consdata->linvars[consdata->linvar_mayincrease];
+         var = consdata->linvars[consdata->linvar_maydecrease];
          /* compute how much we would like to decrease var */
-         delta = viol / consdata->lincoefs[consdata->linvar_mayincrease];
+         delta = viol / consdata->lincoefs[consdata->linvar_maydecrease];
          assert(delta < 0.0);
          /* if var has a lower bound, may need to reduce delta */
          if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
@@ -5570,7 +5570,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             SCIPdebugMessage("increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
 
             /* adjust constraint violation, if satisfied go on to next constraint */
-            viol -= consdata->lincoefs[consdata->linvar_mayincrease] * delta;
+            viol -= consdata->lincoefs[consdata->linvar_maydecrease] * delta;
             if( SCIPisZero(scip, viol) )
                continue;
          }
