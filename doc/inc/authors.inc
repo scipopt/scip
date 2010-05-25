@@ -81,7 +81,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.opt.tu-darmstadt.de/mitarbeiter/AlexanderMartin/">Alexander Martin</a>
+		<a href="http://fauam2m.am.uni-erlangen.de/optimization/edom/staff-members/martin-alexander/prof-dr-alexander-martin.html">Alexander Martin</a>
 	      </td>
 	      <td>
 		Developer of SIP &ndash; the predecessor of SCIP
