@@ -85,7 +85,7 @@
 	      </td>
 	      <td>
 		Developer of SIP &ndash; the predecessor of SCIP
-		&ndash; now at <a href="http://www.tu-darmstadt.de">TU Darmstadt</a>
+		&ndash; now at 	<a href="http://www.uni-erlangen.org/">University of Erlangen-N&uuml;rnberg</a>	
 	      </td>
 	    </tr>
 	    <tr>
