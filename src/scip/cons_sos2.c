@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.31 2010/05/04 13:28:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.32 2010/05/26 09:42:43 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS 
@@ -730,11 +730,11 @@ SCIP_RETCODE enforceSOS2(
       assert( !SCIPisFeasZero(scip, weight2) );
       w = weight1/weight2;
 
-      ind = (int) SCIPfloor(scip, w);
+      ind = (int) SCIPfeasFloor(scip, w);
       assert( 0 <= ind && ind < nVars-1 );
 
       /* correct index if necessary */
-      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[ind])) )
+      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[ind])) && ind < lastNonzero-1 )
 	 ++ind;
 
       /* check if the constraint has more nonzeros */
