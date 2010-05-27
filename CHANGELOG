@@ -168,6 +168,8 @@ fixed bugs:
 - fixed wrong assert in Cplex LPI: Due to numerical inaccuracies, a few pivots might be performed after refactorization
 - fixed bug in lp.c: if in SCIPlpSolveAndEval() the LP has to be solved from scratch due to numerical troubles, reset SCIP_LPPARAM_FROMSCRATCH to FALSE afterwards
 - fixed bug in cons_sos2.c: the branching position was sometimes mistakenly increased
+- fixed bug w.r.t. an assert in presol_inttobinary.c; it was assumed that the aggregation which is performed there will never lead to an infeasibility, 
+  this is not true, see comment in presol_inttobinary.c
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

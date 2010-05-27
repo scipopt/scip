@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.13 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.14 2010/05/27 17:47:25 bzfcirea Exp $"
 
 /**@file   presol_inttobinary.c
  * @ingroup PRESOLVERS
@@ -137,13 +137,24 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
 
          /* aggregate integer and binary variable */
          SCIP_CALL( SCIPaggregateVars(scip, vars[v], binvar, 1.0, -1.0, lb, &infeasible, &redundant, &aggregated) );
-         assert(!infeasible);
-         assert(redundant);
-         assert(aggregated);
-         
+
          /* release binary variable */
          SCIP_CALL( SCIPreleaseVar(scip, &binvar) );
 
+         /* it can be the case that this aggregation detects an infeasibility; for example, during the copy of the
+          * variable bounds from the integer variable to the binary variable, infeasibility can be detected; this can
+          * happen because an upper bound or a lower bound of such a variable bound variable was "just" changed and the
+          * varbound constraint handler, who would detect that infeasibility (since it was creating it from a varbound
+          * constraint), was called before that bound change was detected due to the presolving priorities;
+          */
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+            
+         assert(redundant);
+         assert(aggregated);
          (*nchgvartypes)++;
          *result = SCIP_SUCCESS;
       }
