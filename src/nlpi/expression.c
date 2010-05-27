@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.7 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.8 2010/05/27 09:53:43 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -1744,7 +1744,7 @@ SCIP_Bool SCIPquadelemSortedFind(
    int                   idx1,               /**< index of first  variable in element to search for */
    int                   idx2,               /**< index of second variable in element to search for */
    int                   nquadelems,         /**< number of quadratic elements in array */
-   int*                  pos                 /**< buffer to store position of found quadratic element, or position where it would be inserted */
+   int*                  pos                 /**< buffer to store position of found quadratic element or position where it would be inserted, or NULL */
 )
 {
    int left;
@@ -1752,11 +1752,11 @@ SCIP_Bool SCIPquadelemSortedFind(
 
    assert(quadelems != NULL || nquadelems == 0);
    assert(idx1 <= idx2);
-   assert(pos != NULL);
 
    if( nquadelems == 0 )
    {
-      *pos = 0;
+      if( pos != NULL )
+         *pos = 0;
       return FALSE;
    }
 
@@ -1775,12 +1775,66 @@ SCIP_Bool SCIPquadelemSortedFind(
          left  = middle + 1;
       else
       {
-         *pos = middle;
+         if( pos != NULL )
+            *pos = middle;
          return TRUE;
       }
    }
    assert(left == right+1);
 
-   *pos = left;
+   if( pos != NULL )
+      *pos = left;
    return FALSE;
+}
+
+/** Adds quadratic elements with same index and removes elements with coefficient 0.0.
+ * Assumes that elements have been sorted before.
+ */
+void SCIPquadelemSqueeze(
+   SCIP_QUADELEM*        quadelems,          /** array of quadratic elements */
+   int                   nquadelems,         /** number of quadratic elements */
+   int*                  nquadelemsnew       /** pointer to store new (reduced) number of quadratic elements */
+)
+{
+   int i;
+   int next;
+   
+   assert(quadelems     != NULL);
+   assert(nquadelemsnew != NULL);
+   assert(nquadelems    >= 0);
+   
+   i = 0;
+   next = 0;
+   while( next < nquadelems )
+   {
+      /* assert that array is sorted */
+      assert(QUADELEMS_ISBETTER(quadelems[i], quadelems[next]) ||
+         (quadelems[i].idx1 == quadelems[next].idx1 && quadelems[i].idx2 == quadelems[next].idx2));
+      
+      /* skip elements with coefficient 0.0 */
+      if( quadelems[next].coef == 0.0 )
+      {
+         ++next;
+         continue;
+      }
+      
+      /* if next element has same index as previous one, add it to the previous one */
+      if( i >= 1 &&
+         quadelems[i-1].idx1 == quadelems[next].idx1 &&
+         quadelems[i-1].idx2 == quadelems[next].idx2 )
+      {
+         quadelems[i-1].coef += quadelems[next].coef;
+         ++next;
+         continue;
+      }
+      
+      /* otherwise, move next element to current position */
+      quadelems[i] = quadelems[next];
+      ++i;
+      ++next;
+   }
+   assert(next == nquadelems);
+
+   /* now i should point to the position after the last valid element, i.e., it is the remaining number of elements */
+   *nquadelemsnew = i;
 }

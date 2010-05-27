@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.4 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.5 2010/05/27 09:53:43 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -377,6 +377,106 @@ void mapIndices(
       assert(indexmap[*indices] >= 0);
       *indices = indexmap[*indices];
    }
+}
+
+/** removes entries with index -1 (marked as deleted) from array of linear elements
+ * assumes that array is sorted by index, i.e., all -1 are at the beginning
+ * shortens memory accordingly */
+static
+SCIP_RETCODE clearDeletedLinearElements(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int**                 linidxs,            /**< variable indices */
+   SCIP_Real**           coefs,              /**< variable coefficients */
+   int*                  nidxs               /**< number of indices */
+   )
+{
+   int i;
+   int offset;
+   
+   assert(blkmem   != NULL);
+   assert(linidxs  != NULL);
+   assert(*linidxs != NULL);
+   assert(coefs    != NULL);
+   assert(*coefs   != NULL);
+   assert(nidxs    != NULL);
+   assert(*nidxs   > 0);
+   
+   for( offset = 0; offset < *nidxs; ++offset )
+      if( (*linidxs)[offset] >= 0 )
+         break;
+
+   /* nothing was deleted */
+   if( offset == 0 )
+      return SCIP_OKAY;
+
+   /* all elements were deleted */
+   if( offset == *nidxs )
+   {
+      BMSfreeBlockMemoryArray(blkmem, linidxs, *nidxs);
+      BMSfreeBlockMemoryArray(blkmem, coefs,   *nidxs);
+      *nidxs = 0;
+      return SCIP_OKAY;
+   }
+   
+   /* some elements were deleted */
+   for( i = 0; i < *nidxs - offset; ++i )
+   {
+      (*linidxs)[i] = (*linidxs)[i+offset];
+      (*coefs)[i]   = (*coefs)  [i+offset];
+   }
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, linidxs, *nidxs, *nidxs - offset) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, coefs,   *nidxs, *nidxs - offset) );
+   *nidxs -= offset;
+   
+   return SCIP_OKAY;
+}
+
+/** removes entries with index pair (-1,-1) (marked as deleted) from array of quadratic elements
+ * assumes that array is sorted, i.e., all deleted elements are at the beginning
+ * moves and reallocs memory accordingly */
+static
+SCIP_RETCODE clearDeletedQuadElements(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_QUADELEM**       quadelems,          /**< quadratic elements */
+   int*                  nquadelems          /**< number of quadratic elements */
+   )
+{
+   int i;
+   int offset;
+   
+   assert(blkmem      != NULL);
+   assert(quadelems   != NULL);
+   assert(*quadelems  != NULL);
+   assert(nquadelems  != NULL);
+   assert(*nquadelems > 0);
+   
+   for( offset = 0; offset < *nquadelems; ++offset )
+   {
+      /* either both variables are marked as deleted or none of them */
+      assert(((*quadelems)[offset].idx1 >= 0) == ((*quadelems)[offset].idx2 >= 0));
+      if( (*quadelems)[offset].idx1 >= 0 )
+         break;
+   }
+
+   /* nothing was deleted */
+   if( offset == 0 )
+      return SCIP_OKAY;
+
+   /* all elements were deleted */
+   if( offset == *nquadelems )
+   {
+      BMSfreeBlockMemoryArray(blkmem, quadelems, *nquadelems);
+      *nquadelems = 0;
+      return SCIP_OKAY;
+   }
+   
+   /* some elements were deleted */
+   for( i = 0; i < *nquadelems - offset; ++i )
+      (*quadelems)[i] = (*quadelems)[i+offset];
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, quadelems, *nquadelems, *nquadelems - offset) );
+   *nquadelems -= offset;
+   
+   return SCIP_OKAY;
 }
 
 #if 0
@@ -1149,6 +1249,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 {  /*lint --e{715}*/
    SCIP_Bool addednlcon;  /* whether a nonlinear constraint was added */
    int i, j;
+   int newlen;
 
    assert(oracle != NULL);
    
@@ -1255,17 +1356,35 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             oracle->consquadlens[oracle->nconss + i] = nquadelems[i];
             SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->consquadelems[oracle->nconss + i], quadelems[i], nquadelems[i]) );
             
-            /* update variable degress for variables in quadratic part */
-            for( j = 0; j < nquadelems[i]; ++j )
-            {
-               oracle->vardegrees[quadelems[i][j].idx1] = MAX(2, oracle->vardegrees[quadelems[i][j].idx1]);
-               oracle->vardegrees[quadelems[i][j].idx2] = MAX(2, oracle->vardegrees[quadelems[i][j].idx2]);
-            }
-            
-            /* sort quadratic part */
+            /* sort and squeeze quadratic part */
             SCIPquadelemSort(oracle->consquadelems[oracle->nconss+i], nquadelems[i]);
+            SCIPquadelemSqueeze(oracle->consquadelems[oracle->nconss+i], nquadelems[i], &newlen);
+            assert(newlen >= 0);
+            assert(newlen <= nquadelems[i]);
             
-            addednlcon = TRUE;
+            if( newlen == 0 )
+            {
+               /* quadratic elements turned out to be all 0.0 */
+               BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->consquadelems[oracle->nconss+i], nquadelems[i]);
+               assert(oracle->consquadelems[oracle->nconss+i] == NULL);
+               oracle->consquadlens[oracle->nconss+i] = 0;
+            }
+            else
+            {
+               if( newlen < nquadelems[i] )
+               {
+                  SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadelems[oracle->nconss+i], nquadelems[i], newlen) );
+                  oracle->consquadlens[oracle->nconss+i] = newlen;
+               }
+               /* update variable degress for variables in quadratic part */
+               for( j = 0; j < oracle->consquadlens[oracle->nconss+i]; ++j )
+               {
+                  oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx1] = MAX(2, oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx1]);
+                  oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx2] = MAX(2, oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx2]);
+               }
+
+               addednlcon = TRUE;
+            }
          }
          else
          {
@@ -1413,27 +1532,42 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    else
       oracle->objnlin = 0;
    
+   oracle->objquadlen = nquadelems;
    if( nquadelems != 0 )
    {
       int j;
+      int newlen;
 
       assert(quadelems != NULL);
       
-      oracle->objquadlen = nquadelems;
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objquadelems, quadelems, oracle->objquadlen) );
+
+      /* sort and squeeze quadratic elements */
+      SCIPquadelemSort(oracle->objquadelems, oracle->objquadlen);
+      SCIPquadelemSqueeze(oracle->objquadelems, oracle->objquadlen, &newlen);
+      assert(newlen >= 0);
+      assert(newlen <= nquadelems);
       
-      /* update variable degrees for variables in quadratic part */
-      for( j = 0; j < nquadelems; ++j )
+      if( newlen == 0 )
       {
-         oracle->vardegrees[quadelems[j].idx1] = MAX(2, oracle->vardegrees[quadelems[j].idx1]);
-         oracle->vardegrees[quadelems[j].idx2] = MAX(2, oracle->vardegrees[quadelems[j].idx2]);
+         /* quadratic elements turned out to be all 0.0 */
+         BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->objquadelems, nquadelems);
+         assert(oracle->objquadelems == NULL);
+         oracle->objquadlen = 0;
+      }
+      else if( newlen < nquadelems )
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->objquadelems, nquadelems, newlen) );
+         oracle->objquadlen = newlen;
       }
 
-      /* sort quadratic elements */
-      SCIPquadelemSort(oracle->objquadelems, oracle->objquadlen);
+      /* update variable degrees for variables in quadratic part */
+      for( j = 0; j < oracle->objquadlen; ++j )
+      {
+         oracle->vardegrees[oracle->objquadelems[j].idx1] = MAX(2, oracle->vardegrees[oracle->objquadelems[j].idx1]);
+         oracle->vardegrees[oracle->objquadelems[j].idx2] = MAX(2, oracle->vardegrees[oracle->objquadelems[j].idx2]);
+      }
    }
-   else
-      oracle->objquadlen = 0;
    
    if( exprtree != NULL )
    {
@@ -1590,14 +1724,24 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    }
    assert(c == lastgood);
 
-   mapIndices(delstats, oracle->objnlin, oracle->objlinidxs); /* TODO delete entries for deleted variables */
+   /* update indices in linear part, sort indices, and then clear elements that are marked as deleted */
+   mapIndices(delstats, oracle->objnlin, oracle->objlinidxs);
    SCIPsortIntReal(oracle->objlinidxs, oracle->objlinvals, oracle->objnlin);
+   SCIP_CALL( clearDeletedLinearElements(oracle->blkmem, &oracle->objlinidxs, &oracle->objlinvals, &oracle->objnlin) );
    
-   mapIndicesQuad(delstats, oracle->objquadlen, oracle->objquadelems); /* TODO delete entries for deleted variables */
+   /* update indices in quadratic part, sort elements, and then clear elements that are marked as deleted */
+   mapIndicesQuad(delstats, oracle->objquadlen, oracle->objquadelems);
    SCIPquadelemSort(oracle->objquadelems, oracle->objquadlen);
+   SCIP_CALL( clearDeletedQuadElements(oracle->blkmem, &oracle->objquadelems, &oracle->objquadlen) );
 
    if( oracle->objexprtree )
+   {
       mapIndices(delstats, SCIPexprtreeGetNVars(oracle->objexprtree), oracle->objexprvaridxs);
+      /* assert that all variables from this expression have been deleted */
+      assert(SCIPexprtreeGetNVars(oracle->objexprtree) == 0 || oracle->objexprvaridxs[SCIPexprtreeGetNVars(oracle->objexprtree)-1] == -1);
+      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->objexprvaridxs, SCIPexprtreeGetNVars(oracle->objexprtree));
+      SCIP_CALL( SCIPexprtreeFree(&oracle->objexprtree) );
+   }
    
    for( c = 0; c < oracle->nconss; ++c )
    {
@@ -1605,16 +1749,24 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
       {
          mapIndices(delstats, oracle->conslinlens[c], oracle->conslinidxs[c]);
          SCIPsortIntReal(oracle->conslinidxs[c], oracle->conslincoefs[c], oracle->conslinlens[c]);
+         SCIP_CALL( clearDeletedLinearElements(oracle->blkmem, &oracle->conslinidxs[c], &oracle->conslincoefs[c], &oracle->conslinlens[c]) );
       }
       
       if( oracle->consquadlens )
       {
          mapIndicesQuad(delstats, oracle->consquadlens[c], oracle->consquadelems[c]);
          SCIPquadelemSort(oracle->consquadelems[c], oracle->consquadlens[c]);
+         SCIP_CALL( clearDeletedQuadElements(oracle->blkmem, &oracle->consquadelems[c], &oracle->consquadlens[c]) );
       }
       
       if( oracle->consexprtrees )
+      {
          mapIndices(delstats, SCIPexprtreeGetNVars(oracle->consexprtrees[c]), oracle->consexprvaridxs[c]);
+         /* assert that all variables from this expression have been deleted */
+         assert(SCIPexprtreeGetNVars(oracle->consexprtrees[c]) == 0 || oracle->consexprvaridxs[c][SCIPexprtreeGetNVars(oracle->consexprtrees[c])-1] == -1);
+         BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->consexprvaridxs[c], SCIPexprtreeGetNVars(oracle->consexprtrees[c]));
+         SCIP_CALL( SCIPexprtreeFree(&oracle->consexprtrees[c]) );
+      }
    }
    
    SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->varlbs, oracle->nvars, lastgood+1) );
@@ -1906,10 +2058,12 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
          assert(quadelems[i].idx1 < oracle->nvars);
          assert(quadelems[i].idx2 < oracle->nvars);
          
-         /* we assume that index pairs are not repeating */
          /* if we already have an entry for quadelems[i], then just replace the coefficient, otherwise append new entry */
          if( SCIPquadelemSortedFind(*myquadelems, quadelems[i].idx1, quadelems[i].idx2, *myquadlen, &pos) )
          {
+            /* we can assume that index pairs are not repeating, since we squeezed them when creating the array at first time and changing coefficients should not create duplicate entries */
+            assert(!SCIPquadelemSortedFind(&(*myquadelems)[pos+1], quadelems[i].idx1, quadelems[i].idx2, *myquadlen-pos, NULL));
+            
             (*myquadelems)[pos].coef = quadelems[i].coef;
          }
          else

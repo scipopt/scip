@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.6 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.7 2010/05/27 09:53:43 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -35,7 +35,11 @@
 extern "C" {
 #endif
 
+/**@name Expression operand methods */
+/**@{ */
+
 /** gives the name of an operand */
+extern
 const char* SCIPexpropGetName(
    SCIP_EXPROP           op                  /**< expression operand */
 );
@@ -43,11 +47,18 @@ const char* SCIPexpropGetName(
 /** gives the number of children of a simple operand
  * @return -1 for invalid operands and -2 for complex operands (those where the number of children depends on the expression)
  */
+extern
 int SCIPexpropGetNChildren(
    SCIP_EXPROP           op                  /**< expression operand */
 );
 
+/**@} */
+
+/**@name Expression methods */
+/**@{ */
+
 /** creates an expression */
+extern
 SCIP_RETCODE SCIPexprCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
@@ -58,6 +69,7 @@ SCIP_RETCODE SCIPexprCreate(
 /** creates an expression
  * Note, that the expression is allocated but for the children only the pointer is copied.
  */
+extern
 SCIP_RETCODE SCIPexprCreateDirect(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
@@ -68,6 +80,7 @@ SCIP_RETCODE SCIPexprCreateDirect(
 );
 
 /** copies an expression including its children */
+extern
 SCIP_RETCODE SCIPexprCopyDeep(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copied expression */
@@ -75,58 +88,69 @@ SCIP_RETCODE SCIPexprCopyDeep(
 );
 
 /** frees an expression including its children */
+extern
 void SCIPexprFreeDeep(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr                /**< pointer to expression to free */
 );
 
 /** gives operator of expression */
+extern
 SCIP_EXPROP SCIPexprGetOperator(
    SCIP_EXPR*            expr                /**< expression */
 );
 
 /** gives number of children of an expression */
+extern
 int SCIPexprGetNChildren(
    SCIP_EXPR*            expr                /**< expression */
 );
 
 /** gives pointer to array with children of an expression */
+extern
 SCIP_EXPR** SCIPexprGetChildren(
    SCIP_EXPR*            expr                /**< expression */
 );
 
 /** gives index belonging to a SCIP_EXPR_VARIDX or SCIP_EXPR_PARAM operand */
+extern
 int SCIPexprGetOpIndex(
    SCIP_EXPR*            expr                /**< expression */
 );
 
 /** gives real belonging to a SCIP_EXPR_CONST operand */ 
+extern
 SCIP_Real SCIPexprGetOpReal(
    SCIP_EXPR* expr                           /**< expression */
 );
 
 /** gives void* belonging to a complex operand */
+extern
 void* SCIPexprGetOpData(
    SCIP_EXPR*            expr                /**< expression */
 );
 
 /** gives exponent belonging to a SCIP_EXPR_INTPOWER operand */
+extern
 int SCIPexprGetIntPowerExponent(
    SCIP_EXPR*            expr                /**< expression */
 );
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
+extern
 SCIP_Bool SCIPexprHasParam(
    SCIP_EXPR*            expr                /**< expression */
 );
 
 /** gets maximal degree of expression, or 65535 if not a polynom */
+extern
 SCIP_RETCODE SCIPexprGetMaxDegree(
    SCIP_EXPR*            expr,               /**< expression */
    int*                  maxdegree           /**< buffer to store maximal degree */
 );
 
 /** evaluates an expression w.r.t. a point */
+extern
 SCIP_RETCODE SCIPexprEval(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real*            varvals,            /**< values for variables, can be NULL if the expression is constant */
@@ -135,6 +159,7 @@ SCIP_RETCODE SCIPexprEval(
 );
 
 /** evaluates an expression w.r.t. an interval */
+extern
 SCIP_RETCODE SCIPexprEvalInt(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             infinity,           /**< value to use for infinity */
@@ -144,6 +169,7 @@ SCIP_RETCODE SCIPexprEvalInt(
 );
 
 /** prints an expression */
+extern
 void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
@@ -151,7 +177,13 @@ void SCIPexprPrint(
    const char**          paramnames          /**< names of parameters, or NULL for default names */
 );
 
+/**@} */
+
+/**@name Expression tree methods */
+/**@{ */
+
 /** creates an expression tree */
+extern
 SCIP_RETCODE SCIPexprtreeCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPRTREE**       tree,               /**< buffer to store address of created expression tree */
@@ -162,6 +194,7 @@ SCIP_RETCODE SCIPexprtreeCreate(
 );
 
 /** copies an expression tree */
+extern
 SCIP_RETCODE SCIPexprtreeCopy(
    BMS_BLKMEM*           blkmem,             /**< block memory that should be used in new expression tree */
    SCIP_EXPRTREE**       targettree,         /**< buffer to store address of copied expression tree */
@@ -169,21 +202,25 @@ SCIP_RETCODE SCIPexprtreeCopy(
 );
 
 /** frees an expression tree */
+extern
 SCIP_RETCODE SCIPexprtreeFree(
    SCIP_EXPRTREE**       tree                /**< pointer to expression tree that is freed */
 );
 
 /** returns root expression of an expression tree */
+extern
 SCIP_EXPR* SCIPexprtreeGetRoot(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
 /** returns number of variables in expression tree */
+extern
 int SCIPexprtreeGetNVars(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
 /** returns values of parameters or NULL if none */
+extern
 SCIP_Real* SCIPexprtreeGetParamVals(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
@@ -191,11 +228,13 @@ SCIP_Real* SCIPexprtreeGetParamVals(
 /** gets data of expression tree interpreter
  * @return NULL if not set
  */
+extern
 SCIP_EXPRINTDATA* SCIPexprtreeGetInterpreterData(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
 /** indicates whether there are parameterized constants (SCIP_EXPR_PARAM) in expression tree */
+extern
 SCIP_Bool SCIPexprtreeHasParam(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
@@ -206,18 +245,21 @@ SCIP_Bool SCIPexprtreeHasParam(
  * if polynomial expression, gives its maximal degree,
  * otherwise (nonpolynomial nonconstant expressions) gives at least 65535.
  */
+extern
 SCIP_RETCODE SCIPexprtreeGetMaxDegree(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int*                  maxdegree           /**< buffer to store maximal degree */
 );
 
 /** sets data of expression tree interpreter */
+extern
 void SCIPexprtreeSetInterpreterData(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
 );
 
 /** evaluates an expression tree w.r.t. a point */
+extern
 SCIP_RETCODE SCIPexprtreeEval(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values for variables */
@@ -225,6 +267,7 @@ SCIP_RETCODE SCIPexprtreeEval(
 );
 
 /** evaluates an expression tree w.r.t. an interval */
+extern
 SCIP_RETCODE SCIPexprtreeEvalInt(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             infinity,           /**< value for infinity */
@@ -233,6 +276,7 @@ SCIP_RETCODE SCIPexprtreeEvalInt(
 );
 
 /** prints an expression tree */
+extern
 void SCIPexprtreePrint(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
@@ -240,11 +284,17 @@ void SCIPexprtreePrint(
    const char**          paramnames          /**< names of parameters, or NULL for default names */
 );
 
+/**@} */
+
+/**@name Quadratic element methods */
+/**@{ */
+
 /** sorts an array of quadratic elements
  * The elements are sorted such that the first index is increasing and
  * such that among elements with the same first index, the second index is increasing.
  * For elements with same first and second index, the order is not defined.
  */
+extern
 void SCIPquadelemSort(
    SCIP_QUADELEM*        quadelems,          /**< array of quadratic elements */
    int                   nquadelems          /**< number of quadratic elements */
@@ -255,6 +305,7 @@ void SCIPquadelemSort(
  * If (idx1,idx2) is not found in quadelems, then returns FALSE and stores position where a quadratic element with these indices would be inserted in *pos.
  * Assumes that idx1 <= idx2.
  */
+extern
 SCIP_Bool SCIPquadelemSortedFind(
    SCIP_QUADELEM*        quadelems,          /**< array of quadratic elements */
    int                   idx1,               /**< index of first  variable in element to search for */
@@ -262,6 +313,18 @@ SCIP_Bool SCIPquadelemSortedFind(
    int                   nquadelems,         /**< number of quadratic elements in array */
    int*                  pos                 /**< buffer to store position of found quadratic element, or position where it would be inserted */
 );
+
+/** Adds quadratic elements with same index and removes elements with coefficient 0.0.
+ * Assumes that elements have been sorted before.
+ */
+extern
+void SCIPquadelemSqueeze(
+   SCIP_QUADELEM*        quadelems,          /** array of quadratic elements */
+   int                   nquadelems,         /** number of quadratic elements */
+   int*                  nquadelemsnew       /** pointer to store new (reduced) number of quadratic elements */
+);
+
+/**@} */
 
 #ifdef __cplusplus
 }
