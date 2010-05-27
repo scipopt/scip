@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.571 2010/05/25 12:46:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.572 2010/05/27 09:55:19 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12575,6 +12575,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    const char*           name,               /**< name of nonlinear row */
+   SCIP_Real             constant,           /**< constant */
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
@@ -12590,7 +12591,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP_CALL( checkStage(scip, "SCIPcreateNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->solvemem, scip->set,
-         name, nlinvars, linvars, lincoefs, nquadvars, quadvars, nquadelems, quadelems, expression, lhs, rhs) );
+         name, constant, nlinvars, linvars, lincoefs, nquadvars, quadvars, nquadelems, quadelems, expression, lhs, rhs) );
 
    return SCIP_OKAY;
 }
@@ -12607,7 +12608,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->solvemem, scip->set,
-         name, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs) );
+         name, 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.2 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -105,6 +105,33 @@ void nlrowLinearCoefChanged(
    nlrow->validactivitybdsdomchg = -1;
 }
 
+/** announces, that coefficients of the given quadratic variable in the constraint matrix changed */
+static
+void nlrowQuadVarChanged(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(nlrow != NULL);
+   assert(var   != NULL);
+
+   if( nlrow->nlpindex >= -1 )
+   {
+      /* @todo make this possible */
+      SCIPerrorMessage("cannot change coefficients in a row while in NLP\n");
+      SCIPABORT();
+   }
+
+   nlrow->activity = SCIP_INVALID;
+   nlrow->validactivitynlp = -1;
+   nlrow->pseudoactivity = SCIP_INVALID;
+   nlrow->validpsactivitydomchg = -1;
+   nlrow->minactivity = SCIP_INVALID;
+   nlrow->maxactivity = SCIP_INVALID;
+   nlrow->validactivitybdsdomchg = -1;
+}
+
 /** notifies nonlinear row, that its sides were changed */
 static
 SCIP_RETCODE nlrowSideChanged(
@@ -139,7 +166,7 @@ void nlrowSortLinear(
       return;
 
    /* sort linear coefficients */
-   SCIPsortPtrRealInt((void**)nlrow->linvars, nlrow->lincoefs, nlrow->linvarsnlpiidx, SCIPvarComp, nlrow->nlinvars);
+   SCIPsortPtrReal((void**)nlrow->linvars, nlrow->lincoefs, SCIPvarComp, nlrow->nlinvars);
 
    nlrow->linvarssorted = TRUE;
 }
@@ -180,10 +207,8 @@ void nlrowMoveLinearCoef(
    if( oldpos == newpos )
       return;
 
-   nlrow->linvars[newpos]        = nlrow->linvars[oldpos];
-   nlrow->lincoefs[newpos]       = nlrow->lincoefs[oldpos];
-   if( nlrow->linvarsnlpiidx != NULL )
-      nlrow->linvarsnlpiidx[newpos] = nlrow->linvarsnlpiidx[oldpos];
+   nlrow->linvars[newpos]  = nlrow->linvars[oldpos];
+   nlrow->lincoefs[newpos] = nlrow->lincoefs[oldpos];
 
    /* update sorted flags */
    nlrow->linvarssorted = FALSE;
@@ -287,6 +312,175 @@ SCIP_RETCODE nlrowChgLinearCoefPos(
    return SCIP_OKAY;
 }
 
+
+/** sorts linear part of row entries such that lower variable indices precede higher ones */
+static
+void nlrowSortQuad(
+   SCIP_NLROW*           nlrow                 /**< nonlinear row to be sorted */
+   )
+{
+   assert(nlrow != NULL);
+   assert(nlrow->quadelems != NULL);
+
+   /* check, if row is already sorted in the LP part, or if the sorting should be delayed */
+   if( nlrow->quadelemssorted )
+      return;
+
+   /* sort quadratic elements */
+   SCIPquadelemSort(nlrow->quadelems, nlrow->nquadelems);
+
+   nlrow->quadelemssorted = TRUE;
+}
+
+/** searches quadratic elements in nonlinear row, returns position of given index pair in quadelems array or -1 if not found */
+static
+int nlrowSearchQuadElem(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row to be searched in */
+   int                   idx1,               /**< index of first  variable to be searched for */
+   int                   idx2                /**< index of second variable to be searched for */
+   )
+{
+   int pos;
+
+   assert(nlrow != NULL);
+   assert(idx1 >= 0);
+   assert(idx1 <  nlrow->nquadvars);
+   assert(idx2 >= 0);
+   assert(idx2 <  nlrow->nquadvars);
+
+   pos = -1;
+
+   nlrowSortQuad(nlrow);
+   SCIPquadelemSortedFind(nlrow->quadelems, idx1, idx2, nlrow->nquadelems, &pos);
+
+   return pos;
+}
+
+/** moves a quadratic element in a nonlinear row to a different place, and updates all corresponding data structures */
+static
+void nlrowMoveQuadElement(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   oldpos,             /**< old position of coefficient */
+   int                   newpos              /**< new position of coefficient */
+   )
+{
+   assert(nlrow != NULL);
+   assert(0 <= oldpos && oldpos < nlrow->nquadelems);
+   assert(0 <= newpos && newpos < nlrow->nquadelems);
+
+   if( oldpos == newpos )
+      return;
+
+   nlrow->quadelems[newpos] = nlrow->quadelems[oldpos];
+
+   /* update sorted flags */
+   nlrow->quadelemssorted = FALSE;
+}
+
+/** adds a previously non existing quadratic element to a nonlinear row */
+static
+SCIP_RETCODE nlrowAddQuadElement(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_QUADELEM         elem                /**< quadratic element to add */
+   )
+{
+   int pos;
+
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+   assert(elem.idx1 >= 0);
+   assert(elem.idx1 <  nlrow->nquadvars);
+   assert(elem.idx2 >= 0);
+   assert(elem.idx2 <  nlrow->nquadvars);
+   assert(!SCIPsetIsZero(set, elem.coef));
+
+   SCIP_CALL( SCIPnlrowEnsureQuadElemsSize(nlrow, blkmem, set, nlrow->nquadelems+1) );
+   assert(nlrow->quadelems != NULL);
+
+   pos = nlrow->nquadelems;
+   nlrow->nquadelems++;
+
+   /* insert the element */
+   nlrow->quadelems[pos] = elem;
+
+   /* notifiy row and NLP */
+   nlrowQuadVarChanged(nlrow, nlrow->quadvars[elem.idx1], nlp);
+   if( elem.idx1 != elem.idx2 )
+      nlrowQuadVarChanged(nlrow, nlrow->quadvars[elem.idx2], nlp);
+
+   /* update sorted flag */
+   if( pos > 0 )
+      nlrow->quadelemssorted = FALSE;
+
+   SCIPdebugMessage("added quadratic element %g * <%s> * <%s> at position %d to nonlinear row <%s>\n",
+      elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]), pos, nlrow->name);
+
+   return SCIP_OKAY;
+}
+
+/** deletes coefficient at given position from row */
+static
+SCIP_RETCODE nlrowDelQuadElemPos(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row to be changed */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int                   pos                 /**< position in row vector to delete */
+   )
+{
+   SCIP_QUADELEM elem;
+
+   assert(nlrow != NULL);
+   assert(set != NULL);
+   assert(0 <= pos && pos < nlrow->nquadelems);
+
+   elem = nlrow->quadelems[pos];
+
+   /* move last coefficient to position of empty slot (should set sorted flag to FALSE, if not last element was deleted) */
+   nlrowMoveQuadElement(nlrow, nlrow->nquadelems-1, pos);
+   nlrow->nquadelems--;
+   assert(pos == nlrow->nquadelems || nlrow->quadelemssorted == FALSE);
+
+   /* notify row and NLP */
+   nlrowQuadVarChanged(nlrow, nlrow->quadvars[elem.idx1], nlp);
+   if( elem.idx1 != elem.idx2 )
+      nlrowQuadVarChanged(nlrow, nlrow->quadvars[elem.idx2], nlp);
+
+   return SCIP_OKAY;
+}
+
+/** changes a coefficient at given position of quadratic element in nonlinear row */
+static
+SCIP_RETCODE nlrowChgQuadElemPos(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int                   pos,                /**< position in quadratic elements array to change */
+   SCIP_Real             coef                /**< new value of coefficient */
+   )
+{
+   assert(nlrow != NULL);
+   assert(0 <= pos && pos < nlrow->nquadelems);
+
+   if( SCIPsetIsZero(set, coef) )
+   {
+      /* delete existing coefficient */
+      SCIP_CALL( nlrowDelQuadElemPos(nlrow, set, nlp, pos) );
+   }
+   else if( !SCIPsetIsEQ(set, nlrow->quadelems[pos].coef, coef) )
+   {
+      /* change existing coefficient */
+      nlrow->quadelems[pos].coef = coef;
+      nlrowQuadVarChanged(nlrow, nlrow->quadvars[nlrow->quadelems[pos].idx1], nlp);
+      if( nlrow->quadelems[pos].idx1 != nlrow->quadelems[pos].idx2 )
+         nlrowQuadVarChanged(nlrow, nlrow->quadvars[nlrow->quadelems[pos].idx2], nlp);
+   }
+
+   return SCIP_OKAY;
+}
+
 #if 0
 /** searches quadratic variable in nonlinear row, returns position in quadvars vector or -1 if not found */
 static
@@ -330,7 +524,7 @@ SCIP_RETCODE nlrowCalcActivityBounds(
    inf = SCIPsetInfinity(set);
 
    /* calculate activity bounds */
-   SCIPintervalSet(&activity, 0.0);
+   SCIPintervalSet(&activity, nlrow->constant);
    for( i = 0; i < nlrow->nlinvars && !SCIPintervalIsEntire(inf, activity); ++i )
    {
       SCIPintervalSetBounds(&bounds, SCIPvarGetLbLocal(nlrow->linvars[i]), SCIPvarGetUbLocal(nlrow->linvars[i]));
@@ -412,6 +606,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of nonlinear row */
+   SCIP_Real             constant,           /**< constant */
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
@@ -427,6 +622,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    assert(nlrow  != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
+   assert(!SCIPsetIsInfinity(set, ABS(constant)));
    assert(nlinvars   == 0 || linvars   != NULL);
    assert(nlinvars   == 0 || lincoefs  != NULL);
    assert(nquadvars  == 0 || quadvars  != NULL);
@@ -436,6 +632,9 @@ SCIP_RETCODE SCIPnlrowCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, nlrow) );
 
+   /* constant part */
+   (*nlrow)->constant = constant;
+   
    /* linear part */
    (*nlrow)->nlinvars = nlinvars;
    (*nlrow)->linvarssize = nlinvars;
@@ -451,22 +650,23 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->lincoefs = NULL;
       (*nlrow)->linvarssorted = TRUE;
    }
-   (*nlrow)->linvarsnlpiidx = NULL;
 
    /* quadratic part */
    (*nlrow)->nquadvars  = nquadvars;
    (*nlrow)->nquadelems = nquadelems;
+   (*nlrow)->quadelemssize = nquadelems;
    if( nquadvars > 0 )
    {
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->quadvars,  quadvars,  nquadvars) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->quadelems, quadelems, nquadelems) );
+      (*nlrow)->quadelemssorted = FALSE;
    }
    else
    {
       (*nlrow)->quadvars  = NULL;
       (*nlrow)->quadelems = NULL;
+      (*nlrow)->quadelemssorted = TRUE;
    }
-   (*nlrow)->quadvarsnlpiidx = NULL;
 
    /* nonquadratic part */
    if( exprtree != NULL )
@@ -477,7 +677,6 @@ SCIP_RETCODE SCIPnlrowCreate(
    {
       (*nlrow)->exprtree = NULL;
    }
-   (*nlrow)->exprtreenlpiidx = NULL;
 
    /* left and right hand sides */
    (*nlrow)->lhs = lhs;
@@ -518,12 +717,14 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    assert(sourcenlrow != NULL);
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, sourcenlrow->name,
+      sourcenlrow->constant,
       sourcenlrow->nlinvars, sourcenlrow->linvars, sourcenlrow->lincoefs,
       sourcenlrow->nquadvars, sourcenlrow->quadvars, sourcenlrow->nquadelems, sourcenlrow->quadelems,
       sourcenlrow->exprtree,
       sourcenlrow->lhs, sourcenlrow->rhs) );
 
    (*nlrow)->linvarssorted          = sourcenlrow->linvarssorted;
+   (*nlrow)->quadelemssorted        = sourcenlrow->quadelemssorted;
    (*nlrow)->activity               = sourcenlrow->activity;
    (*nlrow)->validactivitynlp       = sourcenlrow->validactivitynlp;
    (*nlrow)->pseudoactivity         = sourcenlrow->pseudoactivity;
@@ -549,18 +750,13 @@ SCIP_RETCODE SCIPnlrowFree(
    assert((*nlrow)->nlpindex == -2);
    assert((*nlrow)->nlpiindex == -2);
 
-   /* the NLP should have cleared the following arrays when the row was removed from the NLP */
-   assert((*nlrow)->linvarsnlpiidx  == NULL);
-   assert((*nlrow)->quadvarsnlpiidx == NULL);
-   assert((*nlrow)->exprtreenlpiidx == NULL);
-
    /* linear part */
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->linvars,   (*nlrow)->linvarssize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->lincoefs,  (*nlrow)->linvarssize);
 
    /* quadratic part */
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->quadvars,  (*nlrow)->nquadvars);
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->quadelems, (*nlrow)->nquadelems);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->quadelems, (*nlrow)->quadelemssize);
 
    /* nonquadratic part */
    if( (*nlrow)->exprtree != NULL )
@@ -630,10 +826,6 @@ SCIP_RETCODE SCIPnlrowEnsureLinearSize(
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlrow->linvars,    nlrow->linvarssize, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlrow->lincoefs,   nlrow->linvarssize, newsize) );
-      if( nlrow->linvarsnlpiidx != NULL )
-      {
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlrow->linvarsnlpiidx, nlrow->linvarssize, newsize) );
-      }
       nlrow->linvarssize = newsize;
    }
    assert(num <= nlrow->linvarssize);
@@ -719,6 +911,108 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    return SCIP_OKAY;
 }
 
+/** ensures, that quadratic elements array of nonlinear row can store at least num entries */
+SCIP_RETCODE SCIPnlrowEnsureQuadElemsSize(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(nlrow != NULL);
+   assert(nlrow->nquadelems <= nlrow->quadelemssize);
+
+   if( num > nlrow->quadelemssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlrow->quadelems, nlrow->quadelemssize, newsize) );
+      nlrow->quadelemssize = newsize;
+   }
+   assert(num <= nlrow->quadelemssize);
+
+   return SCIP_OKAY;
+}
+
+/** adds a previously non existing quadratic element to an NLP nonlinear row */
+SCIP_RETCODE SCIPnlrowAddQuadElement(
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_QUADELEM         elem                /**< quadratic element to add */
+   )
+{
+   SCIP_CALL( nlrowAddQuadElement(nlrow, blkmem, set, nlp, elem) );
+
+   return SCIP_OKAY;
+}
+
+/** deletes quadratic element from nonlinear row */
+SCIP_RETCODE SCIPnlrowDelQuadElement(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row to be changed */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int                   idx1,               /**< index of first variable in element */
+   int                   idx2                /**< index of second variable in element */
+   )
+{
+   int pos;
+
+   assert(nlrow != NULL);
+   assert(idx1 >= 0);
+   assert(idx1 <  nlrow->nquadvars);
+   assert(idx2 >= 0);
+   assert(idx2 <  nlrow->nquadvars);
+   assert(idx1 <= idx2);
+
+   /* search the position of the variable in the row's variable vector */
+   pos = nlrowSearchQuadElem(nlrow, idx1, idx2);
+   if( pos == -1 )
+   {
+      SCIPerrorMessage("coefficient for index pair (idx1, idx2) doesn't exist in nonlinear row <%s>\n", idx1, idx2, nlrow->name);
+      return SCIP_INVALIDDATA;
+   }
+   assert(0 <= pos && pos < nlrow->nquadelems);
+
+   /* delete the element from the row's quadratic elements array */
+   SCIP_CALL( nlrowDelQuadElemPos(nlrow, set, nlp, pos) );
+
+   return SCIP_OKAY;
+}
+
+/** changes or adds a quadratic element to a nonlinear row */
+SCIP_RETCODE SCIPnlrowChgQuadElem(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_QUADELEM         elem                /**< new quadratic element */
+   )
+{
+   int pos;
+
+   assert(nlrow != NULL);
+   assert(nlp != NULL);
+
+   /* search the position of the variable in the row's linvars vector */
+   pos = nlrowSearchQuadElem(nlrow, elem.idx1, elem.idx2);
+
+   if( pos == -1 )
+   {
+      /* add previously not existing element */
+      SCIP_CALL( nlrowAddQuadElement(nlrow, blkmem, set, nlp, elem) );
+   }
+   else
+   {
+      /* change the coefficient in the row */
+      SCIP_CALL( nlrowChgQuadElemPos(nlrow, set, nlp, pos, elem.coef) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** changes left hand side of nonlinear row */
 SCIP_RETCODE SCIPnlrowChgLhs(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
@@ -780,15 +1074,12 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    }
    assert(nlp->primalsolution != NULL);
 
-   nlrow->activity = 0.0;
+   nlrow->activity = nlrow->constant;
    for( i = 0; i < nlrow->nlinvars; ++i )
    {
       assert(nlrow->linvars[i] != NULL);
 
-      if( nlrow->linvarsnlpiidx != NULL )
-         val1 = nlp->primalsolution[nlp->varmap_nlpi2nlp[nlrow->linvarsnlpiidx[i]]];
-      else
-         val1 = SCIPnlpGetVarSolVal(nlp, nlrow->linvars[i]);
+      val1 = SCIPnlpGetVarSolVal(nlp, nlrow->linvars[i]);
       assert(val1 < SCIP_INVALID);
 
       nlrow->activity += nlrow->lincoefs[i] * val1;
@@ -801,19 +1092,13 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
       if( previdx1 != nlrow->quadelems[i].idx1 )
       {
          previdx1 = nlrow->quadelems[i].idx1;
-         if( nlrow->quadvarsnlpiidx != NULL )
-            val1 = nlp->primalsolution[nlp->varmap_nlpi2nlp[nlrow->quadvarsnlpiidx[previdx1]]];
-         else
-            val1 = SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[previdx1]);
+         val1 = SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[previdx1]);
          assert(val1 < SCIP_INVALID);
          if( val1 == 0.0 )
             continue;
       }
 
-      if( nlrow->quadvarsnlpiidx != NULL )
-         val2 = nlp->primalsolution[nlp->varmap_nlpi2nlp[nlrow->quadvarsnlpiidx[nlrow->quadelems[i].idx2]]];
-      else
-         val2 = SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[nlrow->quadelems[i].idx2]);
+      val2 = SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[nlrow->quadelems[i].idx2]);
       assert(val2 < SCIP_INVALID);
 
       nlrow->activity += nlrow->quadelems[i].coef * val1 * val2;
@@ -828,12 +1113,8 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
 
       SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&varvals, n * sizeof(SCIP_Real)) );
 
-      if( nlrow->exprtreenlpiidx != NULL )
-         for( i = 0; i < n; ++i )
-            varvals[i] = nlp->primalsolution[nlp->varmap_nlpi2nlp[nlrow->exprtreenlpiidx[i]]];
-      else
-         for( i = 0; i < n; ++i )
-            varvals[i] = SCIPnlpGetVarSolVal(nlp, SCIPexprtreeGetVars(nlrow->exprtree)[i]);
+      for( i = 0; i < n; ++i )
+         varvals[i] = SCIPnlpGetVarSolVal(nlp, SCIPexprtreeGetVars(nlrow->exprtree)[i]);
 
       SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, varvals, &val1) );
       nlrow->activity += val1;
@@ -906,7 +1187,7 @@ SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
    assert(nlrow  != NULL);
    assert(stat   != NULL);
 
-   nlrow->pseudoactivity = 0.0;
+   nlrow->pseudoactivity = nlrow->constant;
    for( i = 0; i < nlrow->nlinvars; ++i )
    {
       assert(nlrow->linvars[i] != NULL);
@@ -1012,7 +1293,7 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
    assert(stat != NULL);
    assert(activity != NULL);
 
-   *activity = 0.0;
+   *activity = nlrow->constant;
    for( i = 0; i < nlrow->nlinvars; ++i )
    {
       assert(nlrow->linvars[i] != NULL);
@@ -1175,10 +1456,10 @@ SCIP_RETCODE SCIPnlrowPrint(
    /* print left hand side */
    SCIPmessageFPrintInfo(file, "%.15g <= ", nlrow->lhs);
 
-   /* print coefficients */
-   if( nlrow->nlinvars == 0 && nlrow->nquadvars == 0 && nlrow->exprtree == NULL )
-      SCIPmessageFPrintInfo(file, "0 ");
+   /* print constant */
+   SCIPmessageFPrintInfo(file, "%.15g ", nlrow->constant);
 
+   /* print linear coefficients */
    for( i = 0; i < nlrow->nlinvars; ++i )
    {
       assert(nlrow->linvars[i] != NULL);
@@ -1186,6 +1467,7 @@ SCIP_RETCODE SCIPnlrowPrint(
       SCIPmessageFPrintInfo(file, "%+.15g<%s> ", nlrow->lincoefs[i], SCIPvarGetName(nlrow->linvars[i]));
    }
 
+   /* print quadratic elements */
    for( i = 0; i < nlrow->nquadelems; ++i )
    {
       assert(SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]) != NULL);
@@ -1196,6 +1478,7 @@ SCIP_RETCODE SCIPnlrowPrint(
          SCIPmessageFPrintInfo(file, "%+.15g<%s><%s> ", nlrow->quadelems[i].coef, SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]), SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx2]));
    }
 
+   /* print nonquadratic part */
    if( nlrow->exprtree != NULL )
    {
       SCIP_CALL( SCIPexprtreePrintWithNames(nlrow->exprtree, file) );
@@ -1205,6 +1488,16 @@ SCIP_RETCODE SCIPnlrowPrint(
    SCIPmessageFPrintInfo(file, "<= %.15g\n", nlrow->rhs);
 
    return SCIP_OKAY;
+}
+
+/** gets constant */
+SCIP_Real SCIPnlrowGetConstant(
+   SCIP_NLROW*           nlrow               /**< NLP row */
+   )
+{
+   assert(nlrow != NULL);
+
+   return nlrow->constant;
 }
 
 /** gets number of variables of linear part */
@@ -1488,12 +1781,6 @@ SCIP_RETCODE nlpDelNlRowPos(
    nlrow = nlp->nlrows[pos];
    assert(nlrow != NULL);
    assert(nlrow->nlpindex == pos);
-
-   /* clear mapping of variables to NLP indices */
-   BMSfreeBlockMemoryArrayNull(blkmem, &nlrow->linvarsnlpiidx,  nlrow->linvarssize);
-   BMSfreeBlockMemoryArrayNull(blkmem, &nlrow->quadvarsnlpiidx, nlrow->nquadvars);
-   if( nlrow->exprtree != NULL )
-      BMSfreeBlockMemoryArrayNull(blkmem, &nlrow->exprtreenlpiidx, SCIPexprtreeGetNVars(nlrow->exprtree));
 
    /* if row is in NLPI, then mark that it has to be removed in the next flush
     * if row was not in NLPI yet, then we have one unflushed nlrow addition less */
@@ -1825,26 +2112,26 @@ SCIP_RETCODE nlpDelVarPos(
    return SCIP_OKAY;
 }
 
-/** gets NLPI variable indices of variable in nonlinear row */
+/** creates arrays with NLPI variable indices of variables in a nonlinear row */
 static
 SCIP_RETCODE nlpSetupNlpiIndices(
    SCIP_NLP*             nlp,                /**< NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLROW*           nlrow               /**< nonlinear row */
-   )
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   int**                 linidxs,            /**< buffer to store pointer to NLPI indices of linear variables */
+   SCIP_QUADELEM**       quadelems,          /**< buffer to store pointer to quadratic elements w.r.t. NLPI inidices */
+   int**                 nlinidxs            /**< buffer to store pointer to NLPI indices of nonlinear variables */
+)
 {
    int i;
    SCIP_VAR* var;
 
    assert(nlp    != NULL);
-   assert(blkmem != NULL);
    assert(set    != NULL);
    assert(nlrow  != NULL);
-   assert(nlrow->nlpiindex == -2); /* row should not be in NLPI yet */
-   assert(nlrow->linvarsnlpiidx  == NULL);
-   assert(nlrow->quadvarsnlpiidx == NULL);
-   assert(nlrow->exprtreenlpiidx == NULL);
+   assert(linidxs   != NULL);
+   assert(quadelems != NULL);
+   assert(nlinidxs  != NULL);
 
    /* get indices of variables in linear part of row */
    if( nlrow->nlinvars > 0 )
@@ -1852,10 +2139,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       assert(nlrow->linvars  != NULL);
       assert(nlrow->lincoefs != NULL);
 
-      if( nlrow->linvarsnlpiidx == NULL )
-      {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlrow->linvarsnlpiidx, nlrow->linvarssize) );
-      }
+      SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)linidxs, nlrow->nlinvars * sizeof(int)) );
 
       for( i = 0; i < nlrow->nlinvars; ++i )
       {
@@ -1863,30 +2147,47 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          assert(var != NULL);
 
          assert(SCIPhashmapExists(nlp->varhash, var));
-         nlrow->linvarsnlpiidx[i] = (size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var);
+         (*linidxs)[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
       }
    }
+   else
+      *linidxs = NULL;
 
    /* get indices of variables in quadratic part of row */
    if( nlrow->nquadvars > 0 )
    {
+      int* quadvarsidx;
+      
       assert(nlrow->quadvars    != NULL);
       assert(nlrow->nquadelems  > 0);
       assert(nlrow->quadelems   != NULL);
-
-      if( nlrow->quadvarsnlpiidx == NULL )
-      {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlrow->quadvarsnlpiidx, nlrow->nquadvars) );
-      }
-
+      
+      /* compute mapping of variable indices quadratic term -> NLPI */
+      SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&quadvarsidx, nlrow->nquadvars * sizeof(int)) );
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          var = nlrow->quadvars[i];
          assert(var != NULL);
 
          assert(SCIPhashmapExists(nlp->varhash, var));
-         nlrow->quadvarsnlpiidx[i] = (size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var);
+         quadvarsidx[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
       }
+      
+      /* compute quad elements using NLPI indices */
+      SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)quadelems, nlrow->nquadelems * sizeof(SCIP_QUADELEM)) );
+      for( i = 0; i < nlrow->nquadelems; ++i )
+      {
+         assert(nlrow->quadelems[i].idx1 >= 0);
+         assert(nlrow->quadelems[i].idx1 < nlrow->nquadvars);
+         assert(nlrow->quadelems[i].idx2 >= 0);
+         assert(nlrow->quadelems[i].idx2 < nlrow->nquadvars);
+         
+         (*quadelems)[i].idx1 = quadvarsidx[nlrow->quadelems[i].idx1];
+         (*quadelems)[i].idx2 = quadvarsidx[nlrow->quadelems[i].idx2];
+         (*quadelems)[i].coef = nlrow->quadelems[i].coef;
+      }
+      
+      SCIPbufferFreeMem(set->buffer, (void**)&quadvarsidx, 0);
    }
 
    /* get indices of variables in expression tree part of row */
@@ -1897,10 +2198,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       n = SCIPexprtreeGetNVars(nlrow->exprtree);
       assert(n == 0 || SCIPexprtreeGetVars(nlrow->exprtree) != NULL);
 
-      if( nlrow->exprtreenlpiidx == NULL )
-      {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlrow->exprtreenlpiidx, n) );
-      }
+      SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)nlinidxs, n * sizeof(int)) );
 
       for( i = 0; i < n; ++i )
       {
@@ -1908,7 +2206,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          assert(var != NULL);
 
          assert(SCIPhashmapExists(nlp->varhash, var));
-         nlrow->exprtreenlpiidx[i] = (size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var);
+         (*nlinidxs)[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
       }
    }
 
@@ -2164,7 +2462,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    SCIP_SET*             set                 /**< global SCIP settings */
 )
 {
-   int c, i, j;
+   int c, i;
    SCIP_Bool   havequad;
    SCIP_NLROW* nlrow;
    SCIP_Real*  lhss;
@@ -2224,38 +2522,31 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       if( nlrow->nlpiindex >= 0 )
          continue;
       assert(c < nlp->nunflushednlrowadd);
-
-      SCIP_CALL( nlpSetupNlpiIndices(nlp, blkmem, set, nlrow) );
-      assert(nlrow->linvarsnlpiidx  != NULL || nlrow->nlinvars  == 0);
-      assert(nlrow->quadvarsnlpiidx != NULL || nlrow->nquadvars == 0);
-      assert(nlrow->exprtreenlpiidx != NULL || nlrow->exprtree  == NULL);
+      
+      /* get indices in NLPI */
+      SCIP_CALL( nlpSetupNlpiIndices(nlp, set, nlrow, &linidxs[c], &quadelems[c], &nlidxs[c]) );
+      assert(linidxs[c]   != NULL || nlrow->nlinvars  == 0);
+      assert(quadelems[c] != NULL || nlrow->nquadvars == 0);
+      assert(nlidxs[c]    != NULL || nlrow->exprtree  == NULL);
 
       nlp->nlrowmap_nlpi2nlp[nlp->nnlrows_solver+c] = i;
       nlrow->nlpiindex = nlp->nnlrows_solver+c;
 
-      lhss[c]   = nlrow->lhs;
-      rhss[c]   = nlrow->rhs;
-
-      nlinvars[c]    = nlrow->nlinvars;
-      linidxs[c]     = nlrow->linvarsnlpiidx;
-      lincoefs[c]    = nlrow->lincoefs;
-
-      nquadelems[c]  = nlrow->nquadelems;
-      if( nlrow->nquadelems > 0 )
+      lhss[c] = nlrow->lhs;
+      rhss[c] = nlrow->rhs;
+      if( nlrow->constant != 0.0 )
       {
-         SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&quadelems[c], nlrow->nquadelems * sizeof(SCIP_QUADELEM)) );
-         for( j = 0; j < nlrow->nquadelems; ++j )
-         {
-            quadelems[c][j].idx1 = MIN(nlrow->quadvarsnlpiidx[nlrow->quadelems[j].idx1], nlrow->quadvarsnlpiidx[nlrow->quadelems[j].idx2]);
-            quadelems[c][j].idx2 = MAX(nlrow->quadvarsnlpiidx[nlrow->quadelems[j].idx1], nlrow->quadvarsnlpiidx[nlrow->quadelems[j].idx2]);
-            quadelems[c][j].coef = nlrow->quadelems[j].coef;
-         }
-         havequad = TRUE;
+         if( !SCIPsetIsInfinity(set, -nlrow->lhs) )
+            lhss[c] -= nlrow->constant;
+         if( !SCIPsetIsInfinity(set,  nlrow->rhs) )
+            rhss[c] -= nlrow->constant;
       }
-      else
-         quadelems[c] = NULL;
 
-      nlidxs[c]      = nlrow->exprtreenlpiidx;
+      nlinvars[c] = nlrow->nlinvars;
+      lincoefs[c] = nlrow->lincoefs;
+
+      nquadelems[c] = nlrow->nquadelems;
+      
       exprtrees[c]   = nlrow->exprtree;
 
 #if ADDNAMESTONLPI
@@ -2280,6 +2571,16 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       nlidxs, exprtrees,
       names) );
 
+   for( c = 0; c < nlp->nunflushednlrowadd; ++c )
+   {
+      if( linidxs[c] != NULL )
+         SCIPbufferFreeMem(set->buffer, (void**)&linidxs[c], 0);
+      if( quadelems[c] != NULL )
+         SCIPbufferFreeMem(set->buffer, (void**)&quadelems[c], 0);
+      if( nlidxs[c] != NULL )
+         SCIPbufferFreeMem(set->buffer, (void**)&nlidxs[c], 0);
+   }
+
 #if ADDNAMESTONLPI
    SCIPbufferFreeMem(set->buffer, (void**)&names, 0);
 #endif
@@ -2288,10 +2589,6 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    SCIPbufferFreeMem(set->buffer, (void**)&nlinvars, 0);
    SCIPbufferFreeMem(set->buffer, (void**)&linidxs, 0);
    SCIPbufferFreeMem(set->buffer, (void**)&lincoefs, 0);
-   if( havequad )
-      for( c = 0; c < nlp->nunflushednlrowadd; ++c )
-         if( quadelems[c] != NULL )
-            SCIPbufferFreeMem(set->buffer, (void**)&quadelems[c], 0);
    SCIPbufferFreeMem(set->buffer, (void**)&nquadelems, 0);
    SCIPbufferFreeMem(set->buffer, (void**)&quadelems, 0);
    SCIPbufferFreeMem(set->buffer, (void**)&nlidxs, 0);
@@ -2449,36 +2746,30 @@ SCIP_RETCODE nlpFlushObjective(
    }
    else
    {
-      SCIP_QUADELEM* quadelems;
-
       /* set user given objective */
-      SCIP_CALL( nlpSetupNlpiIndices(nlp, blkmem, set, nlp->objective) );
-      assert(nlp->objective->linvarsnlpiidx  == NULL || nlp->objective->nlinvars  == 0);
-      assert(nlp->objective->quadvarsnlpiidx == NULL || nlp->objective->nquadvars == 0);
-      assert(nlp->objective->exprtreenlpiidx == NULL || nlp->objective->exprtree  == NULL);
+      int* linidxs;
+      SCIP_QUADELEM* quadelems;
+      int* nlidxs;
 
-      if( nlp->objective->nquadelems > 0 )
-      {
-         int j;
-         SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&quadelems, nlp->objective->nquadelems * sizeof(SCIP_QUADELEM)) );
-         for( j = 0; j < nlp->objective->nquadelems; ++j )
-         {
-            quadelems[j].idx1 = MIN(nlp->objective->quadvarsnlpiidx[nlp->objective->quadelems[j].idx1], nlp->objective->quadvarsnlpiidx[nlp->objective->quadelems[j].idx2]);
-            quadelems[j].idx2 = MAX(nlp->objective->quadvarsnlpiidx[nlp->objective->quadelems[j].idx1], nlp->objective->quadvarsnlpiidx[nlp->objective->quadelems[j].idx2]);
-            quadelems[j].coef = nlp->objective->quadelems[j].coef;
-         }
-      }
-      else
-         quadelems = NULL;
+      /* get NLPI indices */
+      SCIP_CALL( nlpSetupNlpiIndices(nlp, set, nlp->objective, &linidxs, &quadelems, &nlidxs) );
+      assert(linidxs   != NULL || nlp->objective->nlinvars  == 0);
+      assert(quadelems != NULL || nlp->objective->nquadvars == 0);
+      assert(nlidxs    != NULL || nlp->objective->exprtree  == NULL);
 
+      /* setup objective in NLPI */
       SCIP_CALL( SCIPnlpiSetObjective(nlp->solver, nlp->problem,
-         nlp->objective->nlinvars, nlp->objective->linvarsnlpiidx, nlp->objective->lincoefs,
+         nlp->objective->nlinvars, linidxs, nlp->objective->lincoefs,
          nlp->objective->nquadelems, quadelems,
-         nlp->objective->exprtreenlpiidx, nlp->objective->exprtree,
-         0.0) );
+         nlidxs, nlp->objective->exprtree,
+         nlp->objective->constant) );
 
+      if( linidxs != NULL )
+         SCIPbufferFreeMem(set->buffer, (void**)&linidxs, 0);
       if( quadelems != NULL )
          SCIPbufferFreeMem(set->buffer, (void**)&quadelems, 0);
+      if( nlidxs != NULL )
+         SCIPbufferFreeMem(set->buffer, (void**)&nlidxs, 0);
    }
 
    nlp->objflushed = TRUE;
@@ -3288,7 +3579,7 @@ SCIP_RETCODE SCIPnlpGetPseudoObjval(
    {
       int i;
 
-      *pseudoobjval = 0.0;
+      *pseudoobjval = 0.0; /* @todo LP objective constant ? */
       for( i = 0; i < nlp->nvars; ++i )
          *pseudoobjval += SCIPvarGetObj(nlp->vars[i]) * SCIPvarGetBestBound(nlp->vars[i]);
    }
@@ -3595,6 +3886,7 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
             coefs[i] = SCIPvarGetObj(nlp->vars[i]);
 
          SCIP_CALL( SCIPnlrowCreate(&nlp->divingobj, blkmem, set, "divingobj",
+            0.0, /* @todo SCIP objective constant */
             nlp->nvars, nlp->vars, coefs,
             0, NULL, 0, NULL,
             NULL,

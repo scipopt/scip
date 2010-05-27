@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.378 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.379 2010/05/27 09:55:19 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4580,6 +4580,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    const char*           name,               /**< name of nonlinear row */
+   SCIP_Real             constant,           /**< constant */
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */

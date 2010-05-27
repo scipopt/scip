@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.2 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -42,15 +42,20 @@
 extern "C" {
 #endif
 
-/*
- * Nonlinear row methods
- */
+/**@name Nonlinear row methods */
+/**@{ */
 
 /** output nonlinear row to file stream */
 extern
 SCIP_RETCODE SCIPnlrowPrint(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** gets constant */
+extern
+SCIP_Real SCIPnlrowGetConstant(
+   SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets number of variables of linear part */
@@ -141,9 +146,10 @@ SCIP_Bool SCIPnlrowIsInNLP(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
-/*
- * Nonlinear problem (NLP) methods
- */
+/**@} */
+
+/**@name Nonlinear problem (NLP) methods */
+/**@{ */
 
 /** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
 extern
@@ -291,6 +297,8 @@ SCIP_RETCODE SCIPnlpSetStringPar(
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char*           sval                /**< parameter value */
 );
+
+/**@} */
 
 #ifdef __cplusplus
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlp.h,v 1.2 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlp.h,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
 
 /**@file   struct_nlp.h
  * @brief  datastructures for NLP management
@@ -21,10 +21,10 @@
  *
  *  In SCIP, the NLP is defined as follows:
  *
- *   min         obj * x + <x, Qx> + f(x)
- *        lhs <=   A * x + const          <= rhs
- *        lhs <=   A * x + <x, Qx> + f(x) <= rhs
- *        lb  <=       x                  <= ub
+ *   min         const + obj * x + <x, Qx> + f(x)
+ *        lhs <= const + A   * x                  <= rhs
+ *        lhs <= const + A   * x + <x, Qx> + f(x) <= rhs
+ *        lb  <=               x                  <= ub
  *
  *  where the linear rows and variable bounds are managed by the LP
  *  and the nonlinear rows are managed by the NLP.
@@ -32,7 +32,7 @@
  *  The row activities are defined as
  *     activity = A * x + const
  *  for a linear row and as
- *     activity = f(x) + <x, Qx> + A * x
+ *     activity = f(x) + <x, Qx> + A * x + const
  *  for a nonlinear row.
  *  The activities must therefore be in the range of [lhs,rhs].
  *
@@ -65,25 +65,27 @@ struct SCIP_NlRow
    /* sides */
    SCIP_Real             lhs;                /**< left hand side */
    SCIP_Real             rhs;                /**< right hand side */
+   
+   /* constant part */
+   SCIP_Real             constant;           /**< constant value */
 
    /* linear part */
    int                   nlinvars;           /**< number of linear variables */
    int                   linvarssize;        /**< size of arrays storing linear part of row */
    SCIP_VAR**            linvars;            /**< linear variables */
    double*               lincoefs;           /**< coefficients of linear variables */
-   int*                  linvarsnlpiidx;     /**< indices of linear variables in NLPI problem, or NULL if row is not in NLPI yet */
    SCIP_Bool             linvarssorted;      /**< are the linear coefficients sorted (by variable indices?) */
 
    /* quadratic part */
    int                   nquadvars;          /**< number of variables in quadratic terms */
    SCIP_VAR**            quadvars;           /**< variables in quadratic term */
    int                   nquadelems;         /**< number of entries in quadratic matrix */
+   int                   quadelemssize;      /**< size of quadratic elements array */
    SCIP_QUADELEM*        quadelems;          /**< entries in quadratic matrix */
-   int*                  quadvarsnlpiidx;    /**< indices of quadratic variables in NLPI problem, or NULL if row is not in NLPI yet */
+   SCIP_Bool             quadelemssorted;    /**< are the quadratic elements sorted? */
 
    /* nonquadratic part */
    SCIP_EXPRTREE*        exprtree;           /**< expression tree representing nonquadratic part */
-   int*                  exprtreenlpiidx;    /**< indices of nonlinear variables from expression tree in NLPI problem, or NULL if row is not in NLPI problem yet */
 
    /* miscellaneous */
    const char*           name;               /**< name */

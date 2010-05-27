@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.2 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -44,9 +44,8 @@
 extern "C" {
 #endif
 
-/*
- * Nonlinear row methods
- */
+/**@name Nonlinear row methods */
+/**@{ */
 
 /** create a new nonlinear row
  * the new row is already captured
@@ -57,6 +56,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of nonlinear row */
+   SCIP_Real             constant,           /**< constant */
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
@@ -140,6 +140,45 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_VAR*             var,                /**< variable */
    SCIP_Real             coef                /**< new value of coefficient */
+   );
+
+/** ensures, that quadratic elements array of nonlinear row can store at least num entries */
+extern
+SCIP_RETCODE SCIPnlrowEnsureQuadElemsSize(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   );
+
+/** adds a previously non existing quadratic element to an NLP nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowAddQuadElement(
+   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_QUADELEM         elem                /**< quadratic element to add */
+   );
+
+/** deletes quadratic element from nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowDelQuadElement(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row to be changed */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int                   idx1,               /**< index of first variable in element */
+   int                   idx2                /**< index of second variable in element */
+   );
+
+/** changes or adds a quadratic element to a nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowChgQuadElem(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_QUADELEM         elem                /**< new quadratic element */
    );
 
 /** changes left hand side of nonlinear row */
@@ -254,9 +293,10 @@ SCIP_RETCODE SCIPnlrowIsRedundant(
    SCIP_Bool*            isredundant         /**< buffer to store whether row is redundant */
    );
 
-/*
- * NLP methods
- */
+/**@} */
+
+/**@name NLP methods */
+/**@{ */
 
 /** includes event handler that is used by NLP */
 SCIP_RETCODE SCIPnlpInclude(
@@ -524,6 +564,7 @@ SCIP_RETCODE SCIPnlpSolveDive(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
+/**@} */
 
 #ifdef __cplusplus
 }
