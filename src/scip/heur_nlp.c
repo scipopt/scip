@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.63 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.64 2010/05/27 08:33:20 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -452,7 +452,7 @@ SCIP_RETCODE setupNLP(
       }
    }
    /* add (linear) objective to NLP solver */
-   SCIP_CALL( SCIPnlpiSetObjective(heurdata->nlpi, heurdata->nlpiprob, cnt, objvar, objcoeff, 0, NULL, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(heurdata->nlpi, heurdata->nlpiprob, cnt, objvar, objcoeff, 0, NULL, NULL, NULL, SCIPgetTransObjoffset(scip)) );
    
    SCIPfreeBufferArray(scip, &objvar);
    SCIPfreeBufferArray(scip, &objcoeff);
