@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.572 2010/05/27 09:55:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.573 2010/05/28 15:57:39 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8661,6 +8661,11 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
+/* calculate clique partition for a maximal amount of comparisons on variables due to expensive algorithm
+ * @todo: check for a good value, maybe it's better to check parts of variables
+ */
+#define MAXNCLIQUEVARSCOMP 1000000
+
 /** calculates a partition of the given set of binary variables into cliques;
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
@@ -8682,6 +8687,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_Bool* tmpvalues;
    int ncliquevars;
    int i;
+   int maxncliquevarscomp;
 
    assert(scip != NULL);
    assert(nvars == 0 || vars != NULL);
@@ -8714,17 +8720,17 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* get corresponding active problem variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
+   maxncliquevarscomp = MIN(nvars*nvars, MAXNCLIQUEVARSCOMP);
+
    /* calculate the clique partition */
    *ncliques = 0;
    for( i = 0; i < nvars; ++i )
    {
       if( cliquepartition[i] == -1 )
       {
-         SCIP_Bool sign;
          int j;
 
          /* variable starts a new clique */
-         sign = TRUE;
          cliquepartition[i] = *ncliques;
          cliquevars[0] = tmpvars[i];
          cliquevalues[0] = tmpvalues[i];
@@ -8764,6 +8770,19 @@ SCIP_RETCODE SCIPcalcCliquePartition(
          ++(*ncliques);
       }
       assert(cliquepartition[i] >= 0 && cliquepartition[i] < i+1);
+
+      /* break if we reached the maximal number of comparisons */
+      if( i * nvars > maxncliquevarscomp )
+         break;
+   }
+   /* if we had to much variables fill up the cliquepartition and put each variable in a separate clique */
+   for( ; i < nvars; ++i )
+   {
+      if( cliquepartition[i] == -1 )
+      {
+         cliquepartition[i] = *ncliques;
+         ++(*ncliques);
+      }
    }
 
    /* free temporary memory */
