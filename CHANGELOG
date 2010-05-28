@@ -60,6 +60,7 @@ interface:
 - new methods SCIPcopyPlugins(), SCIPcopyParamSettings(), SCIPcopyVars(), SCIPcopyConss() 
   to copy individual parts of a SCIP instance separately.
 - SCIP can now maintain a central NLP relaxation of the problem (similar to LP)
+- added SCIPsortLongPtrInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -113,6 +114,7 @@ features:
 - SCIPsolveKnapsackExactly got a new 12. parameter "SCIP_Bool* success" which stores if an error occured during solving(normally a memory problem)
 - "negated cliques" handling in knapsack constraint handler got changed due to the new method SCIPcalcNegatedCliquePartition resulting in new consdata members "negcliquepartition", "negcliquepartitioned" and "nnegcliques"; changed SCIPcalcCliquePartition so all cliquepartitions (calculated by SCIPcalcCliquePartition or SCIPcalcNegatedCliquePartition, which uses the first one) contain again not negative integers
 - cons_quadratic can make solutions in CONSCHECK feasible for the quadratic constraints by moving values of linear variables and passing the modified solution to the trysol heuristic
+- cons_knapsack is now able to detect negated cliques due to negated cliques on knapsack constraints
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

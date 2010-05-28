@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.198 2010/05/17 19:32:03 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.199 2010/05/28 17:56:01 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -5596,13 +5596,213 @@ SCIP_RETCODE tightenWeights(
    return SCIP_OKAY;
 }
 
+/** adds negated cliques of the knapsack constraint to the global clique table */
+static
+SCIP_RETCODE addNegatedCliques(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_CONS*const       cons,               /**< knapsack constraint */
+   SCIP_Bool*const       cutoff,             /**< pointer to store whether the node can be cut off */
+   int*const             nbdchgs             /**< pointer to count the number of performed bound changes */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** poscliquevars;
+   SCIP_VAR** cliquevars;
+   SCIP_Longint* maxweights;
+   SCIP_Longint* gainweights;
+   int* gaincliquepartition;
+   SCIP_Bool* cliqueused;
+   SCIP_Longint minactduetonegcliques;
+   SCIP_Longint freecapacity;
+   SCIP_Longint lastweight;
+   SCIP_Longint beforelastweight;
+   int nposcliquevars;
+   int ncliquevars;
+   int nvars;
+   int nnegcliques;
+   int lastcliqueused;
+   int thisnbdchgs;
+   int v;
+   int w;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(cutoff != NULL);
+   assert(nbdchgs != NULL);
+
+   *cutoff = FALSE;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   nvars = consdata->nvars;
+
+   /* check whether the cliques have already been added */
+   if( consdata->cliquesadded || nvars == 0 )
+      return SCIP_OKAY;
+
+   /* make sure, the items are merged and sorted by non-increasing weight */
+   SCIP_CALL( mergeMultiples(scip, cons) );
+   sortItems(consdata);
+
+   assert(consdata->merged);
+
+   /* calculate a clique partition */
+   SCIP_CALL( calcCliquepartition(scip, consdata) );
+   nnegcliques = consdata->nnegcliques;
+   
+   /* get temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &poscliquevars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquevars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &gainweights, nvars) );
+   BMSclearMemoryArray(gainweights, nvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &gaincliquepartition, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &maxweights, nnegcliques) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliqueused, nnegcliques) );
+   BMSclearMemoryArray(cliqueused, nnegcliques);
+
+   nnegcliques = 0;
+   minactduetonegcliques = 0;
+
+   /* determine maximal weights for all negated cliques and calculate minimal weightsum due to negated cliques */
+   for( v = 0; v < nvars; ++v )
+   {
+      assert(0 <= consdata->negcliquepartition[v] && consdata->negcliquepartition[v] <= nnegcliques);
+      assert(consdata->weights[v] > 0);
+
+      if( consdata->negcliquepartition[v] == nnegcliques )
+      {
+         nnegcliques++;
+         maxweights[consdata->negcliquepartition[v]] = consdata->weights[v];
+      }
+      else
+         minactduetonegcliques += consdata->weights[v];
+   }
+
+   nposcliquevars = 0;
+   
+   /* add cliques, using negated cliques information */
+   if( minactduetonegcliques > 0 )
+   {
+      /* free capacity is the rest of not used capacity if the smallest amount of weights due to negated cliques are used */
+      freecapacity = consdata->capacity - minactduetonegcliques;
+
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebugMessage("Try to add negated cliques in knapsack constraint handler for constraint %s; capacity = %"SCIP_LONGINT_FORMAT", minactivity(due to neg. cliques) = %"SCIP_LONGINT_FORMAT", freecapacity = %"SCIP_LONGINT_FORMAT".\n", 
+         SCIPconsGetName(cons), consdata->capacity, minactduetonegcliques, freecapacity);
+
+      /* calculate possible gain by switching choosen items in negated cliques */
+      for( v = 0; v < nvars; ++v )
+      {
+         if( !cliqueused[consdata->negcliquepartition[v]] )
+         {
+            cliqueused[consdata->negcliquepartition[v]] = TRUE;
+            for( w = v + 1; w < nvars; ++w )
+            {
+               /* if we would take the biggest weight instead of another what would we gain, take weight[i] instead of
+                * weight[j] (which are both in a negated clique) */
+               if( consdata->negcliquepartition[v] == consdata->negcliquepartition[w] 
+                  && consdata->weights[v] > consdata->weights[w] )
+               {
+                  poscliquevars[nposcliquevars] = consdata->vars[w];
+                  gainweights[nposcliquevars] = maxweights[consdata->negcliquepartition[v]] - consdata->weights[w];
+                  gaincliquepartition[nposcliquevars] = consdata->negcliquepartition[v];
+                  ++nposcliquevars;
+               }
+            }
+         }
+      }
+      
+      /* try to create negated cliques */
+      if( nposcliquevars > 0 )
+      {
+         /* sort possible gain per substitution of the clique members */
+         SCIPsortDownLongPtrInt(gainweights,(void**) poscliquevars, gaincliquepartition, nposcliquevars);
+      
+         for( v = 0; v < nposcliquevars; ++v )
+         {
+            cliquevars[0] = poscliquevars[v];
+            ncliquevars = 1;
+            lastweight = gainweights[v];
+            beforelastweight = -1;
+            lastcliqueused = gaincliquepartition[v];
+            /* clear cliqueused to get an unused array */
+            BMSclearMemoryArray(cliqueused, nnegcliques);
+            cliqueused[gaincliquepartition[v]] = TRUE;
+            
+            /* taking bigger weights make the knapsack redundant so we will create cliques, only take items which are not
+             * in the same negated clique and by taking two of them would exceed the free capacity */
+            for( w = v + 1; w < nposcliquevars && !cliqueused[gaincliquepartition[w]] && gainweights[w] + lastweight > freecapacity; ++w )
+            {
+               beforelastweight = lastweight;
+               lastweight = gainweights[w];
+               lastcliqueused = gaincliquepartition[w];
+               cliqueused[gaincliquepartition[w]] = TRUE;
+               SCIP_CALL( SCIPgetNegatedVar(scip, poscliquevars[w], &cliquevars[ncliquevars]) );
+               ++ncliquevars;
+            }
+            
+            if( ncliquevars > 1 )
+            {
+#ifdef SCIP_DEBUG
+               int b;
+               SCIPdebugMessage("adding new Clique: ");
+               for( b = 0; b < ncliquevars; ++b )
+                  SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
+               SCIPdebugPrintf("\n");
+#endif
+               
+               assert(beforelastweight > 0);
+               /* add the clique to the clique table */
+               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+               if( *cutoff )
+                  goto TERMINATE;
+               *nbdchgs += thisnbdchgs;
+               
+               /* reset last used clique to get slightly different cliques */
+               cliqueused[lastcliqueused] = FALSE;
+               
+               /* try to replace the last item in the clique by a different item to obtain a slightly different clique */
+               for( ++w; w < nposcliquevars && !cliqueused[gaincliquepartition[w]] && beforelastweight + gainweights[w] > freecapacity; ++w )
+               {
+                  SCIP_CALL( SCIPgetNegatedVar(scip, poscliquevars[w], &cliquevars[ncliquevars - 1]) );
+#ifdef SCIP_DEBUG
+                  {
+                     SCIPdebugMessage("adding new Clique: ");
+                     for( b = 0; b < ncliquevars; ++b )
+                        SCIPdebugPrintf("%s ", SCIPvarGetName(cliquevars[b]));
+                     SCIPdebugPrintf("\n");
+                  }
+#endif
+                  SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+                  if( *cutoff )
+                     goto TERMINATE;
+                  *nbdchgs += thisnbdchgs;
+               }
+            }
+         }
+      }   
+   }
+
+ TERMINATE:
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &cliqueused);
+   SCIPfreeBufferArray(scip, &gaincliquepartition);
+   SCIPfreeBufferArray(scip, &maxweights);
+   SCIPfreeBufferArray(scip, &gainweights);
+   SCIPfreeBufferArray(scip, &cliquevars);
+   SCIPfreeBufferArray(scip, &poscliquevars);
+
+   return SCIP_OKAY;
+}
+
 /** adds cliques of the knapsack constraint to the global clique table */
 static
 SCIP_RETCODE addCliques(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   int*                  nbdchgs             /**< pointer to count the number of performed bound changes */
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_CONS*const       cons,               /**< knapsack constraint */
+   SCIP_Bool*const       cutoff,             /**< pointer to store whether the node can be cut off */
+   int*const             nbdchgs             /**< pointer to count the number of performed bound changes */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5622,6 +5822,8 @@ SCIP_RETCODE addCliques(
    SCIP_Longint* secondmaxweights;
    int nvars;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(nbdchgs != NULL);
 
@@ -5648,11 +5850,11 @@ SCIP_RETCODE addCliques(
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &poscliquevars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &gainweights, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &secondmaxweights, nnegcliques) );
-   BMSclearMemoryArray(gainweights, nvars);
-   BMSclearMemoryArray(secondmaxweights, nnegcliques);
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquevars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &gainweights, nvars) );
+   BMSclearMemoryArray(gainweights, nvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &secondmaxweights, nnegcliques) );
+   BMSclearMemoryArray(secondmaxweights, nnegcliques);
 
    nnegcliques = 0;
    minactduetonegcliques = 0;
@@ -5669,9 +5871,7 @@ SCIP_RETCODE addCliques(
       assert(weight > 0);
 
       if( cliquenum == nnegcliques )
-      {
          nnegcliques++;
-      }
       else
       {
          minactduetonegcliques += weight;
@@ -5683,14 +5883,15 @@ SCIP_RETCODE addCliques(
    /* add cliques, using negated cliques information */
    if( minactduetonegcliques > 0 )
    {
-      /* @todo: create negated cliques out of negated cliques, if we doesn't take the smallest weight of a cliques ... */
-
       /* free capacity is the rest of not used capacity if the smallest amount of weights due to negated cliques are used */
       freecapacity = consdata->capacity - minactduetonegcliques;
 
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       SCIPdebugMessage("Try to add cliques in knapsack constraint handler for constraint %s; capacity = %"SCIP_LONGINT_FORMAT", minactivity(due to neg. cliques) = %"SCIP_LONGINT_FORMAT", freecapacity = %"SCIP_LONGINT_FORMAT".\n", 
          SCIPconsGetName(cons), consdata->capacity, minactduetonegcliques, freecapacity);
+
+      /* create negated cliques out of negated cliques, if we doesn't take the smallest weight of a cliques ... */
+      SCIP_CALL( addNegatedCliques(scip, cons, cutoff, nbdchgs ) );
 
       nposcliquevars = 0;
 
@@ -5809,9 +6010,9 @@ SCIP_RETCODE addCliques(
 
  TERMINATE:
    /* free temporary memory and mark the constraint */
-   SCIPfreeBufferArray(scip, &cliquevars);
    SCIPfreeBufferArray(scip, &secondmaxweights);
    SCIPfreeBufferArray(scip, &gainweights);
+   SCIPfreeBufferArray(scip, &cliquevars);
    SCIPfreeBufferArray(scip, &poscliquevars);
    consdata->cliquesadded = TRUE;
 
