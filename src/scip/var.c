@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.277 2010/05/12 08:19:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.278 2010/05/28 15:03:20 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4905,8 +4905,9 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    assert(var != NULL);
    assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
-   assert(var->glbdom.lb <= var->locdom.lb);
-   assert(var->locdom.ub <= var->glbdom.ub);
+   /* local domains can violate global bounds but not more than feasibility epsilon */
+   assert(SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb));
+   assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    assert(set != NULL);
    assert(stat != NULL);
@@ -4994,7 +4995,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
             /* a > 0 -> change lower bound of y */
             assert((SCIPsetIsInfinity(set, -parentvar->glbdom.lb) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsEQ(set, parentvar->glbdom.lb,
+               || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5009,7 +5010,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
             assert((SCIPsetIsInfinity(set, parentvar->glbdom.ub) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsEQ(set, parentvar->glbdom.ub,
+               || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5055,8 +5056,9 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    assert(var != NULL);
    assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
-   assert(var->glbdom.lb <= var->locdom.lb);
-   assert(var->locdom.ub <= var->glbdom.ub);
+   /* local domains can violate global bounds but not more than feasibility epsilon */
+   assert(SCIPsetIsFeasLE(set, var->glbdom.lb , var->locdom.lb));
+   assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    assert(set != NULL);
    assert(stat != NULL);
@@ -5143,7 +5145,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
             /* a > 0 -> change upper bound of y */
             assert((SCIPsetIsInfinity(set, parentvar->glbdom.ub) && SCIPsetIsInfinity(set, oldbound))
-               || SCIPsetIsEQ(set, parentvar->glbdom.ub,
+               || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5158,7 +5160,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
             /* a < 0 -> change lower bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
             assert((SCIPsetIsInfinity(set, -parentvar->glbdom.lb) && SCIPsetIsInfinity(set, oldbound))
-               || SCIPsetIsEQ(set, parentvar->glbdom.lb,
+               || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5251,7 +5253,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
          /* a > 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
-            || SCIPsetIsEQ(set, var->glbdom.lb,
+            || SCIPsetIsFeasEQ(set, var->glbdom.lb,
                var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
@@ -5266,7 +5268,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
          /* a < 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
-            || SCIPsetIsEQ(set, var->glbdom.lb,
+            || SCIPsetIsFeasEQ(set, var->glbdom.lb,
                var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
@@ -5369,7 +5371,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
          /* a > 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
-            || SCIPsetIsEQ(set, var->glbdom.ub,
+            || SCIPsetIsFeasEQ(set, var->glbdom.ub,
                var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
@@ -5384,7 +5386,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
          /* a < 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
-            || SCIPsetIsEQ(set, var->glbdom.ub,
+            || SCIPsetIsFeasEQ(set, var->glbdom.ub,
                var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
@@ -5645,7 +5647,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
             /* a > 0 -> change lower bound of y */
             assert((SCIPsetIsInfinity(set, -parentvar->locdom.lb) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsEQ(set, parentvar->locdom.lb,
+               || SCIPsetIsFeasEQ(set, parentvar->locdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5660,7 +5662,7 @@ SCIP_RETCODE varProcessChgLbLocal(
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
             assert((SCIPsetIsInfinity(set, parentvar->locdom.ub) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsEQ(set, parentvar->locdom.ub,
+               || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5753,7 +5755,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
             /* a > 0 -> change upper bound of x */
             assert((SCIPsetIsInfinity(set, parentvar->locdom.ub) && SCIPsetIsInfinity(set, oldbound))
-               || SCIPsetIsEQ(set, parentvar->locdom.ub,
+               || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5768,7 +5770,7 @@ SCIP_RETCODE varProcessChgUbLocal(
             /* a < 0 -> change lower bound of x */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
             assert((SCIPsetIsInfinity(set, -parentvar->locdom.lb) && SCIPsetIsInfinity(set, oldbound))
-               || SCIPsetIsEQ(set, parentvar->locdom.lb,
+               || SCIPsetIsFeasEQ(set, parentvar->locdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -5856,7 +5858,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
          /* a > 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
-            || SCIPsetIsEQ(set, var->locdom.lb,
+            || SCIPsetIsFeasEQ(set, var->locdom.lb,
                var->data.aggregate.var->locdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
@@ -5871,7 +5873,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
          /* a < 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
-            || SCIPsetIsEQ(set, var->locdom.lb,
+            || SCIPsetIsFeasEQ(set, var->locdom.lb,
                var->data.aggregate.var->locdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
@@ -5968,7 +5970,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
          /* a > 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
-            || SCIPsetIsEQ(set, var->locdom.ub,
+            || SCIPsetIsFeasEQ(set, var->locdom.ub,
                var->data.aggregate.var->locdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
@@ -5983,7 +5985,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
          /* a < 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
-            || SCIPsetIsEQ(set, var->locdom.ub,
+            || SCIPsetIsFeasEQ(set, var->locdom.ub,
                var->data.aggregate.var->locdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;

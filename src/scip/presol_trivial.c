@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.35 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.36 2010/05/28 15:03:20 bzfwinkm Exp $"
 
 /**@file   presol_trivial.c
  * @ingroup PRESOLVERS
@@ -175,7 +175,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
          }
 
          /* fix variables with equal bounds */
-         if( SCIPisFeasEQ(scip, lb, ub) )
+         if( SCIPisEQ(scip, lb, ub) )
          {
             SCIP_Real fixval;
 

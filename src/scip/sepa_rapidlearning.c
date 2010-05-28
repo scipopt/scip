@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.9 2010/05/19 12:38:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.10 2010/05/28 15:03:20 bzfwinkm Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -547,7 +547,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 	 SCIPdebugMessage("Try to create new solution by copying subscip solution.\n");
          SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
       }
-      if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i]), SCIPgetSolOrigObj(subscip, subsols[0])) )
+      if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;
    }
 
