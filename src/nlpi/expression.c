@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.8 2010/05/27 09:53:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.9 2010/05/29 12:35:28 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -1791,9 +1791,9 @@ SCIP_Bool SCIPquadelemSortedFind(
  * Assumes that elements have been sorted before.
  */
 void SCIPquadelemSqueeze(
-   SCIP_QUADELEM*        quadelems,          /** array of quadratic elements */
-   int                   nquadelems,         /** number of quadratic elements */
-   int*                  nquadelemsnew       /** pointer to store new (reduced) number of quadratic elements */
+   SCIP_QUADELEM*        quadelems,          /**< array of quadratic elements */
+   int                   nquadelems,         /**< number of quadratic elements */
+   int*                  nquadelemsnew       /**< pointer to store new (reduced) number of quadratic elements */
 )
 {
    int i;
