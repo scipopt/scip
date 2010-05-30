@@ -596,7 +596,7 @@ heuristics/nlp/priority = -2000000
 
 # frequency for calling primal heuristic <nlp> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
-heuristics/nlp/freq = 10
+heuristics/nlp/freq = 1
 
 # frequency offset for calling primal heuristic <nlp>
 # [type: int, range: [0,2147483647], default: 0]
