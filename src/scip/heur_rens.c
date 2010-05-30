@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.36 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.37 2010/05/30 12:30:12 bzfviger Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -329,7 +329,7 @@ SCIP_RETCODE SCIPapplyRens(
    {
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", &success) );
    }
-   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
+   SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
    
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);

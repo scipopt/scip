@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.64 2010/05/27 08:33:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.65 2010/05/30 12:30:11 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -662,12 +662,12 @@ SCIP_RETCODE applyVarBoundConstraints(
          
          /* remember that a bound change for variable var is now stored at position varbnd */
          SCIP_CALL( SCIPhashmapInsert(varmap, var, (void*)(size_t)(varcnt+1)) );
-         
+#if 0
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g\n",
             SCIPconsGetName(cons), SCIPvarGetName(var), varidx[varcnt],
             varlb[varcnt], varub[varcnt], SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
             SCIPgetSolVal(scip, refpoint, SCIPgetVbdvarVarbound(scip, cons)) );
-         
+#endif
          ++varcnt;
       }
       else
@@ -695,11 +695,12 @@ SCIP_RETCODE applyVarBoundConstraints(
          varub[idx_] = MIN(varub[idx_],rhs);
          if( varlb[idx_] > varub[idx_] )
             varlb[idx_] = varub[idx_];
-   
+#if 0
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g  [updated]\n",
             SCIPconsGetName(cons), SCIPvarGetName(var), varidx[idx_],
             varlb[idx_], varub[idx_], SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
             SCIPgetSolVal(scip, refpoint, SCIPgetVbdvarVarbound(scip, cons)) );
+#endif
       }
    }
    
@@ -983,7 +984,7 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
    SCIP_CALL( SCIPnlpiSolve(heurdata->nlpi, heurdata->nlpiprob) );
 
-   SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d\n", 
+   SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d\n",
       SCIPnlpiGetTermstat(heurdata->nlpi, heurdata->nlpiprob), SCIPnlpiGetSolstat(heurdata->nlpi, heurdata->nlpiprob));
    
    if( SCIPnlpiGetTermstat(heurdata->nlpi, heurdata->nlpiprob) >= SCIP_NLPTERMSTAT_MEMERR )
@@ -1041,6 +1042,8 @@ SCIP_RETCODE SCIPapplyNlpHeur(
 
          /* solve again */
          SCIP_CALL( SCIPnlpiSolve(heurdata->nlpi, heurdata->nlpiprob) );
+         SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d\n",
+            SCIPnlpiGetTermstat(heurdata->nlpi, heurdata->nlpiprob), SCIPnlpiGetSolstat(heurdata->nlpi, heurdata->nlpiprob));
          SCIP_CALL( SCIPnlpiGetStatistics(heurdata->nlpi, heurdata->nlpiprob, heurdata->nlpstatistics) );
          if( iterused != NULL )
             *iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
@@ -1256,7 +1259,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
          if( SCIPgetNNodes(scip) > 1 || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
          {
             *result = SCIP_DELAYED;
-            SCIPdebugMessage("NLP heuristic delayed because no start candidate given and no LP solution available\n");
+            SCIPdebugMessage("NLP heuristic delayed because no start candidate given and no LP solution available; LP status = %d\n", SCIPgetLPSolstat(scip));
             return SCIP_OKAY;
          }
          else
@@ -1502,6 +1505,8 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    if( heurdata->nlpi == NULL )
       return SCIP_OKAY;
    
+   SCIPdebugMessage("consider solution candidate with violation %g and objective %g\n", violation, SCIPgetSolTransObj(scip, solcand));
+
    /* if we have no point yet, or the new point has a lower constraint violation, or it has a better objective function value,
     * then take the new point */
    if( heurdata->startcand == NULL || SCIPisGT(scip, heurdata->startcandviol, violation) ||
