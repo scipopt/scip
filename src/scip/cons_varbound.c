@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.92 2010/05/04 13:28:33 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.93 2010/05/30 12:28:36 bzfviger Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -1377,7 +1377,14 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
             sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);   
             
             SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
-            SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", sum - consdata->rhs);
+            if( !SCIPisFeasGE(scip, sum, consdata->lhs) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - sum);
+            }
+            if( !SCIPisFeasLE(scip, sum, consdata->rhs) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", sum - consdata->rhs);
+            }
          }
          return SCIP_OKAY;
       }
