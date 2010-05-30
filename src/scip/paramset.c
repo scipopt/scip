@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.68 2010/05/25 09:36:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.69 2010/05/30 14:23:33 bzfviger Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2540,9 +2540,6 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingAggressive(
    
    /* explicitly change parameters of knapsack constraint handler */
    SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/simplifyinequalities", TRUE, quiet) );
-   
-   /* explicitly change parameters of quadratic constraint handler */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/quadratic/disaggregate", TRUE, quiet) );
    
    /* explicitly change parameters of presolver boundshift */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quiet) );
