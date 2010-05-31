@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.8 2010/05/29 12:35:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.9 2010/05/31 15:13:07 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -219,10 +219,31 @@ int SCIPexprtreeGetNVars(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
+/** returns number of parameters in expression tree */
+extern
+int SCIPexprtreeGetNParams(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+);
+
 /** returns values of parameters or NULL if none */
 extern
 SCIP_Real* SCIPexprtreeGetParamVals(
    SCIP_EXPRTREE*        tree                /**< expression tree */
+);
+
+/** sets value of a single parameter in expression tree */
+extern
+void SCIPexprtreeSetParamVal(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int                   paramidx,           /**< index of parameter */
+   SCIP_Real             paramval            /**< new value of parameter */
+);
+
+/** sets values of all parameters in expression tree */
+extern
+void SCIPexprtreeSetParamVals(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            paramvals           /**< new values of parameters */
 );
 
 /** gets data of expression tree interpreter

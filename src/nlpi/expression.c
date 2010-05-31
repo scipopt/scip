@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.9 2010/05/29 12:35:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.10 2010/05/31 15:13:07 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -1490,6 +1490,16 @@ int SCIPexprtreeGetNVars(
    return tree->nvars;
 }
 
+/** returns number of parameters in expression tree */
+int SCIPexprtreeGetNParams(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+)
+{
+   assert(tree != NULL);
+
+   return tree->nparams;
+}
+
 /** returns values of parameters or NULL if none */
 SCIP_Real* SCIPexprtreeGetParamVals(
    SCIP_EXPRTREE*        tree                /**< expression tree */
@@ -1498,6 +1508,34 @@ SCIP_Real* SCIPexprtreeGetParamVals(
    assert(tree != NULL);
    
    return tree->params;
+}
+
+/** sets value of a single parameter in expression tree */
+void SCIPexprtreeSetParamVal(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int                   paramidx,           /**< index of parameter */
+   SCIP_Real             paramval            /**< new value of parameter */
+)
+{
+   assert(tree != NULL);
+   assert(paramidx >= 0);
+   assert(paramidx < tree->nparams);
+   assert(tree->params != NULL);
+
+   tree->params[paramidx] = paramval;
+}
+
+/** sets values of all parameters in expression tree */
+void SCIPexprtreeSetParamVals(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real*            paramvals           /**< new values of parameters */
+)
+{
+   assert(tree != NULL);
+   assert(paramvals != NULL);
+   assert(tree->params != NULL);
+
+   BMScopyMemoryArray(tree->params, paramvals, tree->nparams);
 }
 
 /** gets data of expression tree interpreter
