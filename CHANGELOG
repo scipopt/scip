@@ -207,6 +207,7 @@ parameters:
 - added parameter <misc/permutationseed> to change the permutation seed value for permuting the problem after the problem is transformed (-1 means no permutation)
 - added parameter <heuristics/nlp/nlpsolver> to specify name of NLP solver to use
 - added parameter <heuristics/nlp/nlpoptfile> to specify name of (NLP solver specific) option file
+- added parameter <heuristics/nlp/runalways> to specify that NLP solver should be run everytime the heuristic is called and a start candidate is available
 - added parameter <constraints/knapsack/dualpresolving> to switch dualpresolving on/off inside the knapsack constraint handler, default is TRUE
 
 SCIP version 1.2.0

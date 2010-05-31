@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.65 2010/05/30 12:30:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.66 2010/05/31 13:34:20 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -87,6 +87,7 @@ struct SCIP_HeurData
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
    int                   itermin;            /**< minimal number of iterations required to start local search */
+   SCIP_Bool             runalways;          /**< whether to run NLP heuristic always (independent of iteroffset,iterquot,itermin) */
                          
    SCIP_Bool             varboundexplicit;   /**< whether variable bound constraints should be handled explicitly before solving an NLP instead of adding them as linear constraints to to the NLP */
 };
@@ -954,7 +955,7 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    SCIP_CALL( applyIndicatorConstraints(scip, heurdata, refpoint) );
 
    /* set time and iteration limit for NLP solver */
-   if( itercontingent == -1 )
+   if( itercontingent == -1 && heurdata->nlpiterlimit > 0 )
       itercontingent = heurdata->nlpiterlimit;
 
    if( itercontingent > 0 )
@@ -1279,27 +1280,36 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       SCIPdebugMessage("have startcand from heur %s\n", SCIPsolGetHeur(heurdata->startcand) ? SCIPheurGetName(SCIPsolGetHeur(heurdata->startcand)) : "NULL");
    }
 
-   /* compute the contingent on number of iterations that the NLP solver is allowed to use
+   if( heurdata->runalways )
+   {
+      /* check if enough nodes have been processed so that we want to run the heuristic again */
+
+      /* compute the contingent on number of iterations that the NLP solver is allowed to use
       we make it depending on the current number of processed nodes */  
-   itercontingent = (SCIP_Longint)(heurdata->iterquot * SCIPgetNNodes(scip));
+      itercontingent = (SCIP_Longint)(heurdata->iterquot * SCIPgetNNodes(scip));
 
-   /* weight by previous success of heuristic */
-   itercontingent = (SCIP_Longint)(itercontingent * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   /* add the fixed offset */
-   itercontingent += heurdata->iteroffset;
-   /* substract the number of iterations used so far */
-   itercontingent -= heurdata->iterused;
+      /* weight by previous success of heuristic */
+      itercontingent = (SCIP_Longint)(itercontingent * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+      /* add the fixed offset */
+      itercontingent += heurdata->iteroffset;
+      /* substract the number of iterations used so far */
+      itercontingent -= heurdata->iterused;
 
-   if( itercontingent < heurdata->itermin )
-   {  /* not enough iterations left to start NLP solver */
-      SCIPdebugMessage("skip NLP heuristic; contingent=%"SCIP_LONGINT_FORMAT"; minimal number of iterations=%d; success ratio=%g\n", 
-         itercontingent, heurdata->itermin, (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-      return SCIP_OKAY;
+      if( itercontingent < heurdata->itermin )
+      {  /* not enough iterations left to start NLP solver */
+         SCIPdebugMessage("skip NLP heuristic; contingent=%"SCIP_LONGINT_FORMAT"; minimal number of iterations=%d; success ratio=%g\n",
+            itercontingent, heurdata->itermin, (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+         return SCIP_OKAY;
+      }
+
+      /* enforce user given iteration limit, if given */
+      if( heurdata->nlpiterlimit > 0 )
+         itercontingent = MIN(itercontingent, heurdata->nlpiterlimit);
    }
-
-   /* enforce user given iteration limit, if given */
-   if( heurdata->nlpiterlimit > 0 )
-      itercontingent = MIN(itercontingent, heurdata->nlpiterlimit);
+   else
+   {
+      itercontingent = -1;
+   }
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1408,6 +1418,10 @@ SCIP_RETCODE SCIPincludeHeurNlp(
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/itermin",
          "contingent of NLP iterations in relation to the number of nodes in SCIP",
          &heurdata->itermin,   FALSE, 300, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/runalways",
+         "whether to run NLP heuristic always if starting point available (does not use iteroffset,iterquot,itermin)",
+         &heurdata->runalways, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/varboundexplicit",
          "should variable bound constraints be handled explicitly before solving the NLP instead of adding them to the NLP?",
