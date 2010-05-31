@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.574 2010/05/31 15:49:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.575 2010/05/31 17:55:21 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12504,7 +12504,7 @@ SCIP_RETCODE SCIPchgVarObjDiveNLP(
 
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPnlpChgVarObjDive(scip->nlp, SCIPblkmem(scip), scip->set, var, coef) );
+      SCIP_CALL( SCIPnlpChgVarObjDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, var, coef) );
    }
    else
    {
@@ -12667,7 +12667,7 @@ SCIP_RETCODE SCIPchgNlRowLhs(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgNlRowLhs", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowChgLhs(nlrow, scip->set, scip->nlp, lhs) );
+   SCIP_CALL( SCIPnlrowChgLhs(nlrow, scip->set, scip->stat, scip->nlp, lhs) );
 
    return SCIP_OKAY;
 }
@@ -12681,7 +12681,7 @@ SCIP_RETCODE SCIPchgNlRowRhs(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgNlRowRhs", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowChgRhs(nlrow, scip->set, scip->nlp, rhs) );
+   SCIP_CALL( SCIPnlrowChgRhs(nlrow, scip->set, scip->stat, scip->nlp, rhs) );
 
    return SCIP_OKAY;
 }
@@ -12696,7 +12696,7 @@ SCIP_RETCODE SCIPaddLinearCoefToNlRow(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddLinearCoefToNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowAddLinearCoef(nlrow, scip->mem->solvemem, scip->set, scip->nlp, var, val) );
+   SCIP_CALL( SCIPnlrowAddLinearCoef(nlrow, scip->mem->solvemem, scip->set, scip->stat, scip->nlp, var, val) );
 
    return SCIP_OKAY;
 }
@@ -12720,7 +12720,7 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    /* add the variables to the row */
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPnlrowAddLinearCoef(nlrow, scip->mem->solvemem, scip->set, scip->nlp, vars[v], vals[v]) );
+      SCIP_CALL( SCIPnlrowAddLinearCoef(nlrow, scip->mem->solvemem, scip->set, scip->stat, scip->nlp, vars[v], vals[v]) );
    }
 
    return SCIP_OKAY;
@@ -12775,7 +12775,7 @@ SCIP_RETCODE SCIPaddQuadElementToNlRow(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddQuadElementToNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->solvemem, scip->set, scip->nlp, quadelem) );
+   SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->solvemem, scip->set, scip->stat, scip->nlp, quadelem) );
 
    return SCIP_OKAY;
 }
@@ -12798,7 +12798,7 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
    SCIP_CALL( SCIPnlrowEnsureQuadElementsSize(nlrow, scip->mem->solvemem, scip->set, SCIPnlrowGetNQuadElems(nlrow) + nquadelems) );
    for( v = 0; v < nquadelems; ++v )
    {
-      SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->solvemem, scip->set, scip->nlp, quadelems[v]) );
+      SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->solvemem, scip->set, scip->stat, scip->nlp, quadelems[v]) );
    }
 
    return SCIP_OKAY;
@@ -12813,7 +12813,7 @@ SCIP_RETCODE SCIPsetNlRowExprtree(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNlRowExprtree", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowChgExprtree(nlrow, scip->mem->solvemem, scip->nlp, exprtree) );
+   SCIP_CALL( SCIPnlrowChgExprtree(nlrow, scip->mem->solvemem, scip->set, scip->stat, scip->nlp, exprtree) );
 
    return SCIP_OKAY;
 }
@@ -12828,7 +12828,7 @@ SCIP_RETCODE SCIPsetNlRowExprtreeParam(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNlRowExprtreeParam", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowChgExprtreeParam(nlrow, scip->mem->solvemem, scip->nlp, paramidx, paramval) );
+   SCIP_CALL( SCIPnlrowChgExprtreeParam(nlrow, scip->mem->solvemem, scip->set, scip->stat, scip->nlp, paramidx, paramval) );
 
    return SCIP_OKAY;
 }
@@ -12842,7 +12842,7 @@ SCIP_RETCODE SCIPsetNlRowExprtreeParams(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNlRowExprtreeParams", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowChgExprtreeParams(nlrow, scip->mem->solvemem, scip->nlp, paramvals) );
+   SCIP_CALL( SCIPnlrowChgExprtreeParams(nlrow, scip->mem->solvemem, scip->set, scip->stat, scip->nlp, paramvals) );
 
    return SCIP_OKAY;
 }

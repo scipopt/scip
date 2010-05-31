@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.4 2010/05/31 17:55:21 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -86,6 +86,13 @@ int SCIPnlrowGetNQuadVars(
 extern
 SCIP_VAR** SCIPnlrowGetQuadVars(
    SCIP_NLROW*           nlrow               /**< NLP row */
+   );
+
+/** gives position of variable in quadvars array of row, or -1 if not found */
+extern
+int SCIPnlrowSearchQuadVar(
+   SCIP_NLROW*           nlrow,                /**< nonlinear row */
+   SCIP_VAR*             var                   /**< variable to search for */
    );
 
 /** gets number of quadratic elements in quadratic part */

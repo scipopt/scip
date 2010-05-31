@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.4 2010/05/31 15:49:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.5 2010/05/31 17:55:21 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -117,6 +117,7 @@ SCIP_RETCODE SCIPnlrowAddLinearCoef(
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_VAR*             var,                /**< variable */
    SCIP_Real             val                 /**< value of coefficient */
@@ -127,6 +128,7 @@ extern
 SCIP_RETCODE SCIPnlrowDelLinearCoef(
    SCIP_NLROW*           nlrow,              /**< nonlinear row to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_VAR*             var                 /**< coefficient to be deleted */
    );
@@ -137,6 +139,7 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_VAR*             var,                /**< variable */
    SCIP_Real             coef                /**< new value of coefficient */
@@ -149,13 +152,6 @@ SCIP_RETCODE SCIPnlrowEnsureQuadVarsSize(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
-   );
-
-/** gives position of variable in quadvars array of row, or -1 if not found */
-extern
-int SCIPnlrowSearchQuadVar(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   SCIP_VAR*             var                   /**< variable to search for */
    );
 
 /** adds variable to quadvars array of row */
@@ -182,6 +178,7 @@ SCIP_RETCODE SCIPnlrowAddQuadElement(
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_QUADELEM         elem                /**< quadratic element to add */
    );
@@ -191,6 +188,7 @@ extern
 SCIP_RETCODE SCIPnlrowDelQuadElement(
    SCIP_NLROW*           nlrow,              /**< nonlinear row to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    int                   idx1,               /**< index of first variable in element */
    int                   idx2                /**< index of second variable in element */
@@ -202,6 +200,7 @@ SCIP_RETCODE SCIPnlrowChgQuadElem(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_QUADELEM         elem                /**< new quadratic element */
    );
@@ -211,6 +210,8 @@ extern
 SCIP_RETCODE SCIPnlrowChgExprtree(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL to delete current one */
    );
@@ -220,6 +221,8 @@ extern
 SCIP_RETCODE SCIPnlrowChgExprtreeParam(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    int                   paramidx,           /**< index of paramater in expression tree's parameter array */
    SCIP_Real             paramval            /**< new value of parameter */
@@ -230,8 +233,20 @@ extern
 SCIP_RETCODE SCIPnlrowChgExprtreeParams(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real*            paramvals           /**< new values of parameters */
+   );
+
+/** changes constant of nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowChgConstant(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_Real             constant            /**< new constant */
    );
 
 /** changes left hand side of nonlinear row */
@@ -239,6 +254,7 @@ extern
 SCIP_RETCODE SCIPnlrowChgLhs(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real             lhs                 /**< new left hand side */
    );
@@ -248,6 +264,7 @@ extern
 SCIP_RETCODE SCIPnlrowChgRhs(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real             rhs                 /**< new right hand side */
    );
@@ -584,6 +601,7 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_VAR*             var,                /**< variable which coefficient to change */
    SCIP_Real             coef                /**< new linear coefficient of variable in objective */
    );
