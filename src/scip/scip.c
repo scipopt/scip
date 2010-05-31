@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.573 2010/05/28 15:57:39 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.574 2010/05/31 15:49:21 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12722,6 +12722,127 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    {
       SCIP_CALL( SCIPnlrowAddLinearCoef(nlrow, scip->mem->solvemem, scip->set, scip->nlp, vars[v], vals[v]) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** adds quadratic variable to the nonlinear row
+ * after adding a quadratic variable, it can be used to add quadratic elements */
+SCIP_RETCODE SCIPaddQuadVarToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddQuadVarToNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, scip->mem->solvemem, scip->set, var) );
+
+   return SCIP_OKAY;
+}
+
+/** adds quadratic variables to the nonlinear row
+ * after adding quadratic variables, they can be used to add quadratic elements */
+SCIP_RETCODE SCIPaddQuadVarsToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   nvars,              /**< number of problem variables */
+   SCIP_VAR**            vars                /**< problem variables */
+   )
+{
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddQuadVarsToNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowEnsureQuadVarsSize(nlrow, scip->mem->solvemem, scip->set, SCIPnlrowGetNQuadVars(nlrow) + nvars) );
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, scip->mem->solvemem, scip->set, vars[v]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** add a quadratic element to the nonlinear row
+ * variable indices of the quadratic element need to be relative to quadratic variables array of row */
+SCIP_RETCODE SCIPaddQuadElementToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_QUADELEM         quadelem            /**< quadratic element */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddQuadElementToNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->solvemem, scip->set, scip->nlp, quadelem) );
+
+   return SCIP_OKAY;
+}
+
+/** adds quadratic elements to the nonlinear row
+ * variable indices of the quadratic elements need to be relative to quadratic variables array of row */
+SCIP_RETCODE SCIPaddQuadElementsToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   nquadelems,         /**< number of quadratic elements */
+   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
+   )
+{
+   int v;
+
+   assert(nquadelems == 0 || quadelems != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddQuadElementsToNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowEnsureQuadElementsSize(nlrow, scip->mem->solvemem, scip->set, SCIPnlrowGetNQuadElems(nlrow) + nquadelems) );
+   for( v = 0; v < nquadelems; ++v )
+   {
+      SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->solvemem, scip->set, scip->nlp, quadelems[v]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets or deletes expression tree in the nonlinear row */
+SCIP_RETCODE SCIPsetNlRowExprtree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRTREE*        exprtree            /**< expression tree, or NULL */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNlRowExprtree", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowChgExprtree(nlrow, scip->mem->solvemem, scip->nlp, exprtree) );
+
+   return SCIP_OKAY;
+}
+
+/** sets a parameter of expression tree in the nonlinear row */
+SCIP_RETCODE SCIPsetNlRowExprtreeParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   paramidx,           /**< index of paramater in expression tree */
+   SCIP_Real             paramval            /**< new value of parameter in expression tree */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNlRowExprtreeParam", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowChgExprtreeParam(nlrow, scip->mem->solvemem, scip->nlp, paramidx, paramval) );
+
+   return SCIP_OKAY;
+}
+
+/** sets parameters of expression tree in the nonlinear row */
+SCIP_RETCODE SCIPsetNlRowExprtreeParams(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_Real*            paramvals           /**< new values of parameter in expression tree */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNlRowExprtreeParams", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowChgExprtreeParams(nlrow, scip->mem->solvemem, scip->nlp, paramvals) );
 
    return SCIP_OKAY;
 }

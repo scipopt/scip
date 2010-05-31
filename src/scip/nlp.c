@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.4 2010/05/31 15:49:19 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -120,6 +120,60 @@ void nlrowQuadVarChanged(
    {
       /* @todo make this possible */
       SCIPerrorMessage("cannot change coefficients in a row while in NLP\n");
+      SCIPABORT();
+   }
+
+   nlrow->activity = SCIP_INVALID;
+   nlrow->validactivitynlp = -1;
+   nlrow->pseudoactivity = SCIP_INVALID;
+   nlrow->validpsactivitydomchg = -1;
+   nlrow->minactivity = SCIP_INVALID;
+   nlrow->maxactivity = SCIP_INVALID;
+   nlrow->validactivitybdsdomchg = -1;
+}
+
+/** announces, that an expression tree changed */
+static
+void nlrowExprtreeChanged(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(nlrow != NULL);
+
+   if( nlrow->nlpindex >= -1 )
+   {
+      /* @todo make this possible? */
+      SCIPerrorMessage("cannot change expression tree in a row while in NLP\n");
+      SCIPABORT();
+   }
+
+   nlrow->activity = SCIP_INVALID;
+   nlrow->validactivitynlp = -1;
+   nlrow->pseudoactivity = SCIP_INVALID;
+   nlrow->validpsactivitydomchg = -1;
+   nlrow->minactivity = SCIP_INVALID;
+   nlrow->maxactivity = SCIP_INVALID;
+   nlrow->validactivitybdsdomchg = -1;
+}
+
+/** announces, that a parameter in an expression tree has changed */
+static
+void nlrowExprtreeParamChanged(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   int                   paramidx,           /**< index of parameter which has changed, or -1 if all changed */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(nlrow != NULL);
+   assert(nlrow->exprtree != NULL);
+   assert(paramidx >= -1);
+   assert(paramidx <  SCIPexprtreeGetNParams(nlrow->exprtree));
+
+   if( nlrow->nlpindex >= -1 )
+   {
+      /* @todo make this possible? */
+      SCIPerrorMessage("cannot change expression tree parameters in a row while in NLP\n");
       SCIPABORT();
    }
 
@@ -312,10 +366,35 @@ SCIP_RETCODE nlrowChgLinearCoefPos(
    return SCIP_OKAY;
 }
 
-
-/** sorts linear part of row entries such that lower variable indices precede higher ones */
+/** sets up the variable hash for quadratic variables, if the number of variables exceeds some given threshold */
 static
-void nlrowSortQuad(
+SCIP_RETCODE nlrowSetupQuadVarsHash(
+   SCIP_NLROW*           nlrow,                /**< nonlinear row */
+   BMS_BLKMEM*           blkmem                /**< block memory */
+   )
+{
+   int i = 0;
+   assert(blkmem != NULL);
+   assert(nlrow  != NULL);
+   assert(nlrow->quadvarshash != NULL);
+
+   if( nlrow->nquadvars < 3 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPhashmapCreate(&nlrow->quadvarshash, blkmem, SCIPcalcHashtableSize(nlrow->nquadvars)) );
+   assert(nlrow->quadvarshash != NULL);
+
+   for( i = 0; i < nlrow->nquadvars; ++i )
+   {
+      SCIP_CALL( SCIPhashmapInsert(nlrow->quadvarshash, (void*)nlrow->quadvars[i], (void*)(size_t)i) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sorts quadratic part of row entries */
+static
+void nlrowSortQuadElem(
    SCIP_NLROW*           nlrow                 /**< nonlinear row to be sorted */
    )
 {
@@ -350,7 +429,7 @@ int nlrowSearchQuadElem(
 
    pos = -1;
 
-   nlrowSortQuad(nlrow);
+   nlrowSortQuadElem(nlrow);
    SCIPquadelemSortedFind(nlrow->quadelems, idx1, idx2, nlrow->nquadelems, &pos);
 
    return pos;
@@ -397,7 +476,7 @@ SCIP_RETCODE nlrowAddQuadElement(
    assert(elem.idx2 <  nlrow->nquadvars);
    assert(!SCIPsetIsZero(set, elem.coef));
 
-   SCIP_CALL( SCIPnlrowEnsureQuadElemsSize(nlrow, blkmem, set, nlrow->nquadelems+1) );
+   SCIP_CALL( SCIPnlrowEnsureQuadElementsSize(nlrow, blkmem, set, nlrow->nquadelems+1) );
    assert(nlrow->quadelems != NULL);
 
    pos = nlrow->nquadelems;
@@ -480,29 +559,6 @@ SCIP_RETCODE nlrowChgQuadElemPos(
 
    return SCIP_OKAY;
 }
-
-#if 0
-/** searches quadratic variable in nonlinear row, returns position in quadvars vector or -1 if not found */
-static
-int nlrowSearchQuadVar(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row to be searched in */
-   SCIP_VAR*             var                 /**< variable to be searched for */
-   )
-{
-   int i;
-
-   assert(nlrow != NULL);
-   assert(var   != NULL);
-
-   /*@todo implement sorting of quadratic coefficients */
-
-   for( i = 0; i < nlrow->nquadvars; ++i )
-      if( nlrow->quadvars[i] == var )
-         return i;
-
-   return -1;
-}
-#endif
 
 /** calculates minimal and maximal activity of row w.r.t. the variable's bounds */
 static
@@ -651,20 +707,32 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->linvarssorted = TRUE;
    }
 
-   /* quadratic part */
-   (*nlrow)->nquadvars  = nquadvars;
-   (*nlrow)->nquadelems = nquadelems;
-   (*nlrow)->quadelemssize = nquadelems;
+   /* quadratic variables */
+   (*nlrow)->nquadvars    = nquadvars;
+   (*nlrow)->quadvarssize = nquadvars;
    if( nquadvars > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->quadvars,  quadvars,  nquadvars) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->quadvars, quadvars, nquadvars) );
+      SCIP_CALL( nlrowSetupQuadVarsHash(*nlrow, blkmem) );
+   }
+   else
+   {
+      (*nlrow)->quadvars     = NULL;
+      (*nlrow)->quadvarshash = NULL;
+   }
+
+   /* quadratic elements */
+   (*nlrow)->nquadelems = nquadelems;
+   (*nlrow)->quadelemssize = nquadelems;
+   if( nquadelems > 0 )
+   {
+      assert(nquadvars > 0);
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->quadelems, quadelems, nquadelems) );
       (*nlrow)->quadelemssorted = FALSE;
    }
    else
    {
-      (*nlrow)->quadvars  = NULL;
-      (*nlrow)->quadelems = NULL;
+      (*nlrow)->quadelems    = NULL;
       (*nlrow)->quadelemssorted = TRUE;
    }
 
@@ -755,8 +823,10 @@ SCIP_RETCODE SCIPnlrowFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->lincoefs,  (*nlrow)->linvarssize);
 
    /* quadratic part */
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->quadvars,  (*nlrow)->nquadvars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->quadvars,  (*nlrow)->quadvarssize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->quadelems, (*nlrow)->quadelemssize);
+   if( (*nlrow)->quadvarshash != NULL )
+      SCIPhashmapFree(&(*nlrow)->quadvarshash);
 
    /* nonquadratic part */
    if( (*nlrow)->exprtree != NULL )
@@ -911,8 +981,91 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    return SCIP_OKAY;
 }
 
+/** ensures, that quadratic variables array of nonlinear row can store at least num entries */
+SCIP_RETCODE SCIPnlrowEnsureQuadVarsSize(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(nlrow != NULL);
+   assert(nlrow->nquadvars <= nlrow->quadvarssize);
+
+   if( num > nlrow->quadvarssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &nlrow->quadvars, nlrow->quadvarssize, newsize) );
+      nlrow->quadvarssize = newsize;
+   }
+   assert(num <= nlrow->quadvarssize);
+
+   return SCIP_OKAY;
+}
+
+/** gives position of variable in quadvars array of row, or -1 if not found */
+int SCIPnlrowSearchQuadVar(
+   SCIP_NLROW*           nlrow,                /**< nonlinear row */
+   SCIP_VAR*             var                   /**< variable to search for */
+   )
+{
+   int pos;
+
+   assert(nlrow != NULL);
+   assert(var   != NULL);
+
+   if( nlrow->quadvarshash != NULL )
+   {
+      pos = SCIPhashmapExists(nlrow->quadvarshash, var) ? (int)(size_t)SCIPhashmapGetImage(nlrow->quadvarshash, var) : -1;
+   }
+   else
+   {
+      for( pos = nlrow->nquadvars-1; pos >= 0; --pos )
+         if( nlrow->quadvars[pos] == var )
+            break;
+   }
+
+   assert(pos == -1 || (pos < nlrow->nquadvars && nlrow->quadvars[pos] == var));
+
+   return pos;
+}
+
+/** adds variable to quadvars array of row */
+SCIP_RETCODE SCIPnlrowAddQuadVar(
+   SCIP_NLROW*           nlrow,                /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,               /**< block memory */
+   SCIP_SET*             set,                  /**< global SCIP settings */
+   SCIP_VAR*             var                   /**< variable to search for */
+   )
+{
+   assert(blkmem != NULL);
+   assert(nlrow  != NULL);
+   assert(var    != NULL);
+
+   /* assert that variable has not been added already */
+   assert(SCIPnlrowSearchQuadVar(nlrow, var) == -1);
+
+   SCIP_CALL( SCIPnlrowEnsureQuadVarsSize(nlrow, blkmem, set, nlrow->nquadvars+1) );
+   nlrow->quadvars[nlrow->nquadvars] = var;
+   nlrow->nquadvars++;
+
+   if( nlrow->quadvarshash != NULL )
+   {
+      SCIP_CALL( nlrowSetupQuadVarsHash(nlrow, blkmem) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPhashmapInsert(nlrow->quadvarshash, (void*)var, (void*)(size_t)(nlrow->nquadvars-1)) );
+   }
+   assert(SCIPnlrowSearchQuadVar(nlrow, var) == nlrow->nquadvars);
+
+   return SCIP_OKAY;
+}
+
 /** ensures, that quadratic elements array of nonlinear row can store at least num entries */
-SCIP_RETCODE SCIPnlrowEnsureQuadElemsSize(
+SCIP_RETCODE SCIPnlrowEnsureQuadElementsSize(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1028,6 +1181,77 @@ SCIP_RETCODE SCIPnlrowChgLhs(
       nlrow->lhs = lhs;
       SCIP_CALL( nlrowSideChanged(nlrow, set, nlp, SCIP_SIDETYPE_LEFT) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** replaces an expression tree in nonlinear row */
+SCIP_RETCODE SCIPnlrowChgExprtree(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_EXPRTREE*        exprtree            /**< new expression tree */
+   )
+{
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+
+   /* free previous expression tree */
+   if( nlrow->exprtree != NULL )
+   {
+      SCIP_CALL( SCIPexprtreeFree(&nlrow->exprtree) );
+      assert(nlrow->exprtree == NULL);
+   }
+
+   /* adds new expression tree */
+   if( exprtree != NULL )
+   {
+      SCIP_CALL( SCIPexprtreeCopy(blkmem, &nlrow->exprtree, exprtree) );
+   }
+
+   /* notify row about the change */
+   nlrowExprtreeChanged(nlrow, nlp);
+
+   return SCIP_OKAY;
+}
+
+/** changes a parameter in an expression of a nonlinear row */
+SCIP_RETCODE SCIPnlrowChgExprtreeParam(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int                   paramidx,           /**< index of paramater in expression tree's parameter array */
+   SCIP_Real             paramval            /**< new value of parameter */
+   )
+{
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+   assert(nlrow->exprtree != NULL);
+
+   SCIPexprtreeSetParamVal(nlrow->exprtree, paramidx, paramval);
+
+   /* notify row about the change */
+   nlrowExprtreeParamChanged(nlrow, paramidx, nlp);
+
+   return SCIP_OKAY;
+}
+
+/** changes all parameters in an expression of a nonlinear row */
+SCIP_RETCODE SCIPnlrowChgExprtreeParams(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_Real*            paramvals           /**< new values of parameters */
+   )
+{
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+   assert(nlrow->exprtree != NULL);
+
+   SCIPexprtreeSetParamVals(nlrow->exprtree, paramvals);
+
+   /* notify row about the change */
+   nlrowExprtreeParamChanged(nlrow, -1, nlp);
 
    return SCIP_OKAY;
 }
@@ -2065,8 +2289,7 @@ SCIP_RETCODE nlpDelVarPos(
          for( j = 0; j < nlrow->nlinvars; ++j )
             assert( nlrow->linvars[j] != var );
 
-      for( j = 0; j < nlrow->nquadvars; ++j )
-         assert( nlrow->quadvars[j] != var );
+      assert( SCIPnlrowSearchQuadVar(nlrow, var) == -1);
 
       assert(nlrow->exprtree == NULL || SCIPexprtreeFindVar(nlrow->exprtree, var) == -1);
    }

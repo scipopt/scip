@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.4 2010/05/31 15:49:20 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -142,9 +142,34 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    SCIP_Real             coef                /**< new value of coefficient */
    );
 
+/** ensures, that quadratic variables array of nonlinear row can store at least num entries */
+extern
+SCIP_RETCODE SCIPnlrowEnsureQuadVarsSize(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   );
+
+/** gives position of variable in quadvars array of row, or -1 if not found */
+extern
+int SCIPnlrowSearchQuadVar(
+   SCIP_NLROW*           nlrow,                /**< nonlinear row */
+   SCIP_VAR*             var                   /**< variable to search for */
+   );
+
+/** adds variable to quadvars array of row */
+extern
+SCIP_RETCODE SCIPnlrowAddQuadVar(
+   SCIP_NLROW*           nlrow,                /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,               /**< block memory */
+   SCIP_SET*             set,                  /**< global SCIP settings */
+   SCIP_VAR*             var                   /**< variable to search for */
+   );
+
 /** ensures, that quadratic elements array of nonlinear row can store at least num entries */
 extern
-SCIP_RETCODE SCIPnlrowEnsureQuadElemsSize(
+SCIP_RETCODE SCIPnlrowEnsureQuadElementsSize(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -179,6 +204,34 @@ SCIP_RETCODE SCIPnlrowChgQuadElem(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_QUADELEM         elem                /**< new quadratic element */
+   );
+
+/** replaces or deletes an expression tree in nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowChgExprtree(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL to delete current one */
+   );
+
+/** changes a parameter in an expression of a nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowChgExprtreeParam(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int                   paramidx,           /**< index of paramater in expression tree's parameter array */
+   SCIP_Real             paramval            /**< new value of parameter */
+   );
+
+/** changes all parameters in an expression of a nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowChgExprtreeParams(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_Real*            paramvals           /**< new values of parameters */
    );
 
 /** changes left hand side of nonlinear row */

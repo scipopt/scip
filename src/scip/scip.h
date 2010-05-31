@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.379 2010/05/27 09:55:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.380 2010/05/31 15:49:21 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4650,6 +4650,69 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
    SCIP_Real*            vals                /**< values of coefficients in linear part of row */
+   );
+
+/** adds quadratic variable to the nonlinear row
+ * after adding a quadratic variable, it can be used to add quadratic elements */
+extern
+SCIP_RETCODE SCIPaddQuadVarToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** adds quadratic variables to the nonlinear row
+ * after adding quadratic variables, they can be used to add quadratic elements */
+extern
+SCIP_RETCODE SCIPaddQuadVarsToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   nvars,              /**< number of problem variables */
+   SCIP_VAR**            vars                /**< problem variables */
+   );
+
+/** add a quadratic element to the nonlinear row
+ * variable indices of the quadratic element need to be relative to quadratic variables array of row */
+extern
+SCIP_RETCODE SCIPaddQuadElementToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_QUADELEM         quadelem            /**< quadratic element */
+   );
+
+/** adds quadratic elements to the nonlinear row
+ * variable indices of the quadratic elements need to be relative to quadratic variables array of row */
+extern
+SCIP_RETCODE SCIPaddQuadElementsToNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   nquadelems,         /**< number of quadratic elements */
+   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
+   );
+
+/** sets or deletes expression tree in the nonlinear row */
+extern
+SCIP_RETCODE SCIPsetNlRowExprtree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_EXPRTREE*        exprtree            /**< expression tree, or NULL */
+   );
+
+/** sets a parameter of expression tree in the nonlinear row */
+extern
+SCIP_RETCODE SCIPsetNlRowExprtreeParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   int                   paramidx,           /**< index of paramater in expression tree */
+   SCIP_Real             paramval            /**< new value of parameter in expression tree */
+   );
+
+/** sets parameters of expression tree in the nonlinear row */
+extern
+SCIP_RETCODE SCIPsetNlRowExprtreeParams(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_Real*            paramvals           /**< new values of parameter in expression tree */
    );
 
 /** recalculates the activity of a nonlinear row in the last NLP solution */

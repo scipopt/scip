@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlp.h,v 1.3 2010/05/27 09:55:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlp.h,v 1.4 2010/05/31 15:49:22 bzfviger Exp $"
 
 /**@file   struct_nlp.h
  * @brief  datastructures for NLP management
@@ -78,7 +78,9 @@ struct SCIP_NlRow
 
    /* quadratic part */
    int                   nquadvars;          /**< number of variables in quadratic terms */
+   int                   quadvarssize;       /**< size of array storing quadratic variables of row */
    SCIP_VAR**            quadvars;           /**< variables in quadratic term */
+   SCIP_HASHMAP*         quadvarshash;       /**< hash map from variable to indices in quadvars */
    int                   nquadelems;         /**< number of entries in quadratic matrix */
    int                   quadelemssize;      /**< size of quadratic elements array */
    SCIP_QUADELEM*        quadelems;          /**< entries in quadratic matrix */
