@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.100 2010/05/16 21:50:37 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.101 2010/06/01 13:07:36 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -111,6 +111,7 @@ using namespace soplex;
 /** SCIP's SoPlex class */
 class SPxSCIP : public SPxSolver
 {
+   SPxLP::SPxSense  m_sense;            /**< optimization sense */
    SLUFactor        m_slu;              /**< sparse LU factorization */
    SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
@@ -145,6 +146,7 @@ public:
           m_rowstat(NULL),
           m_colstat(NULL)
    {
+      setSense(SPxLP::MINIMIZE);
       setSolver(&m_slu);
       setTester(&m_ratio);
       setPricer(&m_price_steep);
@@ -231,6 +233,33 @@ public:
       m_rowrep = rr;
    }
 
+   SPxLP::SPxSense getSense() const
+   {
+      assert(m_sense == sense());
+      return m_sense;
+   }
+
+   void setSense(const SPxLP::SPxSense sen)
+   {
+      if( m_sense != sen )
+      {
+         m_sense = sen;
+         changeSense(sen);
+
+         /* if objective limit was set for the new sense previously, we have to apply it now */
+         if( m_sense == SPxLP::MINIMIZE && getObjUpLimit() < soplex::infinity )
+         {
+            SCIPdebugMessage("setting termination value to <%g>\n", getObjUpLimit());
+            SPxSolver::setTerminationValue(getObjUpLimit());
+         }
+         else if( m_sense == SPxLP::MAXIMIZE && getObjLoLimit() > -soplex::infinity )
+         {
+            SCIPdebugMessage("setting termination value to <%g>\n", getObjLoLimit());
+            SPxSolver::setTerminationValue(getObjLoLimit());
+         }
+      }
+   }
+
    void setProbname(const char* probname)
    {
       assert(probname != NULL);
@@ -247,6 +276,11 @@ public:
 
    void setObjLoLimit(Real limit)
    {
+      if( getSense() == SPxLP::MAXIMIZE )
+      {
+         SCIPdebugMessage("setting termination value from <%g> to <%g>\n", m_objLoLimit, limit);
+         SPxSolver::setTerminationValue(limit);
+      }
       m_objLoLimit = limit;
    }
 
@@ -257,9 +291,12 @@ public:
 
    void setObjUpLimit(Real limit)
    {
-      SCIPdebugMessage("setting termination value from <%g> to <%g>\n", m_objUpLimit, limit);
+      if( getSense() == SPxLP::MINIMIZE )
+      {
+         SCIPdebugMessage("setting termination value from <%g> to <%g>\n", m_objUpLimit, limit);
+         SPxSolver::setTerminationValue(limit);
+      }
       m_objUpLimit = limit;
-      SPxSolver::setTerminationValue(limit);
    }
 
    void trySolve()
@@ -845,7 +882,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       spx->clear();
 
       /* set objective sense */
-      spx->changeSense(spxObjsen(objsen));
+      spx->setSense(spxObjsen(objsen));
 
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
@@ -1266,7 +1303,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    if( !STRONGBRANCH_RESTOREBASIS )
       lpi->spx->restorePreStrongbranchingBasis(true);
 
-   SOPLEX_TRY( lpi->spx->changeSense(spxObjsen(objsen)) );
+   SOPLEX_TRY( lpi->spx->setSense(spxObjsen(objsen)) );
 
    return SCIP_OKAY;
 }
@@ -2554,7 +2591,7 @@ SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
    if( !(spx->getRowRep()) )
    {
       /* in column case the reduced costs are available: */
-      if (spx->spxSense() == SPxLP::MINIMIZE)
+      if (spx->getSense() == SPxLP::MINIMIZE)
 	 *val = spx->pVec()[col] - spx->maxObj()[col];
       else
 	 *val = spx->maxObj()[col] - spx->pVec()[col];
@@ -2567,7 +2604,7 @@ SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
 #if 0
       /* Here is the code necessary to compute the reduced costs for row representation: */
       SCIP_Real sign = 1.0;
-      if ( spx->spxSense() == SPxLP::MINIMIZE )
+      if ( spx->getSense() == SPxLP::MINIMIZE )
 	 sign = -1.0;
 
       if ( spx->isColBasic(col) )
