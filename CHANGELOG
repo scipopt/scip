@@ -184,6 +184,7 @@ plugins:
 - added Chvatal-Gomory cuts separated with a sub-MIP (sepa_cgmip.{c|h})
 - added reader for "Weigted Boolean Optimization" - problems (reader_wbo.{c,h}), this reader needs the reader_opb files
 - added interface to CppAD (nlpi/exprinterpret_cppad.cpp)
+- added new LP interface for SoPlex which can double check each SoPlex result against CPLEX (lpi_spxcheck.cpp)
 
 parameters: 
 - added parameter <misc/usesmalltables> which results in using smaller tables for names, cliques and cuts and improves the

@@ -1,0 +1,3847 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: lpi_spxcheck.cpp,v 1.1 2010/06/01 13:10:56 bzfgleix Exp $"
+
+/**@file   lpi_spxcheck.cpp
+ * @ingroup LPIS
+ * @brief  LP interface for SoPlex 1.4 with CPLEX double check
+ * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Ambros Gleixer
+ * @author Marc Pfetsch
+ */
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#define AUTOPRICING_ITERSWITCH          1000 /**< start with devex and switch to steepest edge after this many iterations */
+#define STRONGBRANCH_RESTOREBASIS       true /**< if true then in SCIPlpiStrongbranch() we restore the basis after the
+                                              *   down branch and after the up branch; if false only after the end of a
+                                              *   strong branching phase, which however seems to mostly increase strong
+                                              *   branching time and iterations */
+
+#define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
+#define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
+#define EXIT_AT_WRONG_RESULT            false/**< shall program be exited if CPLEX returns different result than SoPlex? */
+#define EXIT_AT_CPXERROR                false/**< shall program be exited if CPLEX returns an error? */
+
+#define CPX_CALL(x)                     do                                                                                  \
+                                        {                                                                                   \
+                                           int _cpxstat_;                                                                   \
+                                           if( (_cpxstat_ = (x)) != 0 )                                                     \
+                                           {                                                                                \
+                                              SCIPwarningMessage("CPLEX error <%d>; SoPlex result unchecked\n", _cpxstat_); \
+                                              if( EXIT_AT_CPXERROR )                                                        \
+                                              {                                                                             \
+                                                 exit(1);                                                                   \
+                                              }                                                                             \
+                                              else                                                                          \
+                                              {                                                                             \
+                                                 goto ENDCHECK;                                                             \
+                                              }                                                                             \
+                                           }                                                                                \
+                                        }                                                                                   \
+                                        while( false )
+
+/* remember the original value of the SCIP_DEBUG define and undefine it */
+#ifdef SCIP_DEBUG
+#define ___DEBUG
+#undef SCIP_DEBUG
+#endif
+
+#include "spxsolver.h"
+#include "slufactor.h"
+#include "spxsteeppr.h"
+#include "spxparmultpr.h"
+#include "spxdevexpr.h"
+#include "spxfastrt.h"
+
+/* check version */
+#if (SOPLEX_VERSION < 133)
+#error "This interface is for SoPlex version 1.4"
+#endif
+
+
+/* reset the SCIP_DEBUG define to its original SCIP value */
+#undef SCIP_DEBUG
+#ifdef ___DEBUG
+#define SCIP_DEBUG
+#undef ___DEBUG
+#endif
+
+#include "scip/message.h"
+
+/* additional includes for check functionality */
+extern "C"
+{
+#include <cplex.h>
+}
+
+/********************************************************************/
+/*----------------------------- C++ --------------------------------*/
+/********************************************************************/
+
+/* in C++ we have to use "0" instead of "(void*)0" */
+#undef NULL
+#define NULL 0
+
+#include <cassert>
+using namespace soplex;
+
+
+/** Macro for a single SoPlex call for which exceptions have to be catched - return an LP error. We
+ *  make no distinction between different exception types, e.g., between memory allocation and other
+ *  exceptions. */
+#define SOPLEX_TRY(x)  do                                               \
+   {                                                                    \
+      try                                                               \
+      {                                                                 \
+         (x);                                                           \
+      }                                                                 \
+      catch(SPxException E)                                             \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str()); \
+         return SCIP_LPERROR;                                           \
+      }                                                                 \
+   }                                                                    \
+   while( FALSE )
+
+/* Macro for a single SoPlex call for which exceptions have to be catched - abort if they
+ * arise. SCIP_ABORT() is not accessible here.*/
+#define SOPLEX_TRY_ABORT(x)  do                                         \
+   {                                                                    \
+      try                                                               \
+      {                                                                 \
+         (x);                                                           \
+      }                                                                 \
+      catch(SPxException E)                                             \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw an exception: %s\n", s.c_str()); \
+         abort();                                                       \
+      }                                                                 \
+   }                                                                    \
+   while( FALSE )
+
+
+
+/** SCIP's SoPlex class */
+class SPxSCIP : public SPxSolver
+{
+   SPxLP::SPxSense  m_sense;            /**< optimization sense */
+   SLUFactor        m_slu;              /**< sparse LU factorization */
+   SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
+   SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
+   SPxDevexPR       m_price_devex;      /**< devex pricer */
+   SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
+   char*            m_probname;         /**< problem name */
+   bool             m_fromscratch;      /**< use old basis indicator */
+   Real             m_objLoLimit;       /**< lower objective limit */
+   Real             m_objUpLimit;       /**< upper objective limit */
+   Status           m_stat;             /**< solving status */
+   bool             m_lpinfo;           /**< storing whether output is turned on */
+   bool             m_autopricing;      /**< is automatic pricing selected? */
+   int              m_autophase1iters;  /**< number of iterations spend in phase one of auto pricing */
+   bool             m_rowrep;           /**< is row representation selected? */
+   bool             m_strongbranching;  /**< was last lp solve a strong branching call? */
+   SPxSolver::VarStatus* m_rowstat;     /**< basis status of rows before starting strong branching (if m_strongbranching == true, NULL otherwise) */
+   SPxSolver::VarStatus* m_colstat;     /**< basis status of columns before starting strong branching (if m_strongbranching == true, NULL otherwise) */
+
+   CPXENVptr        m_cpxenv;           /**< CPLEX memory environment */
+   CPXLPptr         m_cpxlp;            /**< CPLEX lp structure */
+   bool             m_doublecheck;      /**< shall the SoPlex result be double checked using CPLEX? */
+
+public:
+   SPxSCIP(const char* probname = NULL)
+        : SPxSolver(LEAVE, COLUMN),
+          m_probname(0),
+          m_fromscratch(false),
+          m_objLoLimit(-soplex::infinity),
+          m_objUpLimit(soplex::infinity),
+          m_stat(NO_PROBLEM),
+          m_lpinfo(false),
+          m_autopricing(true),
+          m_autophase1iters(0),
+          m_rowrep(false),
+          m_strongbranching(false),
+          m_rowstat(NULL),
+          m_colstat(NULL),
+          m_doublecheck(false)
+   {
+      int cpxstat;
+
+      setSense(SPxLP::MINIMIZE);
+      setSolver(&m_slu);
+      setTester(&m_ratio);
+      setPricer(&m_price_steep);
+      /* no starter, no simplifier, no scaler */
+
+      if ( probname != NULL )
+         SOPLEX_TRY_ABORT( setProbname(probname) );
+
+      m_cpxenv = CPXopenCPLEX(&cpxstat);
+      assert(m_cpxenv != NULL);
+      m_cpxlp = CPXcreateprob(m_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
+      (void) CPXsetintparam(m_cpxenv, CPX_PARAM_SCRIND, 0);
+   }
+
+   virtual ~SPxSCIP()
+   {
+      if( m_probname != NULL )
+         spx_free(m_probname);  /*lint !e1551*/
+
+      freePreStrongbranchingBasis();
+
+      (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
+      (void) CPXcloseCPLEX(&m_cpxenv);
+   }
+
+   void setAutoPricer(bool initialphase)
+   {
+      if( initialphase )
+         setPricer(&m_price_devex);
+      else
+         setPricer(&m_price_steep);
+      m_autopricing = true;
+   }
+
+   void setFullPricer()
+   {
+      setPricer(&m_price_steep);
+      m_autopricing = false;
+   }
+
+   void setSteepPricer()
+   {
+      setPricer(&m_price_steep);
+      m_autopricing = false;
+   }
+
+   void setSteepQStartPricer()
+   {
+      setPricer(&m_price_steep);
+      m_autopricing = false;
+   }
+
+   void setParmultPricer()
+   {
+      setPricer(&m_price_parmult);
+      m_autopricing = false;
+   }
+
+   void setDevexPricer()
+   {
+      setPricer(&m_price_devex);
+      m_autopricing = false;
+   }
+
+   bool getFromScratch() const
+   {
+      return m_fromscratch;
+   }
+
+   void setFromScratch(bool fs)
+   {
+      m_fromscratch = fs;
+   }
+
+   bool getLpInfo() const
+   {
+      return m_lpinfo;
+   }
+
+   void setLpInfo(bool li)
+   {
+      m_lpinfo = li;
+   }
+
+   bool getRowRep() const
+   {
+      return m_rowrep;
+   }
+
+   void setRowRep(bool rr)
+   {
+      m_rowrep = rr;
+   }
+
+   SPxLP::SPxSense getSense() const
+   {
+      assert(m_sense == sense());
+      return m_sense;
+   }
+
+   void setSense(const SPxLP::SPxSense sen)
+   {
+      if( m_sense != sen )
+      {
+         m_sense = sen;
+         changeSense(sen);
+
+         /* if objective limit was set for the new sense previously, we have to apply it now */
+         if( m_sense == SPxLP::MINIMIZE && getObjUpLimit() < soplex::infinity )
+         {
+            SCIPdebugMessage("setting termination value to <%g>\n", getObjUpLimit());
+            SPxSolver::setTerminationValue(getObjUpLimit());
+         }
+         else if( m_sense == SPxLP::MAXIMIZE && getObjLoLimit() > -soplex::infinity )
+         {
+            SCIPdebugMessage("setting termination value to <%g>\n", getObjLoLimit());
+            SPxSolver::setTerminationValue(getObjLoLimit());
+         }
+      }
+   }
+
+   void setProbname(const char* probname)
+   {
+      assert(probname != NULL);
+      if( m_probname != NULL )
+         spx_free(m_probname);
+      spx_alloc(m_probname, (int)strlen(probname) + 1);
+      strcpy(m_probname, probname);
+   }
+
+   Real getObjLoLimit() const
+   {
+      return m_objLoLimit;
+   }
+
+   void setObjLoLimit(Real limit)
+   {
+      if( getSense() == SPxLP::MAXIMIZE )
+      {
+         SCIPdebugMessage("setting termination value from <%g> to <%g>\n", m_objLoLimit, limit);
+         SPxSolver::setTerminationValue(limit);
+      }
+      m_objLoLimit = limit;
+   }
+
+   Real getObjUpLimit() const
+   {
+      return m_objUpLimit;
+   }
+
+   void setObjUpLimit(Real limit)
+   {
+      if( getSense() == SPxLP::MINIMIZE )
+      {
+         SCIPdebugMessage("setting termination value from <%g> to <%g>\n", m_objUpLimit, limit);
+         SPxSolver::setTerminationValue(limit);
+      }
+      m_objUpLimit = limit;
+   }
+
+   bool getDoubleCheck() const
+   {
+      return m_doublecheck;
+   }
+
+   void setDoubleCheck(bool dc)
+   {
+      m_doublecheck = dc;
+   }
+
+   const char* spxStatusString(const SPxSolver::Status stat)
+   {
+      switch( stat )
+      {
+      case SPxSolver::ABORT_TIME:
+         return "ABORT_TIME";
+      case SPxSolver::ABORT_ITER:
+         return "ABORT_ITER";
+      case SPxSolver::ABORT_VALUE:
+         return "ABORT_VALUE";
+      case SPxSolver::SINGULAR:
+         return "SINGULAR";
+      case SPxSolver::REGULAR:
+         return "REGULAR";
+      case SPxSolver::UNKNOWN:
+         return "UNKNOWN";
+      case SPxSolver::OPTIMAL:
+         return "OPTIMAL";
+      case SPxSolver::UNBOUNDED:
+         return "UNBOUNDED";
+      case SPxSolver::INFEASIBLE:
+         return "INFEASIBLE";
+      default:
+         return "UNKNOWN";
+      }  /*lint !e788*/
+
+      return "UNKNOWN";
+   }
+
+   const char* cpxStatusString(const int stat)
+   {
+      switch( stat )
+      {
+      case CPX_STAT_ABORT_TIME_LIM:
+         return "ABORT_TIME";
+      case CPX_STAT_ABORT_IT_LIM:
+         return "ABORT_ITER";
+      case CPX_STAT_ABORT_OBJ_LIM:
+         return "ABORT_VALUE";
+      case CPX_STAT_OPTIMAL:
+         return "OPTIMAL";
+      case CPX_STAT_OPTIMAL_INFEAS:
+         return "CPX_STAT_OPTIMAL_INFEAS: OPT SOL INFEASIBLE AFTER UNSCALING";
+      case CPX_STAT_UNBOUNDED:
+         return "UNBOUNDED";
+      case CPX_STAT_INFEASIBLE:
+         return "INFEASIBLE";
+      case CPX_STAT_INForUNBD:
+         return "INFEASIBLE or UNBOUNDED";
+      case CPX_STAT_NUM_BEST:
+         return "CPX_STAT_NUM_BEST: SOL AVAILABLE BUT NOT PROVEN OPTIMAL DUE TO NUM TROUBLE";
+      default:
+         return "UNKNOWN";
+      }  /*lint !e788*/
+
+      return "UNKNOWN";
+   }
+
+   void trySolve()
+   {
+      try
+      {
+	 m_stat = SPxSolver::solve();
+      }
+      catch(SPxException x)
+      {
+	 std::string s = x.what();      
+	 SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+	 m_stat = SPxSolver::status();
+	 
+	 /* since it is not clear if the status in SoPlex are set correctly
+	  * we want to make sure that if an error is thrown the status is
+          * not OPTIMAL anymore.
+          */
+	 assert( m_stat != SPxSolver::OPTIMAL );
+      }
+   }
+
+   virtual Status solve()
+   {
+      if ( getFromScratch() )
+      {
+	 try
+	 {
+            freePreStrongbranchingBasis();
+	    SPxSolver::reLoad();
+	 }
+	 catch(SPxException x)
+	 {
+	    std::string s = x.what();      
+	    SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+	    m_stat = SPxSolver::status();
+	    assert( m_stat != SPxSolver::OPTIMAL );
+	    return m_stat;
+	 }
+      }
+
+      /* dump LP with current basis and settings saved in SoPlex */
+      if( getDoubleCheck() )
+         writeState("spxcheck", NULL, NULL);
+
+      if ( getLpInfo() )
+	 Param::setVerbose(5);
+      else 
+	 Param::setVerbose(0);
+
+      /* in auto pricing, do the first 10000 iterations with devex, then switch to steepest edge */
+      if( m_autopricing && terminationIter() >= 100*AUTOPRICING_ITERSWITCH && SPxBasis::status() < SPxBasis::REGULAR )
+      {
+	 int olditlim = terminationIter();
+	 
+	 setAutoPricer(true);
+	 setTerminationIter(AUTOPRICING_ITERSWITCH);
+
+	 trySolve();
+
+	 m_autophase1iters = SPxSolver::iterations();
+	 setTerminationIter(olditlim);
+	 setAutoPricer(false);
+      }
+      else
+	 m_autophase1iters = 0;
+
+      trySolve();
+      
+      if( m_stat == OPTIMAL )
+      {
+         Real objval = value();
+         
+         if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
+            m_stat = ABORT_VALUE;
+      }
+
+      /* if SoPlex gave a definite answer, we double check if it is consistent with CPLEX's answer */
+      if( getDoubleCheck() && (m_stat == SPxSolver::OPTIMAL || m_stat == SPxSolver::UNBOUNDED || m_stat == SPxSolver::INFEASIBLE || m_stat == SPxSolver::ABORT_VALUE) )
+      {
+         SCIP_Real cpxobj;
+         int cpxstat;
+
+         /* read LP with basis */
+         CPX_CALL( CPXreadcopyprob(m_cpxenv, m_cpxlp, "spxcheck.mps", NULL) );
+         CPX_CALL( CPXreadcopybase(m_cpxenv, m_cpxlp, "spxcheck.bas") );
+
+         /* set tolerances */
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPOPT, delta()) );
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPRHS, delta()) );
+
+         /* solve LP */
+         CPX_CALL( CPXlpopt(m_cpxenv, m_cpxlp) );
+
+         /* get solution status and objective value */
+         CPX_CALL( CPXsolution(m_cpxenv, m_cpxlp, &cpxstat, &cpxobj, NULL, NULL, NULL, NULL) );
+
+         /* check for inconsistent statuses */
+         if( (m_stat == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
+            || (m_stat == SPxSolver::UNBOUNDED && cpxstat != CPX_STAT_UNBOUNDED)
+            || (m_stat == SPxSolver::INFEASIBLE && cpxstat != CPX_STAT_INFEASIBLE) )
+         {
+            SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+               m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+            if( EXIT_AT_WRONG_RESULT )
+               exit(1);
+         }
+         else if( m_stat == SPxSolver::ABORT_VALUE )
+         {
+            switch( cpxstat )
+            {
+            case CPX_STAT_OPTIMAL:
+               if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*delta()))
+                  || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*delta())) )
+               {
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                     m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+                  if( EXIT_AT_WRONG_RESULT )
+                     exit(1);
+               }
+               else if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
+                  || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
+               {
+                  SCIPwarningMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                     m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+               }
+               break;
+            case CPX_STAT_OPTIMAL_INFEAS:
+            case CPX_STAT_NUM_BEST:
+               if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
+                  || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
+               {
+                  SCIPwarningMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                     m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+               }
+               break;
+            case CPX_STAT_INFEASIBLE:
+               break;
+            case CPX_STAT_UNBOUNDED:
+               SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+               if( EXIT_AT_WRONG_RESULT )
+                  exit(1);
+               break;
+            case CPX_STAT_INForUNBD:
+            default:
+               SCIPwarningMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+               break;
+            }  /*lint !e788*/
+         }
+         /* check for same objective values */
+         else if( m_stat == SPxSolver::OPTIMAL )
+         {
+            if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*delta()))
+               || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*delta())) )
+            {
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good\n", value(),
+                  m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj);
+               if( EXIT_AT_WRONG_RESULT )
+                  exit(1);
+            }
+            else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*delta()))
+               || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*delta())) )
+            {
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal\n", value(),
+                  m_probname, getSense() == SPxSolver::MINIMIZE ? ">" : "<", cpxobj);
+               if( EXIT_AT_WRONG_RESULT )
+                  exit(1);
+            }
+         }
+      }
+
+   ENDCHECK:
+      return m_stat;
+   }
+
+   /** save the current basis if (and only if) no basis is in store, yet */
+   void savePreStrongbranchingBasis()
+   {
+      if( !m_strongbranching )
+      {
+         assert(m_rowstat == NULL);
+         assert(m_colstat == NULL);
+
+         m_rowstat = new SPxSolver::VarStatus[nRows()];
+         m_colstat = new SPxSolver::VarStatus[nCols()];
+
+         try
+         {
+            m_stat = getBasis(m_rowstat, m_colstat);
+         }
+         catch(SPxException x)
+         {
+            std::string s = x.what();      
+            SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+
+            /* since it is not clear if the status in SoPlex are set correctly
+             * we want to make sure that if an error is thrown the status is
+             * not OPTIMAL anymore.
+             */
+            assert(m_stat != SPxSolver::OPTIMAL);
+         }
+
+         m_strongbranching = true;
+      }
+      else
+      {
+         assert(m_rowstat != NULL);
+         assert(m_colstat != NULL);
+      }
+   }
+
+   /** if basis is in store, restore and free it */
+   void restorePreStrongbranchingBasis(const bool freebasis)
+   {
+      if( m_strongbranching )
+      {
+         assert(m_rowstat != NULL);
+         assert(m_colstat != NULL);
+
+         try
+         {
+            setBasis(m_rowstat, m_colstat);
+         }
+         catch(SPxException x)
+         {
+            std::string s = x.what();      
+            SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+            m_stat = SPxSolver::status();
+
+            /* since it is not clear if the status in SoPlex are set correctly
+             * we want to make sure that if an error is thrown the status is
+             * not OPTIMAL anymore.
+             */
+            assert(m_stat != SPxSolver::OPTIMAL);
+         }
+
+         if( freebasis )
+         {
+            delete [] m_rowstat;
+            delete [] m_colstat;
+
+            m_strongbranching = false;
+            m_rowstat = NULL;
+            m_colstat = NULL;
+         }
+      }
+      else
+      {
+         assert(m_rowstat == NULL);
+         assert(m_colstat == NULL);
+      }
+   }
+
+   /** if basis is in store, delete it without restoring it */
+   void freePreStrongbranchingBasis()
+   {
+      if( m_strongbranching )
+      {
+         assert(m_rowstat != NULL);
+         assert(m_colstat != NULL);
+
+         delete [] m_rowstat;
+         delete [] m_colstat;
+
+         m_strongbranching = false;
+         m_rowstat = NULL;
+         m_colstat = NULL;
+      }
+      else
+      {
+         assert(m_rowstat == NULL);
+         assert(m_colstat == NULL);
+      }
+   }
+
+   /** is pre-strong-branching basis stored? */
+   bool hasPreStrongbranchingBasis()
+   {
+      return m_strongbranching;
+   }
+
+   Status getStatus() const
+   {
+      return m_stat;
+   }
+
+   bool isInitialized() const
+   {
+      return SPxSolver::isInitialized();
+   }
+
+   int iterations() const
+   {
+      return SPxSolver::iterations() + m_autophase1iters;
+   }
+
+   virtual void clear()
+   {
+      SPxSolver::clear();
+      freePreStrongbranchingBasis();
+      m_stat = NO_PROBLEM;
+   }
+}; /*lint !e1748*/
+
+
+
+
+/********************************************************************/
+/*-----------------------------  C  --------------------------------*/
+/********************************************************************/
+
+#include "scip/lpi.h"
+#include "scip/bitencode.h"
+
+typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
+#define COLS_PER_PACKET SCIP_DUALPACKETSIZE
+typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
+#define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
+
+
+
+/** LP interface */
+struct SCIP_LPi
+{
+   SPxSCIP*                 spx;                /**< our SPxSolver implementation */
+   int*                     cstat;              /**< array for storing column basis status */
+   int*                     rstat;              /**< array for storing row basis status */
+   int                      cstatsize;          /**< size of cstat array */
+   int                      rstatsize;          /**< size of rstat array */
+   SCIP_PRICING             pricing;            /**< current pricing strategy */
+   SCIP_Bool                solved;             /**< was the current LP solved? */
+   SLUFactor*               factorization;      /**< factorization possibly needed for basis inverse */
+};
+
+/** LPi state stores basis information */
+struct SCIP_LPiState
+{
+   int                   ncols;              /**< number of LP columns */
+   int                   nrows;              /**< number of LP rows */
+   COLPACKET*            packcstat;          /**< column basis status in compressed form */
+   ROWPACKET*            packrstat;          /**< row basis status in compressed form */
+};
+
+
+
+
+/*
+ * dynamic memory arrays
+ */
+
+/** resizes cstat array to have at least num entries */
+static
+SCIP_RETCODE ensureCstatMem(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   num                 /**< minimal number of entries in array */
+   )
+{
+   assert(lpi != NULL);
+
+   if( num > lpi->cstatsize )
+   {
+      int newsize;
+
+      newsize = MAX(2*lpi->cstatsize, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lpi->cstat, newsize) );
+      lpi->cstatsize = newsize;
+   }
+   assert(num <= lpi->cstatsize);
+
+   return SCIP_OKAY;
+}
+
+/** resizes rstat array to have at least num entries */
+static
+SCIP_RETCODE ensureRstatMem(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   num                 /**< minimal number of entries in array */
+   )
+{
+   assert(lpi != NULL);
+
+   if( num > lpi->rstatsize )
+   {
+      int newsize;
+
+      newsize = MAX(2*lpi->rstatsize, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lpi->rstat, newsize) );
+      lpi->rstatsize = newsize;
+   }
+   assert(num <= lpi->rstatsize);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
+ * LPi state methods
+ */
+
+/** returns the number of packets needed to store column packet information */
+static 
+int colpacketNum(
+   int                   ncols               /**< number of columns to store */
+   )
+{
+   return (ncols+(int)COLS_PER_PACKET-1)/(int)COLS_PER_PACKET;
+}
+
+/** returns the number of packets needed to store row packet information */
+static 
+int rowpacketNum(
+   int                   nrows               /**< number of rows to store */
+   )
+{
+   return (nrows+(int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
+}
+
+/** store row and column basis status in a packed LPi state object */
+static
+void lpistatePack(
+   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
+   const int*           cstat,               /**< basis status of columns in unpacked format */
+   const int*           rstat                /**< basis status of rows in unpacked format */
+   )
+{
+   assert(lpistate != NULL);
+   assert(lpistate->packcstat != NULL);
+   assert(lpistate->packrstat != NULL);
+
+   SCIPencodeDualBit(cstat, lpistate->packcstat, lpistate->ncols);
+   SCIPencodeDualBit(rstat, lpistate->packrstat, lpistate->nrows);
+}
+
+/** unpacks row and column basis status from a packed LPi state object */
+static
+void lpistateUnpack(
+   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
+   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
+   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   )
+{
+   assert(lpistate != NULL);
+   assert(lpistate->packcstat != NULL);
+   assert(lpistate->packrstat != NULL);
+
+   SCIPdecodeDualBit(lpistate->packcstat, cstat, lpistate->ncols);
+   SCIPdecodeDualBit(lpistate->packrstat, rstat, lpistate->nrows);
+}
+
+/** creates LPi state information object */
+static
+SCIP_RETCODE lpistateCreate(
+   SCIP_LPISTATE**       lpistate,           /**< pointer to LPi state */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   ncols,              /**< number of columns to store */
+   int                   nrows               /**< number of rows to store */
+   )
+{
+   assert(lpistate != NULL);
+   assert(blkmem != NULL);
+   assert(ncols >= 0);
+   assert(nrows >= 0);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpistate) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum(ncols)) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum(nrows)) );
+
+   return SCIP_OKAY;
+}
+
+/** frees LPi state information */
+static
+void lpistateFree(
+   SCIP_LPISTATE**       lpistate,           /**< pointer to LPi state information (like basis information) */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(blkmem != NULL);
+   assert(lpistate != NULL);
+   assert(*lpistate != NULL);
+
+   BMSfreeBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols));
+   BMSfreeBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrows));
+   BMSfreeBlockMemory(blkmem, lpistate);
+}
+
+
+
+
+/*
+ * local methods
+ */
+
+/** converts SCIP's objective sense into SoPlex's objective sense */
+static
+SPxLP::SPxSense spxObjsen(
+   SCIP_OBJSEN           objsen              /**< SCIP's objective sense value */
+   )
+{
+   switch( objsen )
+   {
+   case SCIP_OBJSEN_MAXIMIZE:
+      return SPxLP::MAXIMIZE;
+   case SCIP_OBJSEN_MINIMIZE:
+      return SPxLP::MINIMIZE;
+   default:
+      SCIPerrorMessage("invalid objective sense\n");
+      SCIPABORT();
+      return SPxLP::MINIMIZE;
+   }
+}
+
+/** marks the current LP to be unsolved */
+static
+void invalidateSolution(SCIP_LPI* lpi)
+{
+   assert(lpi != NULL);
+   lpi->solved = FALSE;
+   if ( lpi->factorization != 0 )
+   {
+      delete lpi->factorization;
+      lpi->factorization = 0;
+   }
+}
+
+
+
+/*
+ * LP Interface Methods
+ */
+
+
+/*
+ * Miscellaneous Methods
+ */
+
+static char spxname[SCIP_MAXSTRLEN];
+
+/**@name Miscellaneous Methods */
+/**@{ */
+
+/** gets name and version of LP solver */
+const char* SCIPlpiGetSolverName(
+   void
+   )
+{
+   try
+   {
+      SPxSCIP spx("tmp");
+      int version;
+      
+      version = spx.version();
+      snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return NULL;
+   }
+
+   return spxname;
+}
+
+/** gets pointer for LP solver - use only with great care */
+void* SCIPlpiGetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->spx;
+}
+/**@} */
+
+
+
+
+/*
+ * LPI Creation and Destruction Methods
+ */
+
+/**@name LPI Creation and Destruction Methods */
+/**@{ */
+
+/** creates an LP problem object */
+SCIP_RETCODE SCIPlpiCreate(
+   SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   const char*           name,               /**< problem name */
+   SCIP_OBJSEN           objsen              /**< objective sense */
+   )
+{
+   assert(lpi != NULL);
+
+   /* create SoPlex object */
+   SCIP_ALLOC( BMSallocMemory(lpi) );
+   SOPLEX_TRY( (*lpi)->spx = new SPxSCIP(name) );
+   (*lpi)->cstat = NULL;
+   (*lpi)->rstat = NULL;
+   (*lpi)->cstatsize = 0;
+   (*lpi)->rstatsize = 0;
+   (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
+   (*lpi)->factorization = 0;
+   invalidateSolution(*lpi);
+
+   /* set objective sense */
+   SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
+
+   /* set default pricing */
+   SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
+
+   return SCIP_OKAY;
+}
+
+/** deletes an LP problem object */
+SCIP_RETCODE SCIPlpiFree(
+   SCIP_LPI**            lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+   assert(*lpi != NULL);
+   assert((*lpi)->spx != NULL);
+
+   /* free LP */
+   delete (*lpi)->spx;
+
+   /* free memory */
+   BMSfreeMemoryArrayNull(&(*lpi)->cstat);
+   BMSfreeMemoryArrayNull(&(*lpi)->rstat);
+   BMSfreeMemory(lpi);
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Modification Methods
+ */
+
+/**@name Modification Methods */
+/**@{ */
+
+/** copies LP data with column matrix into LP solver */
+SCIP_RETCODE SCIPlpiLoadColLP(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN           objsen,             /**< objective sense */
+   int                   ncols,              /**< number of columns */
+   const SCIP_Real*      obj,                /**< objective function values of columns */
+   const SCIP_Real*      lb,                 /**< lower bounds of columns */
+   const SCIP_Real*      ub,                 /**< upper bounds of columns */
+   char**                colnames,           /**< column names, or NULL */
+   int                   nrows,              /**< number of rows */
+   const SCIP_Real*      lhs,                /**< left hand sides of rows */
+   const SCIP_Real*      rhs,                /**< right hand sides of rows */
+   char**                /*rownames*/,       /**< row names, or NULL */
+   int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
+   const int*            beg,                /**< start index of each column in ind- and val-array */
+   const int*            ind,                /**< row indices of constraint matrix entries */
+   const SCIP_Real*      val                 /**< values of constraint matrix entries */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+
+   invalidateSolution(lpi);
+   lpi->spx->freePreStrongbranchingBasis();
+
+   try
+   {
+      SPxSCIP* spx = lpi->spx;
+      LPRowSet rows(nrows);
+      DSVector emptyVector(0);
+      int i;
+
+      spx->clear();
+
+      /* set objective sense */
+      spx->setSense(spxObjsen(objsen));
+
+      /* create empty rows with given sides */
+      for( i = 0; i < nrows; ++i )
+         rows.add(lhs[i], emptyVector, rhs[i]);
+      spx->addRows(rows);
+   
+      /* create column vectors with coefficients and bounds */
+      SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds columns to the LP */
+SCIP_RETCODE SCIPlpiAddCols(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   ncols,              /**< number of columns to be added */
+   const SCIP_Real*      obj,                /**< objective function values of new columns */
+   const SCIP_Real*      lb,                 /**< lower bounds of new columns */
+   const SCIP_Real*      ub,                 /**< upper bounds of new columns */
+   char**                /*colnames*/,       /**< column names, or NULL */
+   int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   const int*            beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
+   const int*            ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiAddCols()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before adding new
+      columns (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   SPxSCIP* spx = lpi->spx;
+   try
+   {
+      LPColSet cols(ncols);
+      DSVector colVector(ncols);
+      int last;
+      int i;
+      int j;
+
+      /* create column vectors with coefficients and bounds */
+      for( i = 0; i < ncols; ++i )
+      {
+         colVector.clear();
+         if( nnonz > 0 )
+         {
+            last = (i == ncols-1 ? nnonz : beg[i+1]);
+            for( j = beg[i]; j < last; ++j )
+               colVector.add(ind[j], val[j]);
+         }
+         cols.add(obj[i], lb[i], colVector, ub[i]);
+      }
+      spx->addCols(cols);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+ 
+   return SCIP_OKAY;
+}
+
+/** deletes all columns in the given range from LP */
+SCIP_RETCODE SCIPlpiDelCols(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to be deleted */
+   int                   lastcol             /**< last column to be deleted */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      columns (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   SOPLEX_TRY( lpi->spx->removeColRange(firstcol, lastcol) );
+
+   return SCIP_OKAY;   
+}
+
+/** deletes columns from SCIP_LP; the new position of a column must not be greater that its old position */
+SCIP_RETCODE SCIPlpiDelColset(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  dstat               /**< deletion status of columns
+                                              *   input:  1 if column should be deleted, 0 if not
+                                              *   output: new position of column, -1 if column was deleted */
+   )
+{
+   int ncols;
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiDelColset()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      columns (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   ncols = lpi->spx->nCols();
+
+   /* SoPlex removeCols() method deletes the columns with dstat[i] < 0, so we have to negate the values */
+   for( i = 0; i < ncols; ++i )
+      dstat[i] *= -1;
+
+   SOPLEX_TRY( lpi->spx->removeCols(dstat) );
+
+   return SCIP_OKAY;   
+}
+
+/** adds rows to the LP */
+SCIP_RETCODE SCIPlpiAddRows(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   nrows,              /**< number of rows to be added */
+   const SCIP_Real*      lhs,                /**< left hand sides of new rows */
+   const SCIP_Real*      rhs,                /**< right hand sides of new rows */
+   char**                /*rownames*/,       /**< row names, or NULL */
+   int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   const int*            beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiAddRows()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before adding new
+      rows (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   try
+   {
+      SPxSCIP* spx = lpi->spx;
+      LPRowSet rows(nrows);
+      DSVector rowVector;
+      int last;
+      int i;
+      int j;
+
+      /* create row vectors with given sides */
+      for( i = 0; i < nrows; ++i )
+      {
+         rowVector.clear();
+         if( nnonz > 0 )
+         {
+            last = (i == nrows-1 ? nnonz : beg[i+1]);
+            for( j = beg[i]; j < last; ++j )
+               rowVector.add(ind[j], val[j]);
+         }
+         rows.add(lhs[i], rowVector, rhs[i]);
+      }
+      spx->addRows(rows);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deletes all rows in the given range from LP */
+SCIP_RETCODE SCIPlpiDelRows(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to be deleted */
+   int                   lastrow             /**< last row to be deleted */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiDelRows()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      rows (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   SOPLEX_TRY( lpi->spx->removeRowRange(firstrow, lastrow) );
+
+   return SCIP_OKAY;   
+}
+
+/** deletes rows from SCIP_LP; the new position of a row must not be greater that its old position */
+SCIP_RETCODE SCIPlpiDelRowset(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  dstat               /**< deletion status of rows
+                                              *   input:  1 if row should be deleted, 0 if not
+                                              *   output: new position of row, -1 if row was deleted */
+   )
+{
+   int nrows;
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiDelRowset()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, we should restore the pre-strong-branching basis before deleting
+      rows (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   nrows = lpi->spx->nRows();
+
+   /* SoPlex removeRows() method deletes the rows with dstat[i] < 0, so we have to negate the values */
+   for( i = 0; i < nrows; ++i )
+      dstat[i] *= -1;
+
+   SOPLEX_TRY( lpi->spx->removeRows(dstat) );
+
+   return SCIP_OKAY;   
+}
+
+/** clears the whole LP */
+SCIP_RETCODE SCIPlpiClear(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiClear()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   invalidateSolution(lpi);
+
+   SOPLEX_TRY( lpi->spx->clear() );
+   assert(!lpi->spx->hasPreStrongbranchingBasis());
+
+   return SCIP_OKAY;
+}
+
+/** changes lower and upper bounds of columns */
+SCIP_RETCODE SCIPlpiChgBounds(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   ncols,              /**< number of columns to change bounds for */
+   const int*            ind,                /**< column indices */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiChgBounds()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ind != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing bounds via SCIPlpiChgBounds indicates the end of the
+      strong branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   try
+   {
+      for( i = 0; i < ncols; ++i )
+      {
+	 assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+	 lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes left and right hand sides of rows */
+SCIP_RETCODE SCIPlpiChgSides(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   nrows,              /**< number of rows to change sides for */
+   const int*            ind,                /**< row indices */
+   const SCIP_Real*      lhs,                /**< new values for left hand sides */
+   const SCIP_Real*      rhs                 /**< new values for right hand sides */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiChgSides()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ind != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing sides via SCIPlpiChgSides indicates the end of the strong
+      branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   try
+   {
+      for( i = 0; i < nrows; ++i )
+      {
+	 assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
+	 lpi->spx->changeRange(ind[i], lhs[i], rhs[i]);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes a single coefficient */
+SCIP_RETCODE SCIPlpiChgCoef(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   row,                /**< row number of coefficient to change */
+   int                   col,                /**< column number of coefficient to change */
+   SCIP_Real             newval              /**< new value of coefficient */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiChgCoef()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= row && row < lpi->spx->nRows());
+   assert(0 <= col && col < lpi->spx->nCols());
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing coefficients via SCIPlpiChgCoef indicates the end of the
+      strong branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   SOPLEX_TRY( lpi->spx->changeElement(row, col, newval) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the objective sense */
+SCIP_RETCODE SCIPlpiChgObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN           objsen              /**< new objective sense */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiChgObjsen()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing the objective sense indicates the end of the strong
+      branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   SOPLEX_TRY( lpi->spx->setSense(spxObjsen(objsen)) );
+
+   return SCIP_OKAY;
+}
+
+/** changes objective values of columns in the LP */
+SCIP_RETCODE SCIPlpiChgObj(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   ncols,              /**< number of columns to change objective value for */
+   int*                  ind,                /**< column indices to change objective value for */
+   SCIP_Real*            obj                 /**< new objective values for columns */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiChgObj()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, changing objective coefficients indicates the end of the strong
+      branching phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   try
+   {
+      for( i = 0; i < ncols; ++i )
+      {
+	 assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+	 lpi->spx->changeObj(ind[i], obj[i]);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
+SCIP_RETCODE SCIPlpiScaleRow(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   row,                /**< row number to scale */
+   SCIP_Real             scaleval            /**< scaling multiplier */
+   )
+{
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   SCIPdebugMessage("calling SCIPlpiScaleRow()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(scaleval != 0.0);
+
+   try 
+   {
+      invalidateSolution(lpi);
+
+      /* if last lp solves were strong branching calls, scaling a row indicates the end of the strong branching phase;
+         in this case we should restore the pre-strong-branching basis here (not necessary if STRONGBRANCH_RESTOREBASIS
+         true, since done right after strong branch) */
+      if( !STRONGBRANCH_RESTOREBASIS )
+         lpi->spx->restorePreStrongbranchingBasis(true);
+
+      /* get the row vector and the row's sides */
+      SVector rowvec = lpi->spx->rowVector(row);
+      lhs = lpi->spx->lhs(row);
+      rhs = lpi->spx->rhs(row);
+
+      /* scale the row vector */
+      rowvec *= scaleval;
+
+      /* adjust the sides */
+      if( lhs > -soplex::infinity )
+         lhs *= scaleval;
+      else if( scaleval < 0.0 )
+         lhs = soplex::infinity;
+      if( rhs < soplex::infinity )
+         rhs *= scaleval;
+      else if( scaleval < 0.0 )
+         rhs = -soplex::infinity;
+      if( scaleval < 0.0 )
+      {
+         SCIP_Real oldlhs = lhs;
+         lhs = rhs;
+         rhs = oldlhs;
+      }
+
+      /* create the new row */
+      LPRow lprow(lhs, rowvec, rhs);
+   
+      /* change the row in the LP */
+      lpi->spx->changeRow(row, lprow);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
+ *  are divided by the scalar; for negative scalars, the column's bounds are switched
+ */
+SCIP_RETCODE SCIPlpiScaleCol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column number to scale */
+   SCIP_Real             scaleval            /**< scaling multiplier */
+   )
+{
+   SCIP_Real obj;
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   SCIPdebugMessage("calling SCIPlpiScaleCol()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(scaleval != 0.0);
+
+   try
+   {
+      invalidateSolution(lpi);
+
+      /* if last lp solves were strong branching calls, scaling a column indicates the end of the strong branching
+         phase; in this case we should restore the pre-strong-branching basis here (not necessary if
+         STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+      if( !STRONGBRANCH_RESTOREBASIS )
+         lpi->spx->restorePreStrongbranchingBasis(true);
+
+      /* get the col vector and the col's bounds and objective value */
+      SVector colvec = lpi->spx->colVector(col);
+      obj = lpi->spx->obj(col);
+      lb = lpi->spx->lower(col);
+      ub = lpi->spx->upper(col);
+
+      /* scale the col vector */
+      colvec *= scaleval;
+
+      /* scale the objective value */
+      obj *= scaleval;
+
+      /* adjust the bounds */
+      if( lb > -soplex::infinity )
+         lb /= scaleval;
+      else if( scaleval < 0.0 )
+         lb = soplex::infinity;
+      if( ub < soplex::infinity )
+         ub /= scaleval;
+      else if( scaleval < 0.0 )
+         ub = -soplex::infinity;
+      if( scaleval < 0.0 )
+      {
+         SCIP_Real oldlb = lb;
+         lb = ub;
+         ub = oldlb;
+      }
+
+      /* create the new col (in LPCol's constructor, the upper bound is given first!) */
+      LPCol lpcol(obj, colvec, ub, lb);
+   
+      /* change the col in the LP */
+      lpi->spx->changeCol(col, lpcol);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Data Accessing Methods
+ */
+
+/**@name Data Accessing Methods */
+/**@{ */
+
+/** gets the number of rows in the LP */
+SCIP_RETCODE SCIPlpiGetNRows(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  nrows               /**< pointer to store the number of rows */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetNRows()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(nrows != NULL);
+
+   *nrows = lpi->spx->nRows();
+
+   return SCIP_OKAY;
+}
+
+/** gets the number of columns in the LP */
+SCIP_RETCODE SCIPlpiGetNCols(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  ncols               /**< pointer to store the number of cols */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetNCols()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ncols != NULL);
+
+   *ncols = lpi->spx->nCols();
+
+   return SCIP_OKAY;
+}
+
+/** gets the number of nonzero elements in the LP constraint matrix */
+SCIP_RETCODE SCIPlpiGetNNonz(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  nnonz               /**< pointer to store the number of nonzeros */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiGetNNonz()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(nnonz != NULL);
+
+   /* SoPlex has no direct method to return the number of nonzeros, so we have to count them manually */
+   *nnonz = 0;
+   if( lpi->spx->nRows() < lpi->spx->nCols() )
+   {
+      for( i = 0; i < lpi->spx->nRows(); ++i )
+         (*nnonz) += lpi->spx->rowVector(i).size();
+   }
+   else
+   {
+      for( i = 0; i < lpi->spx->nCols(); ++i )
+         (*nnonz) += lpi->spx->colVector(i).size();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets columns from LP problem object; the arrays have to be large enough to store all values
+ *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+SCIP_RETCODE SCIPlpiGetCols(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get from LP */
+   int                   lastcol,            /**< last column to get from LP */
+   SCIP_Real*            lb,                 /**< buffer to store the lower bound vector, or NULL */
+   SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
+   int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   )
+{
+   int i;
+   int j;
+
+   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+
+   if( lb != NULL )
+   {
+      assert(ub != NULL);
+
+      const Vector& lbvec = lpi->spx->lower();
+      const Vector& ubvec = lpi->spx->upper();
+      for( i = firstcol; i <= lastcol; ++i )
+      {
+         lb[i-firstcol] = lbvec[i];
+         ub[i-firstcol] = ubvec[i];
+      }
+   }
+   else
+      assert(ub == NULL);
+
+   if( nnonz != NULL )
+   {
+      *nnonz = 0;
+      for( i = firstcol; i <= lastcol; ++i )
+      {
+         beg[i-firstcol] = *nnonz;
+         const SVector& cvec = lpi->spx->colVector(i);
+         for( j = 0; j < cvec.size(); ++j )
+         {
+            ind[*nnonz] = cvec.index(j);
+            val[*nnonz] = cvec.value(j);
+            (*nnonz)++;
+         }
+      }
+   }
+   else
+   {
+      assert(beg == NULL);
+      assert(ind == NULL);
+      assert(val == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets rows from LP problem object; the arrays have to be large enough to store all values.
+ *  Either both, lhs and rhs, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+SCIP_RETCODE SCIPlpiGetRows(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get from LP */
+   int                   lastrow,            /**< last row to get from LP */
+   SCIP_Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
+   SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
+   int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   )
+{
+   int i;
+   int j;
+
+   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+
+   if( lhs != NULL )
+   {
+      assert(rhs != NULL);
+
+      const Vector& lhsvec = lpi->spx->lhs();
+      const Vector& rhsvec = lpi->spx->rhs();
+      for( i = firstrow; i <= lastrow; ++i )
+      {
+         lhs[i-firstrow] = lhsvec[i];
+         rhs[i-firstrow] = rhsvec[i];
+      }
+   }
+   else
+      assert(rhs == NULL);
+
+   if( nnonz != NULL )
+   {
+      *nnonz = 0;
+      for( i = firstrow; i <= lastrow; ++i )
+      {
+         beg[i-firstrow] = *nnonz;
+         const SVector& rvec = lpi->spx->rowVector(i);
+         for( j = 0; j < rvec.size(); ++j )
+         {
+            ind[*nnonz] = rvec.index(j);
+            val[*nnonz] = rvec.value(j);
+            (*nnonz)++;
+         }
+      }
+   }
+   else
+   {
+      assert(beg == NULL);
+      assert(ind == NULL);
+      assert(val == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets objective coefficients from LP problem object */
+SCIP_RETCODE SCIPlpiGetObj(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get objective coefficient for */
+   int                   lastcol,            /**< last column to get objective coefficient for */
+   SCIP_Real*            vals                /**< array to store objective coefficients */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+   assert(vals != NULL);
+   
+   for( i = firstcol; i <= lastcol; ++i )
+      vals[i-firstcol] = lpi->spx->obj(i);
+
+   return SCIP_OKAY;
+}
+
+/** gets current bounds from LP problem object */
+SCIP_RETCODE SCIPlpiGetBounds(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get objective value for */
+   int                   lastcol,            /**< last column to get objective value for */
+   SCIP_Real*            lbs,                /**< array to store lower bound values, or NULL */
+   SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+   
+   for( i = firstcol; i <= lastcol; ++i )
+   {
+      if( lbs != NULL )
+         lbs[i-firstcol] = lpi->spx->lower(i);
+      if( ubs != NULL )
+         ubs[i-firstcol] = lpi->spx->upper(i);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets current row sides from LP problem object */
+SCIP_RETCODE SCIPlpiGetSides(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get sides for */
+   int                   lastrow,            /**< last row to get sides for */
+   SCIP_Real*            lhss,               /**< array to store left hand side values, or NULL */
+   SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+   
+   for( i = firstrow; i <= lastrow; ++i )
+   {
+      if( lhss != NULL )
+         lhss[i-firstrow] = lpi->spx->lhs(i);
+      if( rhss != NULL )
+         rhss[i-firstrow] = lpi->spx->rhs(i);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets a single coefficient */
+SCIP_RETCODE SCIPlpiGetCoef(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   row,                /**< row number of coefficient */
+   int                   col,                /**< column number of coefficient */
+   SCIP_Real*            val                 /**< pointer to store the value of the coefficient */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetCoef()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= col && col < lpi->spx->nCols());
+   assert(0 <= row && row < lpi->spx->nRows());
+   assert(val != NULL);
+
+   *val = lpi->spx->colVector(col)[row];
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Solving Methods
+ */
+
+/**@name Solving Methods */
+/**@{ */
+
+/** solves LP -- used for both, primal and dual simplex, because SoPlex doesn't distinct the two cases */
+static
+SCIP_RETCODE spxSolve(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SPxSolver::Type       type                /**< algorithm type */
+   )
+{
+   SCIPdebugMessage("calling SoPlex solve(): %d cols, %d rows\n", lpi->spx->nCols(), lpi->spx->nRows());
+
+   assert( lpi != NULL );
+   assert( lpi->spx != NULL );
+   assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
+
+   invalidateSolution(lpi);
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   /* set the algorithm type */
+   lpi->spx->setType(type);
+
+   lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
+   SPxSolver::Status status = lpi->spx->solve();
+   SCIPdebugMessage(" -> SoPlex status: %d, basis status: %d\n", lpi->spx->getStatus(), lpi->spx->basis().status());
+   lpi->solved = TRUE;
+
+   switch( status )
+   {
+   case SPxSolver::ABORT_TIME:
+   case SPxSolver::ABORT_ITER:
+   case SPxSolver::ABORT_VALUE:
+   case SPxSolver::SINGULAR:
+   case SPxSolver::REGULAR:
+   case SPxSolver::UNKNOWN:
+   case SPxSolver::OPTIMAL:
+   case SPxSolver::UNBOUNDED:
+   case SPxSolver::INFEASIBLE:
+      return SCIP_OKAY;
+   default:
+      return SCIP_LPERROR;
+   }  /*lint !e788*/
+}
+
+/** calls primal simplex to solve the LP */
+SCIP_RETCODE SCIPlpiSolvePrimal(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiSolvePrimal()\n");
+
+   /* SoPlex doesn't distinct between the primal and dual simplex; however
+    * we can force SoPlex to start with the desired method:
+    * If the representation is COLUMN:
+    * - ENTER = PRIMAL 
+    * - LEAVE = DUAL
+    *
+    * If the representation is ROW:
+    * - ENTER = DUAL 
+    * - LEAVE = PRIAML
+    */
+   if ( lpi->spx->getRowRep() )
+      return spxSolve(lpi, SPxSolver::LEAVE);
+   else
+      return spxSolve(lpi, SPxSolver::ENTER);
+}
+
+/** calls dual simplex to solve the LP */
+SCIP_RETCODE SCIPlpiSolveDual(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiSolveDual()\n");
+   
+   /* SoPlex doesn't distinct between the primal and dual simplex; however
+    * we can force SoPlex to start with the desired method:
+    * If the representation is COLUMN:
+    * - ENTER = PRIMAL 
+    * - LEAVE = DUAL
+    *
+    * If the representation is ROW:
+    * - ENTER = DUAL 
+    * - LEAVE = PRIAML
+    */
+   if ( lpi->spx->getRowRep() )
+      return spxSolve(lpi, SPxSolver::ENTER);
+   else
+      return spxSolve(lpi, SPxSolver::LEAVE);
+}
+
+/** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
+SCIP_RETCODE SCIPlpiSolveBarrier(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             crossover           /**< perform crossover */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
+   
+   /* SoPlex doesn't distinct between the primal and dual simplex; however
+    * we can force SoPlex to start with the desired method:
+    * If the representation is COLUMN:
+    * - ENTER = PRIMAL 
+    * - LEAVE = DUAL
+    *
+    * If the representation is ROW:
+    * - ENTER = DUAL 
+    * - LEAVE = PRIAML
+    *
+    * since SoPlex does not support barrier we switch to DUAL
+    */
+   return spxSolve(lpi, SPxSolver::LEAVE);
+}
+
+/** performs strong branching iterations on all candidates */
+SCIP_RETCODE SCIPlpiStrongbranch(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   SPxSCIP* spx;
+   SPxSolver::Status status;
+   SCIP_Real oldlb;
+   SCIP_Real oldub;
+   SCIP_Real newlb;
+   SCIP_Real newub;
+   bool fromparentbasis;
+   bool error;
+   int oldItlim;
+
+   SCIPdebugMessage("calling SCIPlpiStrongbranch() on variable %d (%d iterations)\n", col, itlim);
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(down != NULL);
+   assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
+
+   spx = lpi->spx;
+   status = SPxSolver::UNKNOWN;                      
+   fromparentbasis = false;
+   error = false;                                 
+   oldItlim = spx->terminationIter();
+
+   /* if the last lp solve was not a strong branching call then we save the current basis; we will restore this basis
+    * (I) after each strong branch if flag STRONGBRANCH_RESTOREBASIS is set to true, otherwise (II) before the next
+    * non-strong-branching lp solve or problem modifications, since this may change the dimension of the basis and
+    * typically indicates the end of the strong branching phase
+    */
+   assert(!STRONGBRANCH_RESTOREBASIS || !spx->hasPreStrongbranchingBasis());
+   if( !spx->hasPreStrongbranchingBasis() )
+   {
+      spx->savePreStrongbranchingBasis();
+      fromparentbasis = true;
+   }
+
+   /* get current bounds of column */
+   oldlb = spx->lower(col);
+   oldub = spx->upper(col);
+
+   *downvalid = FALSE;
+   *upvalid = FALSE;
+   if( iter != NULL )
+      *iter = 0;
+
+   /* set the algorithm type to use dual simplex */
+   if( lpi->spx->getRowRep() )
+      lpi->spx->setType(SPxSolver::ENTER);
+   else
+      lpi->spx->setType(SPxSolver::LEAVE);
+
+   /* down branch */
+   newub = EPSCEIL(psol-1.0, 1e-06);
+   if( newub >= oldlb - 0.5 )
+   {
+      SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
+
+      spx->changeUpper(col, newub);
+
+      spx->setTerminationIter(itlim);
+      do
+      {
+         spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
+         status = spx->solve();
+         SCIPdebugMessage(" --> Terminate with status %d\n", status);
+
+         switch( status )
+         {
+         case SPxSolver::OPTIMAL:
+            *down = spx->value();
+            *downvalid = TRUE;
+            SCIPdebugMessage(" --> Terminate with value %f\n", spx->value());
+            break;
+         case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
+         case SPxSolver::ABORT_ITER:
+         case SPxSolver::ABORT_CYCLING:
+            *down = spx->value();
+            break;
+         case SPxSolver::ABORT_VALUE:
+         case SPxSolver::INFEASIBLE:
+            *down = spx->terminationValue();
+            *downvalid = TRUE;
+            break;
+         default:
+            error = true;
+            break;
+         }  /*lint !e788*/
+         if( iter != NULL )
+            (*iter) += spx->iterations();
+
+         /* if this flag is set, we restore the pre-strong-branching basis by default (and don't solve again) */
+         if( STRONGBRANCH_RESTOREBASIS )
+         {
+            assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
+            spx->restorePreStrongbranchingBasis(false);
+            fromparentbasis = false;
+         }
+         /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
+          * pre-strong-branching basis and try again with reduced iteration limit */
+         else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
+         {
+            SCIPdebugMessage(" --> Repeat strong branching down with %d iterations after restoring basis\n", itlim - spx->iterations());
+            spx->setTerminationIter(itlim - spx->iterations());
+            assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
+            spx->restorePreStrongbranchingBasis(false);
+            fromparentbasis = true;
+            error = false;
+         }
+         /* otherwise don't solve again */
+         else
+            fromparentbasis = false;
+      }
+      while( fromparentbasis );
+
+      spx->changeUpper(col, oldub);
+   }
+   else
+   {
+      *down = spx->terminationValue();
+      *downvalid = TRUE;
+   }
+
+   /**@todo if basis was singular, currently we do not perform the up branch; alternatively, we could reload the
+      pre-strong-branching basis and continue */
+      
+   /* up branch */
+   if( !error )
+   {
+      newlb = EPSFLOOR(psol+1.0, 1e-06);
+      if( newlb <= oldub + 0.5 )
+      {
+         SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
+      
+         spx->changeLower(col, newlb);
+
+         spx->setTerminationIter(itlim);
+         do
+         {
+            spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
+            status = spx->solve();
+            SCIPdebugMessage(" --> Terminate with status %d\n", status);
+            switch( status )
+            {
+            case SPxSolver::OPTIMAL:
+               *up = spx->value();
+               *upvalid = TRUE;
+               SCIPdebugMessage(" --> Terminate with value %f\n", spx->value());
+               break;
+            case SPxSolver::ABORT_TIME: /* SoPlex does not return a proven dual bound, if it is aborted */
+            case SPxSolver::ABORT_ITER:
+            case SPxSolver::ABORT_CYCLING:
+               *up = spx->value();
+               break;
+            case SPxSolver::ABORT_VALUE:
+            case SPxSolver::INFEASIBLE:
+               *up = spx->terminationValue();
+               *upvalid = TRUE;
+               break;
+            default:
+               error = true;
+               break;
+            }  /*lint !e788*/
+            if( iter != NULL )
+               (*iter) += spx->iterations();
+
+            /* if this flag is set, we restore the pre-strong-branching basis by default (and don't solve again) */
+            if( STRONGBRANCH_RESTOREBASIS )
+            {
+               assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
+               spx->restorePreStrongbranchingBasis(false);
+               fromparentbasis = false;
+            }
+            /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
+             * pre-strong-branching basis and try again with reduced iteration limit */
+            else if( (status == SPxSolver::ABORT_CYCLING || status == SPxSolver::SINGULAR) && !fromparentbasis && spx->iterations() < itlim )
+            {
+               SCIPdebugMessage(" --> Repeat strong branching  up  with %d iterations after restoring basis\n", itlim - spx->iterations());
+               assert(spx->getFromScratch() || spx->hasPreStrongbranchingBasis());
+               spx->restorePreStrongbranchingBasis(false);
+               spx->setTerminationIter(itlim - spx->iterations());
+               error = false;
+               fromparentbasis = true;
+            }
+            /* otherwise don't solve again */
+            else
+               fromparentbasis = false;
+         }
+         while( fromparentbasis );
+
+         spx->changeLower(col, oldlb);
+      }
+      else
+      {
+         *up = spx->terminationValue();
+         *upvalid = TRUE;
+      }
+   }
+
+   /* reset old iteration limit */
+   spx->setTerminationIter(oldItlim);
+
+   /* if this flag is set, we have restored the pre-strong-branching basis before without freeing it; do this now */
+   if( STRONGBRANCH_RESTOREBASIS )
+      spx->freePreStrongbranchingBasis();
+
+   if( error )
+   {
+      SCIPerrorMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Solution Information Methods
+ */
+
+/**@name Solution Information Methods */
+/**@{ */
+
+/** returns whether a solve method was called after the last modification of the LP */
+SCIP_Bool SCIPlpiWasSolved(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   return lpi->solved;
+}
+
+/** gets information about primal and dual feasibility of the current LP solution */
+SCIP_RETCODE SCIPlpiGetSolFeasibility(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   )
+{
+   SPxBasis::SPxStatus basestatus;
+
+   SCIPdebugMessage("calling SCIPlpiGetSolFeasibility()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(primalfeasible != NULL);
+   assert(dualfeasible != NULL);
+
+   basestatus = lpi->spx->basis().status();
+   *primalfeasible = (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL);
+   *dualfeasible = (basestatus == SPxBasis::DUAL || basestatus == SPxBasis::OPTIMAL);
+
+   return SCIP_OKAY;
+}
+
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the primal ray
+ */
+SCIP_Bool SCIPlpiExistsPrimalRay(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiExistsPrimalRay()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
+}
+
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
+ *  and the solver knows and can return the primal ray
+ */
+SCIP_Bool SCIPlpiHasPrimalRay(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiHasPrimalRay()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
+}
+
+/** returns TRUE iff LP is proven to be primal unbounded */
+SCIP_Bool SCIPlpiIsPrimalUnbounded(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsPrimalUnbounded()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED && lpi->spx->basis().status() == SPxBasis::PRIMAL);
+}
+
+/** returns TRUE iff LP is proven to be primal infeasible */
+SCIP_Bool SCIPlpiIsPrimalInfeasible(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsPrimalInfeasible()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE);
+}
+
+/** returns TRUE iff LP is proven to be primal feasible */
+SCIP_Bool SCIPlpiIsPrimalFeasible(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SPxBasis::SPxStatus basestatus;
+
+   SCIPdebugMessage("calling SCIPlpiIsPrimalFeasible()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   basestatus = lpi->spx->basis().status();
+
+   return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL);
+}
+
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the dual ray
+ */
+SCIP_Bool SCIPlpiExistsDualRay(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiExistsDualRay()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE);
+}
+
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
+ *  and the solver knows and can return the dual ray
+ */
+SCIP_Bool SCIPlpiHasDualRay(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiHasDualRay()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE);
+}
+
+/** returns TRUE iff LP is dual unbounded */
+SCIP_Bool SCIPlpiIsDualUnbounded(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsDualUnbounded()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE && lpi->spx->basis().status() == SPxBasis::DUAL);
+}
+
+/** returns TRUE iff LP is dual infeasible */
+SCIP_Bool SCIPlpiIsDualInfeasible(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsDualInfeasible()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
+}
+
+/** returns TRUE iff LP is proven to be dual feasible */
+SCIP_Bool SCIPlpiIsDualFeasible(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SPxBasis::SPxStatus basestatus;
+
+   SCIPdebugMessage("calling SCIPlpiIsDualFeasible()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   basestatus = lpi->spx->basis().status();
+
+   return (basestatus == SPxBasis::DUAL || basestatus == SPxBasis::OPTIMAL);
+}
+
+/** returns TRUE iff LP was solved to optimality */
+SCIP_Bool SCIPlpiIsOptimal(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsOptimal()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::OPTIMAL);
+}
+
+/** returns TRUE iff current LP basis is stable */
+SCIP_Bool SCIPlpiIsStable(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsStable()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() != SPxSolver::ERROR && lpi->spx->getStatus() != SPxSolver::SINGULAR);
+}
+
+/** returns TRUE iff the objective limit was reached */
+SCIP_Bool SCIPlpiIsObjlimExc(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsObjlimExc()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::ABORT_VALUE);
+}
+
+/** returns TRUE iff the iteration limit was reached */
+SCIP_Bool SCIPlpiIsIterlimExc(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsIterlimExc()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::ABORT_ITER);
+}
+
+/** returns TRUE iff the time limit was reached */
+SCIP_Bool SCIPlpiIsTimelimExc(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsTimelimExc()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::ABORT_TIME);
+}
+
+/** returns the internal solution status of the solver */
+int SCIPlpiGetInternalStatus(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsTimelimExc()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return static_cast<int>(lpi->spx->getStatus());
+}
+
+/** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
+SCIP_RETCODE SCIPlpiIgnoreInstability(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool*            success             /**< pointer to store, whether the instability could be ignored */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiIgnoreInstability()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* instable situations cannot be ignored */
+   *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** gets objective value of solution */
+SCIP_RETCODE SCIPlpiGetObjval(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Real*            objval              /**< stores the objective value */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetObjval()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(objval != NULL);
+
+   *objval = lpi->spx->value();
+
+   return SCIP_OKAY;
+}
+
+/** gets primal and dual solution vectors */
+SCIP_RETCODE SCIPlpiGetSol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
+   SCIP_Real*            primsol,            /**< primal solution vector, may be NULL if not needed */
+   SCIP_Real*            dualsol,            /**< dual solution vector, may be NULL if not needed */
+   SCIP_Real*            activity,           /**< row activity vector, may be NULL if not needed */
+   SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetSol()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   if( objval != NULL )
+      *objval = lpi->spx->value();
+
+   try
+   {
+      if( primsol != NULL )
+      {
+         Vector tmp(lpi->spx->nCols(), primsol);
+         (void)lpi->spx->getPrimal(tmp);
+      }
+      if( dualsol != NULL )
+      {
+         Vector tmp(lpi->spx->nRows(), dualsol);
+         (void)lpi->spx->getDual(tmp);
+      }
+      if( activity != NULL )
+      {
+         Vector tmp(lpi->spx->nRows(), activity);
+         (void)lpi->spx->getSlacks(tmp);  /* in SoPlex, the activities are called "slacks" */
+      }
+      if( redcost != NULL )
+      {
+         Vector tmp(lpi->spx->nCols(), redcost);
+         (void)lpi->spx->getRedCost(tmp);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets primal ray for unbounded LPs */
+SCIP_RETCODE SCIPlpiGetPrimalRay(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Real*            ray                 /**< primal ray */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiGetPrimalRay()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by SoPlex\n");
+   
+   return SCIP_LPERROR;
+}
+
+/** gets dual farkas proof for infeasibility */
+SCIP_RETCODE SCIPlpiGetDualfarkas(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetDualfarkas()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   try
+   {
+      Vector tmp(lpi->spx->nRows(), dualfarkas);
+      (void)lpi->spx->getDualfarkas(tmp);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets the number of LP iterations of the last solve call */
+SCIP_RETCODE SCIPlpiGetIterations(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetIterations()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   *iterations = lpi->spx->iterations();
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * LP Basis Methods
+ */
+
+/**@name LP Basis Methods */
+/**@{ */
+
+/** Return reduced cost of column @c col if this is readily available, otherwise return 0.0 */
+static
+SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
+{
+   assert( spx != NULL );
+   assert( val != NULL );
+
+   *val = 0.0;
+
+   /* Return if the vectors are not set up. The vectors are not set up if for instance we preformed
+    * strong branching before. */
+   if (! spx->isInitialized() )
+      return SCIP_OKAY;
+
+   assert( 0 <= col && col < spx->nCols() );
+
+   if( !(spx->getRowRep()) )
+   {
+      /* in column case the reduced costs are available: */
+      if (spx->getSense() == SPxLP::MINIMIZE)
+	 *val = spx->pVec()[col] - spx->maxObj()[col];
+      else
+	 *val = spx->maxObj()[col] - spx->pVec()[col];
+   }
+   else
+   {
+      assert( spx->rep() == SPxSolver::ROW );
+
+      /* In row case for computing the reduced costs one needs to pass through the basis. We skip this expensive part. */
+#if 0
+      /* Here is the code necessary to compute the reduced costs for row representation: */
+      SCIP_Real sign = 1.0;
+      if ( spx->getSense() == SPxLP::MINIMIZE )
+	 sign = -1.0;
+
+      if ( spx->isColBasic(col) )
+      {
+	 /* It seems necessary to search through the basis in order to find the correct position */
+         for (int i = spx->dim() - 1; i >= 0; --i)
+         {
+	    SPxId id = spx->basis().baseId(i);
+            if ( id.isSPxColId() && col == spx->number(SPxColId(id)) )
+	    {
+	       *val = sign * spx->fVec()[i];
+	       break;
+	    }
+	 }
+      }
+#endif
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+/** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
+SCIP_RETCODE SCIPlpiGetBase(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cstat,              /**< array to store column basis status, or NULL */
+   int*                  rstat               /**< array to store row basis status, or NULL */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiGetBase()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis in order to return
+      the original basis status (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong
+      branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   if( rstat != NULL )
+   {
+      for( i = 0; i < lpi->spx->nRows(); ++i )
+      {
+         switch( lpi->spx->getBasisRowStatus(i) )
+         {
+         case SPxSolver::BASIC:
+            rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
+            break;	  
+         case SPxSolver::FIXED:
+         case SPxSolver::ON_LOWER:
+            rstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
+            break;
+         case SPxSolver::ON_UPPER:
+            rstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
+            break;
+         case SPxSolver::ZERO:
+            SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
+            return SCIP_LPERROR;
+         default:
+            SCIPerrorMessage("invalid basis status\n");
+            SCIPABORT();
+         }
+      }
+   }
+
+   if( cstat != NULL )
+   {
+      for( i = 0; i < lpi->spx->nCols(); ++i )
+      {
+	 SCIP_Real val = 0.0;
+         switch( lpi->spx->getBasisColStatus(i) )
+         {
+         case SPxSolver::BASIC:
+            cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
+            break;	  
+         case SPxSolver::FIXED:
+	    /* Get reduced cost estimation. If the estimation is not correct this should not hurt:
+	     * If the basis is loaded into SoPlex again, the status is converted to FIXED again; in
+	     * this case there is no problem at all. If the basis is saved and/or used in some other
+	     * solver, it usually is very cheap to perform the pivots necessary to get an optimal
+	     * basis. */
+	    SCIP_CALL( getRedCostEst(lpi->spx, i, &val) );
+	    if( val < 0.0 )  /* reduced costs < 0 => UPPER  else => LOWER */
+	       cstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
+	    else
+	       cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
+            break;
+         case SPxSolver::ON_LOWER:
+            cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
+            break;
+         case SPxSolver::ON_UPPER:
+            cstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
+            break;
+         case SPxSolver::ZERO:
+            cstat[i] = SCIP_BASESTAT_ZERO; /*lint !e641*/
+            break;
+         default:
+            SCIPerrorMessage("invalid basis status\n");
+            SCIPABORT();
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets current basis status for columns and rows */
+SCIP_RETCODE SCIPlpiSetBase(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cstat,              /**< array with column basis status */
+   int*                  rstat               /**< array with row basis status */
+   )
+{
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiSetBase()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(cstat != NULL || lpi->spx->nCols() == 0);
+   assert(rstat != NULL || lpi->spx->nRows() == 0);
+
+   invalidateSolution(lpi);
+   lpi->spx->freePreStrongbranchingBasis();
+
+   SPxSolver::VarStatus* spxcstat = new SPxSolver::VarStatus[lpi->spx->nCols()];
+   SPxSolver::VarStatus* spxrstat = new SPxSolver::VarStatus[lpi->spx->nRows()];
+
+   for( i = 0; i < lpi->spx->nRows(); ++i )
+   {
+      switch( rstat[i] )
+      {
+      case SCIP_BASESTAT_LOWER:
+         spxrstat[i] = SPxSolver::ON_LOWER;
+         break;
+      case SCIP_BASESTAT_BASIC:
+         spxrstat[i] = SPxSolver::BASIC;
+         break;
+      case SCIP_BASESTAT_UPPER:
+         spxrstat[i] = SPxSolver::ON_UPPER;
+         break;
+      case SCIP_BASESTAT_ZERO:
+         SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
+         delete[] spxcstat;
+         delete[] spxrstat;
+         return SCIP_LPERROR; /*lint !e429*/
+      default:
+         SCIPerrorMessage("invalid basis status\n");
+         SCIPABORT();
+      }
+   }
+
+   for( i = 0; i < lpi->spx->nCols(); ++i )
+   {
+      switch( cstat[i] )
+      {
+      case SCIP_BASESTAT_LOWER:
+         spxcstat[i] = SPxSolver::ON_LOWER;
+         break;
+      case SCIP_BASESTAT_BASIC:
+         spxcstat[i] = SPxSolver::BASIC;
+         break;
+      case SCIP_BASESTAT_UPPER:
+         spxcstat[i] = SPxSolver::ON_UPPER;
+         break;
+      case SCIP_BASESTAT_ZERO:
+         spxcstat[i] = SPxSolver::ZERO;
+         break;
+      default:
+         SCIPerrorMessage("invalid basis status\n");
+         SCIPABORT();
+      }
+   }
+   SOPLEX_TRY( lpi->spx->setBasis(spxrstat, spxcstat) );
+
+   delete[] spxcstat;
+   delete[] spxrstat;
+   
+   return SCIP_OKAY;
+}
+
+/** returns the indices of the basic columns and rows */
+SCIP_RETCODE SCIPlpiGetBasisInd(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBasisInd()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   /* This function expects that the basis is a column basis. If SoPlex uses row representation, we
+    * have to transform the basis and possibly compute a new factorization in the function
+    * SCIPlpiGetBInvRow(), etc. */
+   if ( !(lpi->spx->getRowRep()) ) 
+   {
+      /* for column representation, return the basis */
+      SPxSolver* spx = lpi->spx;
+      for (int i = 0; i < spx->nRows(); ++i)
+      {
+	 SPxId id = spx->basis().baseId(i);
+	 if ( spx->isId(id) ) /* column id? */
+	    bind[i] = spx->number(id);
+	 else                 /* row id?    */
+	    bind[i] = -1 - spx->number(id);
+      }
+   }
+   else
+   {
+      SPxSolver* spx = lpi->spx;
+      assert( spx->rep() == SPxSolver::ROW );
+
+      /* for row representation, return the complement of the basis - need to loop through all rows and columns */
+      int k = 0;
+      for (int i = 0; i < spx->nRows(); ++i)
+      {
+	 if ( ! spx->isRowBasic(i) )
+	    bind[k++] = -1 - i;
+      }
+      for (int j = 0; j < spx->nCols(); ++j)
+      {
+	 if ( ! spx->isColBasic(j) )
+	    bind[k++] = j;
+      }
+      assert( k == spx->nRows() );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* prepare a factorization of the basis matrix in column representation */
+static
+SCIP_RETCODE prepareFactorization(
+   SCIP_LPI*   lpi
+   )
+{
+   SCIPdebugMessage("Preparing factorization for computation of basis inverse.\n");
+
+   try
+   {
+      /* if the factorization has not been set up, we compute a new factorization */
+      if ( lpi->factorization == 0 )
+      {
+         SPxSolver* spx = lpi->spx;
+
+         /* matrix to store columns */
+         DataArray <const SVector*> matrix(spx->nRows());
+      
+         int k = 0;
+         for (int i = 0; i < spx->nRows(); ++i)
+         {
+            if ( ! spx->isRowBasic(i) )
+               matrix[k++] = new UnitVector(i);
+         }
+         for (int j = 0; j < spx->nCols(); ++j)
+         {
+            if ( ! spx->isColBasic(j) )
+               matrix[k++] = &spx->colVector(j);
+         }
+         assert( k == spx->nRows() );
+         assert( k == matrix.size() );
+
+         /* compute factorization */
+         lpi->factorization = new SLUFactor;
+#ifndef NDEBUG
+         SLinSolver::Status status = lpi->factorization->load(matrix.get_ptr(), k);
+#else
+         (void) lpi->factorization->load(matrix.get_ptr(), k);
+#endif
+         assert( status == SLinSolver::OK );
+         assert( k == lpi->factorization->dim() );
+
+         /* delete matrix columns corresponding to unit vectors */
+         k = 0;
+         for (int i = 0; i < spx->nRows(); ++i)
+         {
+            if ( ! spx->isRowBasic(i) )
+               delete matrix[k++];
+         }
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+   return SCIP_OKAY;
+}
+
+/** get dense row of inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpiGetBInvRow(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   r,                  /**< row number */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   try
+   {
+      assert(lpi != NULL);
+      assert(lpi->spx != NULL);
+      SPxSolver* spx = lpi->spx;
+
+      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
+      DVector e(spx->nRows());      /* prepare unit vector */
+      e.clear();
+      e[r] = 1.0;
+
+      /* in the column case use the existing factorization */
+      if ( spx->rep() == SPxSolver::COLUMN )
+      {
+         assert( spx->dim() == spx->nRows() );
+         assert( spx->coDim() == spx->nCols() );
+
+         /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
+         spx->basis().coSolve(x, e);
+      }
+      else
+      {
+         assert( spx->rep() == SPxSolver::ROW );
+         assert( spx->dim() == spx->nCols() );
+         assert( spx->coDim() == spx->nRows() );
+
+         /* factorization is deleted in invalidateSolution() */
+         SCIP_CALL( prepareFactorization(lpi) );
+         assert( lpi->factorization != 0 );
+         assert( lpi->factorization->dim() == spx->nRows() );
+      
+         /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
+         lpi->factorization->solveLeft(x, e);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** get dense column of inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpiGetBInvCol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
+                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
+                                              *   B^-1 column numbers to the row and column numbers of the LP!
+                                              *   c must be between 0 and nrows-1, since the basis has the size
+                                              *   nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   try
+   {
+      assert(lpi != NULL);
+      assert(lpi->spx != NULL);
+      SPxSolver* spx = lpi->spx;
+
+      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
+      DVector e(spx->nRows());      /* prepare unit vector */
+      e.clear();
+      e[c] = 1.0;
+
+      /* in the column case use the existing factorization */
+      if ( spx->rep() == SPxSolver::COLUMN )
+      {
+         assert( spx->dim() == spx->nRows() );
+         assert( spx->coDim() == spx->nCols() );
+
+         /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
+         spx->basis().solve(x, e);
+      }
+      else
+      {
+         assert( spx->rep() == SPxSolver::ROW );
+         assert( spx->dim() == spx->nCols() );
+         assert( spx->coDim() == spx->nRows() );
+      
+         /* factorization is deleted in invalidateSolution() */
+         SCIP_CALL( prepareFactorization(lpi) );
+         assert( lpi->factorization != 0 );
+         assert( lpi->factorization->dim() == spx->nRows() );
+      
+         /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
+         lpi->factorization->solveRight(x, e);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvARow(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   r,                  /**< row number */
+   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   SCIP_Real* buf;
+   SCIP_Real* binv;
+   int nrows;
+   int ncols;
+   int c;
+
+   SCIPdebugMessage("calling SCIPlpiGetBInvARow()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   nrows = lpi->spx->nRows();
+   ncols = lpi->spx->nCols();
+   buf = NULL;
+
+   /* get (or calculate) the row in B^-1 */
+   if( binvrow == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&buf, nrows) );
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buf) );
+      binv = buf;
+   }
+   else
+      binv = const_cast<SCIP_Real*>(binvrow);
+
+   assert(binv != NULL);
+
+   /* calculate the scalar product of the row in B^-1 and A */
+   soplex::Vector binvvec(nrows, binv);
+   for( c = 0; c < ncols; ++c )
+      coef[c] = binvvec * lpi->spx->colVector(c);  /* scalar product */ /*lint !e1702*/
+
+   /* free memory if it was temporarily allocated */
+   BMSfreeMemoryArrayNull(&buf);
+
+   return SCIP_OKAY;
+}
+
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvACol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   try 
+   {
+      assert(lpi != NULL);
+      assert(lpi->spx != NULL);
+      SPxSolver* spx = lpi->spx;
+
+      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
+      DVector col(lpi->spx->nRows());
+
+      /* extract column c of A */
+      col = lpi->spx->colVector(c);
+
+      /* in the column case use the existing factorization */
+      if ( spx->rep() == SPxSolver::COLUMN )
+      {
+         assert( spx->dim() == spx->nRows() );
+         assert( spx->coDim() == spx->nCols() );
+
+         /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
+         lpi->spx->basis().solve(x, col);
+      }
+      else
+      {
+         assert( spx->rep() == SPxSolver::ROW );
+         assert( spx->dim() == spx->nCols() );
+         assert( spx->coDim() == spx->nRows() );
+
+         /* factorization is deleted in invalidateSolution() */      
+         SCIP_CALL( prepareFactorization(lpi) );
+         assert( lpi->factorization != 0 );
+         assert( lpi->factorization->dim() == spx->nRows() );
+
+         /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
+         lpi->factorization->solveRight(x, col);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * LP State Methods
+ */
+
+/**@name LP State Methods */
+/**@{ */
+
+/** stores LPi state (like basis information) into lpistate object */
+SCIP_RETCODE SCIPlpiGetState(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
+   )
+{
+   int ncols;
+   int nrows;
+
+   SCIPdebugMessage("calling SCIPlpiGetState()\n");
+
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lpistate != NULL);
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   ncols = lpi->spx->nCols();
+   nrows = lpi->spx->nRows();
+   assert(ncols >= 0);
+   assert(nrows >= 0);
+   
+   /* allocate lpistate data */
+   SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows) );
+
+   /* allocate enough memory for storing uncompressed basis information */
+   SCIP_CALL( ensureCstatMem(lpi, ncols) );
+   SCIP_CALL( ensureRstatMem(lpi, nrows) );
+
+   /* get unpacked basis information */
+   SCIP_CALL( SCIPlpiGetBase(lpi, lpi->cstat, lpi->rstat) );
+
+   /* pack LPi state data */
+   (*lpistate)->ncols = ncols;
+   (*lpistate)->nrows = nrows;
+   lpistatePack(*lpistate, lpi->cstat, lpi->rstat);
+
+   return SCIP_OKAY;
+}
+
+/** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetState()
+ */
+SCIP_RETCODE SCIPlpiSetState(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
+   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   )
+{
+   int lpncols;
+   int lpnrows;
+   int i;
+
+   SCIPdebugMessage("calling SCIPlpiSetState()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lpistate != NULL);
+
+   /* if last lp solves were strong branching calls, we delete the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->freePreStrongbranchingBasis();
+
+   lpncols = lpi->spx->nCols();
+   lpnrows = lpi->spx->nRows();
+   assert(lpistate->ncols <= lpncols);
+   assert(lpistate->nrows <= lpnrows);
+
+   /* allocate enough memory for storing uncompressed basis information */
+   SCIP_CALL( ensureCstatMem(lpi, lpncols) );
+   SCIP_CALL( ensureRstatMem(lpi, lpnrows) );
+
+   /* unpack LPi state data */
+   lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
+
+   /* extend the basis to the current LP */
+   for( i = lpistate->ncols; i < lpncols; ++i )
+      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /**@todo this has to be corrected for lb = -infinity */
+   for( i = lpistate->nrows; i < lpnrows; ++i )
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
+
+   /* load basis information */
+   SCIP_CALL( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
+
+   return SCIP_OKAY;
+}
+
+/** frees LPi state information */
+SCIP_RETCODE SCIPlpiFreeState(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiFreeState()\n");
+
+   assert(lpi != NULL);
+   assert(lpistate != NULL);
+
+   if ( *lpistate != NULL )
+      lpistateFree(lpistate, blkmem);
+
+   return SCIP_OKAY;
+}
+
+/** checks, whether the given LP state contains simplex basis information */
+SCIP_Bool SCIPlpiHasStateBasis(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   )
+{  /*lint --e{715}*/
+   return TRUE;
+}
+
+/** reads LP state (like basis information from a file */
+SCIP_RETCODE SCIPlpiReadState(
+   SCIP_LPI*             lpi,               /**< LP interface structure */
+   const char*           fname              /**< file name */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiReadState()\n");
+
+   /* if last lp solves were strong branching calls, we delete the pre-strong-branching basis (not necessary if
+      STRONGBRANCH_RESTOREBASIS true, since done right after strong branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->freePreStrongbranchingBasis();
+
+   bool res;
+   SOPLEX_TRY( res = lpi->spx->readBasisFile(fname, 0, 0) );
+
+   if ( ! res )
+      return SCIP_ERROR;
+   return SCIP_OKAY;
+
+   return SCIP_INVALIDCALL;
+}
+
+/** writes LP state (like basis information) to a file */
+SCIP_RETCODE SCIPlpiWriteState(
+   SCIP_LPI*             lpi,            /**< LP interface structure */
+   const char*           fname           /**< file name */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiWriteState()\n");
+
+   /* if last lp solves were strong branching calls, then we restore the pre-strong-branching basis in order to return
+      the original basis status (not necessary if STRONGBRANCH_RESTOREBASIS true, since done right after strong
+      branch) */
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->restorePreStrongbranchingBasis(true);
+
+   bool res;
+   SOPLEX_TRY( res = lpi->spx->writeBasisFile(fname, 0, 0) );
+
+   if ( ! res )
+      return SCIP_ERROR;
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Parameter Methods
+ */
+
+/**@name Parameter Methods */
+/**@{ */
+
+/** gets integer parameter of LP */
+SCIP_RETCODE SCIPlpiGetIntpar(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPPARAM          type,               /**< parameter number */
+   int*                  ival                /**< buffer to store the parameter value */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetIntpar()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(ival != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FROMSCRATCH:
+      *ival = lpi->spx->getFromScratch();
+      break;
+   case SCIP_LPPAR_LPINFO:
+      *ival = lpi->spx->getLpInfo();
+      break;
+   case SCIP_LPPAR_LPITLIM:
+      *ival = lpi->spx->terminationIter();
+      break;
+   case SCIP_LPPAR_PRICING:
+      *ival = (int)lpi->pricing;
+      break;
+   case SCIP_LPPAR_SIMPLEXROWREP:
+      *ival = (int)(lpi->spx->getRowRep());
+      break;
+   default:
+      return SCIP_PARAMETERUNKNOWN;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** sets integer parameter of LP */
+SCIP_RETCODE SCIPlpiSetIntpar(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPPARAM          type,               /**< parameter number */
+   int                   ival                /**< parameter value */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiSetIntpar()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FROMSCRATCH:
+      assert(ival == TRUE || ival == FALSE);
+      lpi->spx->setFromScratch(bool(ival));
+      break;
+   case SCIP_LPPAR_LPINFO:
+      assert(ival == TRUE || ival == FALSE);
+      lpi->spx->setLpInfo(bool(ival));
+      break;
+   case SCIP_LPPAR_LPITLIM:
+      lpi->spx->setTerminationIter(ival);
+      break;
+   case SCIP_LPPAR_PRICING:
+      lpi->pricing = (SCIP_PRICING)ival;
+      switch( lpi->pricing )
+      {
+      case SCIP_PRICING_LPIDEFAULT:
+      case SCIP_PRICING_AUTO:
+         lpi->spx->setAutoPricer(false);
+         break;
+      case SCIP_PRICING_FULL:
+         lpi->spx->setFullPricer();
+         break;
+      case SCIP_PRICING_PARTIAL:
+         lpi->spx->setParmultPricer();
+         break;
+      case SCIP_PRICING_STEEP:
+         lpi->spx->setSteepPricer();
+	 break;
+      case SCIP_PRICING_STEEPQSTART:
+         lpi->spx->setSteepQStartPricer();
+	 break;
+      case SCIP_PRICING_DEVEX:
+         lpi->spx->setDevexPricer();
+	 break;
+      default:
+         return SCIP_LPERROR;
+      }
+      break;
+   case SCIP_LPPAR_SIMPLEXROWREP:
+      assert(ival == TRUE || ival == FALSE);
+      if( ival && !(lpi->spx->getRowRep()) )
+      {
+         lpi->spx->setRep(SPxSolver::ROW);
+         lpi->spx->setRowRep(true);
+      }
+      else if( !ival && lpi->spx->getRowRep() )
+      {
+         lpi->spx->setRep(SPxSolver::COLUMN);
+         lpi->spx->setRowRep(false);
+      }
+      break;
+   default:
+      return SCIP_PARAMETERUNKNOWN;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** gets floating point parameter of LP */
+SCIP_RETCODE SCIPlpiGetRealpar(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPPARAM          type,               /**< parameter number */
+   SCIP_Real*            dval                /**< buffer to store the parameter value */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetRealpar()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(dval != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FEASTOL:
+      *dval = lpi->spx->delta();
+      break;
+   case SCIP_LPPAR_LOBJLIM:
+      *dval = lpi->spx->getObjLoLimit();
+      break;
+   case SCIP_LPPAR_UOBJLIM:
+      *dval = lpi->spx->getObjUpLimit();
+      break;
+   case SCIP_LPPAR_LPTILIM:
+      *dval = lpi->spx->terminationTime();
+      break;
+   default:
+      return SCIP_PARAMETERUNKNOWN;
+   }  /*lint !e788*/
+   
+   return SCIP_OKAY;
+}
+
+/** sets floating point parameter of LP */
+SCIP_RETCODE SCIPlpiSetRealpar(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPPARAM          type,               /**< parameter number */
+   SCIP_Real             dval                /**< parameter value */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiSetRealpar()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FEASTOL:
+      lpi->spx->setDelta(dval);
+      break;
+   case SCIP_LPPAR_LOBJLIM:
+      lpi->spx->setObjLoLimit(dval);
+      break;
+   case SCIP_LPPAR_UOBJLIM:
+      lpi->spx->setObjUpLimit(dval);
+      break;
+   case SCIP_LPPAR_LPTILIM:
+      lpi->spx->setTerminationTime(dval);
+      break;
+   default:
+      return SCIP_PARAMETERUNKNOWN;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+
+
+
+/*
+ * Numerical Methods
+ */
+
+/**@name Numerical Methods */
+/**@{ */
+
+/** returns value treated as infinity in the LP solver */
+SCIP_Real SCIPlpiInfinity(
+   SCIP_LPI*             /*lpi*/             /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiInfinity()\n");
+
+   return soplex::infinity;
+}
+
+/** checks if given value is treated as infinity in the LP solver */
+SCIP_Bool SCIPlpiIsInfinity(
+   SCIP_LPI*             /*lpi*/,            /**< LP interface structure */
+   SCIP_Real             val
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
+
+   return (val >= soplex::infinity);
+}
+
+/**@} */
+
+
+
+
+/*
+ * File Interface Methods
+ */
+
+/**@name File Interface Methods */
+/**@{ */
+
+/** returns, whether the given file exists */
+static
+SCIP_Bool fileExists(
+   const char*           filename            /**< file name */
+   )
+{
+   FILE* f;
+
+   f = fopen(filename, "r");
+   if( f == NULL )
+      return FALSE;
+
+   fclose(f);
+
+   return TRUE;
+}
+
+/** reads LP from a file */
+SCIP_RETCODE SCIPlpiReadLP(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiReadLP()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   if( !STRONGBRANCH_RESTOREBASIS )
+      lpi->spx->freePreStrongbranchingBasis();
+
+   if( !fileExists(fname) )
+      return SCIP_NOFILE;
+
+   try
+   {
+      if( !lpi->spx->readFile(fname) )
+	 return SCIP_READERROR;
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_READERROR;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** writes LP to a file */
+SCIP_RETCODE SCIPlpiWriteLP(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiWriteLP()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   try
+   {
+      lpi->spx->writeFile(fname);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_WRITEERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
