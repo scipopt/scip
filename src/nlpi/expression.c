@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.10 2010/05/31 15:13:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.11 2010/06/01 19:22:31 bzfviger Exp $"
 
 /**@file   expression.c
  * @brief  methods for expressions and expression trees
@@ -1292,6 +1292,64 @@ SCIP_RETCODE SCIPexprEvalInt(
    return SCIP_OKAY;
 }
 
+/** substitutes variables (SCIP_EXPR_VARIDX) by expressions
+ * a variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
+ * if substexprs[i] == NULL, then the variable expression i is not touched */
+SCIP_RETCODE SCIPexprSubstituteVars(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr,               /**< expression, which of the children may be replaced */
+   SCIP_EXPR**           substexprs          /**< array of substitute expressions; single entries can be NULL */
+)
+{
+   int i;
+
+   assert(blkmem != NULL);
+   assert(expr   != NULL);
+   assert(substexprs != NULL);
+
+   for( i = 0; i < expr->nchildren; ++i )
+   {
+      if( expr->children[i]->op == SCIP_EXPR_VARIDX )
+      {
+         int varidx;
+         varidx = expr->children[i]->data.intval;
+
+         assert(varidx >= 0);
+         if( substexprs[varidx] != NULL )
+         {
+            /* replace child i by copy of substexprs[expr->children[i]->opdata.intval] */
+            SCIPexprFreeDeep(blkmem, &expr->children[i]);
+            SCIP_CALL( SCIPexprCopyDeep(blkmem, &expr->children[i], substexprs[i]) );
+         }
+      }
+      else
+      {
+         /* call recursively */
+         SCIP_CALL( SCIPexprSubstituteVars(blkmem, expr->children[i], substexprs) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** updates variable indices in expression tree */
+void SCIPexprReindexVars(
+   SCIP_EXPR*            expr,               /**< expression to update */
+   int*                  newindices          /**< new indices of variables */
+)
+{
+   int i;
+
+   assert(expr != NULL);
+   assert(newindices != NULL);
+
+   if( expr->op == SCIP_EXPR_VARIDX )
+      expr->data.intval = newindices[expr->data.intval];
+
+   for( i = 0; i < expr->nchildren; ++i )
+      SCIPexprReindexVars(expr->children[i], newindices);
+}
+
 /** prints an expression */
 void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
@@ -1620,6 +1678,39 @@ SCIP_RETCODE SCIPexprtreeEvalInt(
    assert(val     != NULL);
 
    SCIP_CALL( SCIPexprEvalInt(tree->root, infinity, varvals, tree->params, val) );
+
+   return SCIP_OKAY;
+}
+
+/** substitutes variables (SCIP_EXPR_VARIDX) in an expression tree by expressions
+ * A variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
+ * if substexprs[i] == NULL, then the variable expression i is not touched */
+SCIP_RETCODE SCIPexprtreeSubstituteVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR**           substexprs          /**< array of substitute expressions; single entries can be NULL */
+)
+{
+   assert(tree != NULL);
+   assert(tree->root != NULL);
+
+   if( tree->root->op == SCIP_EXPR_VARIDX )
+   {
+      int varidx;
+
+      varidx = tree->root->data.intval;
+      assert(varidx >= 0);
+      if( substexprs[varidx] != NULL )
+      {
+         /* substitute root expression */
+         SCIPexprFreeDeep(tree->blkmem, &tree->root);
+         SCIP_CALL( SCIPexprCopyDeep(tree->blkmem, &tree->root, substexprs[varidx]) );
+      }
+   }
+   else
+   {
+      /* check children (and grandchildren and so on...) of root expression */
+      SCIP_CALL( SCIPexprSubstituteVars(tree->blkmem, tree->root, substexprs) );
+   }
 
    return SCIP_OKAY;
 }

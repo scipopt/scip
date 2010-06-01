@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.4 2010/05/20 16:05:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.5 2010/06/01 19:22:32 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  more methods for expressions and expression trees
@@ -40,18 +40,29 @@ extern "C" {
 #endif
 
 /** returns variables of expression tree */
+extern
 SCIP_VAR** SCIPexprtreeGetVars(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
 /** stores array of variables in expression tree */
+extern
 SCIP_RETCODE SCIPexprtreeSetVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int                   nvars,              /**< number of variables */
    SCIP_VAR**            vars                /**< variables */
 );
 
+/** adds variables to the expression tree variables array */
+extern
+SCIP_RETCODE SCIPexprtreeAddVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int                   nvars,              /**< number of variables */
+   SCIP_VAR**            vars                /**< variables */
+);
+
 /** evaluates an expression tree for a primal solution or LP solution */
+extern
 SCIP_RETCODE SCIPexprtreeEvalSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -60,6 +71,7 @@ SCIP_RETCODE SCIPexprtreeEvalSol(
 );
 
 /** evaluates an expression tree w.r.t. current global bounds */
+extern
 SCIP_RETCODE SCIPexprtreeEvalIntGlobalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -68,6 +80,7 @@ SCIP_RETCODE SCIPexprtreeEvalIntGlobalBounds(
 );
 
 /** evaluates an expression tree w.r.t. current local bounds */
+extern
 SCIP_RETCODE SCIPexprtreeEvalIntLocalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -76,6 +89,7 @@ SCIP_RETCODE SCIPexprtreeEvalIntLocalBounds(
 );
 
 /** prints an expression tree using variable names from variables array */
+extern
 SCIP_RETCODE SCIPexprtreePrintWithNames(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    FILE*                 file                /**< file for printing, or NULL for stdout */
@@ -84,9 +98,17 @@ SCIP_RETCODE SCIPexprtreePrintWithNames(
 /** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
  * Note that this is an O(n) operation!
  */
+extern
 int SCIPexprtreeFindVar(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_VAR*             var                 /**< variable to search for */
+);
+
+/** removes fixed variables from an expression tree, so that at exit all variables are active */
+extern
+SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Bool*            changed             /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
 );
 
 #ifdef __cplusplus

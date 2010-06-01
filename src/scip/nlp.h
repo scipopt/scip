@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.5 2010/05/31 17:55:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.6 2010/06/01 19:22:32 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -267,6 +267,16 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real             rhs                 /**< new right hand side */
+   );
+
+/** removes (or substitutes) all fixed, negated, aggregated, multiaggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
+extern
+SCIP_RETCODE SCIPnlrowRemoveFixedVars(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
 /** recalculates the current activity of a nonlinear row in the current NLP solution */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.5 2010/05/31 17:55:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.6 2010/06/01 19:22:32 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -25,7 +25,6 @@
  *  has to be updated to the current NLP with a call to nlpFlush().
  *
  *  @todo handle linear rows from LP
- *  @todo replacement of aggregated variables, removal of fixed variables
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -476,6 +475,9 @@ SCIP_RETCODE nlrowAddLinearCoef(
    assert(var    != NULL);
    assert(!SCIPsetIsZero(set, coef));
 
+   /* assert that only active variables are added once the row is in the NLP */
+   assert(nlrow->nlpindex <= -2 || SCIPvarIsActive(var) );
+
    SCIP_CALL( SCIPnlrowEnsureLinearSize(nlrow, blkmem, set, nlrow->nlinvars+1) );
    assert(nlrow->linvars  != NULL);
    assert(nlrow->lincoefs != NULL);
@@ -495,6 +497,85 @@ SCIP_RETCODE nlrowAddLinearCoef(
 
    SCIPdebugMessage("added linear coefficient %g * <%s> at position %d to nonlinear row <%s>\n",
       coef, SCIPvarGetName(var), pos, nlrow->name);
+
+   return SCIP_OKAY;
+}
+
+/** adds a linear coefficient to a nonlinear row
+ * if the variable exists in the linear part of the row already, the coefficients are added
+ * otherwise the variable is added to the row */
+static
+SCIP_RETCODE nlrowAddToLinearCoef(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef,               /**< value of coefficient */
+   SCIP_Bool             removefixed         /**< whether to disaggregate var before adding */
+   )
+{
+   int pos;
+
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+   assert(var    != NULL);
+
+   if( removefixed && !SCIPvarIsActive(var) )
+   {
+      SCIP_Real constant;
+
+      constant = 0.0;
+      SCIPvarGetProbvarSum(&var, &coef, &constant);
+      if( constant != 0.0 )
+      {
+         nlrow->constant += constant;
+         SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+      }
+
+      if( !SCIPvarIsActive(var) )
+      {
+         int j;
+
+         /* if var is still not active, then it is multiaggregated */
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+
+         if( SCIPvarGetMultaggrConstant(var) != 0.0 )
+         {
+            nlrow->constant += coef * SCIPvarGetMultaggrConstant(var);
+            SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+         }
+
+         for( j = 0; j < SCIPvarGetMultaggrNVars(var); ++j )
+         {
+            SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var)[j], SCIPvarGetMultaggrScalars(var)[j] * coef, TRUE) );
+         }
+
+         return SCIP_OKAY;
+      }
+   }
+   assert(!removefixed || SCIPvarIsActive(var));
+
+   if( SCIPsetIsZero(set, coef) )
+      return SCIP_OKAY;
+
+   pos = nlrowSearchLinearCoef(nlrow, var);
+
+   if( pos == -1 )
+   {
+      /* add as new coefficient */
+      SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, var, coef) );
+   }
+   else
+   {
+      assert(pos >= 0);
+      assert(pos <  nlrow->nlinvars);
+      assert(nlrow->linvars[pos] == var);
+
+      /* add to previously existing coefficient */
+      nlrow->lincoefs[pos] += coef;
+   }
 
    return SCIP_OKAY;
 }
@@ -840,6 +921,610 @@ SCIP_RETCODE nlrowCalcActivityBounds(
    return SCIP_OKAY;
 }
 
+/** removes a fixed variable from the linear part of a nonlinear row by replacing it with the corresponding constant or disaggregated term */
+static
+SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   int                   pos                 /**< position of variable in linear variables array */
+   )
+{
+   SCIP_Real oldconstant;
+   SCIP_VAR* var;
+
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+   assert(pos >= 0);
+   assert(pos <  nlrow->nlinvars);
+
+   var = nlrow->linvars[pos];
+
+   if( SCIPvarIsActive(var) )
+      return SCIP_OKAY;
+
+   oldconstant = nlrow->constant;
+
+   /* replace fixed, aggregated, or negated variable */
+   SCIP_CALL( SCIPvarGetProbvarSum( &nlrow->linvars[pos], &nlrow->lincoefs[pos], &nlrow->constant) );
+
+   /* if var had been fixed, entry should be removed from row */
+   if( nlrow->lincoefs[pos] == 0.0 )
+   {
+      nlrowMoveLinearCoef(nlrow, nlrow->nlinvars-1, pos);
+      nlrow->nlinvars--;
+   }
+   nlrow->linvarssorted = FALSE;
+
+   /* notify nlrow that coefficient of var is now 0.0 in row */
+   SCIP_CALL( nlrowLinearCoefChanged(nlrow, set, stat, var, 0.0, nlp) );
+
+   /* notify nlrow that constant of row has changed */
+   if( oldconstant != nlrow->constant )
+      SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+
+   if( SCIPvarIsActive(nlrow->linvars[pos]) )
+   {
+      /* if var was aggregated or negated, notify nlrow about new coefficient */
+      SCIP_CALL( nlrowLinearCoefChanged(nlrow, set, stat, nlrow->linvars[pos], nlrow->lincoefs[pos], nlp) );
+   }
+   else
+   {
+      SCIP_Real coef;
+      int i;
+
+      /* if not removed or active, the new variable should be multiaggregated */
+      assert(SCIPvarGetStatus(nlrow->linvars[pos]) == SCIP_VARSTATUS_MULTAGGR);
+
+      var  = nlrow->linvars[pos];
+      coef = nlrow->lincoefs[pos];
+
+      /* remove the variable from the row */
+      SCIP_CALL( nlrowDelLinearCoefPos(nlrow, set, stat, nlp, pos) );
+
+      /* add multiaggregated term to row */
+      if( SCIPvarGetMultaggrConstant(var) != 0.0 )
+      {
+         nlrow->constant += coef * SCIPvarGetMultaggrConstant(var);
+         SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+      }
+      SCIP_CALL( SCIPnlrowEnsureLinearSize(nlrow, blkmem, set, nlrow->nlinvars + SCIPvarGetMultaggrNVars(var)) );
+      for( i = 0; i < SCIPvarGetMultaggrNVars(var); ++i )
+      {
+         SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var)[i], coef * SCIPvarGetMultaggrScalars(var)[i]) );
+         assert(SCIPvarGetMultaggrVars(var)[i] == nlrow->linvars[nlrow->nlinvars-1]);
+         if( !SCIPvarIsActive(SCIPvarGetMultaggrVars(var)[i]) )
+         {
+            /* if newly added variable is fixed, replace it now */
+            SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, nlrow->nlinvars-1) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes fixed variables from the linear part of a nonlinear row */
+static
+SCIP_RETCODE nlrowRemoveFixedLinearCoefs(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   int i;
+   int oldlen;
+
+   assert(nlrow != NULL);
+
+   oldlen = nlrow->nlinvars;
+   for( i = 0; i < oldlen; ++i )
+   {
+      SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, i) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes fixed quadratic variables of a nonlinear row by replacing them with the corresponding constant or disaggregated terms */
+static
+SCIP_RETCODE nlrowRemoveFixedQuadVars(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   int i;
+   int nvarsold;
+   SCIP_Bool* used;
+   SCIP_QUADELEM elem;
+   SCIP_QUADELEM newelem;
+   int idx2;
+   SCIP_Bool havechange;
+
+   SCIP_VAR* var1;
+   SCIP_Real coef1;
+   SCIP_Real constant1;
+   SCIP_VAR* var2;
+   SCIP_Real coef2;
+   SCIP_Real constant2;
+
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+
+   if( nlrow->nquadvars == 0 )
+      return SCIP_OKAY;
+
+   nvarsold = nlrow->nquadvars;
+   havechange = FALSE;
+
+   /* allocate array to count number of uses for each variable */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &used, nlrow->nquadvars) );
+   BMSclearMemoryArray(used, nlrow->nquadvars);
+
+   i = 0;
+   while( i < nlrow->nquadelems )
+   {
+      elem = nlrow->quadelems[i];
+
+      assert(elem.idx1 < nlrow->nquadvars);
+      assert(elem.idx2 < nlrow->nquadvars);
+      if( SCIPvarIsActive(nlrow->quadvars[elem.idx1]) && SCIPvarIsActive(nlrow->quadvars[elem.idx2]) )
+      {
+         /* both variables of quadratic element are active
+          * thus, we just remember that we saw them and can continue with the next element
+          */
+         if( elem.idx1 < nvarsold )
+            used[elem.idx1] = TRUE;
+         if( elem.idx2 < nvarsold )
+            used[elem.idx2] = TRUE;
+         ++i;
+         continue;
+      }
+      /* if one of the variable is not active, we remove the element and insert new disaggregated ones */
+      SCIP_CALL( nlrowDelQuadElemPos(nlrow, set, stat, nlp, i) );
+      havechange = TRUE;
+
+      var1 = nlrow->quadvars[elem.idx1];
+      var2 = nlrow->quadvars[elem.idx2];
+      coef1 = 1.0;
+      coef2 = 1.0;
+      constant1 = 0.0;
+      constant2 = 0.0;
+
+      SCIP_CALL( SCIPvarGetProbvarSum(&var1, &coef1, &constant1) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var2, &coef2, &constant2) );
+
+      if( coef1 == 0.0 && coef2 == 0.0 )
+      {
+         /* both variables were fixed, so we may add a constant term and continue */
+         if( constant1 != 0.0 && constant2 != 0.0 )
+         {
+            nlrow->constant += elem.coef * constant1 * constant2;
+            SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+         }
+         continue;
+      }
+
+      if( coef1 == 0.0 )
+      {
+         /* only the first variable was fixed, so we may add a linear term
+          * elem.coef * x * y -> elem.coef * constant1 * (coef2 * var2 + constant2) */
+         if( constant1 != 0.0 )
+         {
+            SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, var2, elem.coef * constant1 * coef2, TRUE) );
+            if( constant2 != 0.0 )
+            {
+               nlrow->constant += elem.coef * constant1 * constant2;
+               SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+            }
+         }
+         /* continue with next element that is at position i now */
+         continue;
+      }
+
+      if( coef2 == 0.0 )
+      {
+         /* only the second variable was fixed, so we may add a linear term
+          * elem.coef * x * y -> elem.coef * (coef1 * var1 + constant1) * constant2 */
+         if( constant2 != 0.0 )
+         {
+            SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, var1, elem.coef * coef1 * constant2, TRUE) );
+            if( constant1 != 0.0 )
+            {
+               nlrow->constant += elem.coef * constant1 * constant2;
+               SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+            }
+         }
+         /* continue with next element that is at position i now */
+         continue;
+      }
+
+      if( var1 == var2 && !SCIPvarIsActive(var1) )
+      {
+         SCIP_Real tmp;
+         int* multaggrvaridxs;
+         int j, k;
+
+         assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_MULTAGGR);
+         assert(coef1 == coef2);
+         assert(constant1 == constant2);
+         /* square term which variable is multiaggregated
+          * elem.coef * x^2 -> elem.coef * (coef1 * (multaggrconstant + sum_i multaggrscalar_i*multaggrvar_i) + constant1)^2
+          *    = elem.coef * ( (coef1 * multaggrconstant + constant1)^2 +
+          *                    2 * (coef1 * multaggrconstant + constant1) * coef1 * (sum_j multaggrscalar_j*multaggrvar_j) +
+          *                    coef1^2 * (sum_{j,k} multaggrscalar_j*multaggrscalar_k*multaggrvar_j*multaggrvar_k)
+          *                  )
+          */
+
+         /* add constant part */
+         tmp = coef1 * SCIPvarGetMultaggrConstant(var1) + constant1;
+         if( tmp != 0.0 )
+         {
+            nlrow->constant += elem.coef * tmp * tmp;
+            SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+         }
+
+         /* add linear part */
+         if( constant1 != 0.0 || SCIPvarGetMultaggrConstant(var1) != 0.0 )
+         {
+            for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
+            {
+               SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var1)[j],
+                  2 * elem.coef * (coef1 * SCIPvarGetMultaggrConstant(var1) + constant1) * coef1 * SCIPvarGetMultaggrScalars(var1)[j], TRUE) );
+            }
+         }
+
+         /* setup array with indices of multiaggregated variables in quadvars */
+         SCIP_CALL( SCIPsetAllocBufferArray(set, &multaggrvaridxs, SCIPvarGetMultaggrNVars(var1)) );
+         for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
+         {
+            multaggrvaridxs[j] = SCIPnlrowSearchQuadVar(nlrow, SCIPvarGetMultaggrVars(var1)[j]);
+            if( multaggrvaridxs[j] == -1 )
+            {
+               /* variable multaggrvar_j not existing in quadvars array yet, so add it */
+               SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, blkmem, set, SCIPvarGetMultaggrVars(var1)[j]) );
+               multaggrvaridxs[j] = nlrow->nquadvars-1;
+            }
+            assert(nlrow->quadvars[multaggrvaridxs[j]] == SCIPvarGetMultaggrVars(var1)[j]);
+         }
+
+         /* add quadratic elements elem.coef * coef1^2 * (sum_{j,k} multaggrscalar_j*multaggrscalar_k*multaggrvar_j*multaggrvar_k) */
+         for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
+         {
+            /* bilinear terms */
+            for( k = 0; k < j; ++k )
+            {
+               newelem.idx1 = MIN(multaggrvaridxs[j], multaggrvaridxs[k]);
+               newelem.idx2 = MAX(multaggrvaridxs[j], multaggrvaridxs[k]);
+               newelem.coef = 2 * elem.coef * coef1 * coef1 * SCIPvarGetMultaggrScalars(var1)[j] * SCIPvarGetMultaggrScalars(var1)[k];
+               SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, blkmem, set, stat, nlp, newelem) );
+            }
+
+            /* square term */
+            newelem.idx1 = multaggrvaridxs[j];
+            newelem.idx2 = multaggrvaridxs[j];
+            newelem.coef = elem.coef * coef1 * coef1 * SCIPvarGetMultaggrScalars(var1)[j] * SCIPvarGetMultaggrScalars(var1)[j];
+            SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, blkmem, set, stat, nlp, newelem) );
+         }
+
+         SCIPsetFreeBufferArray(set, &multaggrvaridxs);
+
+         /* continue with next element that is at position i now */
+         continue;
+      }
+
+      assert(var1 != NULL);
+      assert(var2 != NULL);
+      if( SCIPvarIsActive(var1) && !SCIPvarIsActive(var2) )
+      {
+         /* if the second variable is multiaggregated, but the first one is not, swap both terms */
+         SCIP_VAR* tmpvar;
+         SCIP_Real tmpcoef;
+         SCIP_Real tmpconstant;
+
+         tmpvar      = var1;
+         tmpcoef     = coef1;
+         tmpconstant = constant1;
+         var2      = var1;
+         coef2     = coef1;
+         constant2 = constant1;
+         var1      = tmpvar;
+         coef1     = tmpcoef;
+         constant1 = tmpconstant;
+      }
+
+      if( !SCIPvarIsActive(var1) )
+      {
+         SCIP_Real tmp;
+         int j;
+
+         assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_MULTAGGR);
+
+         /* the first variable is multiaggregated, add a constant and sequences of linear and quadratic terms:
+          * elem.coef * x * y -> elem.coef * (coef1 * (multaggrconstant + sum_i multaggrscalar_i*multaggrvar_i) + constant1) * (coef2 * var2 + constant2)
+          *    = elem.coef * ( (coef1 * multaggrconstant + constant1) * constant2 +
+          *                    (coef1 * multaggrconstant + constant1) * coef2 * var2 +
+          *                    (coef1 * (sum_j multaggrscalar_j*multaggrvar_j)) * constant2 +
+          *                    (coef1 * (sum_j multaggrscalar_j*multaggrvar_j)) * coef2 * var2
+          *                  )
+          */
+
+         /* add constant part */
+         tmp = elem.coef * (coef1 * SCIPvarGetMultaggrConstant(var1) + constant1) * constant2;
+         if( tmp != 0.0 )
+         {
+            nlrow->constant += tmp;
+            SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+         }
+
+         /* add linear part */
+         SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, var2, elem.coef * (coef1 * SCIPvarGetMultaggrConstant(var1) + constant1) * coef2, TRUE) );
+         if( constant2 != 0.0 )
+         {
+            for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
+            {
+               SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var1)[j], elem.coef * coef1 * SCIPvarGetMultaggrScalars(var1)[j] * constant2, TRUE) );
+            }
+         }
+
+         /* get index of var2 in quadvars array */
+         idx2 = SCIPnlrowSearchQuadVar(nlrow, var2);
+         if( idx2 == -1 )
+         {
+            /* variable var2 not existing in quadvars array yet, so add it */
+            SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, blkmem, set, var2) );
+            idx2 = nlrow->nquadvars-1;
+            assert(nlrow->quadvars[idx2] == var2);
+         }
+
+         /* add quadratic elements elem.coef * coef1 * (sum_j multaggrscalar_j*multaggrvar_j) * coef2 * var2 */
+         for( j = 0; j < SCIPvarGetMultaggrNVars(var1); ++j )
+         {
+            newelem.idx1 = SCIPnlrowSearchQuadVar(nlrow, SCIPvarGetMultaggrVars(var1)[j]);
+            if( newelem.idx1 == -1 )
+            {
+               /* variable not existing in quadvars array yet, so add it */
+               SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, blkmem, set, SCIPvarGetMultaggrVars(var1)[j]) );
+               newelem.idx1 = nlrow->nquadvars-1;
+               assert(nlrow->quadvars[newelem.idx1] == SCIPvarGetMultaggrVars(var1)[j]);
+            }
+
+            newelem.idx2 = idx2;
+
+            /* swap indices if newelem.idx1 <= newelem.idx2 */
+            if( newelem.idx1 > idx2 )
+            {
+               newelem.idx2 = newelem.idx1;
+               newelem.idx1 = idx2;
+            }
+
+            newelem.coef = elem.coef * coef1 * coef2 * SCIPvarGetMultaggrScalars(var1)[j];
+
+            SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, blkmem, set, stat, nlp, newelem) );
+
+            /* continue with next element that is at position i now */
+            continue;
+         }
+      }
+
+      assert(SCIPvarIsActive(var1));
+      assert(SCIPvarIsActive(var2));
+      /* add elem.coef * (coef1 * var1 + constant1) * (coef2 * var2 + constant2) */
+      /* add constant part */
+      if( constant1 != 0.0 && constant2 != 0.0 )
+      {
+         nlrow->constant += elem.coef * constant1 * constant2;
+         SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
+      }
+      /* add linear coefficients */
+      SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, var1, elem.coef * coef1 * constant2, TRUE) );
+      SCIP_CALL( nlrowAddToLinearCoef(nlrow, blkmem, set, stat, nlp, var2, elem.coef * coef2 * constant1, TRUE) );
+      /* get index of var1 in quadvars array */
+      newelem.idx1 = SCIPnlrowSearchQuadVar(nlrow, var1);
+      if( newelem.idx1 == -1 )
+      {
+         /* variable var2 not existing in quadvars array yet, so add it */
+         SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, blkmem, set, var1) );
+         newelem.idx1 = nlrow->nquadvars-1;
+         assert(nlrow->quadvars[newelem.idx1] == var1);
+      }
+      /* get index of var2 in quadvars array */
+      newelem.idx2 = SCIPnlrowSearchQuadVar(nlrow, var2);
+      if( newelem.idx2 == -1 )
+      {
+         /* variable var2 not existing in quadvars array yet, so add it */
+         SCIP_CALL( SCIPnlrowAddQuadVar(nlrow, blkmem, set, var2) );
+         newelem.idx2 = nlrow->nquadvars-1;
+         assert(nlrow->quadvars[newelem.idx2] == var2);
+      }
+      /* make sure idx1 <= idx2 */
+      if( newelem.idx1 > newelem.idx2 )
+      {
+         idx2 = newelem.idx2;
+         newelem.idx2 = newelem.idx1;
+         newelem.idx1 = idx2;
+      }
+      newelem.coef = elem.coef * coef1 * coef2;
+      /* add new quadratic element */
+      SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, blkmem, set, stat, nlp, newelem) );
+
+      /* continue with next element that is at position i now */
+   }
+
+   /* clean up unused variables */
+   if( nlrow->nquadelems == 0 )
+   {
+      /* the complete quadratic part was fixed or linearized, so we just free up all memory */
+      BMSfreeBlockMemoryArray(blkmem, &nlrow->quadvars, nlrow->quadvarssize);
+      if( nlrow->quadvarshash != NULL )
+         SCIPhashmapFree(&nlrow->quadvarshash);
+      BMSfreeBlockMemoryArray(blkmem, &nlrow->quadelems, nlrow->quadelemssize);
+      nlrow->nquadvars = 0;
+      nlrow->quadvarssize = 0;
+      nlrow->nquadelems = 0;
+      nlrow->quadelemssize = 0;
+      nlrow->quadelemssorted = TRUE;
+   }
+   else if( havechange )
+   {
+      /* something had changed, so we likely have quadratic variables to remove */
+      int* newpos;
+      int offset;
+
+      /* compute new positions of variables in quadvars array */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &newpos, nlrow->nquadvars) );
+
+      offset = 0;
+      for( i = 0; i < nvarsold; ++i )
+      {
+         /* previously existing variables should either be active or not used anymore */
+         assert(!used[i] || SCIPvarIsActive(nlrow->quadvars[i]));
+
+         if( !used[i] )
+         {
+            /* variable has been removed */
+            newpos[i] = -1;
+            ++offset;
+         }
+         else
+         {
+            /* variable will move to position i-offset */
+            newpos[i] = i-offset;
+         }
+      }
+      for( ; i < nlrow->nquadvars; ++i )
+      {
+         if( !SCIPvarIsActive(nlrow->quadvars[i]) )
+         {
+            /* it can have happened that a new quadratic variable was added that is multiaggregated (when multiplying two multiaggregations)
+             * in this case, the variable was only temporarily used and should not be used anymore, thus we can remove it */
+            assert(SCIPvarGetStatus(nlrow->quadvars[i]) == SCIP_VARSTATUS_MULTAGGR);
+            newpos[i] = -1;
+            ++offset;
+         }
+         else
+         {
+            /* variable will move to position i-offset */
+            newpos[i] = i-offset;
+         }
+      }
+
+      /* adjust variable indices in quadratic elements */
+      for( i = 0; i < nlrow->nquadelems; ++i )
+      {
+         assert(newpos[nlrow->quadelems[i].idx1] >= 0);
+         assert(newpos[nlrow->quadelems[i].idx2] >= 0);
+         nlrow->quadelems[i].idx1 = newpos[nlrow->quadelems[i].idx1];
+         nlrow->quadelems[i].idx2 = newpos[nlrow->quadelems[i].idx2];
+         assert(nlrow->quadelems[i].idx1 <= nlrow->quadelems[i].idx2); /* the way we shrink the quadvars array, variables should stay in the same relative position to each other */
+      }
+
+      /* move variables in quadvars array and update quadvarshash */
+      for( i = 0; i < nlrow->nquadvars; ++i )
+      {
+         if( newpos[i] == -1 )
+         {
+            if( nlrow->quadvarshash != NULL )
+               SCIPhashmapRemove(nlrow->quadvarshash, (void*)nlrow->quadvars[i]);
+         }
+         else
+         {
+            nlrow->quadvars[newpos[i]] = nlrow->quadvars[i];
+            if( nlrow->quadvarshash != NULL )
+               SCIPhashmapSetImage(nlrow->quadvarshash, (void*)nlrow->quadvars[i], (void*)(size_t)newpos[i]);
+         }
+      }
+      nlrow->nquadvars -= offset;
+
+      SCIPsetFreeBufferArray(set, &newpos);
+   }
+
+   SCIPsetFreeBufferArray(set, &used);
+
+   return SCIP_OKAY;
+}
+
+/** removes fixed variables from expression tree of a nonlinear row */
+static
+SCIP_RETCODE nlrowRemoveFixedExprtreeVars(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   SCIP_Bool changed;
+
+   if( nlrow->exprtree == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &changed) );
+   if( changed )
+   {
+      SCIP_CALL( nlrowExprtreeChanged(nlrow, set, stat, nlp) );
+   }
+
+   if( SCIPexprtreeGetNVars(nlrow->exprtree) == 0 && SCIPexprtreeGetNParams(nlrow->exprtree) == 0 )
+   {
+      /* if expression tree is constant and not parametrized now, remove it */
+      SCIP_Real exprval;
+      SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, NULL, &exprval) );
+      SCIP_CALL( SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + exprval) );
+
+      SCIP_CALL( SCIPexprtreeFree(&nlrow->exprtree) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes fixed variable from nonlinear row */
+static
+SCIP_RETCODE nlrowRemoveFixedVar(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_VAR*             var                 /**< variable that had been fixed */
+   )
+{
+   int pos;
+
+   assert(nlrow != NULL);
+   assert(var   != NULL);
+   assert(!SCIPvarIsActive(var));
+
+   /* search for variable in linear part and remove if existing */
+   pos = nlrowSearchLinearCoef(nlrow, var);
+   if( pos >= 0 )
+   {
+      SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
+   }
+
+   /* search for variable in quadratic part and remove all fixed quad. vars if existing */
+   pos = SCIPnlrowSearchQuadVar(nlrow, var);
+   if( pos >= 0 )
+   {
+      SCIP_CALL( nlrowRemoveFixedQuadVars(nlrow, blkmem, set, stat, nlp) );
+   }
+
+   /* search for variable in nonquadratic part and remove all fixed vars in exprtree if existing */
+   if( nlrow->exprtree != NULL && SCIPexprtreeFindVar(nlrow->exprtree, var) >= 0 )
+   {
+      SCIP_CALL( nlrowRemoveFixedExprtreeVars(nlrow, blkmem, set, stat, nlp) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * public NLP nonlinear row methods
  */
@@ -1104,6 +1789,38 @@ SCIP_RETCODE SCIPnlrowAddLinearCoef(
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
+   /* if row is in NLP already, make sure that only active variables are added */
+   if( nlrow->nlpindex >= -1 )
+   {
+      SCIP_Real constant;
+
+      /* get corresponding active or multiaggregated variable */
+      constant = 0.0;
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, &val, &constant) );
+
+      /* add constant */
+      SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + constant);
+
+      if( val == 0.0 )
+         /* var has been fixed */
+         return SCIP_OKAY;
+
+      if( !SCIPvarIsActive(var) )
+      {
+         /* var should be multiaggregated, so call this function recursively */
+         int i;
+
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+         for( i = 0; i < SCIPvarGetMultaggrNVars(var); ++i )
+         {
+            SCIP_CALL( SCIPnlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var)[i], SCIPvarGetMultaggrScalars(var)[i] * val) );
+         }
+         return SCIP_OKAY;
+      }
+
+      /* var is active, so can go on like normal */
+   }
+
    SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, var, val) );
 
    return SCIP_OKAY;
@@ -1122,6 +1839,9 @@ SCIP_RETCODE SCIPnlrowDelLinearCoef(
 
    assert(nlrow != NULL);
    assert(var   != NULL);
+
+   /* if the row is in the NLP already, we can only have active variables, so var should also be active; in non-debugmode, one gets an error below */
+   assert(nlrow->nlpindex <= -2 || SCIPvarIsActive(var) );
 
    /* search the position of the variable in the row's variable vector */
    pos = nlrowSearchLinearCoef(nlrow, var);
@@ -1210,6 +1930,9 @@ SCIP_RETCODE SCIPnlrowAddQuadVar(
    assert(nlrow  != NULL);
    assert(var    != NULL);
 
+   /* assert that only active variables are added once the row is in the NLP */
+   assert(nlrow->nlpindex <= -2 || SCIPvarIsActive(var) );
+
    /* assert that variable has not been added already */
    assert(SCIPnlrowSearchQuadVar(nlrow, var) == -1);
 
@@ -1225,7 +1948,7 @@ SCIP_RETCODE SCIPnlrowAddQuadVar(
    {
       SCIP_CALL( SCIPhashmapInsert(nlrow->quadvarshash, (void*)var, (void*)(size_t)(nlrow->nquadvars-1)) );
    }
-   assert(SCIPnlrowSearchQuadVar(nlrow, var) == nlrow->nquadvars);
+   assert(SCIPnlrowSearchQuadVar(nlrow, var) == nlrow->nquadvars-1);
 
    return SCIP_OKAY;
 }
@@ -1359,10 +2082,17 @@ SCIP_RETCODE SCIPnlrowChgExprtree(
    if( exprtree != NULL )
    {
       SCIP_CALL( SCIPexprtreeCopy(blkmem, &nlrow->exprtree, exprtree) );
+
+      /* if row is already in NLP, ensure that exprtree has only active variables */
+      if( nlrow->nlpindex >= -1 )
+      {
+         SCIP_Bool dummy;
+         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &dummy) );
+      }
    }
 
    /* notify row about the change */
-   nlrowExprtreeChanged(nlrow, set, stat, nlp);
+   SCIP_CALL( nlrowExprtreeChanged(nlrow, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -1468,6 +2198,22 @@ SCIP_RETCODE SCIPnlrowChgRhs(
       nlrow->rhs = rhs;
       SCIP_CALL( nlrowSideChanged(nlrow, set, stat, nlp) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** removes (or substitutes) all fixed, negated, aggregated, multiaggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
+SCIP_RETCODE SCIPnlrowRemoveFixedVars(
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   SCIP_CALL( nlrowRemoveFixedLinearCoefs(nlrow, blkmem, set, stat, nlp) );
+   SCIP_CALL( nlrowRemoveFixedQuadVars(nlrow, blkmem, set, stat, nlp) );
+   SCIP_CALL( nlrowRemoveFixedExprtreeVars(nlrow, blkmem, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -2188,6 +2934,9 @@ SCIP_RETCODE nlpAddNlRows(
       assert(nlrow->nlpindex == -2);
       assert(nlrow->nlpiindex == -2);
 
+      /* make sure there are only active variables in row */
+      SCIP_CALL( SCIPnlrowRemoveFixedVars(nlrow, blkmem, set, stat, nlp) );
+
 #ifndef NDEBUG
       /* assert that variables of row are in NLP */
       for( i = 0; i < nlrow->nlinvars; ++i )
@@ -2610,6 +3359,41 @@ SCIP_RETCODE nlpDelVarPos(
    return SCIP_OKAY;
 }
 
+/** notifies NLP that a variable was fixed, so it is removed from objective, all rows, and the NLP variables */
+static
+SCIP_RETCODE nlpRemoveFixedVar(
+   SCIP_NLP*             nlp,                /**< NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< SCIP LP, needed to release variable */
+   SCIP_VAR*             var                 /**< variable that has been fixed */
+   )
+{
+   int i;
+
+   assert(nlp != NULL);
+   assert(var != NULL);
+   assert(!SCIPvarIsActive(var));
+   assert(!nlp->indiving);
+   assert(SCIPhashmapExists(nlp->varhash, var));
+
+   /* remove var from objective and all rows */
+   if( nlp->objective != NULL )
+   {
+      SCIP_CALL( nlrowRemoveFixedVar(nlp->objective, blkmem, set, stat, nlp, var) );
+   }
+   for( i = 0; i < nlp->nnlrows; ++i )
+   {
+      SCIP_CALL( nlrowRemoveFixedVar(nlp->nlrows[i], blkmem, set, stat, nlp, var) );
+   }
+
+   /* remove variable from NLP */
+   SCIP_CALL( SCIPnlpDelVar(nlp, blkmem, set, lp, var) );
+
+   return SCIP_OKAY;
+}
+
 /** creates arrays with NLPI variable indices of variables in a nonlinear row */
 static
 SCIP_RETCODE nlpSetupNlpiIndices(
@@ -2643,6 +3427,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       {
          var = nlrow->linvars[i];
          assert(var != NULL);
+         assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
          assert(SCIPhashmapExists(nlp->varhash, var));
          (*linidxs)[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
@@ -2666,6 +3451,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       {
          var = nlrow->quadvars[i];
          assert(var != NULL);
+         assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
          assert(SCIPhashmapExists(nlp->varhash, var));
          quadvarsidx[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
@@ -2710,6 +3496,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       {
          var = SCIPexprtreeGetVars(nlrow->exprtree)[i];
          assert(var != NULL);
+         assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
          assert(SCIPhashmapExists(nlp->varhash, var));
          (*nlinidxs)[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
@@ -3413,11 +4200,9 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_VARFIXED & etype )
    {
-      SCIPdebugMessage( "-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
-      SCIPerrorMessage("handling of var fixation event not implemented yet\n");
-      return SCIP_ERROR;
       /* variable was fixed, aggregated, or multiaggregated */
-      /* @todo need to propagate this into rows!! */
+      SCIPdebugMessage( "-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
+      SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {

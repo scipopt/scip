@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.9 2010/05/31 15:13:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.10 2010/06/01 19:22:31 bzfviger Exp $"
 
 /**@file   expression.h
  * @brief  methods for expressions and expression trees
@@ -168,6 +168,24 @@ SCIP_RETCODE SCIPexprEvalInt(
    SCIP_INTERVAL*        val                 /**< buffer to store value */
 );
 
+/** substitutes variables (SCIP_EXPR_VARIDX) by expressions
+ * Note than only the children of the given expr are checked!
+ * A variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
+ * if substexprs[i] == NULL, then the variable expression i is not touched */
+extern
+SCIP_RETCODE SCIPexprSubstituteVars(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR*            expr,               /**< expression, which of the children may be replaced */
+   SCIP_EXPR**           substexprs          /**< array of substitute expressions; single entries can be NULL */
+);
+
+/** updates variable indices in expression tree */
+extern
+void SCIPexprReindexVars(
+   SCIP_EXPR*            expr,               /**< expression to update */
+   int*                  newindices          /**< new indices of variables */
+);
+
 /** prints an expression */
 extern
 void SCIPexprPrint(
@@ -294,6 +312,15 @@ SCIP_RETCODE SCIPexprtreeEvalInt(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        varvals,            /**< intervals for variables */
    SCIP_INTERVAL*        val                 /**< buffer to store expression tree value */
+);
+
+/** substitutes variables (SCIP_EXPR_VARIDX) in an expression tree by expressions
+ * A variable with index i is replaced by a copy of substexprs[i], if that latter is not NULL
+ * if substexprs[i] == NULL, then the variable expression i is not touched */
+extern
+SCIP_RETCODE SCIPexprtreeSubstituteVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR**           substexprs          /**< array of substitute expressions; single entries can be NULL */
 );
 
 /** prints an expression tree */
