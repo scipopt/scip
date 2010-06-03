@@ -12,7 +12,7 @@
 /*  along with RECTLU; see the file COPYING.                                 */ 
 /*                                                                           */ 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: rectlu_factor.c,v 1.1.2.2 2010/05/14 21:09:25 bzfsteff Exp $"
+#pragma ident "@(#) $Id: rectlu_factor.c,v 1.1.2.3 2010/06/03 01:58:40 bzfsteff Exp $"
 
 /**@file   rectlu_factor.c 
  * @brief  rectlu internal functions
@@ -105,8 +105,10 @@ void QSnum_factor_init_factor_work (qsnum_factor_work * f)
     f->minmult = 1e3;
     f->maxmult = 1e5;
     f->updmaxmult = 1e7;
-    f->dense_fract = 0.25;
-    f->dense_min = 25;
+    /* f->dense_fract = .25;*/
+    f->dense_fract = 1;         /*this means we only use dense for a totally dense matrix */
+    /*    f->dense_min = 25;*/
+    f->dense_min = 1;
     QSnum_Copy (f->partial_cur, f->partial_tol);
     f->work_coef = 0;
     f->work_indx = 0;
