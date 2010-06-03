@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.44 2010/04/28 15:06:21 bzfwanie Exp $
+# $Id: check_cplex.awk,v 1.45 2010/06/03 15:28:09 bzfwanie Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -496,21 +496,21 @@ BEGIN {
          {
             if (timeout)
             {
-               printf("timeout\n");
+               status = "timeout";
                timeouttime += tottime;
                timeouts++;
             }
             else
             {
-               printf("fail\n");
-               failtime += tottime;
-               fail++;
+               status = "ok";
+               pass++;
             }
          }
          else
          {
-            printf("ok\n");
-            pass++;
+            status = "fail";
+            failtime += tottime;
+            fail++;
          }
       }
       else

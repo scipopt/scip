@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_symphony.awk,v 1.4 2010/04/28 15:06:21 bzfwanie Exp $
+# $Id: check_symphony.awk,v 1.5 2010/06/03 15:28:10 bzfwanie Exp $
 #
 #@file    check_symphony.awk
 #@brief   SYMPHONY Check Report Generator
@@ -353,21 +353,21 @@ BEGIN {
          {
             if (timeout)
             {
-               printf("timeout\n");
+               status = "timeout";
                timeouttime += tottime;
                timeouts++;
             }
             else
             {
-               printf("fail\n");
-               failtime += tottime;
-               fail++;
+               status = "ok";
+               pass++;
             }
          }
          else
          {
-            printf("ok\n");
-            pass++;
+            status = "fail";
+            failtime += tottime;
+            fail++;
          }
       }
       else

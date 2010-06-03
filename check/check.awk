@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.85 2010/05/17 16:48:33 bzfhende Exp $
+# $Id: check.awk,v 1.86 2010/06/03 15:28:09 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -611,15 +611,15 @@ BEGIN {
             }
             else
             {
-               status = "fail";
-               failtime += tottime;
-               fail++;
+               status = "ok";
+               pass++;
             }
          }
          else
          {
-            status = "ok";
-            pass++;
+            status = "fail";
+            failtime += tottime;
+            fail++;
          }
       }
       else
