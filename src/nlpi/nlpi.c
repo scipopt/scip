@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.4 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.5 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -52,12 +52,13 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIADDCONSTRAINTS    ((*nlpiaddconstraints)),     /**< add constraints */
    SCIP_DECL_NLPISETOBJECTIVE      ((*nlpisetobjective)),       /**< set objective */
    SCIP_DECL_NLPICHGVARBOUNDS      ((*nlpichgvarbounds)),       /**< change variable bounds */
-   SCIP_DECL_NLPICHGCONSBOUNDS     ((*nlpichgconsbounds)),      /**< change constraint bounds */
+   SCIP_DECL_NLPICHGCONSSIDES      ((*nlpichgconssides)),       /**< change constraint sides */
    SCIP_DECL_NLPIDELVARSET         ((*nlpidelvarset)),          /**< delete a set of constraints */
    SCIP_DECL_NLPIDELCONSSET        ((*nlpidelconsset)),         /**< delete a set of constraints */
-   SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change one coefficient  in linear part */
-   SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs)),       /**< change one coefficient  in quadratic part */
-   SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef)),      /**< change one parameter in nonlinear expressions */
+   SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
+   SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs)),       /**< change coefficients in quadratic part of a constraint or objective */
+   SCIP_DECL_NLPICHGEXPRTREE       ((*nlpichgexprtree)),        /**< change nonlinear expression a constraint or objective */
+   SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef)),      /**< change one parameter in nonlinear expressions of a constraint or objective */
    SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess for primal variables */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat)),         /**< get solution status */
@@ -90,10 +91,11 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpiaddconstraints != NULL);
    assert(nlpisetobjective != NULL);
    assert(nlpichgvarbounds != NULL);
-   assert(nlpichgconsbounds != NULL);
+   assert(nlpichgconssides != NULL);
    assert(nlpidelconsset != NULL);
    assert(nlpichglinearcoefs != NULL);
    assert(nlpichgquadcoefs != NULL);
+   assert(nlpichgexprtree != NULL);
    assert(nlpichgnonlincoef != NULL);
    assert(nlpisetinitialguess != NULL);
    assert(nlpisolve != NULL);
@@ -127,11 +129,12 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpiaddconstraints = nlpiaddconstraints;
    (*nlpi)->nlpisetobjective = nlpisetobjective;
    (*nlpi)->nlpichgvarbounds = nlpichgvarbounds;
-   (*nlpi)->nlpichgconsbounds = nlpichgconsbounds;
+   (*nlpi)->nlpichgconssides = nlpichgconssides;
    (*nlpi)->nlpidelvarset = nlpidelvarset;
    (*nlpi)->nlpidelconsset = nlpidelconsset;
    (*nlpi)->nlpichglinearcoefs = nlpichglinearcoefs;
    (*nlpi)->nlpichgquadcoefs = nlpichgquadcoefs;
+   (*nlpi)->nlpichgexprtree = nlpichgexprtree;
    (*nlpi)->nlpichgnonlincoef = nlpichgnonlincoef;
    (*nlpi)->nlpisetinitialguess = nlpisetinitialguess;
    (*nlpi)->nlpisolve = nlpisolve;
@@ -315,7 +318,7 @@ SCIP_RETCODE SCIPnlpiSetObjective(
 SCIP_RETCODE SCIPnlpiChgVarBounds(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   const int             nvars,              /**< number of variables to change bounds */
+   int                   nvars,              /**< number of variables to change bounds */
    const int*            indices,            /**< indices of variables to change bounds */
    const SCIP_Real*      lbs,                /**< new lower bounds */
    const SCIP_Real*      ubs                 /**< new upper bounds */
@@ -330,19 +333,19 @@ SCIP_RETCODE SCIPnlpiChgVarBounds(
 }
 
 /** change constraint bounds */
-SCIP_RETCODE SCIPnlpiChgConsBounds(
+SCIP_RETCODE SCIPnlpiChgConsSides(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   const int             nconss,              /**< number of constraints to change bounds */
-   const int*            indices,            /**< indices of constraints to change bounds */
-   const SCIP_Real*      lbs,                /**< new lower bounds */
-   const SCIP_Real*      ubs                 /**< new upper bounds */
+   int                   nconss,             /**< number of constraints to change sides */
+   const int*            indices,            /**< indices of constraints to change sides */
+   const SCIP_Real*      lhss,               /**< new left hand sides */
+   const SCIP_Real*      rhss                /**< new right hand sides */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
    
-   SCIP_CALL( (*nlpi->nlpichgconsbounds)(nlpi, problem, nconss, indices, lbs, ubs) );
+   SCIP_CALL( (*nlpi->nlpichgconssides)(nlpi, problem, nconss, indices, lhss, rhss) );
    
    return SCIP_OKAY;
 }
@@ -379,7 +382,7 @@ SCIP_RETCODE SCIPnlpiDelConsSet(
    return SCIP_OKAY;
 }
 
-/** changes or adds one linear coefficient in a constraint or objective */
+/** changes or adds linear coefficients in a constraint or objective */
 SCIP_RETCODE SCIPnlpiChgLinearCoefs(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
@@ -397,7 +400,7 @@ SCIP_RETCODE SCIPnlpiChgLinearCoefs(
    return SCIP_OKAY;
 }
   
-/** changes or adds one coefficient in the quadratic part of a constraint or objective */
+/** changes or adds coefficients in the quadratic part of a constraint or objective */
 SCIP_RETCODE SCIPnlpiChgQuadCoefs(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
@@ -414,12 +417,29 @@ SCIP_RETCODE SCIPnlpiChgQuadCoefs(
    return SCIP_OKAY;
 }
 
+/** change the expression tree in the nonlinear part */
+SCIP_RETCODE SCIPnlpiChgExprtree(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   int                   idxcons,            /**< index of constraint or -1 for objective */
+   const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL */
+   SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL for no tree */
+)
+{
+   assert(nlpi    != NULL);
+   assert(problem != NULL);
+
+   SCIP_CALL( (*nlpi->nlpichgexprtree)(nlpi, problem, idxcons, exprvaridxs, exprtree) );
+
+   return SCIP_OKAY;
+}
+
 /** change the value of one parameter in the nonlinear part */
 SCIP_RETCODE SCIPnlpiChgNonlinCoef(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   const int             considx,            /**< index of constraint or -1 for objective */
-   const int             paramidx,           /**< index of parameter */
+   int                   considx,            /**< index of constraint or -1 for objective */
+   int                   paramidx,           /**< index of parameter */
    SCIP_Real             value               /**< new value for nonlinear parameter */
    )
 {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.4 2010/05/05 19:20:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.5 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file    nlpi_xxx.cpp
  * @ingroup NLPIS
@@ -285,13 +285,13 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsXxx )
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - ncons number of constraints to change bounds
- *  - indices indices of constraints to change bounds
- *  - lbs new lower bounds
- *  - ubs new upper bounds
+ *  - nconss number of constraints to change sides
+ *  - indices indices of constraints to change sides
+ *  - lhss new left hand sides
+ *  - rhss new right hand sides
  */
 static
-SCIP_DECL_NLPICHGCONSBOUNDS( nlpiChgConsBoundsXxx )
+SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesXxx )
 {
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -373,6 +373,24 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsXxx )
    SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
    SCIPABORT();
    
+   return SCIP_OKAY;
+}
+
+/** replaces the expression tree of a constraint or objective
+ *
+ * input:
+ *  - nlpi datastructure for solver interface
+ *  - problem datastructure for problem instance
+ *  - idxcons index of constraint or -1 for objective
+ *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL
+ *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
+ */
+static
+SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeXxx )
+{
+   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPABORT();
+
    return SCIP_OKAY;
 }
 
@@ -693,8 +711,8 @@ SCIP_RETCODE SCIPcreateNlpSolverXxx(
       nlpiCopyXxx, nlpiFreeXxx, nlpiGetSolverPointerXxx,
       nlpiCreateProblemXxx, nlpiFreeProblemXxx, nlpiGetProblemPointerXxx,
       nlpiAddVarsXxx, nlpiAddConstraintsXxx, nlpiSetObjectiveXxx, 
-      nlpiChgVarBoundsXxx, nlpiChgConsBoundsXxx, nlpiDelVarSetXxx, nlpiDelConstraintSetXxx,
-      nlpiChgLinearCoefsXxx, nlpiChgQuadraticCoefsXxx, nlpiChgNonlinCoefXxx,
+      nlpiChgVarBoundsXxx, nlpiChgConsSidesXxx, nlpiDelVarSetXxx, nlpiDelConstraintSetXxx,
+      nlpiChgLinearCoefsXxx, nlpiChgQuadraticCoefsXxx, nlpiChgExprtreeXxx, nlpiChgNonlinCoefXxx,
       nlpiSetInitialGuessXxx, nlpiSolveXxx, nlpiGetSolstatXxx, nlpiGetTermstatXxx,
       nlpiGetSolutionXxx, nlpiGetStatisticsXxx,
       nlpiGetWarmstartSizeXxx, nlpiGetWarmstartMemoXxx, nlpiSetWarmstartMemoXxx,

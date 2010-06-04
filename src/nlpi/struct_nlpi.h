@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlpi.h,v 1.3 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlpi.h,v 1.4 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file   struct_nlpi.h
  * @brief  data definitions for an NLP solver interface
@@ -48,12 +48,13 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPIADDCONSTRAINTS    ((*nlpiaddconstraints));     /**< add constraints to a problem  */
    SCIP_DECL_NLPISETOBJECTIVE      ((*nlpisetobjective));       /**< set objective of a problem  */
    SCIP_DECL_NLPICHGVARBOUNDS      ((*nlpichgvarbounds));       /**< change variable bounds in a problem  */
-   SCIP_DECL_NLPICHGCONSBOUNDS     ((*nlpichgconsbounds));      /**< change constraint bounds in a problem  */
+   SCIP_DECL_NLPICHGCONSSIDES      ((*nlpichgconssides));       /**< change constraint sides in a problem  */
    SCIP_DECL_NLPIDELVARSET         ((*nlpidelvarset));          /**< delete a set of variables from a problem  */
    SCIP_DECL_NLPIDELCONSSET        ((*nlpidelconsset));         /**< delete a set of constraints from a problem */
-   SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs));     /**< change one coefficient in linear part of a problem */
-   SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs));       /**< change one coefficient in quadratic part of a problem */
-   SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef));      /**< change one parameter in nonlinear expressions of a problem */
+   SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs));     /**< change coefficients in linear part of a constraint or objective */
+   SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs));       /**< change coefficients in quadratic part of a constraint or objective */
+   SCIP_DECL_NLPICHGEXPRTREE       ((*nlpichgexprtree));        /**< change nonlinear expression a constraint or objective */
+   SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef));      /**< change one parameter in nonlinear expressions of a constraint or objective */
    SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess));    /**< set initial guess for primal variables in a problem  */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve));              /**< solve a problem */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat));         /**< get solution status for a problem  */

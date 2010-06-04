@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.5 2010/05/27 09:53:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.6 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1595,7 +1595,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 /** change variable bounds */
 SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int             nvars,              /**< number of variables to change bounds */
+   int                   nvars,              /**< number of variables to change bounds */
    const int*            indices,            /**< indices of variables to change bounds */
    const SCIP_Real*      lbs,                /**< new lower bounds, or NULL if all should be -infty */
    const SCIP_Real*      ubs                 /**< new upper bounds, or NULL if all should be +infty */
@@ -1626,9 +1626,9 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
 }
 
 /** change constraint bounds */
-SCIP_RETCODE SCIPnlpiOracleChgConsBounds(
+SCIP_RETCODE SCIPnlpiOracleChgConsSides(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int             nconss,             /**< number of constraints to change bounds */
+   int                   nconss,             /**< number of constraints to change bounds */
    const int*            indices,            /**< indices of constraints to change bounds */
    const SCIP_Real*      lhss,               /**< new left-hand sides, or NULL if all should be -infty */
    const SCIP_Real*      rhss                /**< new right-hand sides, or NULL if all should be +infty */
@@ -2097,6 +2097,125 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
       SCIPquadelemSort(*myquadelems, *myquadlen);
    }
    
+   return SCIP_OKAY;
+}
+
+/** replaces expression tree of one constraint or objective
+ */
+SCIP_RETCODE SCIPnlpiOracleChgExprtree(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx,            /**< index of constraint where expression tree should be changed, or -1 for objective */
+   const int*            exprvaridxs,        /**< problem indices of variables in expression tree */
+   const SCIP_EXPRTREE*  exprtree            /**< new expression tree, or NULL */
+   )
+{
+   int j;
+
+   assert(oracle != NULL);
+   assert(considx >= -1);
+   assert(considx < oracle->nconss);
+   assert((exprvaridxs != NULL) == (exprtree != NULL));
+
+   /* free previous expression tree */
+   if( considx == -1 )
+   {
+      if( oracle->objexprtree != NULL )
+      {
+         assert(oracle->objexprvaridxs != NULL);
+
+         BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->objexprvaridxs, SCIPexprtreeGetNVars(oracle->objexprtree));
+         SCIP_CALL( SCIPexprtreeFree(&oracle->objexprtree) );
+      }
+      else if( exprtree == NULL )
+      {
+         /* nothing to do */
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      assert(considx >= 0);
+      assert(considx <  oracle->nconss);
+      if( oracle->consexprtrees != NULL && oracle->consexprtrees[considx] != NULL )
+      {
+         assert(oracle->consexprvaridxs != NULL);
+         assert(oracle->consexprvaridxs[considx] != NULL);
+
+         BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs[considx], SCIPexprtreeGetNVars(oracle->consexprtrees[considx]));
+         SCIP_CALL( SCIPexprtreeFree(&oracle->consexprtrees[considx]) );
+      }
+      else if( exprtree == NULL )
+      {
+         /* nothing to do */
+         return SCIP_OKAY;
+      }
+   }
+
+   invalidateJacobiSparsity(oracle);
+   /* @TODO need to reset variable degrees! */
+
+   /* if user did not want to set new tree, then we are done */
+   if( exprtree == NULL )
+      return SCIP_OKAY;
+
+   assert(oracle->exprinterpreter != NULL);
+
+   /* install new expression tree */
+   if( considx >= 0 )
+   {
+      if( oracle->consexprtrees == NULL )
+      {
+         assert(oracle->consexprvaridxs == NULL);
+
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->consexprtrees,   oracle->nconss) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs, oracle->nconss) );
+         BMSclearMemoryArray(oracle->consexprtrees,   oracle->nconss);
+         BMSclearMemoryArray(oracle->consexprvaridxs, oracle->nconss);
+      }
+
+      SCIP_CALL( SCIPexprtreeCopy(oracle->blkmem, &oracle->consexprtrees[considx], (SCIP_EXPRTREE*)exprtree) );
+      SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->consexprtrees[considx]) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs[considx], exprvaridxs, SCIPexprtreeGetNVars((SCIP_EXPRTREE*)exprtree)) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPexprtreeCopy(oracle->blkmem, &oracle->objexprtree, (SCIP_EXPRTREE*)exprtree) );
+      SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->objexprtree) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objexprvaridxs, exprvaridxs, SCIPexprtreeGetNVars(oracle->objexprtree)) );
+   }
+
+   /* increase variable decrease */
+   for( j = 0; j < SCIPexprtreeGetNVars((SCIP_EXPRTREE*)exprtree); ++j )
+   {
+      assert(exprvaridxs[j] >= 0);
+      assert(exprvaridxs[j] <  oracle->nvars);
+      oracle->vardegrees[exprvaridxs[j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes one parameter of expression tree of one constraint or objective
+ */
+SCIP_RETCODE SCIPnlpiOracleChgExprParam(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx,            /**< index of constraint where parameter should be changed in expression tree, or -1 for objective */
+   int                   paramidx,           /**< index of parameter */
+   SCIP_Real             paramval            /**< new value of parameter */
+   )
+{
+   assert(oracle != NULL);
+   assert(considx >= -1);
+   assert(considx < oracle->nconss);
+   assert(paramidx >= 0);
+   assert(considx >= 0  || oracle->objexprtree != NULL);
+   assert(considx >= 0  || paramidx < SCIPexprtreeGetNParams(oracle->objexprtree));
+   assert(considx == -1 || oracle->consexprtrees != NULL);
+   assert(considx == -1 || oracle->consexprtrees[considx] != NULL);
+   assert(considx == -1 || paramidx < SCIPexprtreeGetNParams(oracle->consexprtrees[considx]));
+
+   SCIPexprtreeSetParamVal(considx >= 0 ? oracle->consexprtrees[considx] : oracle->objexprtree, paramidx, paramval);
+
    return SCIP_OKAY;
 }
 

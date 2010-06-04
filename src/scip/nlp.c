@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.6 2010/06/01 19:22:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.7 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -238,9 +238,39 @@ SCIP_RETCODE nlrowExprtreeChanged(
 
       if( nlrow->nlpiindex >= -1 )
       {
-         /* @todo make this possible? */
-         SCIPerrorMessage("cannot change expression tree in a row that is already in the NLPI problem\n");
-         return SCIP_ERROR;
+         /* change expression tree in NLPI problem */
+         int* nlinidxs;
+
+         /* get indices of variables in expression tree part of row */
+         if( nlrow->exprtree != NULL )
+         {
+            int i;
+            int n;
+            SCIP_VAR* var;
+
+            n = SCIPexprtreeGetNVars(nlrow->exprtree);
+            assert(n == 0 || SCIPexprtreeGetVars(nlrow->exprtree) != NULL);
+
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &nlinidxs, n) );
+
+            for( i = 0; i < n; ++i )
+            {
+               var = SCIPexprtreeGetVars(nlrow->exprtree)[i];
+               assert(var != NULL);
+               assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
+
+               assert(SCIPhashmapExists(nlp->varhash, var));
+               nlinidxs[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
+            }
+
+            SCIP_CALL( SCIPnlpiChgExprtree(nlp->solver, nlp->problem, nlrow->nlpiindex, nlinidxs, nlrow->exprtree) );
+
+            SCIPsetFreeBufferArray(set, &nlinidxs);
+         }
+         else
+         {
+            SCIP_CALL( SCIPnlpiChgExprtree(nlp->solver, nlp->problem, nlrow->nlpiindex, NULL, NULL) );
+         }
       }
    }
 
@@ -337,7 +367,7 @@ SCIP_RETCODE nlrowSideChanged(
          if( !SCIPsetIsInfinity(set,  rhs) )
             rhs -= nlrow->constant;
 
-         SCIP_CALL( SCIPnlpiChgConsBounds(nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
+         SCIP_CALL( SCIPnlpiChgConsSides(nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
       }
    }
 
@@ -383,7 +413,7 @@ SCIP_RETCODE nlrowConstantChanged(
             rhs -= nlrow->constant;
 
          /* change sides in NLPI problem */
-         SCIP_CALL( SCIPnlpiChgConsBounds(nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
+         SCIP_CALL( SCIPnlpiChgConsSides(nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
       }
       else if( nlrow->nlpiindex == -1 )
       {

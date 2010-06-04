@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.5 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.6 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -219,18 +219,18 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 #define SCIP_DECL_NLPICHGVARBOUNDS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int nvars, const int* indices, \
    const SCIP_Real* lbs, const SCIP_Real* ubs)
 
-/** change constraint bounds
+/** change constraint sides
  *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - ncons number of constraints to change bounds
- *  - indices indices of constraints to change bounds
- *  - lbs new lower bounds
- *  - ubs new upper bounds
+ *  - nconss number of constraints to change sides
+ *  - indices indices of constraints to change sides
+ *  - lhss new left hand sides
+ *  - rhss new right hand sides
  */
-#define SCIP_DECL_NLPICHGCONSBOUNDS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int ncons, const int* indices, \
-   const SCIP_Real* lbs, const SCIP_Real* ubs)
+#define SCIP_DECL_NLPICHGCONSSIDES(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nconss, const int* indices, \
+   const SCIP_Real* lhss, const SCIP_Real* rhss)
 
 /** delete a set of variables
  * 
@@ -266,7 +266,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - varidxs indices of variables which coefficient to change
  *  - vals new values for coefficients
  */
-#define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int idx, int nvals, \
+#define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nvals, \
    const int* varidxs, const SCIP_Real* vals)
 
 /** changes (or adds) coefficients in the quadratic part of a constraint or objective
@@ -278,8 +278,20 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - nquadelems number of entries in quadratic matrix to change
  *  - quadelems new elements in quadratic matrix (replacing already existing ones or adding new ones)
  */
-#define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int idx, const int nquadelems, \
+#define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nquadelems, \
    const SCIP_QUADELEM* quadelems)
+
+/** replaces the expression tree of a constraint or objective
+ *
+ * input:
+ *  - nlpi datastructure for solver interface
+ *  - problem datastructure for problem instance
+ *  - idxcons index of constraint or -1 for objective
+ *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL
+ *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
+ */
+#define SCIP_DECL_NLPICHGEXPRTREE(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, \
+    const int* exprvaridxs, const SCIP_EXPRTREE* exprtree)
 
 /** change the value of one parameter in the nonlinear part
  * 
@@ -289,10 +301,10 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - idxcons index of constraint or -1 for objective
  *  - idxparam index of parameter
  *  - value new value for nonlinear parameter
- * 
+ *
  * return: Error if parameter does not exist
  */
-#define SCIP_DECL_NLPICHGNONLINCOEF(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int idxcons, const int idxparam, \
+#define SCIP_DECL_NLPICHGNONLINCOEF(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, int idxparam, \
    SCIP_Real value)
 
 /** sets initial guess for primal variables

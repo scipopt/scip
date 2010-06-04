@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.9 2010/06/04 14:14:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.10 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -641,20 +641,20 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - ncons number of constraints to change bounds
- *  - indices indices of constraints to change bounds
- *  - lbs new lower bounds
- *  - ubs new upper bounds
+ *  - nconss number of constraints to change sides
+ *  - indices indices of constraints to change sides
+ *  - lhss new left hand sides
+ *  - rhss new right hand sides
  */
 static
-SCIP_DECL_NLPICHGCONSBOUNDS(nlpiChgConsBoundsIpopt)
+SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-      
-   SCIP_CALL( SCIPnlpiOracleChgConsBounds(problem->oracle, ncons, indices, lbs, ubs) );
-   
+
+   SCIP_CALL( SCIPnlpiOracleChgConsSides(problem->oracle, nconss, indices, lhss, rhss) );
+
    SCIPnlpiIpoptInvalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -758,6 +758,27 @@ SCIP_DECL_NLPICHGQUADCOEFS(nlpiChgQuadraticCoefsIpopt)
    assert(problem->oracle != NULL);
    
    SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
+   SCIPnlpiIpoptInvalidateSolution(problem);
+
+   return SCIP_OKAY;
+}
+
+/** replaces the expression tree of a constraint or objective
+ *
+ * input:
+ *  - nlpi datastructure for solver interface
+ *  - problem datastructure for problem instance
+ *  - idxcons index of constraint or -1 for objective
+ *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
+ */
+static
+SCIP_DECL_NLPICHGEXPRTREE(nlpiChgExprtreeIpopt)
+{
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
    SCIPnlpiIpoptInvalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -1640,9 +1661,8 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
       nlpiCopyIpopt, nlpiFreeIpopt, nlpiGetSolverPointerIpopt,
       nlpiCreateProblemIpopt, nlpiFreeProblemIpopt, nlpiGetProblemPointerIpopt,
       nlpiAddVarsIpopt, nlpiAddConstraintsIpopt, nlpiSetObjectiveIpopt, 
-      nlpiChgVarBoundsIpopt, nlpiChgConsBoundsIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
-      nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt,
-      nlpiChgNonlinCoefIpopt, nlpiSetInitialGuessIpopt,
+      nlpiChgVarBoundsIpopt, nlpiChgConsSidesIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
+      nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt, nlpiChgExprtreeIpopt, nlpiChgNonlinCoefIpopt, nlpiSetInitialGuessIpopt,
       nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetTermstatIpopt, nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
       nlpiGetWarmstartSizeIpopt, nlpiGetWarmstartMemoIpopt, nlpiSetWarmstartMemoIpopt,
       nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,

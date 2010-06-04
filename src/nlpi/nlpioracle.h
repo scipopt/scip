@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.h,v 1.2 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.h,v 1.3 2010/06/04 17:57:17 bzfviger Exp $"
 
 /**@file   nlpioracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -114,18 +114,18 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 extern
 SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int             nvars,              /**< number of variables to change bounds */
+   int                   nvars,              /**< number of variables to change bounds */
    const int*            indices,            /**< array with indices of variables to change bounds */
    const SCIP_Real*      lbs,                /**< array with new lower bounds, or NULL if all should be -infty */
    const SCIP_Real*      ubs                 /**< array with new upper bounds, or NULL if all should be +infty */
    );
 
-/** change constraint bounds */
+/** change constraint sides */
 extern
-SCIP_RETCODE SCIPnlpiOracleChgConsBounds(
+SCIP_RETCODE SCIPnlpiOracleChgConsSides(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int             nconss,             /**< number of constraints to change bounds */
-   const int*            indices,            /**< array with indices of constraints to change bounds */
+   int                   nconss,             /**< number of constraints to change sides */
+   const int*            indices,            /**< array with indices of constraints to change sides */
    const SCIP_Real*      lhss,               /**< array with new left-hand sides, or NULL if all should be -infty */
    const SCIP_Real*      rhss                /**< array with new right-hand sides, or NULL if all should be +infty */
    );
@@ -165,6 +165,26 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
    int                   nquadelems,         /**< number of entries in quadratic constraint to change */
    const SCIP_QUADELEM*  quadelems           /**< new elements in quadratic matrix (replacing already existing ones or adding new ones) */
+   );
+
+/** replaces expression tree of one constraint or objective
+ */
+extern
+SCIP_RETCODE SCIPnlpiOracleChgExprtree(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx,            /**< index of constraint where expression tree should be changed, or -1 for objective */
+   const int*            exprvaridxs,        /**< problem indices of variables in expression tree */
+   const SCIP_EXPRTREE*  exprtree            /**< new expression tree, or NULL */
+   );
+
+/** changes one parameter of expression tree of one constraint or objective
+ */
+extern
+SCIP_RETCODE SCIPnlpiOracleChgExprParam(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx,            /**< index of constraint where parameter should be changed in expression tree, or -1 for objective */
+   int                   paramidx,           /**< index of parameter */
+   SCIP_Real             paramval            /**< new value of parameter */
    );
 
 /** gives the current number of variables */
