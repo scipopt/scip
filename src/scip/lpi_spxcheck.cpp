@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spxcheck.cpp,v 1.1 2010/06/01 13:10:56 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spxcheck.cpp,v 1.2 2010/06/04 19:26:08 bzfgleix Exp $"
 
 /**@file   lpi_spxcheck.cpp
  * @ingroup LPIS
@@ -504,6 +504,8 @@ public:
 
          /* get solution status and objective value */
          CPX_CALL( CPXsolution(m_cpxenv, m_cpxlp, &cpxstat, &cpxobj, NULL, NULL, NULL, NULL) );
+         if( getSense() == SPxLP::MAXIMIZE )
+            cpxobj *= -1.0;
 
          /* check for inconsistent statuses */
          if( (m_stat == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
