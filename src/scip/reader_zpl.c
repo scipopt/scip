@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.53 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.54 2010/06/04 14:14:16 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -1216,4 +1216,14 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 #endif
 
    return SCIP_OKAY;
+}
+
+/** gives the ZIMPL version number, of -1 if SCIP was compiled without ZIMPL */
+int SCIPgetZimplVersion(void)
+{
+#ifdef WITH_ZIMPL
+   return ZIMPL_VERSION;
+#else
+   return -1;
+#endif
 }

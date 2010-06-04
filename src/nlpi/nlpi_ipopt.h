@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.1 2010/03/11 11:22:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.2 2010/06/04 14:14:16 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
@@ -37,6 +37,10 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
 );
+
+/** gets string that identifies Ipopt (version number) */
+extern
+const char* SCIPgetNlpiNameIpopt(void);
 
 #ifdef __cplusplus
 }

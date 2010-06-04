@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.8 2010/05/24 17:58:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.9 2010/06/04 14:14:16 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -44,6 +44,7 @@ namespace Ipopt
 #include "IpIpoptCalculatedQuantities.hpp"
 #include "IpSolveStatistics.hpp"
 #include "IpJournalist.hpp"
+#include "config_ipopt.h"
 
 using namespace Ipopt;
 
@@ -1649,6 +1650,12 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
       nlpidata) );
 
    return SCIP_OKAY;
+}
+
+/** gets string that identifies Ipopt (version number) */
+const char* SCIPgetNlpiNameIpopt(void)
+{
+   return PACKAGE_STRING;
 }
 
 /** Method to return some info about the nlp */

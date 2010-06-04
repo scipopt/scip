@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.380 2010/05/31 15:49:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.381 2010/06/04 14:14:17 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -145,6 +145,12 @@ int SCIPsubversion(
 /** prints a version information line to a file stream */
 extern
 void SCIPprintVersion(
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** prints information about external codes that are linked to a file stream */
+extern
+void SCIPprintExternalCodes(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
