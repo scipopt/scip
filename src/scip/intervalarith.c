@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.43 2010/06/04 12:40:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.44 2010/06/04 13:05:54 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -190,6 +190,25 @@ static SCIP_Bool warned_unsafe_log = FALSE;
  * Interval arithmetic operations
  */
 
+/* in optimized mode, some fundamental functions are defined as macros in intervalarith.h */
+#ifndef NDEBUG
+
+/** returns infimum of interval */
+SCIP_Real SCIPintervalGetInf(
+   SCIP_INTERVAL         interval            /**< interval */
+   )
+{
+   return interval.inf;
+}
+
+/** returns supremum of interval */
+SCIP_Real SCIPintervalGetSup(
+   SCIP_INTERVAL         interval            /**< interval */
+   )
+{
+   return interval.sup;
+}
+
 /** stores given value as interval */
 void SCIPintervalSet(
    SCIP_INTERVAL*        resultant,          /**< interval to store value into */
@@ -256,6 +275,8 @@ SCIP_Bool SCIPintervalIsEntire(
 {
    return operand.inf <= -infinity && operand.sup >= infinity;
 }
+
+#endif
 
 /** indicates whether operand1 is contained in operand2 */
 SCIP_Bool SCIPintervalIsSubsetEQ(
@@ -2302,20 +2323,4 @@ void SCIPintervalSolveUnivariateQuadExpression(
          resultant->sup = -lincoeff.inf;
       }
    }
-}
-
-/** returns infimum of interval */
-SCIP_Real SCIPintervalGetInf(
-   SCIP_INTERVAL         interval            /**< interval */
-   )
-{
-   return interval.inf;
-}
-
-/** returns supremum of interval */
-SCIP_Real SCIPintervalGetSup(
-   SCIP_INTERVAL         interval            /**< interval */
-   )
-{
-   return interval.sup;
 }

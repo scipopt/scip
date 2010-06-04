@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.26 2010/06/04 12:40:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.27 2010/06/04 13:05:54 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -72,6 +72,20 @@ void setRoundingModeUpwards(
    void
    );
 
+#ifndef NDEBUG
+
+/** returns infimum of interval */
+extern
+SCIP_Real SCIPintervalGetInf(
+   SCIP_INTERVAL         interval            /**< interval */
+   );
+
+/** returns supremum of interval */
+extern
+SCIP_Real SCIPintervalGetSup(
+   SCIP_INTERVAL         interval            /**< interval */
+   );
+
 /** stores given value as interval */
 extern
 void SCIPintervalSet(
@@ -114,6 +128,23 @@ SCIP_Bool SCIPintervalIsEntire(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
+#else
+
+/* In optimized mode, some methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPintervalGetInf(interval)               (interval).inf
+#define SCIPintervalGetSup(interval)               (interval).sup
+#define SCIPintervalSet(resultant, value)          do { (resultant)->inf = (value);     (resultant)->sup = (value);     } while( FALSE )
+#define SCIPintervalSetBounds(resultant, i, s)     do { (resultant)->inf = (i);         (resultant)->sup = (s);         } while( FALSE )
+#define SCIPintervalSetEmpty(infinity, resultant)  do { (resultant)->inf =  (infinity); (resultant)->sup = -(infinity); } while( FALSE )
+#define SCIPintervalSetEntire(infinity, resultant) do { (resultant)->inf = -(infinity); (resultant)->sup =  (infinity); } while( FALSE )
+#define SCIPintervalIsEmpty(operand)               ( (operand).sup < (operand).inf )
+#define SCIPintervalIsEntire(infinity, operand)    ( (operand).inf <= -(infinity) && (operand).sup >= (infinity) )
+
+#endif
+
 /** indicates whether operand1 is contained in operand2 */
 extern
 SCIP_Bool SCIPintervalIsSubsetEQ(
@@ -137,7 +168,6 @@ void SCIPintervalUnify(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
-
 
 /** adds operand1 and operand2 and stores result in resultant */
 extern
@@ -446,18 +476,6 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
 );
-
-/** returns infimum of interval */
-extern
-SCIP_Real SCIPintervalGetInf(
-   SCIP_INTERVAL         interval            /**< interval */
-   );
-
-/** returns supremum of interval */
-extern
-SCIP_Real SCIPintervalGetSup(
-   SCIP_INTERVAL         interval            /**< interval */
-   );
 
 #ifdef __cplusplus
 }
