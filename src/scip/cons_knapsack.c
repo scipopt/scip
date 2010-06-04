@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.199 2010/05/28 17:56:01 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.200 2010/06/04 21:06:09 bzfpfets Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -3124,7 +3124,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
       var = knapvars[i];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(var) )
       {
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
