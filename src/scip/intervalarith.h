@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.24 2010/05/10 16:33:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.25 2010/06/04 12:37:19 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -226,6 +226,56 @@ void SCIPintervalDivScalar(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** computes an upper bound on the scalar product of two vectors of numbers and stores result in resultant */
+extern
+void SCIPintervalScalarProductRealsSup(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_Real*            resultant,          /**< resultant of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_Real*            operand1,           /**< first  vector as array of numbers */
+   SCIP_Real*            operand2            /**< second vector as array of numbers */
+   );
+
+/** computes a lower bound on the scalar product of two vectors of numbers and stores result in resultant */
+extern
+void SCIPintervalScalarProductRealsInf(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_Real*            resultant,          /**< resultant of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_Real*            operand1,           /**< first  vector as array of numbers */
+   SCIP_Real*            operand2            /**< second vector as array of numbers */
+   );
+
+/** computes the scalar product of two vectors of numbers and stores result in resultant */
+extern
+void SCIPintervalScalarProductReals(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_Real*            operand1,           /**< first  vector as array of numbers */
+   SCIP_Real*            operand2            /**< second vector as array of numbers */
+   );
+
+/** computes the scalar product of a vectors of intervals and a vector of numbers and stores result in resultant */
+extern
+void SCIPintervalScalarProductRealsIntervals(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_INTERVAL*        operand1,           /**< first  vector as array of intervals */
+   SCIP_Real*            operand2            /**< second vector as array of numbers */
+   );
+
+/** computes the scalar product of two vectors of intervals and stores result in resultant */
+extern
+void SCIPintervalScalarProduct(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_INTERVAL*        operand1,           /**< first  vector as array of intervals */
+   SCIP_INTERVAL*        operand2            /**< second vector as array of intervals */
    );
 
 /** squares operand and stores result in resultant */
