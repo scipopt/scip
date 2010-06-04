@@ -173,6 +173,7 @@ fixed bugs:
 - fixed bug w.r.t. an assert in presol_inttobinary.c; it was assumed that the aggregation which is performed there will never lead to an infeasibility, 
   this is not true, see comment in presol_inttobinary.c
 - fixed bug in presol_trivial.c trying to fix continuous variables, now uses a less stricter comparison to fix variables
+- fixed bug in cons_knapsack.c: In SCIPseparateRelaxedKnapsack() not all variables need to be active in deeper regions of the tree
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
