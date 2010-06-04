@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.576 2010/06/04 14:14:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.577 2010/06/04 14:51:24 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -498,7 +498,7 @@ void SCIPprintExternalCodes(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   SCIPmessageFPrintInfo(file, "\nExternal Codes linked into this SCIP executable:\n");
+   SCIPmessageFPrintInfo(file, "\nExternal codes linked into this SCIP executable:\n");
 
    if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
    {
