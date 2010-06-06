@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.101 2010/06/01 13:07:36 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.102 2010/06/06 21:52:39 bzfwinkm Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -146,6 +146,9 @@ public:
           m_rowstat(NULL),
           m_colstat(NULL)
    {
+      /* note: next line only done for initializing m_sense, which has to be distinct to the next parameter in the 
+       * line afterwards */
+      m_sense = SPxLP::MAXIMIZE;
       setSense(SPxLP::MINIMIZE);
       setSolver(&m_slu);
       setTester(&m_ratio);
