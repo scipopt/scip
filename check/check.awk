@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.86 2010/06/03 15:28:09 bzfwanie Exp $
+# $Id: check.awk,v 1.87 2010/06/06 21:59:51 bzfwinkm Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -519,7 +519,7 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( (db <= pb && db-sol[prob] > reltol) || (db >= pb && sol[prob]-db > reltol) )
+         if( (db < pb && db-sol[prob] > reltol) || (db > pb && sol[prob]-db > reltol) )
          {
             status = "fail";
             failtime += tottime;
@@ -601,7 +601,7 @@ BEGIN {
       }
       else if( solstatus[prob] == "inf" )
       {
-         if (feasible)
+         if (!feasible)
          {
             if (timeout)
             {
