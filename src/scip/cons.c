@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.198 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.199 2010/06/07 19:22:23 bzfpfets Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4170,9 +4170,9 @@ SCIP_RETCODE SCIPconssetchgApply(
          assert(cons->addarraypos >= 0);
          assert(!cons->deleted); /* deleted constraints must not be enabled! */
          SCIP_CALL( SCIPconsDisable(conssetchg->disabledconss[i], set, stat) );
+	 assert(!cons->update);
+	 assert(!cons->enabled);
       }
-      assert(!cons->update);
-      assert(!cons->enabled);
    }
 
    return SCIP_OKAY;
