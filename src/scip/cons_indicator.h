@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.16 2010/05/11 18:44:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.17 2010/06/07 16:04:33 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -150,6 +150,14 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            changed             /**< whether the solution has been changed */
+   );
+
+/** adds additional linear constraint that is not connected with an indicator constraint, but can be used for separation */
+extern
+SCIP_RETCODE SCIPaddLinearConsIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_CONS*            lincons             /**< linear constraint */
    );
 
 #ifdef __cplusplus
