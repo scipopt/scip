@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.29 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.30 2010/06/07 17:00:52 bzfberth Exp $"
 
 /**@file   type_heur.h
  * @ingroup TYPEDEFINITIONS
@@ -49,8 +49,8 @@ extern "C" {
 #define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x080 /**< call heuristic during pricing loop */
 #define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving */
 #define SCIP_HEURTIMING_DURINGPRESOLLOOP  0x200 /**< call heuristic during presolving loop */
-#define SCIP_HEURTIMING_DURINGPROPLOOP    0x400 /**< call heuristic after each round in the propagation loop */
-#define SCIP_HEURTIMING_AFTERPROPLOOP     0x800 /**< call heuristic after propagation for this node was finished */
+#define SCIP_HEURTIMING_AFTERPROPLOOP     0x400 /**< call heuristic after propagation for this node was finished */
+/* it turned out that a heuristic timing DURINGPROPLOOP causes severe troubles with the resolving of propagations */
 
 typedef unsigned int SCIP_HEURTIMING;
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.296 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.297 2010/06/07 17:00:52 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -130,12 +130,11 @@ SCIP_RETCODE SCIPprimalHeuristics(
    assert(primal != NULL);
    assert(tree != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP);
    assert(lp != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP 
-      || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP);
+      || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP);
    assert(heurtiming == SCIP_HEURTIMING_BEFORENODE || heurtiming == SCIP_HEURTIMING_DURINGLPLOOP
       || heurtiming == SCIP_HEURTIMING_AFTERLPLOOP || heurtiming == SCIP_HEURTIMING_AFTERNODE
       || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL
-      || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP  || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP 
-      || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP
+      || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP
       || heurtiming == (SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE));
    assert(heurtiming != SCIP_HEURTIMING_AFTERNODE || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
    assert(foundsol != NULL);
@@ -332,17 +331,6 @@ SCIP_RETCODE propagationRound(
          *delayed = TRUE;
          return SCIP_OKAY;
       }
-   }
-
-   /* call primal heuristics that are applicable during propagation loop, 
-    * if the heuristics find a new incumbent solution, propagate again.
-    */
-   if( !(*cutoff) && !SCIPtreeProbing(tree))
-   {
-      assert(result != SCIP_CUTOFF);
-      foundsol = FALSE;
-      SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_DURINGPROPLOOP, &foundsol) );
-      *propagain = *propagain || foundsol;
    }
 
    return SCIP_OKAY;
