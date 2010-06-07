@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.5 2010/06/01 19:22:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.6 2010/06/07 16:43:36 bzfviger Exp $"
 
-/**@file   expression.c
+/**@file   scip/expression.c
  * @brief  more methods for expressions and expression trees
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
