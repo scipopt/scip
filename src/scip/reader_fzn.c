@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.40 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.41 2010/06/07 16:41:07 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2911,7 +2911,7 @@ static
 void flattenFloat(
    SCIP*                 scip,               /**< SCIP data structure */   
    SCIP_Real             val,                /**< value to flatten */
-   char*                 buffer
+   char*                 buffer              /**< string buffer to print in */
    ) 
 {
    if( SCIPisIntegral(scip, val) )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.577 2010/06/04 14:51:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.578 2010/06/07 16:41:07 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -14455,12 +14455,12 @@ SCIP_RETCODE SCIPcreateChild(
 }
 
 /** branches on a non-continuous variable v using the current LP or pseudo solution;
- *  if solution value x' is fractional, two child nodes are created
+ *  if solution value x' is fractional, two child nodes will be created
  *  (x <= floor(x'), x >= ceil(x')),
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching
- *  variable and the bounds of v are finite, then two child nodes are created
+ *  variable and the bounds of v are finite, then two child nodes will be created
  *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+ *  otherwise (up to) three child nodes will be created
  *  (x <= x'-1, x == x', x >= x'+1)
  */
 SCIP_RETCODE SCIPbranchVar(
@@ -14478,6 +14478,7 @@ SCIP_RETCODE SCIPbranchVar(
       SCIPerrorMessage("cannot branch on continuous variable <%s>\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
+
    if( SCIPsetIsEQ(scip->set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
       SCIPerrorMessage("cannot branch on variable <%s> with fixed domain [%.15g,%.15g]\n",
@@ -14491,14 +14492,11 @@ SCIP_RETCODE SCIPbranchVar(
    return SCIP_OKAY;
 }
 
-/** branches on a variable v using a given value x'; 
+/** branches on a variable x using a given value x'; 
  *  for continuous variables, x' must not be one of the bounds. Two child nodes (x <= x', x >= x') are created;
  *  for integer variables, if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')),
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching
- *  variable and the bounds of v are finite, then two child nodes are created
- *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+ *  if x' is integral, three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
  */
 SCIP_RETCODE SCIPbranchVarVal(

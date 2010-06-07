@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.70 2010/05/28 17:56:01 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.71 2010/06/07 16:41:06 bzfberth Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -2925,7 +2925,7 @@ void SCIPescapeString(
 extern
 int SCIPsnprintf(
    char*            t,      /**< target string                */
-   int              length, /**< length of the string to copy */
+   int              len,    /**< length of the string to copy */
    const char*      s,      /**< source string                */
    ...                      /**< further parameters           */
    );

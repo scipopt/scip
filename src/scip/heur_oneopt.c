@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.37 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.38 2010/06/07 16:41:06 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -62,7 +62,7 @@ SCIP_Real calcShiftVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable that should be shifted */
    SCIP_Real             solval,             /**< current solution value */
-   SCIP_Real*            activities
+   SCIP_Real*            activities          /**< LP row activities */
    )
 {
    SCIP_Real lb;

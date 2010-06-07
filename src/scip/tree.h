@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.105 2010/02/08 20:05:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.106 2010/06/07 16:41:07 bzfberth Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -409,16 +409,19 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** branches on a variable v
- *  if v is a continuous variable, then two child nodes with x <= x' and x >= x' are created
- *  if v is not a continuous variable, then:
- *  if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), 
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
- *  variable and the bounds of v are finite, then two child nodes are created
+/** branches on a variable x
+ *  if x is a continuous variable, then two child nodes will be created
+ *  (x <= x', x >= x')
+ *  if x is not a continuous variable, then:
+ *  if solution value x' is fractional, two child nodes will be created
+ *  (x <= floor(x'), x >= ceil(x')),
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching
+ *  variable and the bounds of x are finite, then two child nodes will be created
  *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+ *  otherwise (up to) three child nodes will be created
  *  (x <= x'-1, x == x', x >= x'+1)
+ *  if solution value is equal to one of the bounds and the other bound is infinite, only two child nodes
+ *  will be created (the third one would be infeasible anyway)
  */
 extern
 SCIP_RETCODE SCIPtreeBranchVar(

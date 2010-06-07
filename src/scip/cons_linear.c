@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.362 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.363 2010/06/07 16:41:06 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -761,7 +761,7 @@ SCIP_Bool getNextToken(
 }
 
 /** for a given name of a negated variable (i.e., "<original name>_neg"), tries to find the corresponding negated variable
- * returns NULL in *negvar if a variable under name <original name> does not exits
+ * returns NULL in *negvar if a variable under name "<original name>" does not exits
  * creates negated variable if not existing yet
  */
 static

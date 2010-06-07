@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.381 2010/06/04 14:14:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.382 2010/06/07 16:41:07 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5423,12 +5423,12 @@ SCIP_RETCODE SCIPcreateChild(
    );
 
 /** branches on a non-continuous variable v using the current LP or pseudo solution;
- *  if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), 
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
- *  variable and the bounds of v are finite, then two child nodes are created
+ *  if solution value x' is fractional, two child nodes will be created
+ *  (x <= floor(x'), x >= ceil(x')),
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching
+ *  variable and the bounds of v are finite, then two child nodes will be created
  *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+ *  otherwise (up to) three child nodes will be created
  *  (x <= x'-1, x == x', x >= x'+1)
  */
 extern
@@ -5440,14 +5440,11 @@ SCIP_RETCODE SCIPbranchVar(
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
-/** branches on a variable v using a given value x'; 
+/** branches on a variable x using a given value x'; 
  *  for continuous variables, x' must not be one of the bounds. Two child nodes (x <= x', x >= x') are created;
  *  for integer variables, if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')),
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching
- *  variable and the bounds of v are finite, then two child nodes are created
- *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+ *  if x' is integral, three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
  */
 extern

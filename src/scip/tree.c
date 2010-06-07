@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.235 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.236 2010/06/07 16:41:07 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4418,16 +4418,19 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    return estimate;
 }
 
-/** branches on a variable v
- *  if v is a continuous variable, then two child nodes with x <= x' and x >= x' are created
- *  if v is not a continuous variable, then:
- *  if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), 
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
- *  variable and the bounds of v are finite, then two child nodes are created
+/** branches on a variable x
+ *  if x is a continuous variable, then two child nodes will be created
+ *  (x <= x', x >= x')
+ *  if x is not a continuous variable, then:
+ *  if solution value x' is fractional, two child nodes will be created
+ *  (x <= floor(x'), x >= ceil(x')),
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching
+ *  variable and the bounds of x are finite, then two child nodes will be created
  *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+ *  otherwise (up to) three child nodes will be created
  *  (x <= x'-1, x == x', x >= x'+1)
+ *  if solution value is equal to one of the bounds and the other bound is infinite, only two child nodes
+ *  will be created (the third one would be infeasible anyway)
  */
 SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -4513,7 +4516,24 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
    /* if there was no explicit value given for branching, branch on current LP or pseudo solution value */
    if( val == SCIP_INVALID )
-     val = SCIPvarGetSol(var, tree->focusnodehaslp);
+   {
+      val = SCIPvarGetSol(var, tree->focusnodehaslp);
+
+      /* avoid branching on infinite values in pseudo solution */
+      if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
+      {
+         val = SCIPvarGetWorstBound(var);
+       
+         /* if both bounds are infinite, choose zero as branching point */
+         if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
+         {
+            assert(SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+            assert(SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));         
+            val = 0.0;
+         }
+      }
+   }
+
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || 
