@@ -115,6 +115,8 @@ features:
 - "negated cliques" handling in knapsack constraint handler got changed due to the new method SCIPcalcNegatedCliquePartition resulting in new consdata members "negcliquepartition", "negcliquepartitioned" and "nnegcliques"; changed SCIPcalcCliquePartition so all cliquepartitions (calculated by SCIPcalcCliquePartition or SCIPcalcNegatedCliquePartition, which uses the first one) contain again not negative integers
 - cons_quadratic can make solutions in CONSCHECK feasible for the quadratic constraints by moving values of linear variables and passing the modified solution to the trysol heuristic
 - cons_knapsack is now able to detect negated cliques due to negated cliques on knapsack constraints
+- cons_indicator tries to adapt solutions to get feasible during check
+- cons_indicator allows to store information on other linear constraints that might help to separate cuts
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
