@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.126 2010/05/15 12:12:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.127 2010/06/08 15:00:39 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -4604,7 +4604,7 @@ SCIP_RETCODE printFlowSystemInfo(
 
 /** initializes a union find data structure by putting each element into its own set */
 static void
-unionfindInitSets (int *representatives, /**< mapping v -> representative */
+unionfindInitSets (int *representatives, /**< mapping an element v to its representative */
                    int nelems)           /**< number of elements in the ground set */
 {
    int v;
@@ -4616,8 +4616,8 @@ unionfindInitSets (int *representatives, /**< mapping v -> representative */
 
 /** applies a union find algorithm to get the representative of v */
 static int
-unionfindGetRepresentative (int *representatives, /**< mapping v -> representative */
-                            int v)                /**< element v to get representative for */
+unionfindGetRepresentative (int *representatives, /**< mapping an element v to its representative */
+                            int v)                /**< element v to get a representative for */
 {
    assert(representatives != NULL);
 
@@ -4632,9 +4632,9 @@ unionfindGetRepresentative (int *representatives, /**< mapping v -> representati
 
 /** joins two sets in the union find framework */
 static void
-unionfindJoinSets (int *representatives, /** mapping v -> representative */
-                   int rep1,             /** representative of first set */
-                   int rep2)             /** representative of second set */
+unionfindJoinSets (int *representatives, /**< mapping an element v to its representative */
+                   int rep1,             /**< representative of first set */
+                   int rep2)             /**< representative of second set */
 {
    assert(rep1 != rep2);
    assert(representatives[rep1] == rep1);
@@ -6637,7 +6637,7 @@ SCIP_DECL_SEPACOPY(sepaCopyMcf)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
- 
+
    return SCIP_OKAY;
 }
 
