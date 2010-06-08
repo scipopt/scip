@@ -12,7 +12,7 @@
 /*  along with RECTLU; see the file COPYING.                                 */ 
 /*                                                                           */ 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: rectlu_factor.c,v 1.1.2.3 2010/06/03 01:58:40 bzfsteff Exp $"
+#pragma ident "@(#) $Id: rectlu_factor.c,v 1.1.2.4 2010/06/08 21:22:00 bzfsteff Exp $"
 
 /**@file   rectlu_factor.c 
  * @brief  rectlu internal functions
@@ -1447,7 +1447,7 @@ static int qsnum_build_iteration_l_data (qsnum_factor_work * f)
     int dimr = f->dimr;
     qsnum_lc_info *lc_inf = f->lc_inf;
     qsnum_lr_info *lr_inf = f->lr_inf;
-    QSnum_type *lrcoef = 0;
+    QSnum_type *lrcoef = 0; 
     int *lrindx = 0;
     QSnum_type *lccoef = f->lccoef;
     int *lcindx = f->lcindx;
@@ -1471,8 +1471,9 @@ static int qsnum_build_iteration_l_data (qsnum_factor_work * f)
 
     QSnum_FreeArray (f->lrcoef, f->lr_space);
     if (nzcnt) {
-        lrcoef = QSnum_AllocArray (nzcnt);
-        f->lrcoef = lrcoef;
+       lrcoef = QSnum_AllocArray (nzcnt);
+       f->lr_space = nzcnt; /* added by dan */
+       f->lrcoef = lrcoef;
     }
 
     CG_IFFREE (f->lrindx, int);
@@ -2882,7 +2883,9 @@ int RECTLUsolveSystem(
    }
 
    /* set up sparse vectors for solve interface */
-   rval = init_sxvector (&srhs, rhsnz); 
+   //rval = init_sxvector (&srhs, rhsnz); 
+   QSnum_svector_init(&srhs);
+   rval = QSnum_svector_alloc(&srhs, rhsnz);   
    CGcheck_rval (rval, "init_sxvector failed");
 
    temp = 0;
@@ -2898,7 +2901,9 @@ int RECTLUsolveSystem(
 
    /* sparse solution will have at most n nonzeros because it */
    /* will be a basic solution */
-   rval = init_sxvector (&ssol, n); 
+   //   rval = init_sxvector (&ssol, n);
+   QSnum_svector_init(&ssol);
+   rval = QSnum_svector_alloc(&ssol, n); 
    CGcheck_rval (rval, "init_sxvector failed");
 
    QSnum_factor_ftran (f, &srhs, &ssol);
@@ -2913,6 +2918,7 @@ int RECTLUsolveSystem(
 
 CLEANUP:
    clear_sxvector(&srhs);
+   ssol.nzcnt = n; /* this has to be done to make sure it frees all the mpqs, nzcnt is reset to be lower in ftranu3 - dan */
    clear_sxvector(&ssol);
    return rval;
 }

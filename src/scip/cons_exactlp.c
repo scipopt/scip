@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.21 2010/06/03 01:58:40 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.22 2010/06/08 21:22:00 bzfsteff Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -21,7 +21,7 @@
 //#define DBVERIFY_TEST /* only for testing the methode ?????????????????? */
 //#define EXLPSOLVER_OUT /* only for debugging ???????????????? */
 //#define DETAILED_DEBUG /* only for debugging ???????????????? */
-//#define PS_OUT /* only for debugging ???????????????? */
+//#define PS_OUT/* only for debugging ???????????????? */
 
 //#define READER_OUT /* only for debugging ???????????????? */
 //#define PRESOL_OUT /* only for debugging ?????????? */
@@ -51,6 +51,7 @@
 #include "QSopt_ex.h" 
 #include "scip/misc.h" 
 #include "rectlu/rectlu.h"
+#include "scip/lp.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "exactlp"
@@ -2564,48 +2565,54 @@ SCIP_RETCODE constructPSData(
    int pos;
    int nconss;
    int nvars;
+   //   int pivotcount;
    int nextendedconss;     /* number of extended constraints, # of cols in [A',-A',I,-I] */    
    int nnonz;
    int npsbasis;
    int indx;
    mpq_t mpqtemp;
+   double dbltemp;
    mpq_t alpha;
    mpq_t beta;
    int nobjnz;
 
-
-   SCIP_LPIEX* pslpiex;    /* exact LP to find interior point of dual */ 
-   int psnvars;            /* number of variables used in aux problem to find S-interior point/ray*/
-   mpq_t* psobj;           /* objective function values of variables in aux problem */
-   mpq_t* pslb;            /* lower bounds of variables in aux problem */
-   mpq_t* psub;            /* upper bounds of variables in aux problem */
-   int psnconss;           /* number of constraints in aux problem */
-   mpq_t* pslhs;           /* left hand sides of constraints in aux problem */
-   mpq_t* psrhs;           /* right hand sides of constraints in aux problem */
-   int psnnonz;            /* number of nonzero elements in the constraint matrix in aux prob */
-   int* psbeg;             /* start index of each constraint in ind- and val-array in aux prob */
-   int* pslen;             /* length array for constraints of aux problem */
-   int* psind;             /* col indices of variables (probindex) corresponding to nonzero matrix entries */
-   mpq_t* psval;           /* values of nonzero constraint matrix entries in aux problem */   
-
-   int ndvarmap;           /* number of dual vars we consider in aux problem */
-   int* dvarmap;           /* mapping from considered dual vars (1..ndvarmap) to all possible dual variables */
-   int* dvarincidence;     /* incidence vector for dvarmap */
- 
-   mpq_t* dualsol;         /* stores the dual solution vector of the aux problem */  
+   /* lpiex and data used for the aux. problem */
+   SCIP_LPIEX* pslpiex;
+   int psnvars;
+   mpq_t* psobj;
+   mpq_t* pslb;
+   mpq_t* psub;
+   int psnconss;
+   mpq_t* pslhs;
+   mpq_t* psrhs;
+   int psnnonz;
+   int* psbeg;
+   int* pslen;
+   int* psind;
+   mpq_t* psval;
+   mpq_t* dualsol;
    mpq_t* primalsol;
    char ** colnames;
-   mpq_t objval;           /* objective value of aux problem */
+   mpq_t objval;
 
-   int* projbeg;           /* projection submatrix begin */
-   int* projlen;           /* projection column length */
-   int* projind;           /* dual row indices of projection submatrix */
-   mpq_t* projval;         /* values of projection submatrix */ 
+   /* mapping between variables used in the aux. problem and the original problem */
+   int ndvarmap;
+   int* dvarmap;
+   int* dvarincidence;
+ 
+   /* sparse representation of the matrix used for the LU factorization */
+   int* projbeg;
+   int* projlen;
+   int* projind;
+   mpq_t* projval;
 
-   mpq_t* rootactivity;    /* activity of root node LP */
-   mpq_t* rootprimal;      /* primal solution at root node LP */
-
+   /* solution information for exact root LP */
+   mpq_t* rootactivity;
+   mpq_t* rootprimal;
    SCIP_Bool lperror;
+
+   SCIP_COL** cols;
+   SCIP_ROW** rows;
 
    
    assert(!conshdlrdata->psdatafail);
@@ -2761,7 +2768,24 @@ SCIP_RETCODE constructPSData(
       SCIPerrorMessage("psdualcolselection: case 'A' not handled yet\n");
 
       // In order to do this I will have to access the floating point solution at the root node.
-
+      rows = SCIPgetLPRows(scip);
+      for( i = 0; i < nconss; i++ )
+      {
+         dbltemp = SCIProwGetLPActivity(rows[i], scip->stat, scip->lp);
+         if( EPSEQ(dbltemp, mpq_get_d(consdata->lhs[i]), 1.0e-6) )
+            conshdlrdata->includedcons[i] = 1;
+         if( EPSEQ(dbltemp, mpq_get_d(consdata->rhs[i]), 1.0e-6) )
+            conshdlrdata->includedcons[nconss + i] = 1;
+      }   
+      cols = SCIPgetLPCols(scip);
+      for( i = 0; i < nvars; i++ )
+      {
+         dbltemp = SCIPcolGetPrimsol(cols[i]);
+         if( EPSEQ(dbltemp, mpq_get_d(consdata->lbloc[i]), 1.0e-6) )
+            conshdlrdata->includedcons[2*nconss + i] = 1;
+         if( EPSEQ(dbltemp, mpq_get_d(consdata->ubloc[i]), 1.0e-6) )
+            conshdlrdata->includedcons[2*nconss + nvars + i] = 1;
+      }
    }
    else if( conshdlrdata->psdualcolselection == 'b' )
    {
@@ -2791,7 +2815,6 @@ SCIP_RETCODE constructPSData(
    }
    conshdlrdata->npsbasis = pos;
    npsbasis = conshdlrdata->npsbasis;
-
 
    /* build the sparse representation of D that will be passed to the RECTLU code for factorization */
    pos = 0;
@@ -2884,6 +2907,7 @@ SCIP_RETCODE constructPSData(
       SCIPdebugMessage("Factorization of matrix for project and shift method failed. \n");
    }
 
+
 #ifdef PS_OUT
    printf("Factorization complete \n");    
    if(rval)
@@ -2900,8 +2924,7 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( SCIPallocBufferArray(scip, &dvarincidence, nextendedconss) );   
    if( conshdlrdata->psreduceauxlp )
    {
-      /* if the aux. lp is reduced, this means that dvarmap is the same as psbasis */
-      SCIPerrorMessage("psdualcolselection: case 'B' not handled yet\n");
+      /* if the aux. lp is reduced, this means that dvarmap is based on the conshdlrdata->includedcons */
       for( i = 0; i < nextendedconss; i++ )
          dvarincidence[i] = conshdlrdata->includedcons[i];
    }
@@ -2974,7 +2997,12 @@ SCIP_RETCODE constructPSData(
        * next block of rows tell us which components were nonzero (\delta_i) and the final row tells us what the 
        * scale factor \lambda of the c in the original problem was.
        */
-
+      if( !conshdlrdata->psuseintpoint )
+      {
+         SCIPerrorMessage("Interior ray with arbitrary point selection not available \n");
+         conshdlrdata->psdatafail = TRUE;
+      }
+      
       SCIPdebugMessage("building aux. problem with arbitrary interior point\n");  
       /* figure out the dimensions of the aux problem */
       psnvars = nvars + 2 * ndvarmap + 1;
@@ -3212,8 +3240,15 @@ SCIP_RETCODE constructPSData(
          if( mpq_sgn(dualsol[psnconss - 1]) )
             mpq_inv(conshdlrdata->commonslack,dualsol[psnconss - 1]);
          else
+         {
             mpq_set_si(conshdlrdata->commonslack, 0, 1);
-         
+         }         
+         if( mpq_sgn(conshdlrdata->commonslack) == 0 )
+         {
+            conshdlrdata->psdatafail = TRUE;
+            SCIPerrorMessage(" Error: interior point not found \n");
+         }
+
          /* interior point is y/lambda */ 
          for( i = 0; i < ndvarmap; i++ )                
          {                                         
@@ -3421,7 +3456,8 @@ SCIP_RETCODE constructPSData(
       for( i = 0; i < ndvarmap; i ++)
          mpq_mul(psobj[i], psobj[i], alpha);
       mpq_set(psobj[ndvarmap], beta);
-      
+      // mpq_set_ui(psobj[ndvarmap],100000,1);
+
       /* set variable bounds */
       for( i = 0; i < ndvarmap; i++ )
       {
@@ -3534,7 +3570,72 @@ SCIP_RETCODE constructPSData(
       }
       assert( pos == psnconss);
 
+      if( !conshdlrdata->psuseintpoint )
+      {
+         /* In this case we want to find an interior point instead of an interior ray
+          * the problem will be modified to the following problem:
+          * max:  [OBJ, 0]*[y,d]'
+          * s.t.: [0] <= [ A~ |  0]   [y] <= [  0   ]
+          *       [0] <= [ I* | -1] * [d] <= [\infty] <-- only for dual vars from includecons 
+          * bounds:     0 <= y <= \infty
+          *             1 <= d <= \infty  
+          * y is a vector of length (ndvarmap) and d is a single variable
+          * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
+          * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
+          *
+          * the parts that change are the objective function, the RHS/LHS of the first constraint set
+          * and the lower bound for d
+          */
+         
+         /* update the objective */
+         pos = 0;
+         for( i = 0; i < nconss; i++ )
+         {
+            if( dvarincidence[i] )
+            {
+               mpq_set(psobj[pos], consdata->lhs[i]);
+               pos++;
+            }
+         }
+         for( i = 0; i < nconss; i++ )
+         {
+            if( dvarincidence[nconss + i] ) 
+            {
+               mpq_neg(psobj[pos], consdata->rhs[i]);
+               pos++;
+            }
+         }
+         for( i = 0; i < nvars; i++ )
+         {
+            if( dvarincidence[2*nconss + i] )
+            {
+               mpq_set(psobj[pos], consdata->lbloc[i]);
+               pos++;
+            }
+         }
+         for( i = 0; i < nvars; i++ )
+         {  
+            if( dvarincidence[2*nconss + nvars + i])
+            {
+               mpq_neg(psobj[pos], consdata->ubloc[i]);
+               pos++;
+            }
+         }
+         assert(pos == ndvarmap);
+         mpq_set_ui(psobj[ndvarmap], 0, 1);
+         
+         /* update the rhs/lhs */
+         for( i = 0; i < nvars; i++ )
+         {
+            mpq_set_ui(pslhs[i], 0, 1);
+            mpq_set_ui(psrhs[i], 0, 1);
+         }
 
+         /* update bounds on d */
+         mpq_set(psub[ndvarmap], conshdlrdata->posinfinity);
+         mpq_set_ui(pslb[ndvarmap], 1 ,1);
+      }
+      
 #ifdef PS_OUT 
       printf("Creating and assigning LPIEX to find S-interior point\n");
 #endif
@@ -3557,7 +3658,8 @@ SCIP_RETCODE constructPSData(
 
       /* solve the LP */      
       SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
-      
+      //           SCIP_CALL( SCIPlpiexSolvePrimal(pslpiex) );
+
       /* recover the optimal solution and set interior point and slack in constraint handler data */
       if( SCIPlpiexIsOptimal(pslpiex) )
       {
@@ -3566,6 +3668,10 @@ SCIP_RETCODE constructPSData(
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, &objval, primalsol, NULL, NULL, NULL) );
 
 #ifdef PS_OUT 
+
+         //         SCIPlpiexGetIterations(pslpiex, &pivotcount);
+         //printf("Number of simplex pivots: %d\n",pivotcount);
+
          printf("Dual solution: \n");
          if( psnvars < 100 )
          {
@@ -3613,29 +3719,35 @@ SCIP_RETCODE constructPSData(
       }
       else if( SCIPlpiexIsObjlimExc(pslpiex) )
       {
+         conshdlrdata->psdatafail = TRUE;
          SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
       }
       else if( SCIPlpiexIsPrimalInfeasible(pslpiex) )
       {
+         conshdlrdata->psdatafail = TRUE;
+         SCIPerrorMessage(" Error: interior point not found - infeasible aux. problem \n");
          SCIPdebugMessage("   exact LP is primal infeasible\n"); 
       }
       else if( SCIPlpiexExistsPrimalRay(pslpiex) ) 
       {
+         conshdlrdata->psdatafail = TRUE;
          SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
       }
       else if( SCIPlpiexIsIterlimExc(pslpiex) )
       {
+         conshdlrdata->psdatafail = TRUE;
          SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
       }
       else if( SCIPlpiexIsTimelimExc(pslpiex) )
       {
+         conshdlrdata->psdatafail = TRUE;
          SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
       }
       else
       {
          SCIPerrorMessage("Other Error\n");
       }
-
+      
       if(primalsol != NULL)
       {
          for( i = 0; i < psnvars; i++ )
@@ -3648,7 +3760,7 @@ SCIP_RETCODE constructPSData(
       SCIPerrorMessage("Invald value for parameter psintpointselection\n");
    }
 
-   /* free memory */  /* this might not be done in the right order */
+   /* free memory */
 #ifdef PS_OUT 
    printf("Freeing memory from constructpsdata\n");
 #endif
@@ -3719,24 +3831,24 @@ SCIP_RETCODE getPSdualbound(
    mpq_t*                boundval            /**< value of dual bound */
    )
 {
-   int                   i;
-   int                   j;
-   int                   rval;               
-   int                   currentrow;
-   mpq_t*                approxdualsol;      /**< stores the approximate dual solution vector */
-   mpq_t*                costvect;           /**< dual cost vector */
-   int                   nextendedconss;              /**< column dimension of dual problem */
-   int                   nconss;             /**< number of primal constraints */
-   int                   nvars;              /**< number of primal variables */
-   mpq_t*                violation;          /**< amount by which the approx dual solution violates constraints */  
-   mpq_t*                correction;         /**< stores the correction to the approximate dual solution */
-   mpq_t                 mpqtemp;
-   mpq_t                 mpqtemp2;
-   mpq_t                 lambda1;            /**< multiplier for convex comb. of int. pt and proj sol */
-   mpq_t                 lambda2;            /**< multiplier for convex comb. of int. pt and proj sol */ 
-   mpq_t                 maxv;               /**< max violation of projected point */   
-   mpq_t                 dualbound;          /**< lp bound generated */
-   SCIP_COL**            cols;
+   int i;
+   int j;
+   int rval;               
+   int nextendedconss;
+   int nconss;
+   int nvars;
+   int currentrow;
+   mpq_t* approxdualsol;
+   mpq_t* costvect; /**< dual cost vector for expanded problem*/
+   mpq_t* violation;
+   mpq_t* correction;
+   mpq_t mpqtemp;
+   mpq_t mpqtemp2;
+   mpq_t lambda1;
+   mpq_t lambda2;
+   mpq_t maxv;
+   mpq_t dualbound;
+   SCIP_COL** cols;
 
    assert(conshdlrdata->psdatacon);
    assert(!conshdlrdata->psdatafail);
@@ -3759,18 +3871,16 @@ SCIP_RETCODE getPSdualbound(
    /* process bound changes */
    processBoundchgs(scip, conshdlrdata, consdata);
 
+   /*allocate memory for approximate dual solution, dual cost vector, violation and correction */
    SCIP_CALL( SCIPallocBufferArray(scip, &approxdualsol, nextendedconss) );
    for( i = 0; i < nextendedconss; i++ )
       mpq_init(approxdualsol[i]);
-
    SCIP_CALL( SCIPallocBufferArray(scip, &costvect, nextendedconss) );
    for( i = 0; i < nextendedconss; i++ )
       mpq_init(costvect[i]);
-
    SCIP_CALL( SCIPallocBufferArray(scip, &violation, nvars) );
    for( i = 0; i < nvars; i++ )
       mpq_init(violation[i]);
-
    SCIP_CALL( SCIPallocBufferArray(scip, &correction, nextendedconss) );
    for( i = 0; i < nextendedconss; i++ )
       mpq_init(correction[i]);
@@ -3920,45 +4030,85 @@ SCIP_RETCODE getPSdualbound(
       printf(" Solution too long to print.\n");
 #endif
 
-   /* shifting step (scale solution with interior point to be dual feasible): 
-    * y' = lambda1 bold(y) + lambda2 y*, where
-    *   lambda1 = ( slack of int point)/ (slack of int point + max violation) = d/m+d
-    *   lambda2 = 1 - lambda1 
-    */
-
-   /* compute lambda values */
-   if( conshdlrdata->pslambdacompwise )
+   if( conshdlrdata->psuseintpoint )
    {
-      /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-      mpq_set_ui(lambda1, 1, 1);
-      for( i = 0; i < nextendedconss; i++ )
+      /* shifting step (scale solution with interior point to be dual feasible): 
+       * y' = lambda1 bold(y) + lambda2 y*, where
+       *   lambda1 = ( slack of int point)/ (slack of int point + max violation) = d/m+d
+       *   lambda2 = 1 - lambda1 
+       */
+      
+      /* compute lambda values */
+      if( conshdlrdata->pslambdacompwise )
       {
-         if( mpq_sgn(approxdualsol[i]) < 0 )
+         /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+         mpq_set_ui(lambda1, 1, 1);
+         for( i = 0; i < nextendedconss; i++ )
          {
-            mpq_set(mpqtemp2, conshdlrdata->interiorpt[i]);
-            mpq_sub(mpqtemp, conshdlrdata->interiorpt[i], approxdualsol[i]);
-            mpq_div(mpqtemp2, mpqtemp2, mpqtemp);
-            if( mpq_cmp(lambda1, mpqtemp2) > 0 )
-               mpq_set(lambda1, mpqtemp2);
-         }
-      }    
+            if( mpq_sgn(approxdualsol[i]) < 0 )
+            {
+               mpq_set(mpqtemp2, conshdlrdata->interiorpt[i]);
+               mpq_sub(mpqtemp, conshdlrdata->interiorpt[i], approxdualsol[i]);
+               mpq_div(mpqtemp2, mpqtemp2, mpqtemp);
+               if( mpq_cmp(lambda1, mpqtemp2) > 0 )
+                  mpq_set(lambda1, mpqtemp2);
+            }
+         }    
+      }
+      else
+      {
+         mpq_set_ui(maxv, 0, 1);
+         /* compute lambda1 as max violation of inequality constraints */
+         for( i = 0; i < nextendedconss; i++ )
+         {
+            if( mpq_cmp(maxv, approxdualsol[i]) > 0 )
+               mpq_set(maxv, approxdualsol[i]);
+         }    
+         mpq_set(lambda1, conshdlrdata->commonslack);
+         mpq_sub(mpqtemp, conshdlrdata->commonslack, maxv);
+         mpq_div(lambda1, lambda1, mpqtemp);
+      }
+      
+      mpq_set_si(lambda2, 1, 1);
+      mpq_sub(lambda2, lambda2, lambda1);
    }
    else
    {
-      mpq_set_ui(maxv, 0, 1);
-      /* compute lambda1 as max violation of inequality constraints */
-      for( i = 0; i < nextendedconss; i++ )
+      /* in this case we are using an interior ray that can be added freely to the solution */
+      mpq_set_si(lambda1, 1, 1);
+      /* compute lambda values */
+      if( conshdlrdata->pslambdacompwise )
       {
-         if( mpq_cmp(maxv, approxdualsol[i]) > 0 )
-            mpq_set(maxv, approxdualsol[i]);
-      }    
-      mpq_set(lambda1, conshdlrdata->commonslack);
-      mpq_sub(mpqtemp, conshdlrdata->commonslack, maxv);
-      mpq_div(lambda1, lambda1, mpqtemp);
-   }
+         /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+         mpq_set_ui(lambda1, 1, 1);
+         for( i = 0; i < nextendedconss; i++ )
+         {
+            if( mpq_sgn(approxdualsol[i]) < 0 && conshdlrdata->includedcons[i] )
+            {
+               mpq_div(mpqtemp, approxdualsol[i], conshdlrdata->interiorpt[i]);
+               mpq_neg(mpqtemp, mpqtemp);
+               if( mpq_cmp(lambda2, mpqtemp) > 0 )
+                  mpq_set(lambda2, mpqtemp);
+            }
+         }    
+      }
+      else
+      {
+         mpq_set_ui(maxv, 0, 1);
+         /* compute lambda2 as -(max violation of inequality constraints)/ (common slack) */
+         for( i = 0; i < nextendedconss; i++ )
+         {
+            if( mpq_cmp(maxv, approxdualsol[i]) > 0 )
+               mpq_set(maxv, approxdualsol[i]);
+         }    
+         printf("Constraints all satisfied by slack of:  ");
+         mpq_out_str(stdout, 10, conshdlrdata->commonslack);
+         printf(" \n"); 
 
-   mpq_set_si(lambda2, 1, 1);
-   mpq_sub(lambda2, lambda2, lambda1);
+         mpq_div(mpqtemp, maxv, conshdlrdata->commonslack);
+         mpq_neg(lambda2, mpqtemp);
+      }
+   }
 
    /* perform shift */
    if( mpq_sgn(lambda2) != 0 )
@@ -3973,8 +4123,8 @@ SCIP_RETCODE getPSdualbound(
          mpq_add(approxdualsol[i], approxdualsol[i], mpqtemp);
       }
    }
-
-
+   
+   
    /* postprocess dual solution to reduce values when both sides of constraint used;
     * if y(lhs) and y(rhs) are both nonzero shift them such that one becomes zero 
     * this will tighten the solution and improve the objective value, there is no way this can hurt 

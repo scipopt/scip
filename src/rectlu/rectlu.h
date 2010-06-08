@@ -12,7 +12,7 @@
 /*  along with RECTLU; see the file COPYING.                                 */ 
 /*                                                                           */ 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: rectlu.h,v 1.1.2.1 2010/04/02 18:40:45 bzfsteff Exp $"
+#pragma ident "@(#) $Id: rectlu.h,v 1.1.2.2 2010/06/08 21:22:00 bzfsteff Exp $"
 
 /**@file   rectlu.h 
  * @brief  rectlu user interface
@@ -179,11 +179,11 @@ int RECTLUsolveSystem(
    int              m,                   /**< number of columns in matrix*/ 
    mpq_t*           rhs,                 /**< right hand side of system to solve */ 
    mpq_t*           sol                  /**< solution to system */
-);
+   );
 
 /** frees factor work f */ 
 void RECTLUfreeFactorization(
    qsnum_factor_work* f                 /**< pointer to store factor work*/
-);
+   );
 
 #endif	/*  __RECTLU_H */
