@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.89 2010/06/09 15:20:24 bzfwanie Exp $
+# $Id: check.awk,v 1.90 2010/06/09 15:44:14 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -571,7 +571,10 @@ BEGIN {
             {
                if( abs(pb - db) <= max(abstol, reltol) )
                {
-                  status = "solved";
+                  if( abs(checkpb - rootdb) <= max(abstol,reltol) )
+                     status = "solved not verified";
+                  else
+                     status = "solved";
                   pass++;
                }
                else
