@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.579 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.580 2010/06/09 14:12:53 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -74,9 +74,6 @@
 #include "nlpi/nlpi.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/debug.h"
-/* for printing of information about plugins that are linked in (SCIPprintThirdPartyCodes()) */
-#include "scip/reader_zpl.h"
-#include "nlpi/nlpi_ipopt.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -476,10 +473,9 @@ void SCIPprintVersion(
    SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
    SCIPmessageFPrintInfo(file, " [LP solver: %s]", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [Expression interpreter: %s]", SCIPexprintGetName());
    SCIPmessageFPrintInfo(file, "\n");
    SCIPmessageFPrintInfo(file, "%s\n", SCIP_COPYRIGHT);
-
-   SCIPprintExternalCodes(file);
 }
 
 /** prints error message for the given SCIP return code */
@@ -491,33 +487,6 @@ void SCIPprintError(
    SCIPmessageFPrintInfo(file, "SCIP Error (%d): ", retcode);
    SCIPretcodePrint(file, retcode);
    SCIPmessageFPrintInfo(file, "\n");
-}
-
-/** prints information about external codes that are linked to a file stream */
-void SCIPprintExternalCodes(
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   SCIPmessageFPrintInfo(file, "\nExternal codes linked into this SCIP executable:\n");
-
-   if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
-   {
-      SCIPmessageFPrintInfo(file, "  Expressions interpreter: %s\n", SCIPexprintGetName());
-   }
-
-   if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
-   {
-      SCIPmessageFPrintInfo(file, "  LP solver:               %s\n", SCIPlpiGetSolverName());
-   }
-
-#ifdef WITH_IPOPT
-      SCIPmessageFPrintInfo(file, "  NLP solver:              %s\n", SCIPgetNlpiNameIpopt());
-#endif
-
-   if( SCIPgetZimplVersion() >= 0 )
-   {
-      SCIPmessageFPrintInfo(file, "  File Reader:             ZIMPL %d.%d.%d\n", SCIPgetZimplVersion()/100, (SCIPgetZimplVersion()%100)/10, SCIPgetZimplVersion()%10);
-   }
 }
 
 
