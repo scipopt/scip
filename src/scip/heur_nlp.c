@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.66 2010/05/31 13:34:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.67 2010/06/09 14:21:07 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1280,7 +1280,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       SCIPdebugMessage("have startcand from heur %s\n", SCIPsolGetHeur(heurdata->startcand) ? SCIPheurGetName(SCIPsolGetHeur(heurdata->startcand)) : "NULL");
    }
 
-   if( heurdata->runalways )
+   if( !heurdata->runalways )
    {
       /* check if enough nodes have been processed so that we want to run the heuristic again */
 
