@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.88 2010/06/09 10:30:25 bzfwanie Exp $
+# $Id: check.awk,v 1.89 2010/06/09 15:20:24 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -161,7 +161,9 @@ BEGIN {
    timeout = 0;
    feasible = 0;
    pb = +infty;
+   firstpb = +infty;
    db = -infty;
+   rootdb = -infty;
    simpiters = 0;
    bbnodes = 0;
    primlps = 0;
@@ -171,6 +173,8 @@ BEGIN {
    sblps = 0;
    sbiter = 0;
    tottime = 0.0;
+   timetofirst = -1.0;
+   timetobest = -1.0;
    inconflict = 0;
    inconstime = 0;
    confclauses = 0;
@@ -296,13 +300,14 @@ BEGIN {
 #
 /^Original Problem   : no problem exists./ { readerror = 1; }
 /^SCIP Status        :/ { aborted = 0; }
-/solving was interrupted/  { timeout = 1; }
+/solving was interrupted/ { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
 /memory limit reached/ { memlimitreached = 1; }
-/problem is solved/    { timeout = 0; }
-/^  First Solution   :/{
+/problem is solved/ { timeout = 0; }
+/^  First Solution   :/ {
     timetofirst = $11;
+    firstpb = $4;
 }
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
@@ -310,25 +315,24 @@ BEGIN {
       pb = +infty;
       db = +infty;
       feasible = 0;
-      timetobest = -1;
    }
    else if( $4 == "-" )
    {
       pb = +infty;
       feasible = 0;
-      timetobest = -1;
    }
    else
    {
       pb = $4;
       feasible = 1;
-      timetobest=$11;
+      timetobest = $11;
    }
 }
 /^  Dual Bound       :/ { 
    if( $4 != "-" ) 
       db = $4;
 }
+/^  Root Dual Bound  :/ { rootdb = $5; }
 #
 # iterations
 #
@@ -365,6 +369,12 @@ BEGIN {
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
+      
+      #firstpb and rootdb are used to detect the direction of optimization (min or max)
+      temp = firstpb;
+      firstpb = 1.0*temp;
+      temp = rootdb;
+      rootdb = 1.0*temp;
 
       nprobs++;
 
@@ -425,7 +435,7 @@ BEGIN {
       if( timelimit > 0.0 )
          tottime = min(tottime, timelimit);
 
-      if( aborted || timetobest < 0 )
+      if( aborted || timetobest < 0.0 )
       {
 	  timetofirst = tottime;
 	  timetobest = tottime;
@@ -480,8 +490,12 @@ BEGIN {
       {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
+         if( timetofirst < 0.0 )
+            checkpb = pb;
+         else
+            checkpb = firstpb;
 
-         if( (db <= pb && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || (db >= pb && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) )
+         if( ( checkpb-rootdb > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( rootdb-checkpb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) )
          {
             status = "fail";
             failtime += tottime;
@@ -520,8 +534,12 @@ BEGIN {
       {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
+         if( timetofirst < 0.0 )
+            checkpb = pb;
+         else
+            checkpb = firstpb;
 
-         if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol) || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) )
+         if( ( checkpb-rootdb > max(abstol,reltol) && db-sol[prob] > reltol) || ( rootdb-checkpb > max(reltol,abstol) && sol[prob]-db > reltol) )
          {
             status = "fail";
             failtime += tottime;
@@ -531,7 +549,7 @@ BEGIN {
          {
             if( timeout || gapreached || sollimitreached )
             {
-               if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) )
+               if( (checkpb-rootdb > max(abstol,reltol) && sol[prob]-pb > reltol) || (rootdb-checkpb > max(abstol,reltol) && pb-sol[prob] > reltol) )
                {
                   status = "better";
                   timeouttime += tottime;
@@ -551,9 +569,17 @@ BEGIN {
             }
             else
             {
-               #obsolete: if( abs(pb - db) <= max(abstol, reltol) )
-               status = "solved";
-               pass++;
+               if( abs(pb - db) <= max(abstol, reltol) )
+               {
+                  status = "solved";
+                  pass++;
+               }
+               else
+               {
+                  status = "fail";
+                  failtime += tottime;
+                  fail++;
+               }
             }
          }
       }
@@ -564,7 +590,7 @@ BEGIN {
          
          if( abs(pb - db) <= max(abstol, reltol) )
          {
-            status = "solved";
+            status = "solved not verified";
             pass++;
          }
          else
@@ -618,19 +644,30 @@ BEGIN {
       }
       else
       {
-         if( timeout || gapreached || sollimitreached )
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+         if( abs(pb - db) < max(abstol,reltol) )
          {
-            if( timeout )
-               status = "timeout";
-            else if( gapreached )
-               status = "gaplimit";
-            else if( sollimitreached )
-               status = "sollimit";
-            timeouttime += tottime;
-            timeouts++;
+            status = "ok";
+            pass++;
          }
          else
-            status = "unknown";
+         {
+            if( timeout || gapreached || sollimitreached )
+            {
+               if( timeout )
+                  status = "timeout";
+               else if( gapreached )
+                  status = "gaplimit";
+               else if( sollimitreached )
+                  status = "sollimit";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+               status = "unknown";
+         }
       }
 
       if( writesolufile )
