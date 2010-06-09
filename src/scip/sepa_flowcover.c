@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.30 2010/05/17 19:32:04 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.31 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -166,10 +166,10 @@ SCIP_RETCODE getClosestVlb(
          SCIP_Bool meetscriteria; 
          int probidxbinvar;
       
-         /* use only variable lower bounds l~_i * x_i + d_i with x_i binary */
-         if( SCIPvarGetType(vlbvars[i]) != SCIP_VARTYPE_BINARY )
+         /* use only variable lower bounds l~_i * x_i + d_i with x_i binary which are active */
+         if( !SCIPvarIsBinary(vlbvars[i])  || !SCIPvarIsActive(vlbvars[i]) )
             continue;
-
+         
          /* check if current variable lower bound l~_i * x_i + d_i imposed on y_j meets the following criteria:
           * (let a_j  = coefficient of y_j in current row,
           *      u_j  = closest simple upper bound imposed on y_j,
@@ -184,7 +184,6 @@ SCIP_RETCODE getClosestVlb(
           *   2. a_j ( u_j - d_i ) + c_i >= 0
           *   3. a_j l~_i + c_i >= 0 
           */
-         assert(SCIPvarGetProbindex(vlbvars[i]) > -1);
          probidxbinvar = SCIPvarGetProbindex(vlbvars[i]);
          rowcoefbinvar = rowcoefsbinary[probidxbinvar];
 
@@ -285,10 +284,10 @@ SCIP_RETCODE getClosestVub(
          SCIP_Bool meetscriteria; 
          int probidxbinvar;
     
-         /* use only variable upper bound u~_i * x_i + d_i with x_i binary */
-         if( SCIPvarGetType(vubvars[i]) != SCIP_VARTYPE_BINARY )
+         /* use only variable upper bound u~_i * x_i + d_i with x_i binary and which are active */
+         if( !SCIPvarIsBinary(vubvars[i]) || !SCIPvarIsActive(vubvars[i]))
             continue;
-     
+
          /* checks if current variable upper bound u~_i * x_i + d_i meets the following criteria
           * (let a_j  = coefficient of y_j in current row,
           *      l_j  = closest simple lower bound imposed on y_j,
@@ -303,7 +302,6 @@ SCIP_RETCODE getClosestVub(
           *   2. a_j ( l_j - d_i ) + c_i <= 0
           *   3. a_j u~_i + c_i <= 0 
           */
-         assert(SCIPvarGetProbindex(vubvars[i]) > -1);
          probidxbinvar = SCIPvarGetProbindex(vubvars[i]);
          rowcoefbinvar = rowcoefsbinary[probidxbinvar];
 
@@ -492,7 +490,7 @@ SCIP_RETCODE constructSNFRelaxation(
 
       assert(!SCIPisZero(scip, nonzcoefs[c]));
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
       {
          /* saves column for binary variable */
          nonzcolsbinary[nnonzcolsbinary] = c;
@@ -737,7 +735,7 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j d_j
              */
-            assert(SCIPvarGetType(vlbvars[bestlbtype]) == SCIP_VARTYPE_BINARY);
+            assert(SCIPvarIsBinary(vlbvars[bestlbtype]));
 
             rowcoefbinary = rowcoefsbinary[SCIPvarGetProbindex(vlbvars[bestlbtype])];
             varsolvalbinary = varsolvals[SCIPvarGetProbindex(vlbvars[bestlbtype])];
@@ -844,7 +842,7 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j d_j
              */
-            assert(SCIPvarGetType(vubvars[bestubtype]) == SCIP_VARTYPE_BINARY);
+            assert(SCIPvarIsBinary(vubvars[bestubtype]));
 
             rowcoefbinary = rowcoefsbinary[SCIPvarGetProbindex(vubvars[bestubtype])];
             varsolvalbinary = varsolvals[SCIPvarGetProbindex(vubvars[bestubtype])];
@@ -1714,7 +1712,7 @@ SCIP_RETCODE getBoundsForSubstitution(
       }
 
       /* binary variable */
-      if( SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(vars[j]) )
       {
          /* j in C1 & C2 */
          if( flowcoverstatus[assoctransvars[j]] == 1 )

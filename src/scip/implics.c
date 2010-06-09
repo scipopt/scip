@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.38 2010/02/04 16:54:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.39 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -176,7 +176,7 @@ SCIP_RETCODE vboundsSearchPos(
             assert(vbounds->coefs[pos-1] > 0.0);
             *insertpos = pos-1;
             *found = TRUE;
-            }
+         }
          else
          {
             /* the positive coefficient should be inserted to the left of the negative one */
@@ -431,6 +431,10 @@ void checkImplics(
       {
          int cmp;
 
+         /* in case of implication we can not use SCIPvarIsBinary() to check for binaries since the implication are
+          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
+          * SCIP_VARTYPE_BINARY) and second all others;
+          */
          assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
          assert((types[i] == SCIP_BOUNDTYPE_LOWER) == (bounds[i] > 0.5));
          assert(SCIPsetIsFeasEQ(set, bounds[i], 0.0) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
@@ -448,6 +452,10 @@ void checkImplics(
       {
          int cmp;
          
+         /* in case of implication we can not use SCIPvarIsBinary() to check for binaries since the implication are
+          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
+          * SCIP_VARTYPE_BINARY) and second all others;
+          */
          assert(SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY);
 
          if( i == 0 )
@@ -573,10 +581,10 @@ void implicsSearchVar(
                                               *   should be placed */
    )
 {
-   int implvaridx;
+   SCIP_Bool found;
    int left;
    int right;
-   int middle;
+   int pos;
 
    assert(implics != NULL);
    assert(poslower != NULL);
@@ -593,7 +601,7 @@ void implicsSearchVar(
          *posadd = 0;
          *poslower = -1;
          *posupper = -1;
-          return;
+         return;
       }      
       left = 0;
       right = implics->nbinimpls[varfixing] - 1;
@@ -614,69 +622,55 @@ void implicsSearchVar(
    }
    assert(left <= right);
 
-   /* search for y */
-   implvaridx = SCIPvarGetIndex(implvar);
-   do
-   {
-      int idx;
+   /* search for the position in the sorted array (via binary search) */
+   found = SCIPsortedvecFindPtr((void**)(&(implics->vars[varfixing][left])), SCIPvarComp, (void*)implvar, right-left+1, &pos);
 
-      middle = (left + right) / 2;
-      idx = SCIPvarGetIndex(implics->vars[varfixing][middle]);
-      if( implvaridx < idx )
-         right = middle - 1;
-      else if( implvaridx > idx )
-         left = middle + 1;
-      else
-      {
-         assert(implvar == implics->vars[varfixing][middle]);
-         break;
-      }
-   }
-   while( left <= right );
-   assert(left <= right+1);
+   /* adjust position */
+   pos += left;
 
-   if( left > right )
+   if( !found )
    {
       /* y was not found */
-      assert(right == -1 || compVars((void*)implics->vars[varfixing][right], (void*)implvar) < 0);
-      assert(left >= implics->nimpls[varfixing] || implics->vars[varfixing][left] != implvar);
+      assert(pos >= right || compVars((void*)implics->vars[varfixing][pos], (void*)implvar) > 0);
+      assert(pos == left || compVars((void*)implics->vars[varfixing][pos-1], (void*)implvar) < 0);
       *poslower = -1;
       *posupper = -1;
-      *posadd = left;
+      *posadd = pos;
+      
    }
    else
    {
       /* y was found */
-      assert(implvar == implics->vars[varfixing][middle]);
+      assert(implvar == implics->vars[varfixing][pos]);
 
       /* set poslower and posupper */
-      if( implics->types[varfixing][middle] == SCIP_BOUNDTYPE_LOWER )
+      if( implics->types[varfixing][pos] == SCIP_BOUNDTYPE_LOWER )
       {
          /* y was found as y_lower (on position middle) */
-         *poslower = middle;
-         if( middle + 1 < implics->nimpls[varfixing] && implics->vars[varfixing][middle+1] == implvar )
+         *poslower = pos;
+         if( pos + 1 < implics->nimpls[varfixing] && implics->vars[varfixing][pos+1] == implvar )
          {  
-            assert(implics->types[varfixing][middle+1] == SCIP_BOUNDTYPE_UPPER);
-            *posupper = middle + 1;
+            assert(implics->types[varfixing][pos+1] == SCIP_BOUNDTYPE_UPPER);
+            *posupper = pos + 1;
          }
          else
             *posupper = -1;
-         *posadd = middle;
+         *posadd = pos;
       }
       else
       {
-         /* y was found as y_upper (on position middle) */
-         *posupper = middle;
-         if( middle - 1 >= 0 && implics->vars[varfixing][middle-1] == implvar )
+         /* y was found as y_upper (on position pos) */
+         *posupper = pos;
+         if( pos - 1 >= 0 && implics->vars[varfixing][pos-1] == implvar )
          {  
-            assert(implics->types[varfixing][middle-1] == SCIP_BOUNDTYPE_LOWER);
-            *poslower = middle - 1;
-            *posadd = middle - 1;
+            assert(implics->types[varfixing][pos-1] == SCIP_BOUNDTYPE_LOWER);
+            *poslower = pos - 1;
+            *posadd = pos - 1;
          }
          else
          {
             *poslower = -1;
-            *posadd = middle;
+            *posadd = pos;
          }
       }
    }
@@ -1183,7 +1177,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
 
    assert(clique != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
    assert(doubleentry != NULL);
    assert(oppositeentry != NULL);
 
@@ -1234,7 +1228,7 @@ SCIP_RETCODE SCIPcliqueDelVar(
 
    assert(clique != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    SCIPdebugMessage("deleting variable <%s> == %u from clique %u\n", SCIPvarGetName(var), value, clique->id);
 
@@ -1511,7 +1505,7 @@ void SCIPcliquelistRemoveFromCliques(
    SCIP_VAR*             var                 /**< active problem variable the clique list belongs to */
    )
 {
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    if( cliquelist != NULL )
    {

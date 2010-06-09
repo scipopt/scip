@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.26 2010/05/17 12:53:37 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.27 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   heur_intdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -322,7 +322,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       var = fixcands[c];
       assert(SCIPvarIsIntegral(var));
       colveclen = (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN ? SCIPcolGetNNonz(SCIPvarGetCol(var)) : 0);
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
       {
          score = 500.0 * SCIPvarGetNCliques(var, TRUE) + 100.0 * SCIPvarGetNImpls(var, TRUE)
             + SCIPgetVarAvgInferenceScore(scip, var) + (SCIP_Real)colveclen/100.0;

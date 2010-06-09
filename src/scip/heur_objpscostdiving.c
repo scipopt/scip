@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.48 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.49 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -66,8 +66,7 @@ struct SCIP_HeurData
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   maxsols;            /**< total number of feasible solutions found up to which heuristic is called
                                               *   (-1: no limit) */
-   SCIP_Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */
-   SCIP_Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
+   SCIP_Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */   SCIP_Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
@@ -122,7 +121,7 @@ void calcPscostQuot(
       *roundup = FALSE;
    else
       *roundup = TRUE;
-   
+
    /* calculate pseudo cost quotient */
    if( *roundup )
       *pscostquot = sqrt(frac) * (1.0+pscostdown) / (1.0+pscostup);
@@ -130,7 +129,7 @@ void calcPscostQuot(
       *pscostquot = sqrt(1.0-frac) * (1.0+pscostup) / (1.0+pscostdown);
    
    /* prefer decisions on binary variables */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarIsBinary(var) )
       (*pscostquot) *= 1000.0;
 }
 

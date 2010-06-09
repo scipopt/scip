@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.149 2010/03/26 13:55:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.150 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -883,7 +883,7 @@ SCIP_RETCODE mergeMultiples(
       negated2 = FALSE;
       
       var1 = consdata->vars[v];
-      assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var1));
       assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_FIXED);
       if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
       {
@@ -893,7 +893,7 @@ SCIP_RETCODE mergeMultiples(
       assert(var1 != NULL);
       
       var2 = consdata->vars[v-1];
-      assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var2));
       assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_FIXED);
       if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
       {
@@ -995,7 +995,7 @@ SCIP_RETCODE applyFixings(
       SCIP_VAR* var;
 
       var = consdata->vars[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var));
 
       if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
@@ -1342,7 +1342,7 @@ SCIP_Bool checkCons(
    sumbound = ((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING ? 1.0 : 1.0 + 2*SCIPfeastol(scip));
    for( v = 0; v < nvars && sum < sumbound; ++v )  /* if sum >= sumbound, the feasibility is clearly decided */
    {
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(vars[v]));
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
       sum += solval;
@@ -3111,7 +3111,7 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
                
                for( v = 0; v < consdata->nvars; ++v )
                {
-                  assert(SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY);
+                  assert(SCIPvarIsBinary(consdata->vars[v]));
                   sum += SCIPgetSolVal(scip, sol, consdata->vars[v]);
                }
                SCIPinfoMessage(scip, NULL, "violation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
@@ -3894,7 +3894,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
 
       /* we can only treat binary variables */
-      if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+      if( !SCIPvarIsBinary(vars[i]) )
          break;
 
       /* if the variable is fixed to one in the conflict set, we have to use its negation */

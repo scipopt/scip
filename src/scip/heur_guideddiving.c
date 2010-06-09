@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.50 2010/05/17 12:53:37 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.51 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   heur_guideddiving.c
  * @ingroup PRIMALHEURISTICS
@@ -383,7 +383,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
                   objgain *= 1000.0;
             
                /* prefer decisions on binary variables */
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+               if( !SCIPvarIsBinary(var) )
                   objgain *= 1000.0;
 
                /* check, if candidate is new best candidate */
@@ -409,7 +409,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
                frac += 10.0;
             
             /* prefer decisions on binary variables */
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+            if( !SCIPvarIsBinary(var) )
                frac *= 1000.0;
 
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */

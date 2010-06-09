@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_boundshift.c,v 1.11 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: presol_boundshift.c,v 1.12 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   presol_boundshift.c
  * @ingroup PRESOLVERS
@@ -158,9 +158,8 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
    
    *result = SCIP_DIDNOTFIND;
 
-   /* copy the integer variables into an own array, since adding new
-    * integer variables affects the left-most slots in the array and
-    * thereby interferes with our search loop
+   /* copy the integer variables into an own array, since adding new integer variables affects the left-most slots in
+    * the array and thereby interferes with our search loop
     */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &scipvars[nbinvars], nvars) );
    
@@ -171,7 +170,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       SCIP_Real lb;
       SCIP_Real ub;
 
-      assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
       /* get current variable's bounds */
       lb = SCIPvarGetLbGlobal(var);
@@ -206,7 +205,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
                SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newvar) );
 
-         /* aggregate old variable and with new variable */
+         /* aggregate old variable with new variable */
          if (presoldata->flipping)
          {
             if ( REALABS(ub) < REALABS(lb) )

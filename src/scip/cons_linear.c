@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.363 2010/06/07 16:41:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.364 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4781,7 +4781,7 @@ SCIP_RETCODE extractCliques(
    nnegcoefs = 0;
    for( i = 0; i < consdata->nvars; ++i )
    {
-      if( SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_BINARY )
+      if( !SCIPvarIsBinary(consdata->vars[i]) )
          return SCIP_OKAY;
       else if( SCIPisEQ(scip, consdata->vals[i], +1.0) )
          nposcoefs++;
@@ -6015,7 +6015,7 @@ SCIP_RETCODE dualPresolve(
       /* better do not multi-aggregate binary variables, since most plugins rely on their binary variables to be either
        * active, fixed, or single-aggregated with another binary variable
        */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && consdata->nvars > 2 )
+      if( SCIPvarIsBinary(var) && consdata->nvars > 2 )
          continue;
 
       if ( SCIPvarDoNotMultaggr(var) )
@@ -6451,7 +6451,7 @@ SCIP_RETCODE aggregateVariables(
          if( val % 2 != 0 )
          {
             /* the odd valus have belong to binary variables */
-            if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
+            if( !SCIPvarIsBinary(vars[v]) )
                return SCIP_OKAY;
             
             if( noddvars == 0 )
@@ -6633,7 +6633,7 @@ SCIP_RETCODE simplifyInequalities(
          if( !SCIPisIntegral(scip, val) )
          {
             /* the odd values have to belong to binary variables */
-            if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
+            if( !SCIPvarIsBinary(vars[v]) )
                return SCIP_OKAY;
             
             oddbinvar = vars[v];
@@ -8032,7 +8032,7 @@ SCIP_RETCODE fullDualPresolve(
                integralcoefs = integralcoefs && SCIPisIntegral(scip, val);
 
             /* we do not need to process binary variables */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarIsBinary(var) )
                continue;
 
             if( SCIPconsIsModifiable(conss[c]) )
@@ -9975,7 +9975,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 
       /* we can only treat binary variables */
       /**@todo extend linear conflict constraints to some non-binary cases */
-      if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+      if( !SCIPvarIsBinary(vars[i]) )
          break;
 
       /* check whether the variable is fixed to zero (P) or one (N) in the conflict set */

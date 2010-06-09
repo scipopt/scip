@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.79 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.80 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   pub_var.h
  * @ingroup PUBLICMETHODS
@@ -344,6 +344,17 @@ SCIP_Bool SCIPvarIsNegated(
 /** gets type of variable */
 extern
 SCIP_VARTYPE SCIPvarGetType(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns TRUE if the variable is of binary type; this is the case if:
+ *  (1) variable type is binary
+ *  (2) variable type is integer or implicit integer and 
+ *      (i)  the lazy lower bound or the global lower bound is greater or equal to zero
+ *      (ii) the lazy upper bound or the global upper bound is less tor equal to one 
+ */
+extern
+SCIP_Bool SCIPvarIsBinary(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -698,6 +709,8 @@ SCIP_Real SCIPvarGetLPSol(
       && ((var)->varstatus != SCIP_VARSTATUS_NEGATED || (var)->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL))
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
 #define SCIPvarGetType(var)             ((SCIP_VARTYPE)((var)->vartype))
+#define SCIPvarIsBinary(var)            ((var)->vartype == SCIP_VARTYPE_BINARY || \
+      ((var)->vartype != SCIP_VARTYPE_CONTINUOUS && MAX((var)->glbdom.lb, (var)->lazylb) >= 0.0  && MIN((var)->glbdom.ub, (var)->lazyub) <= 1.0))
 #define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemovable(var)         (var)->removable

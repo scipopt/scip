@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.39 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.40 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -381,7 +381,7 @@ CUTOFF_CONSTRAINT(addBinaryCons)
    {
       var = vars[v];
     
-      assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert( SCIPvarIsBinary(var) );
       assert( varIsUnfixedLocal(var) );
 
       value = SCIPgetSolVal(scip, sol, var);
@@ -454,7 +454,7 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
       assert( varIsUnfixedLocal(var) );
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
       {
          ++nbinvars;
          value = SCIPgetSolVal(scip, sol, var);
@@ -755,7 +755,7 @@ SCIP_Bool checkLogicor(
       satisfied = FALSE;
       for( v = 0; v < nvars && !satisfied; ++v )
       {
-         assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarIsBinary(vars[v]));
 
          if( !varIsUnfixedLocal(vars[v] ) ) 
             satisfied = SCIPvarGetLbLocal(vars[v]) > 0.5;

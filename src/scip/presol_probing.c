@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.57 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.58 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   presol_probing.c
  * @ingroup PRESOLVERS
@@ -442,6 +442,10 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    /* if no domains changed since the last call, we don't need to probe */
    if( presoldata->called && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0 )
       return SCIP_OKAY;
+
+   /**@todo currently we only perform probing on variables which are of binary type; there are, however, more
+    *       implicit binary variables which can be found with the method SCIPvarIsBinary(); for these variable we could
+    *       also perform probing */
 
    SCIPdebugMessage("executing probing (used %.1f sec)\n", SCIPpresolGetTime(presol));
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.17 2010/05/17 12:53:37 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.18 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   heur_actconsdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -464,7 +464,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
                   actscore *= 0.01;
             
                /* prefer decisions on binary variables */
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+               if( !SCIPvarIsBinary(var) )
                   actscore *= 0.01;
 
                /* check, if candidate is new best candidate */
@@ -493,7 +493,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
                actscore *= 0.01;
             
             /* prefer decisions on binary variables */
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+            if( !SCIPvarIsBinary(var) )
                actscore *= 0.01;
 
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.59 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.60 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   heur_pscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -137,7 +137,7 @@ void calcPscostQuot(
       *pscostquot = sqrt(1.0-frac) * (1.0+pscostup) / (1.0+pscostdown);
    
    /* prefer decisions on binary variables */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarIsBinary(var) )
       (*pscostquot) *= 1000.0;
 }
 

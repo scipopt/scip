@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.200 2010/06/04 21:06:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.201 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -1189,7 +1189,7 @@ SCIP_RETCODE getCover(
    *ntightened = 0;
    for( j = 0; j < nvars; j++ )
    {
-      assert(SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(vars[j]));
       
       /* tightens upper bound of x_j if weight of x_j is greater than capacity of knapsack */
       if( weights[j] > capacity ) 
@@ -3054,7 +3054,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    }
 
-   SCIP_CALL( SCIPgetVarsData(scip, &binvars, NULL, &nbinvars, NULL, NULL, NULL) );
+   binvars = SCIPgetVars(scip);
+
+   /* all variables which are of integral type can be potentially of binary type; this can be checked via the method SCIPvarIsBinary(var) */
+   nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
    if( nbinvars == 0 )
       return SCIP_OKAY;
@@ -3093,7 +3096,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             conshdlrdata->reals1size *= 2;
          SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, conshdlrdata->reals1size) );
          BMSclearMemoryArray(&conshdlrdata->reals1[oldsize], conshdlrdata->reals1size - oldsize);
-	}
+      }
       binvals = conshdlrdata->reals1;
 
       /* check for cleared array, all entries have to be zero */
@@ -3124,7 +3127,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
       var = knapvars[i];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(var) )
+      if( SCIPvarIsBinary(var) && SCIPvarIsActive(var) )
       {
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
@@ -3160,8 +3163,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          for( j = 0; j < nvlb; j++ )
          {
             /* use only numerical stable vlb with binary variable z */
-            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvlb[j]) 
-               && REALABS(bvlb[j]) <= MAXABSVBCOEF )
+            if( SCIPvarIsBinary(zvlb[j]) && SCIPvarIsActive(zvlb[j]) && REALABS(bvlb[j]) <= MAXABSVBCOEF )
             {
                SCIP_Real vlbsol;
 
@@ -3231,8 +3233,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          for( j = 0; j < nvub; j++ )
          {
             /* use only numerical stable vub with active binary variable z */
-            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvub[j]) 
-               && REALABS(bvub[j]) <= MAXABSVBCOEF )
+            if( SCIPvarIsBinary(zvub[j]) && SCIPvarIsActive(zvub[j]) && REALABS(bvub[j]) <= MAXABSVBCOEF )
             {
                SCIP_Real vubsol;
 
@@ -3385,6 +3386,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
    return SCIP_OKAY;
 }
+
 /** separates given knapsack constraint */
 static
 SCIP_RETCODE separateCons(
@@ -3436,7 +3438,7 @@ SCIP_RETCODE addCoef(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
    assert(weight > 0);
 
    /* add the new coefficient to the LP row */
@@ -3694,7 +3696,7 @@ SCIP_RETCODE mergeMultiples(
       negated2 = FALSE;
       
       var1 = consdata->vars[v];
-      assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var1));
       assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
       if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
       {
@@ -3704,7 +3706,7 @@ SCIP_RETCODE mergeMultiples(
       assert(var1 != NULL);
       
       var2 = consdata->vars[prev];
-      assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var2));
       assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
       if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
       {
@@ -4416,7 +4418,7 @@ SCIP_RETCODE applyFixings(
       SCIP_VAR* var;
 
       var = consdata->vars[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var));
 
       if( SCIPvarGetLbGlobal(var) > 0.5 )
       {
@@ -4508,7 +4510,7 @@ SCIP_RETCODE applyFixings(
                assert(aggrvars != NULL);
                assert(aggrscalars != NULL);
 
-	       if( SCIPvarGetType(aggrvars[i]) != SCIP_VARTYPE_BINARY )
+	       if( !SCIPvarIsBinary(aggrvars[i]) )
                {
                   SCIPerrorMessage("try to resolve a multiaggregation with a non-binary variable <%s>\n", aggrvars[i]);
                   return SCIP_ERROR;
@@ -4658,7 +4660,7 @@ SCIP_RETCODE insertZerolist(
    assert(zeroitemssize != NULL);
    assert(nzeroitems != NULL);
    assert(*nzeroitems <= *zeroitemssize);
-   assert(0 <= probindex && probindex < SCIPgetNBinVars(scip));
+   assert(0 <= probindex && probindex < SCIPgetNVars(scip) - SCIPgetNContVars(scip));
    assert(memlimitreached != NULL);
 
    nzeros = *nzeroitems;
@@ -4777,9 +4779,10 @@ SCIP_RETCODE tightenWeightsLift(
    if( !consdata->cliquepartitioned && nvars > MAX_USECLIQUES_SIZE )
       return SCIP_OKAY;
    
-   binvars = SCIPgetVars(scip);
-   nbinvars = SCIPgetNBinVars(scip);
+   /* we have to consider all integral variables since even integer and implicit integer variables can have binary bounds */
+   nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    assert(nbinvars > 0);
+   binvars = SCIPgetVars(scip);
 
    /* get conshdlrdata to use cleared memory */
    conshdlr = SCIPconsGetHdlr(cons);
@@ -4959,7 +4962,7 @@ SCIP_RETCODE tightenWeightsLift(
          int probindex;
          SCIP_Bool implvalue;
 
-         assert(SCIPvarGetType(implvars[j]) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarIsBinary(implvars[j]));
          probindex = SCIPvarGetProbindex(implvars[j]);
          assert(0 <= probindex && probindex < nbinvars);
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER); /* the negation of the implication */
@@ -6641,9 +6644,9 @@ SCIP_DECL_CONSINIT(consInitKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   nvars = SCIPgetNBinVars(scip);
-   nvars += SCIPgetNIntVars(scip); /* maybe some integer variables get upgraded to binary variables due to presolving, so we need to count them too */
-
+   /* all variables which are of integral type can be binary; this can be checked via the method SCIPvarIsBinary(var) */
+   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+ 
    SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->reals1, nvars) );
    BMSclearMemoryArray(conshdlrdata->reals1, nvars);
    conshdlrdata->reals1size = nvars;
@@ -6687,8 +6690,8 @@ SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   nvars = SCIPgetNBinVars(scip);
-   nvars += SCIPgetNIntVars(scip); /* maybe some integer variables get upgraded to binary variables due to presolving, so we need to count them too */
+   /* all variables which are of integral type can be binary; this can be checked via the method SCIPvarIsBinary(var) */
+   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->ints1, nvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->ints2, nvars) );

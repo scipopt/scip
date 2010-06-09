@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.59 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.60 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -986,7 +986,7 @@ void calculateAlternatives(
    SCIP_Real ub;
 
    /* for binary variables, there is only one possible alternative value for backtracking */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarIsBinary(var) )
    {
       assert(SCIPisFeasEQ(scip, fixval, 0.0) || SCIPisFeasEQ(scip, fixval, 1.0));
       alternatives[0] = 1.0 - fixval;

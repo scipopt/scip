@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.64 2010/05/17 12:53:37 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.65 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   heur_coefdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -385,7 +385,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
                   nviolrows *= 100;
             
                /* prefer decisions on binary variables */
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+               if( !SCIPvarIsBinary(var) )
                   nviolrows *= 100;
 
                /* check, if candidate is new best candidate */
@@ -420,7 +420,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
                nviolrows *= 100;
             
             /* prefer decisions on binary variables */
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+            if( !SCIPvarIsBinary(var) )
                nviolrows *= 100;
 
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */

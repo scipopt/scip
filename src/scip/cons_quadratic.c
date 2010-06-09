@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.98 2010/05/25 11:06:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.99 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -1966,8 +1966,9 @@ SCIP_RETCODE presolveCreateQuadTerm(
       {
          var  = (SCIP_VAR*) SCIPhashmapListGetOrigin(listitem);
          term = (PRESOLVEQUADTERM*) SCIPhashmapListGetImage(listitem);
-         if( replacesqrbinary && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && term->sqrcoefs != 0.0 )
-         { /* replace square of binary variable by variable itself (x^2 = x) */
+         if( replacesqrbinary && SCIPvarIsBinary(var) && term->sqrcoefs != 0.0 )
+         { 
+            /* replace square of binary variable by variable itself (x^2 = x) */
             term->lincoefs += term->sqrcoefs;
             term->sqrcoefs  = 0.0;
             *havechange = TRUE;
@@ -2532,7 +2533,7 @@ SCIP_RETCODE presolveTryAddAND(
       for( list = SCIPhashmapGetList(terms, i); list != NULL; list = SCIPhashmapListGetNext(list) )
       {
          x = (SCIP_VAR*) SCIPhashmapListGetOrigin(list);
-         if( SCIPvarGetType(x) != SCIP_VARTYPE_BINARY )
+         if( !SCIPvarIsBinary(x) )
             continue;
 
          xterm = (PRESOLVEQUADTERM*) SCIPhashmapListGetImage(list);
@@ -2545,14 +2546,14 @@ SCIP_RETCODE presolveTryAddAND(
             while( blist != NULL )
             {
                y = (SCIP_VAR*) SCIPhashmapListGetOrigin(blist);
-               if( SCIPvarGetType(y) != SCIP_VARTYPE_BINARY )
+               if( !SCIPvarIsBinary(y) )
                {
                   blist = SCIPhashmapListGetNext(blist);
                   continue;
                }
 
                (void)SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(x), SCIPvarGetName(y));
-               SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0., 1., 0., SCIP_VARTYPE_BINARY, TRUE, TRUE, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, TRUE, TRUE, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
                vars[0] = x;
@@ -2678,7 +2679,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
          maxnrvarfull = FALSE;
          
          y = (SCIP_VAR*) SCIPhashmapListGetOrigin(list);
-         if( SCIPvarGetType(y) != SCIP_VARTYPE_BINARY )
+         if( !SCIPvarIsBinary(y) )
             continue;
          
          yterm = (PRESOLVEQUADTERM*) SCIPhashmapListGetImage(list);
@@ -2752,11 +2753,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
          assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(xbnds)));
          assert(!SCIPisInfinity(scip, SCIPintervalGetSup(xbnds)));
          
-         if( nxvars == 1 && empathy4and >= 1 && SCIPvarGetType(xvars[0]) == SCIP_VARTYPE_BINARY )
-         { /* product of two binary variables, replace by auxvar and AND constraint */
+         if( nxvars == 1 && empathy4and >= 1 && SCIPvarIsBinary(xvars[0]) )
+         { 
+            /* product of two binary variables, replace by auxvar and AND constraint */
             /* add auxiliary variable z */
             (void)SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
-            SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0., 1., 0., SCIP_VARTYPE_BINARY, TRUE, TRUE, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, TRUE, TRUE, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
             
             xvars[1] = y;

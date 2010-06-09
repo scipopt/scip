@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.236 2010/06/07 16:41:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.237 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2019,7 +2019,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
          continue;
 
       var = SCIPboundchgGetVar(boundchg);
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
       {
          SCIP_Bool varfixing;
          int nimpls;
@@ -2092,7 +2092,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
                SCIP_Real lb;
                SCIP_Real ub;
                   
-               assert(SCIPvarGetType(vars[k]) == SCIP_VARTYPE_BINARY);
+               assert(SCIPvarIsBinary(vars[k]));
 
                if( SCIPvarGetStatus(vars[k]) == SCIP_VARSTATUS_MULTAGGR )
                   continue;

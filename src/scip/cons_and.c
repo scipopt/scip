@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.117 2010/04/26 21:52:08 bzfgleix Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.118 2010/06/09 13:37:45 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -744,7 +744,7 @@ SCIP_RETCODE applyFixings(
    while( v < consdata->nvars )
    {
       var = consdata->vars[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var));
 
       if( SCIPvarGetLbGlobal(var) > 0.5 )
       {

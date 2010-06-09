@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.93 2010/05/30 12:28:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.94 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -980,7 +980,7 @@ SCIP_RETCODE tightenCoefs(
    assert(consdata != NULL);
 
    /* coefficient tightening only works for binary bound variable */
-   if( SCIPvarGetType(consdata->vbdvar) != SCIP_VARTYPE_BINARY )
+   if( !SCIPvarIsBinary(consdata->vbdvar) )
       return SCIP_OKAY;
 
    oldnchgcoefs = *nchgcoefs;

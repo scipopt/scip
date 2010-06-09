@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.136 2010/03/26 13:55:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.137 2010/06/09 13:37:46 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -419,7 +419,7 @@ SCIP_RETCODE applyFixings(
    while( v < consdata->nvars )
    {
       var = consdata->vars[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var));
 
       if( SCIPvarGetLbGlobal(var) > 0.5 )
       {
@@ -831,7 +831,7 @@ SCIP_RETCODE checkCons(
    solval = 0.0;
    for( v = 0; v < nvars && sum < 1.0; ++v )
    {
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(vars[v]));
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
       sum += solval;
@@ -1935,7 +1935,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                for( v = 0; v < consdata->nvars; ++v )
                {
                   assert( consdata->vars[v] != NULL);
-                  assert( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY );
+                  assert( SCIPvarIsBinary(consdata->vars[v]) );
                   assert( SCIPisZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[v])) );
                }
 #endif
@@ -2481,7 +2481,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
 
       /* we can only treat binary variables */
-      if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+      if( !SCIPvarIsBinary(vars[i]) )
          break;
 
       /* if the variable is fixed to one in the conflict set, we have to use its negation */

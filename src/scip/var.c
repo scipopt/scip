@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.278 2010/05/28 15:03:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.279 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -283,8 +283,8 @@ SCIP_RETCODE varAddLbchginfo(
    assert(SCIPsetIsLT(set, oldbound, newbound));
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, oldbound));
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, oldbound, 0.0));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 1.0));
+   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, oldbound, 0.0));
+   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 1.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
@@ -355,8 +355,8 @@ SCIP_RETCODE varAddUbchginfo(
    assert(SCIPsetIsGT(set, oldbound, newbound));
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, oldbound));
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, oldbound, 1.0));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0));
+   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, oldbound, 1.0));
+   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
@@ -1179,8 +1179,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
-      || SCIPsetIsEQ(set, newbound, boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : 0.0));
+   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : 0.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
@@ -1356,7 +1355,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsActive(var) || !SCIPvarIsBinary(var));
 
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -1369,7 +1368,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
    {
       SCIP_Bool varfixing;
 
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var));
 
       varfixing = FALSE;
       do
@@ -1395,7 +1394,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             impltype = impltypes[i];
             assert(implvar != var);
             assert(SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY);
-
+            
             /* remove for all implications z == 0 / 1  ==>  x <= 0 / x >= 1 (x binary)
              * the following implication from x's implications 
              *   x == 1  ==>  z <= 0            , for z == 1  ==>  x <= 0
@@ -1424,7 +1423,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             impltype = impltypes[i];
             assert(implvar != var);
             assert(SCIPvarGetType(implvar) != SCIP_VARTYPE_BINARY);
-
+            
             /* remove for all implications z == 0 / 1  ==>  x <= p / x >= p (x not binary)
              * the following variable bound from x's variable bounds 
              *   x <= b*z+d (z in vubs of x)            , for z == 0 / 1  ==>  x <= p
@@ -2987,7 +2986,7 @@ SCIP_RETCODE SCIPvarFix(
       assert(var->implics == NULL);
 
       /* remove the variable from all cliques */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
       {
          SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
          SCIPcliquelistFree(&var->cliquelist, blkmem);
@@ -3729,7 +3728,7 @@ SCIP_RETCODE SCIPvarAggregate(
    var->nlocksup = 0;
 
    /* check, if variable should be used as NEGATED variable of the aggregation variable */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY
+   if( SCIPvarIsBinary(var) && SCIPvarIsBinary(aggvar)
       && var->negatedvar == NULL && aggvar->negatedvar == NULL
       && SCIPsetIsEQ(set, scalar, -1.0) && SCIPsetIsEQ(set, constant, 1.0) )
    {
@@ -3791,7 +3790,7 @@ SCIP_RETCODE SCIPvarAggregate(
     */
    if( var->implics != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY )
    {
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var));
       for( i = 0; i < 2; ++i )
       {
          SCIP_VAR** implvars;
@@ -3819,10 +3818,10 @@ SCIP_RETCODE SCIPvarAggregate(
     *  - add all cliques again to the variable, thus adding it to the aggregated variable
     *  - free the cliquelist data structures
     */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarIsBinary(var) )
    {
       SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-      if( var->cliquelist != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY )
+      if( var->cliquelist != NULL && SCIPvarIsBinary(aggvar) )
       {
          for( i = 0; i < 2; ++i )
          {
@@ -4065,7 +4064,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       assert(var->implics == NULL);
 
       /* the variable also has to be removed from all cliques */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
       {
          SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
          SCIPcliquelistFree(&var->cliquelist, blkmem);
@@ -4227,7 +4226,7 @@ SCIP_RETCODE SCIPvarNegate(
       SCIP_CALL( varCreate(negvar, blkmem, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
             SCIPvarGetType(var), var->initial, var->removable, NULL, NULL, NULL, NULL) );
       (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
          (*negvar)->data.negate.constant = 1.0;
       else
          (*negvar)->data.negate.constant = var->glbdom.lb + var->glbdom.ub;
@@ -4402,7 +4401,7 @@ SCIP_RETCODE SCIPvarChgType(
    var->vartype = vartype; /*lint !e641*/
    if( var->negatedvar != NULL )
       var->negatedvar->vartype = vartype; /*lint !e641*/
-
+   
    return SCIP_OKAY;
 }
 
@@ -5600,7 +5599,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    assert(var != NULL);
    assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -5705,10 +5704,10 @@ SCIP_RETCODE varProcessChgUbLocal(
    SCIP_VAR* parentvar;
    SCIP_Real oldbound;
    int i;
-
+   
    assert(var != NULL);
    assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -6504,7 +6503,7 @@ SCIP_RETCODE varAddImplic(
    assert(var != NULL);
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
    assert(SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED);
    assert(infeasible != NULL);
    assert(added != NULL);
@@ -6592,7 +6591,7 @@ SCIP_RETCODE varAddImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* check, whether implied variable is binary */
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarIsBinary(implvar) )
    {
       SCIP_Bool inverseadded;
 
@@ -6767,7 +6766,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    SCIP_Bool added;
 
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var) );
    assert(SCIPvarIsActive(var));
    assert(implvar != NULL);
    assert(SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED);
@@ -6782,7 +6781,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* add transitive closure */
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarIsBinary(implvar) )
    {
       SCIP_Bool implvarfixing;
 
@@ -7077,7 +7076,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          minvlb = xlb;
 
          /* improve variable bound for binary z by moving the variable's global bound to the vlb constant */
-         if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarIsBinary(vlbvar) )
          {
             /* b > 0: x >= (maxvlb - minvlb) * z + minvlb
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
@@ -7106,7 +7105,7 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* if one of the variables is binary, add the corresponding implication to the variable's implication
              * list, thereby also adding the variable bound (or implication) to the other variable
              */
-            if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarIsBinary(vlbvar) )
             {
                /* add corresponding implication:
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
@@ -7115,7 +7114,7 @@ SCIP_RETCODE SCIPvarAddVlb(
                SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
             }
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            else if( SCIPvarIsBinary(var) )
             {
                /* add corresponding implication:
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
@@ -7343,7 +7342,7 @@ SCIP_RETCODE SCIPvarAddVub(
          maxvub = xub;
 
          /* improve variable bound for binary z by moving the variable's global bound to the vub constant */
-         if( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarIsBinary(vubvar) )
          {
             /* b > 0: x <= (maxvub - minvub) * z + minvub
              * b < 0: x <= (minvub - maxvub) * z + maxvub
@@ -7372,7 +7371,7 @@ SCIP_RETCODE SCIPvarAddVub(
             /* if one of the variables is binary, add the corresponding implication to the variable's implication
              * list, thereby also adding the variable bound (or implication) to the other variable
              */
-            if( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarIsBinary(vubvar) )
             {
                /* add corresponding implication:
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
@@ -7381,7 +7380,7 @@ SCIP_RETCODE SCIPvarAddVub(
                SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
             }
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            else if( SCIPvarIsBinary(var) )
             {
                /* add corresponding implication:
                 *   b > 0, x <= b*z + d  <->  x == 1 -> z >= (1-d)/b
@@ -7471,7 +7470,7 @@ SCIP_RETCODE SCIPvarAddImplic(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+   assert(SCIPvarIsBinary(var)); 
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
@@ -7532,7 +7531,7 @@ SCIP_RETCODE SCIPvarAddImplic(
        * use only binary variables z 
        */
       assert(var->data.aggregate.var != NULL);
-      if( SCIPvarGetType(var->data.aggregate.var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var->data.aggregate.var) )
       {   
          assert( (SCIPsetIsEQ(set, var->data.aggregate.scalar, 1.0) && SCIPsetIsZero(set, var->data.aggregate.constant))
             || (SCIPsetIsEQ(set, var->data.aggregate.scalar, -1.0) && SCIPsetIsEQ(set, var->data.aggregate.constant, 1.0)) );
@@ -7563,7 +7562,7 @@ SCIP_RETCODE SCIPvarAddImplic(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      assert(SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(var->negatedvar));
 
       SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
             !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
@@ -7592,7 +7591,7 @@ SCIP_Bool SCIPvarHasImplic(
    assert(implvar != NULL);
    assert(SCIPvarIsActive(var));
    assert(SCIPvarIsActive(implvar));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    return var->implics != NULL && SCIPimplicsContainsImpl(var->implics, varfixing, implvar, impltype);
 }
@@ -7608,7 +7607,7 @@ SCIP_Bool SCIPvarHasBinaryImplic(
    SCIP_Bool             implvarfixing       /**< value of the implied variable to search for */
    )
 {
-   assert(SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(implvar));
 
    return SCIPvarHasImplic(var, varfixing, implvar, implvarfixing ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER);
 }
@@ -7679,7 +7678,7 @@ SCIP_RETCODE SCIPvarAddClique(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+   assert(SCIPvarIsBinary(var)); 
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
@@ -7690,7 +7689,7 @@ SCIP_RETCODE SCIPvarAddClique(
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    /* only column and loose variables may be member of a clique */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
@@ -7751,7 +7750,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+   assert(SCIPvarIsBinary(var)); 
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
    /* delete clique from variable's clique list */
@@ -7769,7 +7768,7 @@ SCIP_RETCODE SCIPvarDelClique(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+   assert(SCIPvarIsBinary(var)); 
 
    /* get corresponding active problem variable */
    SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
@@ -7777,7 +7776,7 @@ SCIP_RETCODE SCIPvarDelClique(
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    /* only column and loose variables may be member of a clique */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
@@ -7812,8 +7811,8 @@ SCIP_Bool SCIPvarsHaveCommonClique(
    assert(var2 != NULL);
    assert(SCIPvarIsActive(var1));
    assert(SCIPvarIsActive(var2));
-   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
-   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var1));
+   assert(SCIPvarIsBinary(var2));
 
    return (SCIPcliquelistsHaveCommonClique(var1->cliquelist, value1, var2->cliquelist, value2)
       || (regardimplics && SCIPvarHasImplic(var1, value1, var2, value2 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)));
@@ -8317,7 +8316,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
 
       while( !resolved && *var != NULL )
       {
-         assert(SCIPvarGetType(*var) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarIsBinary(*var));
          
          switch( SCIPvarGetStatus(*var) )
          {
@@ -8336,7 +8335,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
             
          case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
             assert((*var)->data.aggregate.var != NULL);
-            assert(SCIPvarGetType((*var)->data.aggregate.var) == SCIP_VARTYPE_BINARY);
+            assert(SCIPvarIsBinary((*var)->data.aggregate.var));
             assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
             assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
             assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
@@ -8383,7 +8382,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
    while( *var != NULL )
    {
-      assert(SCIPvarGetType(*var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsBinary(*var));
 
       switch( SCIPvarGetStatus(*var) )
       {
@@ -8401,7 +8400,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert((*var)->data.aggregate.var != NULL);
-         assert(SCIPvarGetType((*var)->data.aggregate.var) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarIsBinary((*var)->data.aggregate.var));
          assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
          assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
          assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
@@ -11315,7 +11314,7 @@ SCIP_Bool SCIPvarWasFixedAtIndex(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    /* check the current bounds first in order to decide at which bound change information we have to look
     * (which is expensive because we have to follow the aggregation tree to the active variable)
@@ -11456,8 +11455,8 @@ SCIP_Bool SCIPvarWasFixedEarlier(
 
    assert(var1 != NULL);
    assert(var2 != NULL);
-   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
-   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var1));
+   assert(SCIPvarIsBinary(var2));
 
    var1 = SCIPvarGetProbvar(var1);
    var2 = SCIPvarGetProbvar(var2);
@@ -11472,8 +11471,8 @@ SCIP_Bool SCIPvarWasFixedEarlier(
 
    assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetStatus(var2) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
-   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var1));
+   assert(SCIPvarIsBinary(var2));
    assert(var1->nlbchginfos + var1->nubchginfos <= 1);
    assert(var2->nlbchginfos + var2->nubchginfos <= 1);
    assert(var1->nlbchginfos == 0 || !var1->lbchginfos[0].redundant); /* otherwise, var would be globally fixed */
@@ -11544,6 +11543,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsTransformed
 #undef SCIPvarIsNegated
 #undef SCIPvarGetType
+#undef SCIPvarIsBinary
 #undef SCIPvarIsIntegral
 #undef SCIPvarIsInitial
 #undef SCIPvarIsRemovable
@@ -11806,6 +11806,22 @@ SCIP_VARTYPE SCIPvarGetType(
    assert(var != NULL);
 
    return (SCIP_VARTYPE)(var->vartype);
+}
+
+/** returns TRUE if the variable is of binary type; this is the case if:
+ *  (1) variable type is binary
+ *  (2) variable type is integer or implicit integer and 
+ *      (i)  the lazy lower bound or the global lower bound is greater or equal to zero
+ *      (ii) the lazy upper bound or the global upper bound is less tor equal to one 
+ */
+SCIP_Bool SCIPvarIsBinary(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->vartype == SCIP_VARTYPE_BINARY || 
+      (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && MAX(var->glbdom.lb, var->lazylb) >= 0.0 && MIN(var->glbdom.ub, var->lazyub) <= 1.0));
 }
 
 /** returns whether variable is of integral type (binary, integer, or implicit integer) */

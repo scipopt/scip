@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.154 2010/04/27 12:11:13 bzfberth Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.155 2010/06/09 13:37:45 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1846,7 +1846,7 @@ SCIP_RETCODE conflictQueueBound(
    if( !conflictMarkBoundCheckPresence(conflict, bdchginfo) )
    {
       /* insert the bound change into the conflict queue */
-      if( (!set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY)
+      if( (!set->conf_preferbinary || SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
          && !isBoundchgUseless(set, bdchginfo) )
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
@@ -3260,7 +3260,7 @@ SCIP_RETCODE addCand(
    if( !resolvable )
    {
       score += 10.0;
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+      if( !SCIPvarIsBinary(var) )
          score += 10.0;
    }
 

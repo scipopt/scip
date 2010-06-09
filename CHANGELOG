@@ -116,6 +116,17 @@ features:
 - cons_knapsack is now able to detect negated cliques due to negated cliques on knapsack constraints
 - cons_indicator tries to adapt solutions to get feasible during check
 - cons_indicator allows to store information on other linear constraints that might help to separate cuts
+- new method SCIPvarIsBinary() which checks if a variable is (implicit) binary (see var.c for more details)
+- and constraint handler can handle implicit binary variables
+- knapsack constraint handler can handle implicit binary variables
+- linear or constraint handler can handle implicit binary variables
+- logic or constraint handler can handle implicit binary variables
+- or constraint handler can handle implicit binary variables
+- quadratic or constraint handler can handle implicit binary variables
+- setppc constraint handler can handle implicit binary variables
+- varbound constraint handler can handle implicit binary variables
+- xor constraint handler can handle implicit binary variables
+- cliques can contain implicit binary variables
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

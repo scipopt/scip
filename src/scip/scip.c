@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.578 2010/06/07 16:41:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.579 2010/06/09 13:37:47 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7166,8 +7166,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
        * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
        */
       if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
-         && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
-         && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
+         && SCIPvarIsBinary(var) && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
       {
          if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
             || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
@@ -8058,7 +8057,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
    SCIP_Real lb;
    SCIP_Real ub;
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
    assert(fixedval == TRUE || fixedval == FALSE);
    assert(infeasible != NULL);
 
@@ -8297,7 +8296,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
    SCIP_Real lb;
    SCIP_Real ub;
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
    assert(fixedval == TRUE || fixedval == FALSE);
    assert(infeasible != NULL);
 
@@ -10251,7 +10250,7 @@ SCIP_RETCODE SCIPaddConflictBinvar(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
    if( SCIPvarGetLbLocal(var) > 0.5 )
    {
       SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, NULL) );
