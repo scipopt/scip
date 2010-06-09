@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.87 2010/06/06 21:59:51 bzfwinkm Exp $
+# $Id: check.awk,v 1.88 2010/06/09 10:30:25 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -194,23 +194,23 @@ BEGIN {
    scipversion = $3; 
 
    # get name of LP solver
-   if( $13 == "SoPlex")
+   if( $13 == "SoPlex" )
       lpsname = "spx";
-   else if ($13 == "CPLEX")
+   else if( $13 == "CPLEX" )
       lpsname = "cpx";
-   else if ($13 == "NONE")
+   else if( $13 == "NONE" )
       lpsname = "none";
-   else if ($13 == "Clp")
+   else if( $13 == "Clp" )
       lpsname = "clp";
-   else if ($13 == "MOSEK")
+   else if( $13 == "MOSEK" )
       lpsname = "msk";
-   else if ($13 == "Gurobi")
+   else if( $13 == "Gurobi" )
       lpsname = "grb";
-   else if ($13 == "NONE")
+   else if( $13 == "NONE" )
       lpsname = "none"
-#   else if ($13 == "???")
+#   else if( $13 == "???" )
 #      lpsname = "xprs"
-#   else if ($13 == "???")
+#   else if( $13 == "???" )
 #      lpsname = "qso"
 
    # get LP solver version 
@@ -350,6 +350,8 @@ BEGIN {
 #    (especially of problem is claimed to be solved but solution is not the optimal solution)
 # 3) solver solved problem with the value in solu-file (if existing) => ok
 # 4) solver solved problem which has no (optimal) value in solu-file => solved
+#    (since we here don't detect the direction of optimization, it is possible 
+#     that a solver claims an optimal solution which contradicts a known feasible solution)
 # 5) solver found solution better than known best solution (or no solution was known so far) => better
 # 7) solver reached gaplimit or limit of number of solutions => gaplimit, sollimit
 # 8) solver reached any other limit (like time or nodes) => timeout
@@ -368,7 +370,7 @@ BEGIN {
 
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 && pb < infty)
+      if( abs(pb - db) < 1e-06 && pb < infty )
       {
          gap = 0.0;
          optimal = 1;
@@ -487,7 +489,7 @@ BEGIN {
          }
          else
          {
-            if (timeout || gapreached || sollimitreached)
+            if( timeout || gapreached || sollimitreached )
             {
                if( timeout )
                   status = "timeout";
@@ -519,7 +521,7 @@ BEGIN {
          reltol = 1e-5 * max(abs(pb),1.0);
          abstol = 1e-4;
 
-         if( (db < pb && db-sol[prob] > reltol) || (db > pb && sol[prob]-db > reltol) )
+         if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol) || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) )
          {
             status = "fail";
             failtime += tottime;
@@ -527,9 +529,9 @@ BEGIN {
          }
          else
          {
-            if (timeout || gapreached || sollimitreached)
+            if( timeout || gapreached || sollimitreached )
             {
-               if ( (db <= pb && sol[prob]-pb > reltol) || (db >= pb && pb-sol[prob] > reltol) )
+               if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) )
                {
                   status = "better";
                   timeouttime += tottime;
@@ -549,17 +551,9 @@ BEGIN {
             }
             else
             {
-               if( abs(pb - db) <= max(abstol, reltol) )
-               {
-                  status = "solved";
-                  pass++;
-               }
-               else
-               {
-                  status = "fail";
-                  failtime += tottime;
-                  fail++;
-               }
+               #obsolete: if( abs(pb - db) <= max(abstol, reltol) )
+               status = "solved";
+               pass++;
             }
          }
       }
@@ -583,7 +577,7 @@ BEGIN {
             }
             else
             {
-               if (timeout || gapreached || sollimitreached)
+               if( timeout || gapreached || sollimitreached )
                {
                   if( timeout )
                      status = "timeout";
@@ -601,9 +595,9 @@ BEGIN {
       }
       else if( solstatus[prob] == "inf" )
       {
-         if (!feasible)
+         if( !feasible )
          {
-            if (timeout)
+            if( timeout )
             {
                status = "timeout";
                timeouttime += tottime;
@@ -624,7 +618,7 @@ BEGIN {
       }
       else
       {
-         if (timeout || gapreached || sollimitreached)
+         if( timeout || gapreached || sollimitreached )
          {
             if( timeout )
                status = "timeout";
@@ -645,7 +639,7 @@ BEGIN {
             printf("=inf= ")>NEWSOLUFILE;
          else if( pb == db )
             printf("=opt= ")>NEWSOLUFILE;
-         else if ( pb < +infty )
+         else if( pb < +infty )
             printf("=best= ")>NEWSOLUFILE;
          else
             printf("=unkn= ")>NEWSOLUFILE;
