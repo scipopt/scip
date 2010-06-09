@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.97 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.98 2010/06/09 14:57:48 bzfviger Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -144,6 +144,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_NLPI* nlpiipopt;
       SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpiipopt) );
       SCIP_CALL( SCIPincludeNlpi(scip, nlpiipopt) );
+      /* @todo would like to print IPOPT version here, but user may have had no chance to change verbosity level
+       * SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "This library includes %s.\n", SCIPgetNlpiNameIpopt());
+       */
    }
 #endif
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.h,v 1.8 2010/06/04 14:14:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.h,v 1.9 2010/06/09 14:57:48 bzfviger Exp $"
 
 /**@file   reader_zpl.h
  * @brief  ZIMPL model file reader
@@ -36,10 +36,6 @@ extern
 SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-/** gives the ZIMPL version number, of -1 if SCIP was compiled without ZIMPL */
-extern
-int SCIPgetZimplVersion(void);
 
 #ifdef __cplusplus
 }

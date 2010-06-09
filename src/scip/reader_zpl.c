@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.54 2010/06/04 14:14:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.55 2010/06/09 14:57:48 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -1213,17 +1213,11 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP_CALL( SCIPaddStringParam(scip,
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
          NULL, FALSE, "-", NULL, NULL) );
+
+   /* @todo would like to print ZIMPL version here, but user may have had no chance to change verbosity level
+    * SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "This library includes ZIMPL %d.%d.%d.\n", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
+    */
 #endif
 
    return SCIP_OKAY;
-}
-
-/** gives the ZIMPL version number, of -1 if SCIP was compiled without ZIMPL */
-int SCIPgetZimplVersion(void)
-{
-#ifdef WITH_ZIMPL
-   return ZIMPL_VERSION;
-#else
-   return -1;
-#endif
 }
