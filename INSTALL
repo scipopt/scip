@@ -196,7 +196,7 @@ make[1]: Entering directory `/sw/scip'
 
   -> "clpinc" is the path to the Clp "include" directory, e.g., "<Clp-path>/include/coin".
   -> "libclp.*" is the path to the Clp library, e.g., "<Clp-path>/lib/libclp.a"           
-  -> "libcoinutils.*" is the path to the COIN utilities library, e.g., "<Clp-path>/lib/libcoinutils.a" 
+  -> "libcoinutils.*" is the path to the COIN-OR utilities library, e.g., "<Clp-path>/lib/libcoinutils.a" 
   -> "ipoptinc" is a directory containing the ipopt header files, i.e., "ipoptinc/IpIpoptApplication.hpp" should exist.
   -> "libipopt.*" is the Ipopt library, e.g., "/client/lib/ipopt-3.7.0/libipopt.a"                                     
   -> "ipopt_addlibs.*" is the Ipopt addlibs_cpp file, e.g., "/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt"            
@@ -323,6 +323,12 @@ make[1]: Leaving directory `/sw/scip'
 
    On some systems, the option [-e] is not available for the read command.
    You have to compile with READ=read.
+   
+   In some situations, it may be necessary to adjust the flags for linking against Clp.
+   SCIP's Makefile assumes that Blas and Lapack are installed as system libraries (libblas.a, liblapack.a)
+   and are not build into the CoinUtils library. If that is different in your build of Clp,
+   you may have to remove $(LINKCXX_l)lapack$(LINKLIBSUFFIX) from the LPSLDFLAGS in Makefile
+   or make.project. Also removing $(LINKCXX_l)bz2$(LINKLIBSUFFIX) may help in some cases.
 
    If you encounter other compiler or linker errors, you should recompile with
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
@@ -375,7 +381,7 @@ make[1]: Leaving directory `/sw/scip'
        - ln -s <file libClp.a> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /Coin-Clp/lib/libClp.a lib/libclp.linux.x86.gnu.a")
-       - ln -s <file libCoin.a> <path to SCIP>/lib/libcoin.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <file libCoinUtils.a> <path to SCIP>/lib/libcoinutils.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /Coin-Clp/lib/libCoinUtils.a lib/libcoinutils.linux.x86.gnu.a")
 
