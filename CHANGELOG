@@ -57,7 +57,7 @@ interface:
   in pub_misc.h and necessary defines in misc.c
 - added SCIPcalcNegatedCliquePartition() to scip.c to calculate a clique partition on negations of all given binary variables
 - new method SCIPcopy() to clone a SCIP instance
-- new methods SCIPcopyPlugins(), SCIPcopyParamSettings(), SCIPcopyVars(), SCIPcopyConss() 
+- new methods SCIPcopyPlugins(), SCIPcopyParamSettings(), SCIPcopyVars(), SCIPcopyConss(), SCIPgetVarCopy() 
   to copy individual parts of a SCIP instance separately.
 - SCIP can now maintain a central NLP relaxation of the problem (similar to LP)
 - added SCIPsortLongPtrInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
@@ -135,7 +135,8 @@ performance improvements:
   faster scaling of fractional coefficients in rows (now enabled), improved parameter settings (presolving)   
 - changed default value of parameter "nodeselection/restartdfs/selectbestfreq" to 0;
   this means if the current node has no children the node with the best bound is selected (SCIPgetBestboundNode()) 
-- separators are not called any longer for an integral root LP
+- separators are not called any longer for an integral initial LP solution
+- in root node, first LP solution is checked for feasibility to avoid expensive setup
 - added a dual reduction step in cons_knapsack.c
 
 fixed bugs:

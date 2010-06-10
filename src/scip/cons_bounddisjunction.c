@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.29 2010/05/04 13:28:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.30 2010/06/10 16:42:59 bzfberth Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1720,7 +1720,52 @@ SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
 }
 
 /** constraint copying method of constraint handler */
-#define consCopyBounddisjunction NULL
+static
+SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
+{
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** targetvars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
+
+   int nvars;
+   int v;
+   
+   assert(success != NULL);
+   
+   (*success) = TRUE;
+
+   /* get source data */
+   sourcevars = SCIPgetVarsBounddisjunction(sourcescip, sourcecons);
+   nvars = SCIPgetNVarsBounddisjunction(sourcescip, sourcecons);
+   boundtypes = SCIPgetBoundtypesBounddisjunction(sourcescip, sourcecons);
+   bounds = SCIPgetBoundsBounddisjunction(sourcescip, sourcecons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
+   
+   /* map source variables to active variables of the target SCIP */
+   for( v = 0; v < nvars && (*success); ++v )
+   {
+      if( SCIPvarGetStatus(sourcevars[v]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(sourcevars[v]) ==  SCIP_VARSTATUS_COLUMN 
+         || SCIPvarGetStatus(sourcevars[v]) == SCIP_VARSTATUS_LOOSE )
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap) );
+      }
+      else 
+         *success = FALSE;
+   }
+
+   /* create new copied constraint in target SCIP */
+   if( *success )
+   {
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons,  SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
+            bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );      
+   }
+
+   SCIPfreeBufferArray(scip, &targetvars);
+
+   return SCIP_OKAY;   
+}
 
 /** constraint parsing method of constraint handler */
 #define consParseBounddisjunction NULL

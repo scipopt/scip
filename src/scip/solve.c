@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.298 2010/06/08 07:42:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.299 2010/06/10 16:43:00 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1803,6 +1803,61 @@ SCIP_RETCODE priceAndCutLoop(
    return SCIP_OKAY;
 }
 
+/** updates the current lower bound with the pseudo objective value, cuts off node by bounding, and applies conflict
+ *  analysis if the pseudo objective lead to the cutoff
+ */
+static
+SCIP_RETCODE applyBounding(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if the node can be cut off */
+   )
+{
+   assert(primal != NULL);
+   assert(cutoff != NULL);
+
+   if( !(*cutoff) )
+   {
+      SCIP_NODE* focusnode;
+      SCIP_Real pseudoobjval;
+
+      /* get current focus node */
+      focusnode = SCIPtreeGetFocusNode(tree);
+
+      /* update lower bound w.r.t. the pseudo solution */
+      pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
+      SCIPnodeUpdateLowerbound(focusnode, stat, pseudoobjval);
+      SCIPdebugMessage(" -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
+         SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(prob, set, SCIPnodeGetLowerbound(focusnode)),
+         pseudoobjval, SCIPprobExternObjval(prob, set, pseudoobjval),
+         primal->cutoffbound, SCIPprobExternObjval(prob, set, primal->cutoffbound));
+
+      /* check for infeasible node by bounding */
+      if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
+      {
+         SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n",
+            SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
+         SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
+         *cutoff = TRUE;
+
+         /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
+         if( pseudoobjval >= primal->cutoffbound )
+         {
+            SCIP_CALL( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solves the current node's LP in a price-and-cut loop */
 static
 SCIP_RETCODE solveNodeLP(
@@ -1856,6 +1911,24 @@ SCIP_RETCODE solveNodeLP(
       /* update initial LP iteration counter */
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
+
+      /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in separators */
+      if( !(*cutoff) && SCIPtreeGetCurrentDepth(tree) == 0 )
+      {
+         SCIP_Bool stored;
+         SCIP_SOL* sol;
+         
+         SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
+         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+
+         /* if the solution was accepted, the root node can be cut off by bounding */
+         if( stored )
+         {          
+            SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
+            SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
+            assert(*cutoff);
+         }
+      }
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -2265,61 +2338,6 @@ SCIP_RETCODE applyCuts(
       SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, root, cutoff) );
       *propagateagain = *propagateagain || (stat->domchgcount != olddomchgcount);
       *solvelpagain = TRUE;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** updates the current lower bound with the pseudo objective value, cuts off node by bounding, and applies conflict
- *  analysis if the pseudo objective lead to the cutoff
- */
-static
-SCIP_RETCODE applyBounding(
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if the node can be cut off */
-   )
-{
-   assert(primal != NULL);
-   assert(cutoff != NULL);
-
-   if( !(*cutoff) )
-   {
-      SCIP_NODE* focusnode;
-      SCIP_Real pseudoobjval;
-
-      /* get current focus node */
-      focusnode = SCIPtreeGetFocusNode(tree);
-
-      /* update lower bound w.r.t. the pseudo solution */
-      pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
-      SCIPnodeUpdateLowerbound(focusnode, stat, pseudoobjval);
-      SCIPdebugMessage(" -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
-         SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(prob, set, SCIPnodeGetLowerbound(focusnode)),
-         pseudoobjval, SCIPprobExternObjval(prob, set, pseudoobjval),
-         primal->cutoffbound, SCIPprobExternObjval(prob, set, primal->cutoffbound));
-
-      /* check for infeasible node by bounding */
-      if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
-         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
-      {
-         SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n",
-            SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
-         SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
-         *cutoff = TRUE;
-
-         /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
-         if( pseudoobjval >= primal->cutoffbound )
-         {
-            SCIP_CALL( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
-         }
-      }
    }
 
    return SCIP_OKAY;

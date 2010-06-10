@@ -2072,24 +2072,23 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page BRANCH How to add branching rules
  *
- * Branching rules are used to split the current problem into subproblems. Branching rules can be called in three
+ * Branching rules are used to split the problem at the current node into smaller subproblems. Branching rules can be called at three
  * different occasions, which is why they have three different execution methods (see \ref
- * BRANCHRULE_ADDITIONALCALLBACKS).  Branching is performed, if:
+ * BRANCHRULE_ADDITIONALCALLBACKS).  Branching is performed if:
  * - the LP solution of the current problem is fractional. In this case, the integrality constraint handler calls the
- *   \ref BRANCHEXECLP method of the branching rules.
- * - the list of relaxation branching candidates is not empty. This will only be case if branching candidates were added
+ *   \ref BRANCHEXECLP methods of the branching rules.
+ * - the list of relaxation branching candidates is not empty. This will only be the case if branching candidates were added
  *   by a user's \ref RELAX "relaxator" or \ref CONS "constraint handler" plugin, calling SCIPaddRelaxBranchCand().
  *   These branching candidates should be processed by the \ref BRANCHEXECREL method.
- * - if an integral solution violates one or more constraints for which the associated constraint handlers were not able
- *   to resolve the infeasibility. For the resolution of infeasibility, see the constraint handlers' callback methods
- *   \ref CONSENFOLP and \ref CONSENFOPS. In this case, the \ref BRANCHEXECPS method will be called. This is the
+ * - if an integral solution violates one or more constraints and this infeasibility could not be resolved in the callback methods
+ *   \ref CONSENFOLP and \ref CONSENFOPS of the corresponding constraint handlers. In this case, the \ref BRANCHEXECPS method will be called. This is the
  *   standard case, if you use SCIP as a pure CP or SAT solver. If the LP or any other type of relaxation is used, then
  *   branching on pseudo solutions works as a last resort.
  *
- * Note that in constraint handlers may also apply constraint specific branching rules, see, e.g., the constraint
- * handlers for special ordered sets (src/scip/cons_sos{1,2}.c)).  The idea of branching rules is to take a global view
- * on the problem. If your branching paradigm is specific for one type of constraint, you might better implement it
- * within the enforcement callbacks of your constraint handler.
+ * The idea of branching rules is to take a global view on the problem. In contrast, branching paradigms which are
+ * specific to one type of constraint are best implemented within the enforcement callbacks of your constraint handler.
+ * See, e.g., the constraint specific branching rules provided by the constraint handlers for special ordered sets
+ * (src/scip/cons_sos{1,2}.c)).
  * \n
  * All branching rules that come with the default distribution of SCIP create two subproblems by splitting a single
  * variable's domain.  It is, however, fully supported to implement much more general branching schemes, for example by
@@ -2239,17 +2238,18 @@
  *
  * The BRANCHEXECREL callback is executed during node processing if no LP solution is available and the list of
  * relaxation branching candidates is not empty. It should split the current problem into smaller subproblems.  If you
- * do not use any relaxation besides the LP, you do not need to implement this callback.
+ * do not use relaxators or constraints handlers that provide relaxation branching candidates, you do not need to
+ * implement this callback.
  *
  * In contrast to the LP branching candidates and the pseudo branching candidates, the list of relaxation branching
  * candidates will not be generated automatically. The user has to add all variables to the list by calling
  * SCIPaddRelaxBranchCand() for each of them. Usually, this will happen in the execution method of a relaxator or in the
  * enforcement methods of a constraint handler.
  *
- * The user gains access to the these branching candidates by calling the method SCIPgetRelaxBranchCands(). Furthermore,
+ * The user gains access to these branching candidates by calling the method SCIPgetRelaxBranchCands(). Furthermore,
  * SCIP provides two methods for performing the actual branching with a given solution value, namely SCIPbranchVarVal()
- * and SCIPcreateChild(). SCIPbranchVarVal() allows to specify the branching point for a variable, whereas
- * SCIPbranchVar() will always use the current LP or pseudo solution.
+ * and SCIPcreateChild(). SCIPbranchVarVal() allows to specify the branching point for a variable in contrast to
+ * SCIPbranchVar(), which will always use the current LP or pseudo solution.
  *
  * This paragraph contains additional information, how the method SCIPbranchVarVal() works. For relaxation solutions,
  * there are three principle possibilities:
@@ -2280,12 +2280,14 @@
  * SCIPbranchVar() and SCIPcreateChild().
  *
  * Given an integer variable \f$x\f$ with bounds \f$[l,u]\f$ and not having solved the LP, the method SCIPbranchVar()
- * creates two child nodes. If both bounds are finite, then the two children will contain the domain reductions \f$x \le
- * x^*\f$, and \f$x \ge x^*+1\f$ with \f$x^* = \lfloor \frac{l + u}{2}\rfloor\f$. The current pseudo solution will
- * remain feasible in one of the branches, but the hope is that halving the domain#s size leads to good propagations. If
- * only one of the bounds is finite, the variable will be fixed to that bound in one of the child nodes. In the other
- * child node, the bound will be shifted by one.  If both bounds are infinite, three children will be created: \f$x \le
- * -1\f$, \f$x \ge 1\f$, and \f$x = 0\f$.
+ * creates two child nodes:
+ * - If both bounds are finite, then the two children will contain the domain reductions \f$x \le x^*\f$, and \f$x \ge
+ *   x^*+1\f$ with \f$x^* = \lfloor \frac{l + u}{2}\rfloor\f$. The current pseudo solution will remain feasible in one
+ *   of the branches, but the hope is that halving the domain#s size leads to good propagations.
+ * - If only one of the bounds is finite, the variable will be fixed to that bound in one of the child nodes. In the
+ *   other child node, the bound will be shifted by one.
+ * - If both bounds are infinite, three children will be created: \f$x \le 1\f$, \f$x \ge 1\f$, and \f$x = 0\f$.
+
  *
  * See the BRANCHEXECPS callback in src/scip/branch_random.c for an example. In addition, if a proven lower bound of a
  * created child node is known, the user may call the method SCIPupdateNodeLowerbound() in order to update the child
@@ -2295,16 +2297,15 @@
  *
  * @subsection BRANCHEXEC Further information for the three execution methods
  *
- * In order to apply more general branching schemes, one should use the method SCIPcreateChild(). The branching rule has
- * to assign two values to the new nodes: a node selection priority for each node and an estimate for the objective
- * value of the best feasible solution contained in the subtree after applying the branching. If the method
- * SCIPbranchVar() is used, these values are automatically assigned. Here, the user can calculate these values by
- * calling the method SCIPcalcNodeselPriority(), which takes into account the preferred branch direction of the
- * branching variable, and the method SCIPcalcChildEstimate(), which is based on pseudo costs, and pass them to the
- * SCIPcreateChild() call.
- * \n
+ * In order to apply more general branching schemes, one should use the method SCIPcreateChild(). 
  * After having created a child node, the additional restrictions of the child node have to be added with calls to
- * SCIPaddConsNode(), SCIPchgVarLbNode(), and SCIPchgVarUbNode().
+ * SCIPaddConsNode(), SCIPchgVarLbNode(), or SCIPchgVarUbNode().
+ * \n
+ * In the method SCIPcreateChild(), the branching rule has to assign two values to the new nodes: a node selection
+ * priority for each node and an estimate for the objective value of the best feasible solution contained in the subtree
+ * after applying the branching. If the method SCIPbranchVar() is used, these values are automatically assigned. For
+ * variable based branching schemes, one might use the methods SCIPcalcNodeselPriority() and the method
+ * SCIPcalcChildEstimate().
  *
  * In some cases, the branching rule can tighten the current subproblem instead of producing a branching. For example,
  * strong branching might have proven that rounding up a variable would lead to an infeasible LP relaxation and thus,
@@ -2315,7 +2316,7 @@
  *  - detecting that the node is infeasible and can be cut off (result SCIP_CUTOFF)
  *  - adding an additional constraint (e.g. a conflict constraint) (result SCIP_CONSADDED; note that this action
  *    must not be performed if the input "allowaddcons" is FALSE)
- *  - reducing the domain of a variable that rendered the current LP solution to be infeasible (result SCIP_REDUCEDDOM)
+ *  - reducing the domain of a variable such that the current LP solution becomes infeasible (result SCIP_REDUCEDDOM)
  *  - applying a branching (result SCIP_BRANCHED)
  *  - stating that the branching rule was skipped (result SCIP_DIDNOTRUN).
  *

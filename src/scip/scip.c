@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.580 2010/06/09 14:12:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.581 2010/06/10 16:42:59 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -971,6 +971,82 @@ SCIP_RETCODE copyVar(
 
    return SCIP_OKAY;
 }
+
+/** returns the copy of a source variable in a target SCIP as given by a hashmap. Creates a copy, if not existent yet */
+SCIP_RETCODE SCIPgetVarCopy(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR*             sourcevar,          /**< source variable */
+   SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
+   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables */
+   )
+{
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(targetscip != NULL);
+   assert(sourcevar != NULL);
+   assert(targetvar != NULL);
+   assert(varmap != NULL);
+
+   /* try to retrieve vcopied variable from hashmap */
+   *targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
+   
+   /* if variable does not exists yet in target SCIP, create it */
+   if( *targetvar == NULL )
+   {
+      switch( SCIPvarGetStatus(sourcevar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_FIXED:
+         SCIP_CALL( copyVar(targetscip, sourcevar, targetvar, varmap) );
+         return SCIP_OKAY;        
+
+      case SCIP_VARSTATUS_AGGREGATED:
+      {
+         SCIPerrorMessage("Copying of aggregated variables not implemented yet");
+         return SCIP_OKAY;                  
+      }
+      case SCIP_VARSTATUS_MULTAGGR:
+      {
+         SCIPerrorMessage("Copying of multiaggregated variables not implemented yet");
+         return SCIP_OKAY;                  
+      }
+      case SCIP_VARSTATUS_NEGATED:
+      {
+         SCIP_VAR* sourcenegatedvar;
+         SCIP_VAR* targetnegatedvar;
+         
+         /* get negated source variable */
+         SCIP_CALL( SCIPgetNegatedVar(sourcescip, sourcevar, &sourcenegatedvar) );
+         assert(sourcenegatedvar != NULL);
+         assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
+
+         /* get copy of negated source variable */         
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap) );
+         assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
+         
+         /* get negation of copied negated source variable, this is the target variable */
+         SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
+         assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
+
+         SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *targetvar) );
+         
+         return SCIP_OKAY;         
+      }
+      default:
+         SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return SCIP_OKAY; /*lint !e527*/
+      }
+   }
+   return SCIP_OKAY;
+}
+
 
 /** copies all active variables from source to target SCIP and captures it in target SCIP */
 SCIP_RETCODE SCIPcopyVars(
