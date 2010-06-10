@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.31 2010/05/04 13:28:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.32 2010/06/10 17:46:48 bzfpfets Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -28,8 +28,9 @@
 
 #include "scip/cons_sos1.h"
 #include "scip/cons_linear.h"
-#include <string.h>
 #include "scip/pub_misc.h"
+#include <string.h>
+#include <ctype.h>
 
 
 /* constraint handler properties */
@@ -1667,7 +1668,7 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
       if ( j > 0 )
          SCIPinfoMessage(scip, file, ", ");
       if ( consdata->weights == NULL )
-         SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(consdata->Vars[j]));
+         SCIPinfoMessage(scip, file, "%s (%d)", SCIPvarGetName(consdata->Vars[j]), j+1);
       else
          SCIPinfoMessage(scip, file, "%s (%3.2f)", SCIPvarGetName(consdata->Vars[j]), consdata->weights[j]);
    }
@@ -1676,10 +1677,159 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
 }
 
 /** constraint copying method of constraint handler */
-#define consCopySOS1 NULL
+static
+SCIP_DECL_CONSCOPY(consCopySOS1)
+{
+   SCIP_CONSDATA* sourceconsdata;
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** targetvars;
+   SCIP_Real* sourceweights;
+   SCIP_Real* targetweights;
+   const char* consname;
+   int nVars;
+   int v;
+
+   assert( scip != NULL );
+   assert( sourcescip != NULL );
+   assert( sourcecons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
+
+   sourceconsdata = SCIPconsGetData(sourcecons);
+   assert( sourceconsdata != NULL );
+
+   (*success) = TRUE;
+
+   /* get variables and weights of the source constraint */
+   nVars = sourceconsdata->nVars;
+
+   if ( nVars == 0 )
+      return SCIP_OKAY;
+
+   if ( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+
+   SCIPdebugMessage("Copying SOS1 constraint <%s> ...\n", consname);
+
+   sourcevars = sourceconsdata->Vars;
+   assert( sourcevars != NULL );
+   sourceweights = sourceconsdata->weights;
+   assert( sourceweights != NULL );
+
+   /* duplicate variable array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nVars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &targetweights, sourceweights, nVars) );
+
+   /* map variables of the source constraint to variables of the target SCIP */
+   for (v = 0; v < nVars && *success; ++v)
+   {
+      SCIP_VAR* var;
+
+      var = sourcevars[v];
+
+      /* we cannot currently copy (multi-)aggregated variables */
+      if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+      {
+         SCIPdebugMessage("Variable <%s> is (multi-)aggregated - cannot currently copy these variables.\n", SCIPvarGetName(var));
+         (*success) = FALSE;
+      }
+
+      targetvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
+      if ( targetvars[v] == NULL )
+      {
+         SCIPdebugMessage("Could not map variable <%s>, copying constraint <%s> failed \n", SCIPvarGetName(var), name);    
+         (*success) = FALSE;
+      }
+   }
+
+   if ( *success )
+   {
+      SCIP_CALL( SCIPcreateConsSOS1(scip, cons, consname, nVars, targetvars, targetweights, 
+            initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+   }
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &targetweights);
+   SCIPfreeBufferArray(scip, &targetvars);
+
+   return SCIP_OKAY;
+}
+
 
 /** constraint parsing method of constraint handler */
-#define consParseSOS1 NULL
+static
+SCIP_DECL_CONSPARSE(consParseSOS1)
+{
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR* var;
+   SCIP_Real weight;
+   const char* s;
+   char* t;
+   int k;
+
+   *success = TRUE;
+   s = str;
+
+   /* skip white space */
+   while ( *s != '\0' && isspace(*s) )
+      s++;
+
+   /* create empty SOS1 constraint */
+   SCIP_CALL( SCIPcreateConsSOS1(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+
+   /* loop through string */
+   do
+   {
+      /* find variable name */
+      k = 0;
+      while ( *s != '\0' && ! isspace(*s) && *s != ',' && *s != '(' )
+	 varname[k++] = *s++;
+      varname[k] = '\0';
+
+      if ( *s == '\0' )
+      {
+	 SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
+	 *success = FALSE;
+	 return SCIP_OKAY;
+      }
+
+      /* skip white space, ',', and '(' */
+      while ( *s != '\0' && ( isspace(*s) ||  *s == ',' || *s == '(' ) )
+	 s++;
+
+      /* find weight */
+      weight = strtod(s, &t);
+
+      if ( t == NULL )
+      {
+	 SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+	 *success = FALSE;
+	 return SCIP_OKAY;
+      }
+      s = t;
+
+      /* skip white space, ',', and '(' */
+      while ( *s != '\0' && ( isspace(*s) ||  *s == ',' || *s == ')' ) )
+	 s++;
+
+      /* get variable */
+      var = SCIPfindVar(scip, varname);
+      if ( var == NULL )
+      {
+	 SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+	 *success = FALSE;
+	 return SCIP_OKAY;
+      }
+
+      /* add variable */
+      SCIP_CALL( SCIPaddVarSOS1(scip, *cons, var, weight) );
+   }
+   while ( *s != '\0' );
+
+   return SCIP_OKAY;
+}
+
 
 
 
