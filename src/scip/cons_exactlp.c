@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.22 2010/06/08 21:22:00 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.23 2010/06/10 18:38:07 bzfsteff Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -51,7 +51,6 @@
 #include "QSopt_ex.h" 
 #include "scip/misc.h" 
 #include "rectlu/rectlu.h"
-#include "scip/lp.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "exactlp"
@@ -83,6 +82,8 @@
 
 #define PSPOSTPROCESSDUALSOL       TRUE
 #define PSBIGM                      100
+#define PSTWOSTAGEAUXPROB         FALSE
+#define PSWARMSTARTAUXPROB         TRUE
 
 /*
  * Data structures
@@ -2571,7 +2572,6 @@ SCIP_RETCODE constructPSData(
    int npsbasis;
    int indx;
    mpq_t mpqtemp;
-   double dbltemp;
    mpq_t alpha;
    mpq_t beta;
    int nobjnz;
@@ -2595,6 +2595,16 @@ SCIP_RETCODE constructPSData(
    char ** colnames;
    mpq_t objval;
 
+   /* lpi and data used for approximation of aux. problem */
+   SCIP_LPI* pslpi;
+   SCIP_LPISTATE* lpistate;
+   SCIP_Real* psobj_real;
+   SCIP_Real* pslb_real;
+   SCIP_Real* psub_real;
+   SCIP_Real* pslhs_real;
+   SCIP_Real* psrhs_real;
+   SCIP_Real* psval_real;
+   
    /* mapping between variables used in the aux. problem and the original problem */
    int ndvarmap;
    int* dvarmap;
@@ -2771,19 +2781,17 @@ SCIP_RETCODE constructPSData(
       rows = SCIPgetLPRows(scip);
       for( i = 0; i < nconss; i++ )
       {
-         dbltemp = SCIProwGetLPActivity(rows[i], scip->stat, scip->lp);
-         if( EPSEQ(dbltemp, mpq_get_d(consdata->lhs[i]), 1.0e-6) )
+         if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetLhs(rows[i])) )
             conshdlrdata->includedcons[i] = 1;
-         if( EPSEQ(dbltemp, mpq_get_d(consdata->rhs[i]), 1.0e-6) )
+         if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetRhs(rows[i])) )
             conshdlrdata->includedcons[nconss + i] = 1;
       }   
       cols = SCIPgetLPCols(scip);
       for( i = 0; i < nvars; i++ )
       {
-         dbltemp = SCIPcolGetPrimsol(cols[i]);
-         if( EPSEQ(dbltemp, mpq_get_d(consdata->lbloc[i]), 1.0e-6) )
+         if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetLb(cols[i])) )
             conshdlrdata->includedcons[2*nconss + i] = 1;
-         if( EPSEQ(dbltemp, mpq_get_d(consdata->ubloc[i]), 1.0e-6) )
+         if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetUb(cols[i])) )
             conshdlrdata->includedcons[2*nconss + nvars + i] = 1;
       }
    }
@@ -3428,27 +3436,46 @@ SCIP_RETCODE constructPSData(
       }
       assert(pos == ndvarmap);
       
-      /* set alpha and beta */
+      /* set alpha and beta. */
       mpq_set_d(alpha, conshdlrdata->psobjweight);
       mpq_set_ui(beta, 1, 1);
-      mpq_sub(beta, beta, alpha);
-      /*calculate L1 norm of objective */
-      mpq_set_ui(mpqtemp, 0, 1);
-      for( i = 0; i < ndvarmap; i ++)
-      {
-         if( mpq_sgn(psobj[i]) > 0 )
-            mpq_add(mpqtemp, mpqtemp, psobj[i]);
-         else
-            mpq_sub(mpqtemp, mpqtemp, psobj[i]);
-      }
-      // round mpqtemp to nearest power of two, we dont need it exactly..
-      mpq_set_d(mpqtemp, pow(2, (int) log(mpq_get_d(mpqtemp))));
 
-      mpq_div(alpha, alpha, mpqtemp);
+      if( mpq_sgn(alpha) > 0 )
+      {
+         mpq_sub(beta, beta, alpha);
+         /*  beta = (1-alpha)*|OBJ|   Where OBJ = optimal objective value of root LP, if |OBJ|<1 use 1 instead */
+         if( fabs(SCIPgetLPObjval(scip)) > 1 )
+         {
+            mpq_set_d(mpqtemp, fabs(SCIPgetLPObjval(scip)));
+            mpq_mul(beta, beta, mpqtemp);
+         }
+         // divide through by alpha and round beta to be a power of 2
+         mpq_div(beta, beta, alpha);
+         mpq_set_ui(alpha, 1, 1);
+         mpq_set_d(beta, pow(2, (int) (log(mpq_get_d(beta))/log(2)))); 
+      }
+
+      // OLD WAY
+      // /*calculate L1 norm of objective */
+      // mpq_set_ui(mpqtemp, 0, 1);
+      // for( i = 0; i < ndvarmap; i ++)
+      // {
+      //    if( mpq_sgn(psobj[i]) > 0 )
+      //       mpq_add(mpqtemp, mpqtemp, psobj[i]);
+      //    else
+      //       mpq_sub(mpqtemp, mpqtemp, psobj[i]);
+      // }
+      // // round mpqtemp to nearest power of two, we dont need it exactly..
+      // mpq_set_d(mpqtemp, pow(2, (int) log(mpq_get_d(mpqtemp))));
+
+      // mpq_div(alpha, alpha, mpqtemp);
       
 #ifdef PS_OUT
       printf("alpha = ");
       mpq_out_str(stdout, 10, alpha);
+      printf(" \n");
+      printf("beta = ");
+      mpq_out_str(stdout, 10, beta);
       printf(" \n");
 #endif
 
@@ -3456,7 +3483,6 @@ SCIP_RETCODE constructPSData(
       for( i = 0; i < ndvarmap; i ++)
          mpq_mul(psobj[i], psobj[i], alpha);
       mpq_set(psobj[ndvarmap], beta);
-      // mpq_set_ui(psobj[ndvarmap],100000,1);
 
       /* set variable bounds */
       for( i = 0; i < ndvarmap; i++ )
@@ -3656,9 +3682,60 @@ SCIP_RETCODE constructPSData(
       printf("solving LPIEX \n");
 #endif
 
+
+
+      if( PSWARMSTARTAUXPROB )
+      {
+         /* warm start the exact LP by solving the approximate LP first */
+
+         /* allocate and copy aux problem using SCIP_Real arrays */
+         SCIP_CALL( SCIPallocBufferArray(scip, &psobj_real, psnvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &pslb_real, psnvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &psub_real, psnvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &pslhs_real, psnconss) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &psrhs_real, psnconss) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &psval_real, psnnonz) );
+         for( i = 0; i < psnvars; i++)
+         {
+            psobj_real[i] = mpq_get_d(psobj[i]);
+            pslb_real[i] = mpq_get_d(pslb[i]);
+            psub_real[i] = mpq_get_d(psub[i]);
+         }
+         for( i = 0; i < psnconss; i++)
+         {
+            pslhs_real[i] = mpq_get_d(pslhs[i]);
+            psrhs_real[i] = mpq_get_d(psrhs[i]);
+         }
+         for( i = 0; i < psnnonz; i++)
+            psval_real[i] = mpq_get_d(psval[i]);
+
+         /* build and solve approximate aux. problem */
+         SCIP_CALL( SCIPlpiCreate(&pslpi, "problem" , SCIP_OBJSEN_MAXIMIZE) );
+         SCIP_CALL( SCIPlpiAddCols(pslpi, psnvars, psobj_real, pslb_real, psub_real, colnames, 0, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPlpiAddRows(pslpi, psnconss, pslhs_real, psrhs_real, NULL, psnnonz, psbeg, psind, psval_real) );
+         SCIP_CALL( SCIPlpiSolveDual(pslpi) );
+
+         /* load lp state into exact LP */
+         SCIP_CALL( SCIPlpiGetState(pslpi, SCIPblkmem(scip), &lpistate) );
+         SCIP_CALL( SCIPlpiexSetState(pslpiex, SCIPblkmem(scip), lpistate) );
+
+         /* free memory used for approx LP */
+         SCIP_CALL( SCIPlpiFreeState(pslpi, SCIPblkmem(scip), &lpistate) );
+         SCIPfreeBufferArray(scip, &psval_real);
+         SCIPfreeBufferArray(scip, &psrhs_real);
+         SCIPfreeBufferArray(scip, &pslhs_real);
+         SCIPfreeBufferArray(scip, &psub_real);
+         SCIPfreeBufferArray(scip, &pslb_real);
+         SCIPfreeBufferArray(scip, &psobj_real);
+         if( pslpi != NULL )
+         {
+            SCIP_CALL( SCIPlpiFree(&pslpi) );
+         }
+         assert(pslpi == NULL);
+      }
+
       /* solve the LP */      
       SCIP_CALL( SCIPlpiexSolveDual(pslpiex) );
-      //           SCIP_CALL( SCIPlpiexSolvePrimal(pslpiex) );
 
       /* recover the optimal solution and set interior point and slack in constraint handler data */
       if( SCIPlpiexIsOptimal(pslpiex) )
@@ -3668,9 +3745,6 @@ SCIP_RETCODE constructPSData(
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, &objval, primalsol, NULL, NULL, NULL) );
 
 #ifdef PS_OUT 
-
-         //         SCIPlpiexGetIterations(pslpiex, &pivotcount);
-         //printf("Number of simplex pivots: %d\n",pivotcount);
 
          printf("Dual solution: \n");
          if( psnvars < 100 )
@@ -3786,7 +3860,7 @@ SCIP_RETCODE constructPSData(
    if( pslpiex != NULL )
    {
      SCIP_CALL( SCIPlpiexFree(&pslpiex) );
-    }
+   }
    assert(pslpiex == NULL);
    for( i = psnvars - 1; i >= 0; i--)
       SCIPfreeBufferArray(scip, &colnames[i] );   
