@@ -12,10 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.8 2010/04/24 16:24:35 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.9 2010/06/11 08:35:38 bzfwolte Exp $"
 //#define PROVEDBOUNDOUT /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUTSUB /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUTSUB2 /*only for debugging ?????????*/
+#define NEWVERSION /*????????????????????*/
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1832,7 +1833,7 @@ SCIP_RETCODE lpSetUobjlim(
    assert(set != NULL);
 
    /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
-   if( set->misc_exactsolve )
+   if( set->misc_exactsolve )  
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -13838,6 +13839,222 @@ SCIP_RETCODE SCIPlpEndProbing(
    return SCIP_OKAY;
 }
 
+#ifdef NEWVERSION /*????????????????????*/
+/** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
+ *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0
+ *  Calculating this value in interval arithmetics gives a proved lower LP bound for the following reason (assuming,
+ *  we have only left hand sides):
+ *           min{cx       |  b <=  Ax, lb <= x <= ub}
+ *   >=      min{cx       | yb <= yAx, lb <= x <= ub}   (restriction in minimum is relaxed)
+ *   == yb + min{cx - yb  | yb <= yAx, lb <= x <= ub}   (added yb - yb == 0)
+ *   >= yb + min{cx - yAx | yb <= yAx, lb <= x <= ub}   (because yAx >= yb inside minimum)
+ *   >= yb + min{cx - yAx |            lb <= x <= ub}   (restriction in minimum is relaxed)
+ */
+static
+SCIP_RETCODE provedBound(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             usefarkas,          /**< use y = dual farkas and c = 0 instead of y = dual solution and c = obj? */
+   SCIP_Real*            bound               /**< result of interval arithmetic minimization */
+   )
+{
+   ROUNDMODE roundmode;
+   SCIP_INTERVAL* rhsinter;
+   SCIP_INTERVAL* constantinter;
+   SCIP_INTERVAL* xinter;
+   SCIP_INTERVAL* ainter;
+   SCIP_INTERVAL* atyinter;
+   SCIP_INTERVAL* cinter;
+   SCIP_INTERVAL ytb;
+   SCIP_INTERVAL minprod;
+   SCIP_ROW* row;
+   SCIP_COL* col;
+   SCIP_Real* y;
+   SCIP_Real* ycol;
+   SCIP_Real c;
+   int i;
+   int j;
+
+   assert(lp != NULL);
+   assert(lp->solved);
+   assert(set != NULL);
+   assert(bound != NULL);
+   assert(SCIPlpiInfinity(lp->lpi) <= SCIPsetInfinity(set));
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &y, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rhsinter, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &constantinter, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ycol, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ainter, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &atyinter, lp->ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &cinter, lp->ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &xinter, lp->ncols) );
+
+   /* calculate y^Tb */
+   SCIPintervalSet(&ytb, 0.0);
+   /* create y, rhs and constant vector in interval arithmetic */
+   for( j = 0; j < lp->nrows; ++j )
+   {
+      row = lp->rows[j];
+      assert(row != NULL);
+
+      /* create y vector in interval arithmetic, setting near zeros to zero */
+      y[j] = (usefarkas ? row->dualfarkas : row->dualsol);
+
+      if( SCIPlpiIsInfinity(lp->lpi, y[j]) )
+	  y[j] = SCIPsetInfinity(set);
+
+      if( SCIPlpiIsInfinity(lp->lpi, -y[j]) )
+	  y[j] = -SCIPsetInfinity(set);
+
+      /* create rhs and constant vectors in interval arithmetic */
+      if( SCIPsetIsFeasPositive(set, y[j]) )
+      {
+         SCIPintervalSet(&rhsinter[j], row->lhs);
+         SCIPintervalSet(&constantinter[j], -1.0 * row->constant);
+      }
+      else if( SCIPsetIsFeasNegative(set, y[j]) )
+      {
+         SCIPintervalSet(&rhsinter[j], row->rhs);
+         SCIPintervalSet(&constantinter[j], -1.0 * row->constant);
+      }
+      else
+      {
+         SCIPintervalSet(&rhsinter[j], 0.0);
+         SCIPintervalSet(&constantinter[j], 0.0);
+      }
+   }      
+   /* substract constant from rhs in interval arithmetic and calculate y^Tb */
+   SCIPintervalArraysAdd(SCIPsetInfinity(set), rhsinter, lp->nrows, rhsinter, constantinter);
+   SCIPintervalScalarProductRealsIntervals(SCIPsetInfinity(set), &ytb, lp->nrows, rhsinter, y);
+
+#ifdef PROVEDBOUNDOUT /*?????????*/
+   for( j = 0; j < lp->nrows; ++j )
+   {
+      row = lp->rows[j];
+      if( SCIPsetIsFeasPositive(set, y[j]) || SCIPsetIsFeasNegative(set, y[j]) )
+         printf("j=%d: b=[%g,%g] (lhs=%g, rhs=%g, const=%g, y=%g)\n ", j, rhsinter[j].inf, rhsinter[j].sup, row->lhs, 
+            row->rhs, row->constant, y[j]);
+   }
+   printf("--> ytb=[%g,%g]\n", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb)); /*???????????????*/
+#endif
+
+#ifndef NDEBUG
+   for( j = 0; j < lp->nrows; ++j )
+   {
+      row = lp->rows[j];
+      assert(row != NULL);
+
+      if( !SCIPsetIsFeasPositive(set, y[j]) && !SCIPsetIsFeasNegative(set, y[j]) )
+      {
+         assert(rhsinter[j].inf == 0.0);
+         assert(rhsinter[j].sup == 0.0);
+      }
+   }
+#endif
+
+   /* calculate min{(c^T - y^TA)x} */
+
+   /* compute infimums of -A^Ty */
+   roundmode = getRoundingMode();
+   setRoundingModeDownwards();
+   for( j = 0; j < lp->ncols; ++j )
+   {
+      col = lp->cols[j];
+      assert(col != NULL);
+      assert(col->nunlinked == 0);
+
+      /* create -a.j vector in interval arithmetic and corresponding y vector and compute infimum of vector -a.j^Ty */
+      for( i = 0; i < col->nlprows; ++i )
+      {
+         assert(col->rows[i] != NULL);
+         assert(col->rows[i]->lppos >= 0);
+         assert(col->linkpos[i] >= 0);
+
+         SCIPintervalSet(&ainter[i], -1.0 * col->vals[i]);
+         ycol[i] = y[col->rows[i]->lppos];
+      }
+      atyinter[j].inf = 0.0;
+      SCIPintervalScalarProductRealsIntervalsInf(SCIPsetInfinity(set), &atyinter[j], col->nlprows, ainter, ycol);
+
+#ifndef NDEBUG
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         assert(col->rows[i] != NULL);
+         assert(col->rows[i]->lppos == -1);
+         assert(col->rows[i]->dualsol == 0.0);
+         assert(col->rows[i]->dualfarkas == 0.0);
+         assert(col->linkpos[i] >= 0);
+      }
+#endif
+   }
+   /* compute supremums of -A^Ty */
+   setRoundingModeUpwards();
+   for( j = 0; j < lp->ncols; ++j )
+   {
+      col = lp->cols[j];
+      assert(col != NULL);
+      assert(col->nunlinked == 0);
+
+      /* create -a.j vector in interval arithmetic and corresponding y vector and compute supremums of vector -a.j^Ty */
+      for( i = 0; i < col->nlprows; ++i )
+      {
+         assert(col->rows[i] != NULL);
+         assert(col->rows[i]->lppos >= 0);
+         assert(col->linkpos[i] >= 0);
+
+         SCIPintervalSet(&ainter[i], -1.0 * col->vals[i]);
+         ycol[i] = y[col->rows[i]->lppos];
+      }
+      atyinter[j].sup = 0.0;
+      SCIPintervalScalarProductRealsIntervalsSup(SCIPsetInfinity(set), &atyinter[j], col->nlprows, ainter, ycol);
+
+#ifndef NDEBUG
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         assert(col->rows[i] != NULL);
+         assert(col->rows[i]->lppos == -1);
+         assert(col->rows[i]->dualsol == 0.0);
+         assert(col->rows[i]->dualfarkas == 0.0);
+         assert(col->linkpos[i] >= 0);
+      }
+#endif
+   }   
+   setRoundingMode(roundmode);
+
+   /* create c vector and x vector in interval arithmetic and compute min{(c^T - y^TA)x} */
+   for( j = 0; j < lp->ncols; ++j )
+   {
+      col = lp->cols[j];
+      assert(col != NULL);
+      assert(col->nunlinked == 0);
+
+      c = usefarkas ? 0.0 : col->obj;
+      SCIPintervalSet(&cinter[j], c);
+      SCIPintervalSetBounds(&xinter[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
+   }
+   SCIPintervalArraysAdd(SCIPsetInfinity(set), atyinter, lp->ncols, atyinter, cinter);
+   SCIPintervalScalarProduct(SCIPsetInfinity(set), &minprod, lp->ncols, atyinter, xinter);
+   
+   /* add y^Tb */
+   SCIPintervalAdd(SCIPsetInfinity(set), &minprod, minprod, ytb);
+
+   /* free buffer for storing y in interval arithmetic */
+   SCIPsetFreeBufferArray(set, &xinter);
+   SCIPsetFreeBufferArray(set, &cinter);
+   SCIPsetFreeBufferArray(set, &atyinter);
+   SCIPsetFreeBufferArray(set, &ainter);
+   SCIPsetFreeBufferArray(set, &ycol);
+   SCIPsetFreeBufferArray(set, &constantinter);
+   SCIPsetFreeBufferArray(set, &rhsinter);
+   SCIPsetFreeBufferArray(set, &y);
+
+   *bound = SCIPintervalGetInf(minprod);
+
+   return SCIP_OKAY;
+}
+#else
 /** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
  *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0
  *  Calculating this value in interval arithmetics gives a proved lower LP bound for the following reason (assuming,
@@ -13858,6 +14075,8 @@ SCIP_RETCODE provedBound(
 {
    SCIP_INTERVAL* yinter;
    SCIP_INTERVAL b;
+   SCIP_INTERVAL rhs;
+   SCIP_INTERVAL constant;
    SCIP_INTERVAL ytb;
    SCIP_INTERVAL prod;
    SCIP_INTERVAL diff;
@@ -13904,7 +14123,9 @@ SCIP_RETCODE provedBound(
       if( SCIPsetIsFeasPositive(set, y) )
       {
          SCIPintervalSet(&yinter[j], y);
-         SCIPintervalSet(&b, row->lhs - row->constant);
+         SCIPintervalSet(&rhs, row->lhs);
+         SCIPintervalSet(&constant, row->constant);
+         SCIPintervalSub(SCIPsetInfinity(set), &b, rhs, constant);
 #ifdef PROVEDBOUNDOUT /*?????????*/
 	 printf("b=%g (rhs)", row->lhs - row->constant); /*???????????????*/
 #endif
@@ -13912,7 +14133,9 @@ SCIP_RETCODE provedBound(
       else if( SCIPsetIsFeasNegative(set, y) )
       {
          SCIPintervalSet(&yinter[j], y);
-         SCIPintervalSet(&b, row->rhs - row->constant);
+         SCIPintervalSet(&rhs, row->rhs);
+         SCIPintervalSet(&constant, row->constant);
+         SCIPintervalSub(SCIPsetInfinity(set), &b, rhs, constant);
 #ifdef PROVEDBOUNDOUT /*?????????*/
 	 printf("b=%g (lhs)", row->rhs - row->constant); /*???????????????*/
 #endif
@@ -14061,6 +14284,7 @@ SCIP_RETCODE provedBound(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** gets proven lower (dual) bound of last LP solution */
 SCIP_RETCODE SCIPlpGetProvedLowerbound(

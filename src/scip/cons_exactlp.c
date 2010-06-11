@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.23 2010/06/10 18:38:07 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.24 2010/06/11 08:35:38 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -26,6 +26,7 @@
 //#define READER_OUT /* only for debugging ???????????????? */
 //#define PRESOL_OUT /* only for debugging ?????????? */
 //#define BOUNDING_OUT /* only for debugging ?????????? */
+//#define USEOBJLIM /*??????????????*/ 
 
 /**@file   cons_exactlp.c
  * @ingroup CONSHDLRS 
@@ -81,6 +82,8 @@
 #define EVENTHDLR_DESC        "bound change event handler for exactlp constraints"
 
 #define PSPOSTPROCESSDUALSOL       TRUE
+
+#define OBJSCALE_MAXFINALSCALE   1000.0 /**< maximal final value to apply as scaling */
 #define PSBIGM                      100
 #define PSTWOSTAGEAUXPROB         FALSE
 #define PSWARMSTARTAUXPROB         TRUE
@@ -98,6 +101,7 @@ struct SCIP_ConshdlrData
    mpq_t                 neginfinity;        /**< value considered to be infinity */
    SCIP_LPIEX*           lpiex;              /**< Exact LP solver interface */
    SCIP_Bool             lpexconstructed;    /**< was the exact LP of some prior node already constructed (constraints)? */
+   mpq_t                 lpiexuobjlim;       /**< current upper objective limit in LPIEX */
    SCIP_NODE*            lastenfopsnode;     /**< last node at which enfops was called */ 
    mpq_t                 pseudoobjval;       /**< pseudo solution value at node where all unprocessed bound changes were
                                               *   applied last with all variables set to their best bounds, ignoring 
@@ -318,9 +322,9 @@ SCIP_RETCODE checkLoadState(
 /** checks whether pseudo objective value has been updated correctly */
 static
 void checkPseudoobjval(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,      /**< exactlp constraint handler data */
-   SCIP_CONSDATA*        consdata           /**< constraint data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    mpq_t pseudoobjval;
@@ -556,6 +560,14 @@ void mpqCeil(
    mpz_clear(ceilint);
 }
 
+/** checks, if value is integral */
+SCIP_Bool mpqIsIntegral(
+   const mpq_t           val                  /**< value to process */
+   )
+{
+   return (mpz_get_si(mpq_denref(val)) == 1);
+}
+
 /*
  * local methods for managing event data
  */
@@ -712,9 +724,15 @@ SCIP_RETCODE conshdlrdataCreate(
    
    mpq_init((*conshdlrdata)->posinfinity);
    mpq_init((*conshdlrdata)->neginfinity);
+   mpq_init((*conshdlrdata)->lpiexuobjlim);
 
    mpq_set((*conshdlrdata)->posinfinity, *SCIPlpiexPosInfinity((*conshdlrdata)->lpiex));
    mpq_set((*conshdlrdata)->neginfinity, *SCIPlpiexNegInfinity((*conshdlrdata)->lpiex));
+   mpq_set((*conshdlrdata)->lpiexuobjlim, *SCIPlpiexPosInfinity((*conshdlrdata)->lpiex));
+
+#ifdef USEOBJLIM /*??????????????*/ 
+   SCIP_CALL( SCIPlpiexSetRealpar((*conshdlrdata)->lpiex, SCIP_LPPAR_UOBJLIM, (*conshdlrdata)->lpiexuobjlim) ); 
+#endif
 
    (*conshdlrdata)->lpexconstructed = FALSE;
    (*conshdlrdata)->psdatacon = FALSE;
@@ -774,6 +792,7 @@ SCIP_RETCODE conshdlrdataFree(
 
    mpq_clear((*conshdlrdata)->pseudoobjval);
    mpq_clear((*conshdlrdata)->commonslack);
+   mpq_clear((*conshdlrdata)->lpiexuobjlim);
    mpq_clear((*conshdlrdata)->posinfinity);
    mpq_clear((*conshdlrdata)->neginfinity);
 
@@ -1683,6 +1702,252 @@ const mpq_t* getPseudoObjval(
       return (const mpq_t*) (&conshdlrdata->pseudoobjval);
 }
 
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
+ *  integral objective value
+ */
+static
+SCIP_RETCODE checkObjIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   SCIP_VAR** origvars; 
+   SCIP_VAR** vars;
+#ifdef SCIP_DEBUG /* ?????????? */
+   char s[SCIP_MAXSTRLEN];
+#endif
+   int v;
+
+   assert(consdata != NULL);
+
+   SCIPdebugMessage("check whether objective is always integral:\n");
+
+   /* if we know already, that the objective value is integral, nothing has to be done */
+   if( SCIPisObjIntegral(scip) )
+      return SCIP_OKAY;
+
+   /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+   if( SCIPgetNActivePricers(scip) != 0 )
+      return SCIP_OKAY;
+
+#ifdef SCIP_DEBUG
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "objoffset=%Qd (integral=%d)\n", consdata->objoffset, 
+      mpqIsIntegral(consdata->objoffset)); 
+   SCIPdebugMessage(s);
+#endif
+
+   /* if the objective value offset is fractional, the value itself is possibly fractional */
+   if( !mpqIsIntegral(consdata->objoffset) )
+     return SCIP_OKAY;
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
+   
+   /* get transformed problem variables */
+   origvars = SCIPgetOrigVars(scip);
+   assert(SCIPgetNOrigVars(scip) == consdata->nvars);
+   SCIP_CALL( SCIPgetTransformedVars(scip, consdata->nvars, origvars, vars) );
+
+   /* scan through the variables */
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      assert(SCIPvarIsOriginal(origvars[v]));
+      assert(SCIPvarIsTransformed(vars[v]));
+
+      /* check, if objective value is non-zero */
+      if( mpq_sgn(consdata->obj[v]) != 0 )
+      {
+         /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         {
+#ifdef SCIP_DEBUG
+            gmp_snprintf(s, SCIP_MAXSTRLEN, " -> v=%d [type=%d (3=cont)]: objval=%Qd --> continuous var\n", 
+               v, SCIPvarGetType(vars[v]), consdata->obj[v]);
+            SCIPdebugMessage(s);
+#endif
+            break;
+         }
+
+         /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+         if( !mpqIsIntegral(consdata->obj[v]) )
+         {
+#ifdef SCIP_DEBUG
+            gmp_snprintf(s, SCIP_MAXSTRLEN, " -> v=%d [type=%d (3=cont)]: objval=%Qd --> nonintegral val for int var\n", 
+               v, SCIPvarGetType(vars[v]), consdata->obj[v]);
+            SCIPdebugMessage(s);
+#endif
+            break;
+         }         
+
+#ifdef SCIP_DEBUG
+            gmp_snprintf(s, SCIP_MAXSTRLEN, " -> v=%d [type=%d (3=cont)]: objval=%Qd\n", 
+               v, SCIPvarGetType(vars[v]), consdata->obj[v]);
+            SCIPdebugMessage(s);
+#endif
+      }
+   }
+
+   /* objective value is integral, if the variable loop scanned all variables */
+   if( v == consdata->nvars )
+      SCIPsetObjIntegral(scip);
+
+   SCIPdebugMessage("--> obj is %s always integral\n", SCIPisObjIntegral(scip) ? "" : "NOT");
+
+#ifdef DETAILED_DEBUG /*????????????????*/
+   checkOrigVars(scip);
+#endif
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &vars);
+   
+   return SCIP_OKAY;
+}
+
+/** if possible, scales objective function such that it is integral with gcd = 1 */
+static
+SCIP_RETCODE scaleObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   SCIP_VAR** vars;
+   int nints;
+   int v;
+
+   assert(consdata != NULL);
+
+   SCIPdebugMessage("scale objective to be integral with gcd = 1:\n");
+
+   /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+   if( SCIPgetNActivePricers(scip) != 0 )
+      return SCIP_OKAY;
+
+   /* get problem variables */
+   vars = SCIPgetVars(scip);
+   assert(SCIPgetNVars(scip) == consdata->nvars);
+
+   nints = consdata->nvars - SCIPgetNContVars(scip);
+   
+   /* scan through the continuous variables */
+   for( v = nints; v < consdata->nvars; ++v )
+   {
+      /* get objective value of variable; it it is non-zero, no scaling can be applied */
+      if( mpq_sgn(consdata->obj[v]) != 0 )
+         break;
+   }
+
+   /* only continue if all continuous variables have obj = 0 */
+   if( v == consdata->nvars )
+   {
+      mpq_t* objvals;
+      SCIP_Bool success; 
+      mpq_t intscalar;
+      mpq_t one;
+#ifdef SCIP_DEBUG /* ?????????? */
+      char s[SCIP_MAXSTRLEN];
+#endif
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &objvals, nints) );
+      
+      /* get objective values of integer variables */
+      for( v = 0; v < nints; ++v )
+      {         
+         mpq_init(objvals[v]);
+         mpq_set(objvals[v], consdata->obj[v]); 
+      }
+      
+      mpq_init(intscalar);
+      mpq_init(one);
+      mpq_set_d(intscalar, 1.0);
+      mpq_set_d(one, 1.0);
+      success = TRUE;
+
+      /* calculate integral scalar */
+      SCIP_CALL( SCIPmpqCalcIntegralScalar((const mpq_t*) objvals, nints, OBJSCALE_MAXFINALSCALE, intscalar, &success) );
+      
+#ifdef SCIP_DEBUG
+      gmp_snprintf(s, SCIP_MAXSTRLEN, "integral objective scalar: success=%u, intscalar=%Qd\n", success, intscalar);
+      SCIPdebugMessage(s);
+#endif
+      
+      /* apply scaling */
+      if( success && !mpq_equal(intscalar, one) )
+      {
+         /* calculate scaled objective values */
+         for( v = 0; v < nints; ++v )
+         {
+	    mpq_mul(objvals[v], objvals[v], intscalar); 
+            assert(mpqIsIntegral(objvals[v]));
+
+	    /* large integral values might not be FP representable which is required when we work with an FP relaxation */ 
+	    if( SCIPuseFPRelaxation(scip) && !mpqIsReal(scip, objvals[v]) )
+               break;
+         }
+
+         /* change the variables' objective values and adjust objscale */
+         if( v == nints )
+         {
+            for( v = 0; v < nints; ++v )
+            {
+               assert(mpqIsIntegral(objvals[v]));
+               assert(mpqIsReal(scip, objvals[v]));
+
+#ifdef SCIP_DEBUG
+               gmp_snprintf(s, SCIP_MAXSTRLEN, " -> v=%d: old val=%Qd --> \n", v, consdata->obj[v]);
+               SCIPdebugMessage(s);
+#endif
+
+               mpq_set(consdata->obj[v], objvals[v]);
+               SCIP_CALL( SCIPchgVarObj(scip, vars[v], mpqGetRealApprox(scip, objvals[v])) );
+
+#ifdef SCIP_DEBUG
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "                           scaled val=%Qd\n", consdata->obj[v]);
+               SCIPdebugMessage(s);
+#endif
+            }
+
+            /* update objscale of transformed constraint; 
+             * in contrast to the objscale of the transformed problem this value here is exact. therefore, it is used 
+             * to compute primal and dual bounds (external values), see getPrimalbound() and getDualbound() in scip.c
+             */
+            mpq_div(consdata->objscale, consdata->objscale, intscalar); 
+            
+            /* update objscale of transforemd problem; 
+             * note that this value is not reliable and should never be used to compute dual and primal bounds 
+             */
+            SCIPsetTransObjscale(scip, mpqGetRealApprox(scip, consdata->objscale));
+            
+            SCIPsetObjIntegral(scip);
+
+#ifdef SCIP_DEBUG
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "integral objective scalar: objscale=%Qg\n", consdata->objscale);
+            SCIPdebugMessage(s);
+#endif
+
+            /* update upperbound and cutoffbound in primal data structure:
+             * there could already be solutions for the original problem or the upper and cutoff bound could be set 
+             * according to an objective limit (see handling in SCIPprimalUpdateObjoffset()); 
+             * but currently we do not support this here, i.e., cutoff and upper boudn do not need to be updated
+             */            
+            assert(SCIPgetNSolexs(scip) == 0 && SCIPgetNSols(scip) == 0 ); 
+            assert(SCIPisInfinity(scip, SCIPgetObjlimit(scip)));
+            assert(SCIPisInfinity(scip, SCIPgetCutoffbound(scip)));
+            assert(SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
+         }
+      }
+
+      /* free temporary memory */
+      mpq_clear(intscalar);
+      for( v = 0; v < nints; ++v )
+         mpq_clear(objvals[v]);
+      SCIPfreeBufferArray(scip, &objvals);
+
+   }
+   
+   return SCIP_OKAY;
+}
+
 
 /*
  * local methods for managing the LP relaxation 
@@ -2138,6 +2403,28 @@ SCIP_RETCODE solveLPEX(
    SCIP_CALL( SCIPlpiexSetIntpar(conshdlrdata->lpiex, SCIP_LPPAR_LPINFO, TRUE) ); 
 #endif
 
+#ifdef USEOBJLIM /*??????????????*/ 
+   {
+      /* set objective limit for exact LP solver */
+      mpq_t uobjlim;
+      
+      mpq_init(uobjlim);
+      
+      if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
+         mpq_set(uobjlim, *SCIPlpiexPosInfinity(conshdlrdata->lpiex));
+      else
+         mpq_set_d(uobjlim, SCIPgetCutoffbound(scip));
+
+      if( mpq_cmp(uobjlim, conshdlrdata->lpiexuobjlim) < 0 )
+      {      
+         SCIP_CALL( SCIPlpiexSetRealpar(conshdlrdata->lpiex, SCIP_LPPAR_UOBJLIM, uobjlim) ); 
+         mpq_set(conshdlrdata->lpiexuobjlim, uobjlim);
+         printf("-----> uobjlim set\n");
+      }
+      mpq_clear(uobjlim);
+   }
+#endif
+
    switch( lpalgo )
    {
    case SCIP_LPALGO_PRIMALSIMPLEX:
@@ -2270,7 +2557,7 @@ SCIP_RETCODE checkIntegrality(
          assert(SCIPvarGetProbindex(vars[v]) == v);
          assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
 
-         if( mpz_get_si(mpq_denref(primsol[v])) != 1 ) 
+         if( !mpqIsIntegral(primsol[v]) ) 
          {
             integral = FALSE;
             branchvar = v;
@@ -2498,8 +2785,14 @@ SCIP_RETCODE evaluateLPEX(
    }
    else if( SCIPlpiexIsObjlimExc(conshdlrdata->lpiex) )
    {
+#ifdef USEOBJLIM /*?????????????????????*/
+      SCIPdebugMessage("   exact LP exceeds upper objective limit\n"); 
+
+      *result = SCIP_CUTOFF;
+#else
       SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
       return SCIP_ERROR;
+#endif
    }
    else if( SCIPlpiexIsPrimalInfeasible(conshdlrdata->lpiex) )
    {
@@ -5145,6 +5438,7 @@ SCIP_RETCODE tightenBounds(
    return SCIP_OKAY;
 }
 
+
 /*
  * Callback methods of constraint handler
  */
@@ -5221,18 +5515,27 @@ SCIP_DECL_CONSINITPRE(consInitpreExactlp)
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
 static
 SCIP_DECL_CONSEXITPRE(consExitpreExactlp)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of exactlp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{ 
+   SCIP_CONSDATA* consdata;
+
+   assert(nconss >= 0 && nconss <= 1);
+   
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(conss[0]);
+   assert(consdata != NULL);
+
+   /* check, wheter objective value is always integral by inspecting the problem */
+   checkObjIntegral(scip, consdata);
+
+   /* if possible, scale objective function such that it becomes integral with gcd 1 */
+   SCIP_CALL( scaleObj(scip, consdata) );
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreExactlp NULL
-#endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -5362,7 +5665,8 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
       assert(SCIPuseFPRelaxation(scip));
 
       /* todo: check what value is suitable for maxscale such that there is no overflow ?????????? */
-      SCIP_CALL( SCIPmpqCalcIntegralScalar((const mpq_t*) newobj, sourcedata->nvars, SCIPinfinity(scip), intscalar, &success) );
+      SCIP_CALL( SCIPmpqCalcIntegralScalar((const mpq_t*) newobj, sourcedata->nvars, SCIPinfinity(scip), intscalar, 
+            &success) );
       
       if( success )
       {
@@ -5374,7 +5678,7 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
          assert(SCIPgetNOrigVars(scip) == sourcedata->nvars);
          SCIP_CALL( SCIPgetTransformedVars(scip, sourcedata->nvars, origvars, vars) );
          
-         /* scale exact objective values s.t. all become FP representable and store these values in the transformed problem */
+         /* scale exact objective values s.t. all become FP representable and store them in the transformed problem */
          for( i = 0; i < sourcedata->nvars && success; ++i )
          {
 #ifdef SCIP_DEBUG
@@ -5405,7 +5709,7 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
 #ifdef DETAILED_DEBUG /*????????????????*/
          checkOrigVars(scip);
 #endif
-         
+          
          /* free temporary memory */
          SCIPfreeBufferArray(scip, &vars);
       }
@@ -5415,8 +5719,9 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
    {
       /* create exactlp constraint data for target constraint */
       SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr, sourcedata->objsense, sourcedata->nvars, 
-            newobj, sourcedata->lb, sourcedata->ub, sourcedata->nconss, sourcedata->conssize, sourcedata->lhs, sourcedata->rhs,
-            sourcedata->nnonz, sourcedata->beg, sourcedata->len, sourcedata->ind, sourcedata->val, FALSE) );
+            newobj, sourcedata->lb, sourcedata->ub, sourcedata->nconss, sourcedata->conssize, sourcedata->lhs, 
+            sourcedata->rhs, sourcedata->nnonz, sourcedata->beg, sourcedata->len, sourcedata->ind, sourcedata->val, 
+            FALSE) );
      
       /* create target constraint */
       SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -5428,6 +5733,9 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
       /* update objscale of transformed constraint */
       mpq_div(targetdata->objscale, targetdata->objscale, intscalar); 
    }
+
+   /* check, wheter objective value is always integral by inspecting the problem */
+   checkObjIntegral(scip, targetdata);
 
    /* free temporary memory */
    mpq_clear(intscalar);
@@ -6534,8 +6842,8 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, objsense, nvars, obj, lb, ub, nconss, nconss, lhs, rhs, 
-         nnonz, beg, len, ind, val, objneedscaling) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, objsense, nvars, obj, lb, ub, nconss, nconss, lhs, 
+         rhs, nnonz, beg, len, ind, val, objneedscaling) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,

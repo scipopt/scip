@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.10 2010/04/16 15:41:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.11 2010/06/11 08:35:38 bzfwolte Exp $"
 //#define SCIP_DEBUG /*?????????????????*/
 //#define SCIP_DEBUG2 /*?????????????????*/
+//#define USEOBJLIM /*??????????????*/ 
 
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
@@ -1787,8 +1788,11 @@ SCIP_RETCODE SCIPlpiexGetSolFeasibility(
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED)
       *primalfeasible = 1;
 
-   /* if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT) */
+#ifdef USEOBJLIM /*??????????????*/ 
+   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT) 
+#else
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE ) /* ?????????????????? */
+#endif
       *dualfeasible = 1;
 
    return SCIP_OKAY;
@@ -1930,8 +1934,11 @@ SCIP_Bool SCIPlpiexIsDualFeasible(
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-   /* return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT); */
+#ifdef USEOBJLIM /*??????????????*/ 
+   return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT); 
+#else
    return (lpi->solstat == QS_LP_OPTIMAL);  /* ?????????????*/
+#endif
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -1970,8 +1977,11 @@ SCIP_Bool SCIPlpiexIsObjlimExc(
 
    SCIPdebugMessage("checking for objective limit exceeded\n");
 
-   /* return (lpi->solstat == QS_LP_OBJ_LIMIT); */
+#ifdef USEOBJLIM /*??????????????*/ 
+   return (lpi->solstat == QS_LP_OBJ_LIMIT);
+#else
    return FALSE;   /* ????????????? */
+#endif
 }
 
 /** returns TRUE iff the iteration limit was reached */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.85.2.5 2010/03/22 16:05:30 bzfwolte Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.85.2.6 2010/06/11 08:35:38 bzfwolte Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -36,6 +36,9 @@
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/disp.h"
+#ifdef EXACTSOLVE
+#include "scip/cons_exactlp.h"
+#endif
 
 
 
@@ -225,17 +228,58 @@ SCIP_RETCODE primalSetUpperbound(
 
    primal->upperbound = upperbound;
    
-   /* todo: use something similar for exact case */
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
-   if( !set->misc_exactsolve && SCIPprobIsObjIntegral(prob) && !SCIPsetIsInfinity(set, upperbound) )
+   if( SCIPprobIsObjIntegral(prob) && !SCIPsetIsInfinity(set, upperbound) )
    {
       SCIP_Real delta;
 
-      delta = 100.0*SCIPsetFeastol(set);
-      delta = MIN(delta, 0.1);
-      cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
-      cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
-                                                   * and very large upperbound value */
+      if( !set->misc_exactsolve )
+      { 
+         delta = 100.0*SCIPsetFeastol(set);
+         delta = MIN(delta, 0.1);
+         cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
+         cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
+                                                      * and very large upperbound value */
+      }
+      else 
+      {
+         mpq_t safecutoffbound;
+         mpq_t change;
+
+         mpq_init(safecutoffbound);
+         mpq_init(change);
+         
+         delta = SCIPsetFeastol(set);
+         delta = MIN(delta, 0.1);
+         assert(delta > 0);
+
+         mpq_set_d(safecutoffbound, ceil(upperbound));
+         mpq_set_d(change, 1.0 - delta);
+
+         mpq_sub(safecutoffbound, safecutoffbound, change);
+         cutoffbound = mpqGetRealRelax(set->scip, safecutoffbound, GMP_RNDU);
+
+#ifndef NDEBUG
+         {
+            mpq_t tmp;
+            mpq_t tmpcutoffbound;
+            
+            mpq_init(tmp);
+            mpq_init(tmpcutoffbound);
+
+            mpq_set_d(tmp, ceil(upperbound) - 1.0);
+            mpq_set_d(tmpcutoffbound, cutoffbound);
+            assert(mpqIsIntegral(tmp));
+            assert(mpq_cmp(tmp, tmpcutoffbound) < 0);
+            
+            mpq_clear(tmpcutoffbound);
+            mpq_clear(tmp);
+         }
+#endif
+
+         mpq_clear(change);
+         mpq_clear(safecutoffbound);
+      }
    }
    else
       cutoffbound = upperbound;

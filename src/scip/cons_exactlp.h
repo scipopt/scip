@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.6 2010/04/24 16:24:35 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.7 2010/06/11 08:35:38 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -86,6 +86,12 @@ extern
 SCIP_Real mpqGetRealApprox(
    SCIP*                 scip,               /**< SCIP data structure */
    const mpq_t           val                 /**< given rational number */
+   );
+
+/** checks, if value is integral */
+extern
+SCIP_Bool mpqIsIntegral(
+   const mpq_t           val                  /**< value to process */
    );
 
 /** creates the handler for exactlp constraints and includes it in SCIP */
