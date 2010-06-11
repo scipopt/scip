@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.45 2010/06/07 14:47:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.46 2010/06/11 09:44:05 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -190,8 +190,20 @@ static SCIP_Bool warned_unsafe_log = FALSE;
  * Interval arithmetic operations
  */
 
-/* in optimized mode, some fundamental functions are defined as macros in intervalarith.h */
-#ifndef NDEBUG
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPintervalGetInf
+#undef SCIPintervalGetSup
+#undef SCIPintervalSet
+#undef SCIPintervalSetBounds
+#undef SCIPintervalSetEmpty
+#undef SCIPintervalIsEmpty
+#undef SCIPintervalSetEntire
+#undef SCIPintervalIsEntire
 
 /** returns infimum of interval */
 SCIP_Real SCIPintervalGetInf(
@@ -275,8 +287,6 @@ SCIP_Bool SCIPintervalIsEntire(
 {
    return operand.inf <= -infinity && operand.sup >= infinity;
 }
-
-#endif
 
 /** indicates whether operand1 is contained in operand2 */
 SCIP_Bool SCIPintervalIsSubsetEQ(
