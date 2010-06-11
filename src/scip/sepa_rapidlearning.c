@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.10 2010/05/28 15:03:20 bzfwinkm Exp $"
-
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.11 2010/06/11 15:57:32 bzfberth Exp $"
+#define SCIP_DEBUG
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
  * @brief  rapidlearning separator
@@ -295,18 +295,23 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                                              * e.g., because a constraint could not be copied or a primal solution
                                              * could not be copied back 
                                              */
+
+   int ndiscvars;
+
    assert(sepa != NULL);
    assert(scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
    
+   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)+SCIPgetNImplVars(scip);
+
    /* only run when still not fixed binary variables exists */
-   if( SCIPgetNBinVars(scip) == 0 )
+   if( ndiscvars == 0 )
       return SCIP_OKAY;
 
    /* only run for binary programs */
-   if( SCIPgetNBinVars(scip) != SCIPgetNVars(scip) )
+   if( ndiscvars != SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
    /* if the separator should be exclusive to the root node, this prevents multiple calls due to restarts */
