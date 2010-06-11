@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.90 2010/05/03 08:00:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.91 2010/06/11 13:52:25 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1452,13 +1452,13 @@ SCIP_RETCODE SCIPbranchruleExecRelaxSol(
             && *result != SCIP_BRANCHED
             && *result != SCIP_DIDNOTRUN )
          {
-            SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
+            SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from relaxation solution branching\n",
                branchrule->name, *result);
             return SCIP_INVALIDRESULT;
          }
          if( *result == SCIP_CONSADDED && !allowaddcons )
          {
-            SCIPerrorMessage("branching rule <%s> added a constraint in LP solution branching without permission\n",
+            SCIPerrorMessage("branching rule <%s> added a constraint in relaxation solution branching without permission\n",
                branchrule->name);
             return SCIP_INVALIDRESULT;
          }
