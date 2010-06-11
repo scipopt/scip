@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.30 2010/05/03 16:32:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.31 2010/06/11 13:52:06 bzfviger Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -534,7 +534,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelPscost)
    if( brvar == NULL )
    {
       SCIPwarningMessage("branching variable selection failed to select a variable\n");
-      *result = SCIP_DIDNOTFIND;
+      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 
