@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.h,v 1.3 2010/01/04 20:35:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_trysol.h,v 1.4 2010/06/14 18:52:32 bzfgamra Exp $"
 
 /**@file   heur_trysol.h
  * @brief  primal heuristic that tries a given solution
@@ -26,7 +26,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_HEUR_TRYSOL_H__
-#define __SCIP_HEUR_TRYSOL_H___
+#define __SCIP_HEUR_TRYSOL_H__
 
 
 #include "scip/scip.h"
