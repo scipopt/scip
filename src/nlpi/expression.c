@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.12 2010/06/07 16:43:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.13 2010/06/14 18:30:04 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -1319,7 +1319,7 @@ SCIP_RETCODE SCIPexprSubstituteVars(
          {
             /* replace child i by copy of substexprs[expr->children[i]->opdata.intval] */
             SCIPexprFreeDeep(blkmem, &expr->children[i]);
-            SCIP_CALL( SCIPexprCopyDeep(blkmem, &expr->children[i], substexprs[i]) );
+            SCIP_CALL( SCIPexprCopyDeep(blkmem, &expr->children[i], substexprs[varidx]) );
          }
       }
       else
