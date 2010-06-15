@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.25 2010/05/24 17:01:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.26 2010/06/15 13:31:09 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2389,11 +2389,11 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(upgdconslhs != NULL);
-   assert(upgdconsrhs != NULL);
+   assert(nupgdconss != NULL);
+   assert(upgdconss  != NULL);
    
-   *upgdconslhs = NULL;
-   *upgdconsrhs = NULL;
+   *nupgdconss = 0;
+   *upgdconss  = NULL;
    
    SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
@@ -2480,14 +2480,35 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    if( rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
    { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMessage("found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
+
+      /* alloc memory for array of upgrade constraints:
+       * we need two if we will have a quadratic constraint for the left hand side left */
+      *nupgdconss = SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) ? 1 : 2;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, upgdconss, *nupgdconss) );
   
-      SCIP_CALL( SCIPcreateConsSOC(scip, upgdconsrhs, SCIPconsGetName(cons),
+      SCIP_CALL( SCIPcreateConsSOC(scip, &(*upgdconss)[0], SCIPconsGetName(cons),
          lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
          rhsvar, rhscoef, rhsoffset,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconsrhs, NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, (*upgdconss)[0], NULL) ) );
+
+      /* create constraint that is equal to cons except that rhs is now infinity */
+      if( !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) )
+      {
+         SCIP_CALL( SCIPcreateConsQuadratic2(scip, &(*upgdconss)[1], SCIPconsGetName(cons),
+            SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+            SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons),
+            SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons), SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons),
+            SCIPgetNAdjBilinQuadratic(scip, cons), SCIPgetAdjBilinQuadratic(scip, cons),
+            SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinVars1Quadratic(scip, cons), SCIPgetBilinVars2Quadratic(scip, cons),
+            SCIPgetBilinCoefsQuadratic(scip, cons),
+            SCIPgetLhsQuadratic(scip, cons), SCIPinfinity(scip),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      }
    }
    else if( !SCIPisInfinity(scip, - SCIPgetLhsQuadratic(scip, cons)) )
    { /* if the first failed, try if constraint on left hand side is SOC (using negated coefficients) */
@@ -2563,14 +2584,35 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       if (rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant))
       { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
          SCIPdebugMessage("found left hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
-     
-         SCIP_CALL( SCIPcreateConsSOC(scip, upgdconslhs, SCIPconsGetName(cons),
+
+         /* alloc memory for array of upgrade constraints:
+          * we need two if we will have a quadratic constraint for the right hand side left */
+         *nupgdconss = SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) ? 1 : 2;
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, upgdconss, *nupgdconss) );
+
+         SCIP_CALL( SCIPcreateConsSOC(scip, &(*upgdconss)[0], SCIPconsGetName(cons),
             lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
             rhsvar, rhscoef, rhsoffset,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconslhs, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, &(*upgdconss)[0], NULL) ) );
+
+         /* create constraint that is equal to cons except that lhs is now -infinity */
+         if( !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
+         {
+            SCIP_CALL( SCIPcreateConsQuadratic2(scip, &(*upgdconss)[1], SCIPconsGetName(cons),
+               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+               SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons),
+               SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons), SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons),
+               SCIPgetNAdjBilinQuadratic(scip, cons), SCIPgetAdjBilinQuadratic(scip, cons),
+               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinVars1Quadratic(scip, cons), SCIPgetBilinVars2Quadratic(scip, cons),
+               SCIPgetBilinCoefsQuadratic(scip, cons),
+               -SCIPinfinity(scip), SCIPgetRhsQuadratic(scip, cons),
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+         }
       }
    }
 
