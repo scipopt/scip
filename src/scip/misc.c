@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.112 2010/05/28 17:56:01 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.113 2010/06/17 21:22:50 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2577,7 +2577,7 @@ int SCIPptrarrayGetMaxIdx(
 
 /* first all upwards-sorting methods */
 
-/** sort an indexed element set, resulting in a permutation index array */
+/** sort an indexed element set in non-decreasing order, resulting in a permutation index array */
 void SCIPsort(
    int*                  perm,               /**< pointer to store the resulting permutation */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
@@ -2891,7 +2891,7 @@ void SCIPsort(
 /* now all downwards-sorting methods */
 
 
-/** sort an indexed element set, resulting in a permutation index array */
+/** sort an indexed element set in non-increasing order, resulting in a permutation index array */
 void SCIPsortDown(
    int*                  perm,               /**< pointer to store the resulting permutation */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
