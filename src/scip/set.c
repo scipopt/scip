@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.222 2010/05/20 16:05:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.223 2010/06/17 12:04:31 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -628,6 +628,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nnlpis = 0;
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
+   (*set)->extcodenames = NULL;
+   (*set)->extcodedescs = NULL;
+   (*set)->nextcodes = 0;
+   (*set)->extcodessize = 0;
    (*set)->vbc_filename = NULL;
    (*set)->nlp_solver = NULL;
 
@@ -1430,6 +1434,15 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i]) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
+
+   /* free information on external codes */
+   for( i = 0; i < (*set)->nextcodes; ++i )
+   {
+      BMSfreeMemoryArrayNull(&(*set)->extcodenames[i]);
+      BMSfreeMemoryArrayNull(&(*set)->extcodedescs[i]);
+   }
+   BMSfreeMemoryArrayNull(&(*set)->extcodenames);
+   BMSfreeMemoryArrayNull(&(*set)->extcodedescs);
 
    BMSfreeMemory(set);
 
@@ -2782,6 +2795,38 @@ void SCIPsetSetPriorityNlpi(
 
    SCIPnlpiSetPriority(nlpi, priority);
    set->nlpissorted = FALSE;
+}
+
+/** inserts information about an external code in external codes list */
+SCIP_RETCODE SCIPsetIncludeExternalCode(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of external code */
+   const char*           description         /**< description of external code, can be NULL */
+   )
+{
+   assert(set  != NULL);
+   assert(name != NULL);
+
+   if( set->nextcodes >= set->extcodessize )
+   {
+      set->extcodessize = SCIPsetCalcMemGrowSize(set, set->nextcodes+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->extcodenames, set->extcodessize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->extcodedescs, set->extcodessize) );
+   }
+   assert(set->nextcodes < set->extcodessize);
+
+   BMSduplicateMemoryArray(&set->extcodenames[set->nextcodes], name, strlen(name)+1);
+   if( description != NULL )
+   {
+      BMSduplicateMemoryArray(&set->extcodedescs[set->nextcodes], description, strlen(description)+1);
+   }
+   else
+   {
+      set->extcodedescs[set->nextcodes] = NULL;
+   }
+   set->nextcodes++;
+
+   return SCIP_OKAY;
 }
 
 /** calls init methods of all plugins */

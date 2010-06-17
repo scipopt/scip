@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.71 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.72 2010/06/17 12:04:24 bzfviger Exp $"
 
 /**@file   lpi.h
  * @ingroup PUBLICMETHODS
@@ -45,6 +45,12 @@ extern "C" {
 /** gets name and version of LP solver */
 extern
 const char* SCIPlpiGetSolverName(
+   void
+   );
+
+/** gets description of LP solver (developer, webpage, ...) */
+extern
+const char* SCIPlpiGetSolverDesc(
    void
    );
 

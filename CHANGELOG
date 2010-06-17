@@ -61,6 +61,8 @@ interface:
   to copy individual parts of a SCIP instance separately.
 - SCIP can now maintain a central NLP relaxation of the problem (similar to LP)
 - added SCIPsortLongPtrInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- SCIP can now manage a list of external codes (e.g., LP or NLP solver, ZIMPL)
+- new method SCIPlpiGetSolverDesc() to get a descriptive string of an LP solver (developer, webpage, ...) 
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

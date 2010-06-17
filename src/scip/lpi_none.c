@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_none.c,v 1.10 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.11 2010/06/17 12:04:26 bzfviger Exp $"
 
 /**@file   lpi_none.c
  * @ingroup LPIS
@@ -60,6 +60,14 @@ const char* SCIPlpiGetSolverName(
    )
 {
    return "NONE";
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "dummy LP solver interface which solely purpose is to resolve references at linking";
 }
 
 /** gets pointer for LP solver - use only with great care */

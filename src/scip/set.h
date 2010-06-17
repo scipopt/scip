@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.113 2010/05/19 12:38:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.114 2010/06/17 12:04:32 bzfviger Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -672,6 +672,14 @@ void SCIPsetSetPriorityNlpi(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLPI*            nlpi,               /**< NLPI */
    int                   priority            /**< new priority of NLPI */
+   );
+
+/** inserts information about an external code in external codes list */
+extern
+SCIP_RETCODE SCIPsetIncludeExternalCode(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of external code */
+   const char*           description         /**< description of external code, can be NULL */
    );
 
 /** calls init methods of all plugins */

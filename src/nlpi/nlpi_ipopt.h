@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.2 2010/06/04 14:14:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.3 2010/06/17 12:04:23 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
@@ -40,7 +40,11 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 
 /** gets string that identifies Ipopt (version number) */
 extern
-const char* SCIPgetNlpiNameIpopt(void);
+const char* SCIPgetSolverNameIpopt(void);
+
+/** gets string that describes Ipopt (version number) */
+extern
+const char* SCIPgetSolverDescIpopt(void);
 
 #ifdef __cplusplus
 }

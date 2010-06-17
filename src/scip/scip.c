@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.583 2010/06/13 11:17:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.584 2010/06/17 12:04:29 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -473,7 +473,6 @@ void SCIPprintVersion(
    SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
    SCIPmessageFPrintInfo(file, " [LP solver: %s]", SCIPlpiGetSolverName());
-   SCIPmessageFPrintInfo(file, " [Expression interpreter: %s]", SCIPexprintGetName());
    SCIPmessageFPrintInfo(file, "\n");
    SCIPmessageFPrintInfo(file, "%s\n", SCIP_COPYRIGHT);
 }
@@ -525,6 +524,15 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->cutpool = NULL;
 
    SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
+
+   if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
+   {
+      SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc());
+   }
+   if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
+   {
+      SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc());
+   }
 
    return SCIP_OKAY;
 }
@@ -3056,6 +3064,75 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    return SCIP_OKAY;
 }
 
+/** includes information about an external code linked into the SCIP library */
+SCIP_RETCODE SCIPincludeExternalCodeInformation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of external code */
+   const char*           description         /**< description of external code, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(name != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeExternalCodeInformation", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsetIncludeExternalCode(scip->set, name, description) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the names of currently included external codes */
+char* const* SCIPgetExternalCodeNames(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetExternalCodeNames", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->extcodenames;
+}
+
+/** returns the descriptions of currently included external codes
+ * note that some descriptions may be NULL */
+char* const* SCIPgetExternalCodeDescriptions(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetExternalCodeDescriptions", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->extcodedescs;
+}
+
+/** returns the number of currently included information on external codes */
+int SCIPgetNExternalCodes(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNExternalCodes", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nextcodes;
+}
+
+/** prints information on external codes to a file stream */
+void SCIPprintExternalCodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
+
+   SCIPmessageFPrintInfo(file, "External codes: ");
+   if( scip->set->nextcodes == 0 )
+   {
+      SCIPinfoMessage(scip, file, "none\n");
+      return;
+   }
+   SCIPinfoMessage(scip, file, "\n");
+
+   for( i = 0; i < scip->set->nextcodes; ++i )
+   {
+      SCIPinfoMessage(scip, file, "  %-20s %s\n", scip->set->extcodenames[i], scip->set->extcodedescs[i] != NULL ? scip->set->extcodedescs[i] : "");
+   }
+}
 
 
 /*

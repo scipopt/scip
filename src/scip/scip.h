@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.384 2010/06/10 16:43:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.385 2010/06/17 12:04:30 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -1427,6 +1427,40 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< NLPI */
    int                   priority            /**< new priority of the NLPI */
+   );
+
+/** includes information about an external code linked into the SCIP library */
+extern
+SCIP_RETCODE SCIPincludeExternalCodeInformation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of external code */
+   const char*           description         /**< description of external code, or NULL */
+   );
+
+/** returns the names of currently included external codes
+ * note that some descriptions may be NULL */
+extern
+char* const* SCIPgetExternalCodeNames(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the descriptions of currently included external codes */
+extern
+char* const* SCIPgetExternalCodeDescriptions(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently included information on external codes */
+extern
+int SCIPgetNExternalCodes(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** prints information on external codes to a file stream */
+extern
+void SCIPprintExternalCodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */

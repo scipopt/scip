@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.16 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.17 2010/06/17 12:04:26 bzfviger Exp $"
 
 /**@file   lpi_msk.c
  * @ingroup LPIS
@@ -555,6 +555,14 @@ const char* SCIPlpiGetSolverName(
 {
    snprintf(mskname, SCIP_MAXSTRLEN, "MOSEK %.2f", (SCIP_Real)MSK_VERSION_MAJOR);
    return mskname;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed by MOSEK Optimization Software (www.mosek.com)";
 }
 
 /** gets pointer for LP solver - use only with great care */

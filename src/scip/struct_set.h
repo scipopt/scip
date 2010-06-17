@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.92 2010/05/20 16:05:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.93 2010/06/17 12:04:32 bzfviger Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -78,6 +78,8 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
+   char**                extcodenames;       /**< names of externals codes */
+   char**                extcodedescs;       /**< descriptions of external codes */
    int                   nreaders;           /**< number of file readers */
    int                   readerssize;        /**< size of readers array */
    int                   npricers;           /**< number of variable pricers */
@@ -109,6 +111,8 @@ struct SCIP_Set
    int                   dialogssize;        /**< size of dialogs array */
    int                   nnlpis;             /**< number of NLPIs */
    int                   nlpissize;          /**< size of NLPIs array */
+   int                   nextcodes;          /**< number of external codes */
+   int                   extcodessize;       /**< size of external code arrays */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    SCIP_Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
    SCIP_Bool             presolssorted;      /**< are the presolvers sorted by priority? */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.48 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.49 2010/06/17 12:04:28 bzfviger Exp $"
 
 /**@file   lpi_spx121.cpp
  * @ingroup LPIS
@@ -440,6 +440,14 @@ const char* SCIPlpiGetSolverName(
    version = spx.version();
    snprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)";
 }
 
 /** gets pointer for LP solver - use only with great care */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.9 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.10 2010/06/17 12:04:27 bzfviger Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -334,6 +334,14 @@ const char* SCIPlpiGetSolverName(void)
    snprintf (__qsstr, 1023, "%s", vname);
    QSfree(vname);
    return __qsstr;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed by D. Applegate, W. Cook, S. Dash, and M. Mevenkamp (www.isye.gatech.edu/~wcook/qsopt)";
 }
 
 /** gets pointer for LP solver - use only with great care */

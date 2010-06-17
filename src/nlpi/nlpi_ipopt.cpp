@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.10 2010/06/04 17:57:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.11 2010/06/17 12:04:23 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -1673,9 +1673,14 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 }
 
 /** gets string that identifies Ipopt (version number) */
-const char* SCIPgetNlpiNameIpopt(void)
+const char* SCIPgetSolverNameIpopt(void)
 {
    return PACKAGE_STRING;
+}
+
+const char* SCIPgetSolverDescIpopt(void)
+{
+   return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
 }
 
 /** Method to return some info about the nlp */

@@ -634,6 +634,14 @@ const char* SCIPlpiGetSolverName(
    return xprsname;
 }
 
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed by FICO (www.fico.com/xpress)";
+}
+
 /** gets pointer for LP solver - use only with great care 
  *
  *  Here we return the pointer to the LP environment.

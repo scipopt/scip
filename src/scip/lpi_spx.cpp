@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.102 2010/06/06 21:52:39 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.103 2010/06/17 12:04:27 bzfviger Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -764,6 +764,14 @@ const char* SCIPlpiGetSolverName(
    }
 
    return spxname;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)";
 }
 
 /** gets pointer for LP solver - use only with great care */

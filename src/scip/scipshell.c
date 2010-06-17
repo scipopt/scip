@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.16 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.17 2010/06/17 12:04:31 bzfviger Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -310,13 +310,15 @@ SCIP_RETCODE SCIPprocessShellArguments(
 
       if( !error )
       {
-         /***********************
-          * Version information *
-          ***********************/
+         /***********************************
+          * Version and library information *
+          ***********************************/
          
          SCIPprintVersion(NULL);
          SCIPinfoMessage(scip, NULL, "\n");
 
+         SCIPprintExternalCodes(scip, NULL);
+         SCIPinfoMessage(scip, NULL, "\n");
 
          /*****************
           * Load settings *

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.55 2010/06/09 14:57:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.56 2010/06/17 12:04:29 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -1190,6 +1190,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 {
 #ifdef WITH_ZIMPL
    SCIP_READERDATA* readerdata;
+   char extcodename[100];
 
    /* create zpl reader data */
    readerdata = NULL;
@@ -1214,9 +1215,8 @@ SCIP_RETCODE SCIPincludeReaderZpl(
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
          NULL, FALSE, "-", NULL, NULL) );
 
-   /* @todo would like to print ZIMPL version here, but user may have had no chance to change verbosity level
-    * SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "This library includes ZIMPL %d.%d.%d.\n", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
-    */
+   (void) SCIPsnprintf(extcodename, sizeof(extcodename), "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #endif
 
    return SCIP_OKAY;

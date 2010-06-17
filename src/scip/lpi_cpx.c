@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.129 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.130 2010/06/17 12:04:25 bzfviger Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -877,6 +877,14 @@ const char* SCIPlpiGetSolverName(
 {
    snprintf(cpxname, SCIP_MAXSTRLEN, "CPLEX %.2f", (SCIP_Real)CPX_VERSION/100.0);
    return cpxname;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed by IBM (www-01.ibm.com/software/integration/optimization/cplex-optimizer)";
 }
 
 /** gets pointer for LP solver - use only with great care 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_grb.c,v 1.5 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_grb.c,v 1.6 2010/06/17 12:04:25 bzfviger Exp $"
 
 /**@file   lpi_grb.c
  * @ingroup LPIS
@@ -960,6 +960,14 @@ const char* SCIPlpiGetSolverName(
    GRBversion(&major, &minor, &technical);
    snprintf(grbname, SCIP_MAXSTRLEN, "Gurobi %d.%d.%d", major, minor, technical);
    return grbname;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed by Gurobi Optimization (www.gurobi.com)";
 }
 
 /** gets pointer for LP solver - use only with great care

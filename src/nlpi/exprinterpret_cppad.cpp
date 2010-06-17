@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.7 2010/05/25 13:06:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.8 2010/06/17 12:04:23 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -534,6 +534,12 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
 const char* SCIPexprintGetName(void)
 {
    return PACKAGE_STRING;
+}
+
+/** gets descriptive text of expression interpreter */
+const char* SCIPexprintGetDesc(void)
+{
+   return "Algorithmic Differentiation of C++ algorithms developed by B. Bell (www.coin-or.org/CppAD)";
 }
 
 /** creates an expression interpreter object */

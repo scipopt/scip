@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.66 2010/03/20 17:22:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.67 2010/06/17 12:04:25 bzfviger Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -431,6 +431,14 @@ const char* SCIPlpiGetSolverName(
    // Currently Clp has no function to get version, so we hard code it ...
    snprintf(clpname, SCIP_MAXSTRLEN, "Clp "VERSION"");
    return clpname;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "COIN-OR Linear Programming Solver developed by J. Forrest et.al. (projects.coin-or.org/Clp)";
 }
 
 /** gets pointer for LP solver - use only with great care */
