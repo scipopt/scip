@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.7 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.8 2010/06/17 18:23:07 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -44,6 +44,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "scip/cons_orbitope.h"
 
@@ -1882,18 +1883,196 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
 	 SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(vars[i][j]));
       }
       if ( i < nspcons-1 )
-	 SCIPinfoMessage(scip, file, ";");
+	 SCIPinfoMessage(scip, file, ".");
    }
    SCIPinfoMessage(scip, file, ")");
 
    return SCIP_OKAY;
 }
 
+
 /** constraint copying method of constraint handler */
-#define consCopyOrbitope NULL
+static
+SCIP_DECL_CONSCOPY(consCopyOrbitope)
+{
+   SCIP_CONSDATA* sourcedata;
+   SCIP_VAR*** sourcevars;
+   SCIP_VAR*** vars;
+   int i;
+   int j;
+   int nspcons;
+   int nblocks;
+
+   assert( scip != 0 );
+   assert( conshdlr != 0 );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( cons != 0 );
+   assert( sourcescip != 0 );
+   assert( sourcecons != 0 );
+   assert( varmap != 0 );
+
+   SCIPdebugMessage("Copying method for orbitope constraint handler.\n");
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
+   assert( sourcedata->nspcons > 0 );
+   assert( sourcedata->nblocks > 0 );
+   assert( sourcedata->vars != NULL );
+
+   nspcons = sourcedata->nspcons;
+   nblocks = sourcedata->nblocks;
+   sourcevars = sourcedata->vars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nspcons) );
+   for (i = 0; i < nspcons; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), nblocks) );
+
+      for (j = 0; j < nblocks; ++j)
+      {
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap) );
+	 assert( vars[i][j] != 0 );
+      }
+   }
+
+   /* create copied constraint */
+   if ( name == 0 )
+      name = SCIPconsGetName(sourcecons);
+
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
+	 vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
+	 initial, separate, enforce, check, propagate, local, dynamic, modifiable, removable, stickingatnode) );
+
+   for (i = 0; i < nspcons; ++i)
+      SCIPfreeBufferArray(scip, &vars[i]);
+   SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 
 /** constraint parsing method of constraint handler */
-#define consParseOrbitope NULL
+static
+SCIP_DECL_CONSPARSE(consParseOrbitope)
+{
+   const char* s;
+   SCIP_Bool ispart;
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR*** vars;
+   SCIP_VAR* var;
+   int nspcons;
+   int maxnspcons;
+   int nblocks;
+   int maxnblocks;
+   int k;
+   int j;
+
+   *success = TRUE;
+   s = str;
+
+   /* skip white space */
+   while ( *s != '\0' && isspace(*s) )
+      ++s;
+
+   ispart = FALSE;
+   if ( strncmp(s, "partOrbitope(", 13) == 0 )
+      ispart = TRUE;
+   else
+   {
+      if ( strncmp(s, "packOrbitope(", 13) != 0 )
+      {
+	 SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error - expected \"partOrbitope\" or \"packOrbitope\": %s\n", s);
+	 *success = FALSE;
+	 return SCIP_OKAY;
+      }
+   }
+   s += 13;
+
+   /* loop through string */
+   nspcons = 0;
+   nblocks = 0;
+   maxnspcons = 10;
+   maxnblocks = 10;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnspcons) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(vars[0]), maxnblocks) );
+
+   j = 0;
+   do
+   {
+      /* find variable name */
+      k = 0;
+      while ( *s != '\0' && ! isspace(*s) && *s != ',' && *s != '.' && *s != ')' )
+	 varname[k++] = *s++;
+      varname[k] = '\0';
+
+      /* get variable */
+      var = SCIPfindVar(scip, varname);
+      if ( var == NULL )
+      {
+	 SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+	 *success = FALSE;
+	 return SCIP_OKAY;
+      }
+      vars[nspcons][j++] = var;
+
+      if ( j > nblocks )
+      {
+	 int newsize;
+
+	 if ( nspcons > 0 )
+	 {
+	    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variables per row do not match.\n");
+	    *success = FALSE;
+	    return SCIP_OKAY;
+	 }
+
+	 nblocks = j;
+	 newsize = SCIPcalcMemGrowSize(scip, nblocks);
+	 SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );
+	 maxnblocks = newsize;
+	 assert( nblocks <= maxnblocks );
+      }
+
+      /* skip white space and ',' */
+      while ( *s != '\0' && ( isspace(*s) ||  *s == ',' ) )
+	 ++s;
+      
+      /* begin new row if required */
+      if ( *s == '.' )
+      {
+	 ++nspcons;
+	 ++s;
+	 
+	 if ( nspcons > maxnspcons )
+	 {
+	    int newsize;
+
+	    newsize = SCIPcalcMemGrowSize(scip, nspcons);
+	    SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
+	    maxnspcons = newsize;
+	 }
+	 assert( nspcons <= maxnspcons );
+
+	 SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons]), nblocks) );
+	 j = 0;
+      }
+   }
+   while ( *s != ')' );
+   ++nspcons;
+
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, ispart, nspcons, nblocks, TRUE, 
+	 initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   for (k = 0; k < nspcons; ++k)
+      SCIPfreeBufferArray(scip, &vars[k]);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 
 
 
