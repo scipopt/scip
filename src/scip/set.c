@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.223 2010/06/17 12:04:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.224 2010/06/18 11:14:49 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -62,6 +62,8 @@
 #define SCIP_DEFAULT_BRANCH_SCOREFAC      0.167 /**< branching score factor to weigh downward and upward gain prediction
                                                  *   in sum score function */
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
+#define SCIP_DEFAULT_BRANCH_CLAMP           0.2 /**< minimal fractional distance of branching point to a continuous variable'
+                                                     bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 
 
 /* Conflict Analysis */
@@ -650,6 +652,11 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/preferbinary",
          "should branching on binary variables be preferred?",
          &(*set)->branch_preferbinary, FALSE, SCIP_DEFAULT_BRANCH_PREFERBINARY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "branching/clamp",
+         "minimal relative distance of branching point to bounds when branching on a continuous variable",
+         &(*set)->branch_clamp, FALSE, SCIP_DEFAULT_BRANCH_CLAMP, 0.0, 0.5,
          NULL, NULL) );
 
    /* conflict analysis parameters */

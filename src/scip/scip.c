@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.584 2010/06/17 12:04:29 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.585 2010/06/18 11:14:49 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -14528,6 +14528,20 @@ SCIP_Real SCIPgetBranchScoreMultiple(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBranchScoreMultiple", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPbranchGetScoreMultiple(scip->set, var, nchildren, gains);
+}
+
+/** computes a branching point for a continuous or discrete variable
+ * @see SCIPbranchGetBranchingPoint
+ */
+SCIP_Real SCIPgetBranchingPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable, of which the branching point should be computed */
+   SCIP_Real             suggestion          /**< suggestion for branching point, or SCIP_INVALID if no suggestion */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetBranchingPoint", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchGetBranchingPoint(scip->set, scip->tree, var, suggestion);
 }
 
 /** calculates the node selection priority for moving the given variable's LP value to the given target value;

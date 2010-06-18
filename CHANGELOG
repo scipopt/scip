@@ -10,6 +10,8 @@ interface:
 - new method SCIPrestartSolve() that allows the user to manually restart the solving process
 - new method SCIPbranchRelax() to branch on a relaxation solution
 - new method SCIPbranchVarVal() to branch on an arbitrary value within the variable's bounds
+- new method SCIPbranchGetBranchingPoint() and SCIPgetBranchingPoint() to select branching point for a variable,
+  e.g., ensure branching point is inside the interval for a continuous variable
 - new callback SCIP_DECL_BRANCHEXECRELAX(), together with new parameter in SCIPincludeBranchrule() for branching on a relaxation solution
 - added SCIPsortPtrPtrInt (and various other) and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added to the callback method SCIP_DECL_PROBEXITSOL(x) (type_prob.h) the parameter restart; 
@@ -190,6 +192,7 @@ fixed bugs:
 - fixed bug in presol_trivial.c trying to fix continuous variables, now uses a less stricter comparison to fix variables
 - fixed bug in cons_knapsack.c: In SCIPseparateRelaxedKnapsack() not all variables need to be active in deeper regions of the tree
 - fixed potential bug with pseudo solution branching on free variables
+- fixed bug in cons_bounddisjunction.c: presolve may have tried to tighten bounds on a multiaggregated variable (now upgrades to linear constraint)
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
@@ -222,6 +225,7 @@ parameters:
 - added parameter <constraints/indicator/addCouplingCons> that allows to add variable upper bounds if addCoupling is true
 - added parameter <constraints/indicator/maxCouplingValue> for the maximal value of the coefficient in a coupling inequality/constraint
 - added parameter <branching/random/seed> to change the initial seed value of the branching rule random
+- added parameter <branching/clamp> to set the minimal fractional distance of a branching point to a continuous variable' bounds
 - added parameter <misc/permutationseed> to change the permutation seed value for permuting the problem after the problem is transformed (-1 means no permutation)
 - added parameter <heuristics/nlp/nlpsolver> to specify name of NLP solver to use
 - added parameter <heuristics/nlp/nlpoptfile> to specify name of (NLP solver specific) option file

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.h,v 1.16 2010/05/03 14:47:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_pscost.h,v 1.17 2010/06/18 11:14:48 bzfviger Exp $"
 
 /**@file   branch_pscost.h
  * @brief  pseudo costs branching rule
@@ -38,7 +38,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    );
 
 /** selects a branching variable, due to pseudo cost, from the given candidate array and returns this variable together
- *  with a lower and upper bound for the right and left branch, respectively */
+ *  with a branching point */
 extern
 SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -47,8 +47,7 @@ SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP_Real*            branchcandsscore,   /**< array of candidate scores */
    int                   nbranchcands,       /**< number of branching candidates */
    SCIP_VAR**            var,                /**< pointer to store the variable to branch on, or NULL if none */
-   SCIP_Real*            rightlb,            /**< pointer to store the lower bound for the branching variable in the right branch */
-   SCIP_Real*            leftub              /**< pointer to store thr upper bound for the branching variable in the left branch */
+   SCIP_Real*            brpoint             /**< pointer to store the branching point for the branching variable, will be fractional for a discrete variable */
    );
    
 #ifdef __cplusplus

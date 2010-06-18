@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.385 2010/06/17 12:04:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.386 2010/06/18 11:14:49 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5430,6 +5430,16 @@ SCIP_Real SCIPgetBranchScoreMultiple(
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    int                   nchildren,          /**< number of children that the branching will create */
    SCIP_Real*            gains               /**< prediction of objective gain for each child */
+   );
+
+/** computes a branching point for a continuous or discrete variable
+ * @see SCIPbranchGetBranchingPoint
+ */
+extern
+SCIP_Real SCIPgetBranchingPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable, of which the branching point should be computed */
+   SCIP_Real             suggestion          /**< suggestion for branching point, or SCIP_INVALID if no suggestion */
    );
 
 /** calculates the node selection priority for moving the given variable's LP value to the given target value;

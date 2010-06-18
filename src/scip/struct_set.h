@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.93 2010/06/17 12:04:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.94 2010/06/18 11:14:49 bzfviger Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -128,6 +128,7 @@ struct SCIP_Set
    SCIP_Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction
                                               *   in sum score function */
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
+   SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */

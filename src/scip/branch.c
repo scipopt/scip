@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.91 2010/06/11 13:52:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.92 2010/06/18 11:14:48 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1428,7 +1428,7 @@ SCIP_RETCODE SCIPbranchruleExecRelaxSol(
          int oldncuts;
          int oldnactiveconss;
 
-         SCIPdebugMessage("executing LP branching rule <%s>\n", branchrule->name);
+         SCIPdebugMessage("executing relaxation solution branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -1870,6 +1870,183 @@ SCIP_Real SCIPbranchGetScoreMultiple(
    return SCIPbranchGetScore(set, var, min1, min2);
 }
 
+/** computes a branching point for a (not necessarily discrete) variable
+ * a suggested branching point is first projected onto the box
+ * if no point is suggested, then the value in the current LP or pseudo solution is used
+ * if this value is at infinity, then 0.0 projected onto the bounds and then moved inside the interval is used 
+ * for a discrete variable, it is ensured that the returned value is fractional
+ * for a continuous variable, the parameter branching/clamp defines how far a branching point need to be from the bounds of a variable
+ * the latter is only applied if no point has been suggested, or the suggested point is not inside the variable's interval
+ */
+SCIP_Real SCIPbranchGetBranchingPoint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR*             var,                /**< variable, of which the branching point should be computed */
+   SCIP_Real             suggestion          /**< suggestion for branching point, or SCIP_INVALID if no suggestion */
+   )
+{
+   SCIP_Real branchpoint;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   
+   assert(set != NULL);
+   assert(var != NULL);
+
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   
+   /* for an (almost) fixed variable, we cannot branch further */
+   assert(!SCIPsetIsEQ(set, lb, ub));
+   
+   if( !SCIPsetIsInfinity(set, REALABS(suggestion)) )
+   { 
+      /* use user suggested branching point */
+
+      /* first, project it onto the current domain */
+      branchpoint = MAX(lb, MIN(suggestion, ub));
+      
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      { 
+         /* if it is a discrete variable, then round it down and up and accept this choice */
+         if( SCIPsetIsEQ(set, branchpoint, ub) )
+         {
+            /* in the right branch, variable is fixed to its current upper bound */
+            return SCIPsetFloor(set, branchpoint) - 0.5;
+         }
+         else
+         {
+            /* in the  left branch, variable is fixed to its current lower bound */
+            return SCIPsetFloor(set, branchpoint) + 0.5;
+         }
+      }
+      else if( (SCIPsetIsInfinity(set, -lb) || SCIPsetIsGT(set, branchpoint, lb)) && 
+               (SCIPsetIsInfinity(set,  ub) || SCIPsetIsLT(set, branchpoint, ub)) )
+      {
+         /* if it is continuous and inside the box, then accept it */ 
+         return branchpoint;
+      }
+      /* if it is continuous and suggestion is on of the bounds, continue below */
+   }
+   else
+   {
+      /* if not point is suggested, try the LP or pseudo LP solution, projected into the bounds */
+      branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
+      branchpoint = MAX(lb, MIN(suggestion, ub));
+   }
+   
+   /* if value is at +/- infty, then choose some value a bit off from bounds or 0.0 */
+   if( SCIPsetIsInfinity(set, branchpoint) )
+   {
+      /* if value is at +infty, then the upper bound should be at infinity */
+      assert(SCIPsetIsInfinity(set, ub));
+
+      /* choose 0.0 or something above lower bound if lower bound > 0 */
+      if( SCIPsetIsPositive(set, lb) )
+         branchpoint = lb + 1000.0;
+      else
+         branchpoint = 0.0;
+   }
+   else if( SCIPsetIsInfinity(set, -branchpoint) )
+   { 
+      /* if value is at -infty, then the lower bound should be at -infinity */
+      assert(SCIPsetIsInfinity(set, -lb));
+      
+      /* choose 0.0 or something below upper bound if upper bound < 0 */
+      if( SCIPsetIsNegative(set, ub) )
+         branchpoint = ub - 1000.0;
+      else
+         branchpoint = 0.0;
+   }
+
+   assert(SCIPsetIsInfinity(set,  ub) || SCIPsetIsLE(set, branchpoint, ub));
+   assert(SCIPsetIsInfinity(set, -lb) || SCIPsetIsGE(set, branchpoint, lb));
+
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
+      {
+         /* if branching point is too close to the bounds, move more into the middle of the interval */
+         if( ub - lb < 2.02 * SCIPsetEpsilon(set) )
+         { 
+            /* for very tiny intervals we set it exactly into the middle */
+            branchpoint = (lb+ub)/2.0;
+         }
+         else
+         { 
+            /* otherwise we project it away from the bounds */
+            SCIP_Real minbrpoint;
+            SCIP_Real maxbrpoint;
+
+            /* the minimal branching point should be
+             * - set->clamp away from the lower bound - relative to the local domain size
+             * - SCIPsetEpsilon(set) above the lower bound - in absolute value
+             */
+            minbrpoint = (1.0 - set->branch_clamp) * lb + set->branch_clamp * ub;
+            minbrpoint = MAX(lb + 1.01*SCIPsetEpsilon(set), minbrpoint);
+
+            /* the maximal branching point should be
+             * - set->clamp away from the upper bound - relative to the local domain size
+             * - SCIPsetEpsilon(set) below the upper bound - in absolute value
+             */
+            maxbrpoint = set->branch_clamp * lb + (1.0 - set->branch_clamp) * ub;
+            maxbrpoint = MIN(ub - 1.01*SCIPsetEpsilon(set), maxbrpoint);
+
+            /* project branchpoint into [minbrpoint, maxbrpoint] */
+            branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
+            
+            /* if selected branching point is close to 0.0 and bounds are away from 0.0, it often makes sense to branch exactly on 0.0 */
+            if( SCIPsetIsFeasZero(set, branchpoint) && SCIPsetIsFeasNegative(set, lb) && SCIPsetIsFeasPositive(set, ub) )
+               branchpoint = 0.0;
+         }
+         assert(SCIPsetIsLT(set, lb, branchpoint));
+         assert(SCIPsetIsLT(set, branchpoint, ub));
+      }
+      else if( !SCIPsetIsLT(set, lb, branchpoint) )
+      {
+         /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound */
+         assert(SCIPsetIsInfinity(set,  ub));
+         branchpoint = lb + MAX(0.5*REALABS(lb), 1000);
+      }
+      else if( !SCIPsetIsGT(set, ub, branchpoint) )
+      { 
+         /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound */
+         assert(SCIPsetIsInfinity(set, -lb));
+         branchpoint = ub - MAX(0.5*REALABS(ub), 1000);
+      }
+
+      return branchpoint;
+   }
+   else
+   {
+      /* discrete variables */
+      if( SCIPsetIsEQ(set, branchpoint, lb) )
+      {
+         /* if branchpoint is on lower bound, create one branch with x = lb and one with x >= lb+1 */
+         return lb + 0.5;
+      }
+      else if( SCIPsetIsEQ(set, branchpoint, ub) )
+      {
+         /* if branchpoint is on upper bound, create one branch with x = ub and one with x <= ub-1 */
+         return ub - 0.5;
+      }
+      else if( SCIPsetIsIntegral(set, branchpoint) )
+      {
+         /* if branchpoint is integral, create one branch with x <= x'-1 and one with x >= x'
+          * @todo could in the same way be x <= x' and x >= x'+1; is there some easy way to know which is better? */
+         return branchpoint - 0.5;
+      }
+      else
+      {
+         /* branchpoint is somewhere between bounds and fractional, so just round down and up */
+         return branchpoint;
+      }
+   }
+   
+   SCIPerrorMessage("you should not be here, this should not happen\n");
+   SCIPABORT();
+   return SCIP_INVALID;
+}
+
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
  *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
@@ -2038,6 +2215,9 @@ SCIP_RETCODE SCIPbranchExecRelax(
       int bestpriority;
       int bestcand;
 
+      /* if all branching rules did nothing, then they should also not have cleared all branching candidates */
+      assert(branchcand->nrelaxcands > 0);
+
       /* no branching method succeeded in choosing a branching: just branch on the first branching candidates with maximal
        * priority, and out of these on the one with maximal branch factor, and out of these on the one with largest domain
        */
@@ -2061,7 +2241,7 @@ SCIP_RETCODE SCIPbranchExecRelax(
       assert(0 <= bestcand && bestcand < branchcand->nrelaxcands);
 
       var = branchcand->relaxcands[bestcand];
-      val = branchcand->relaxcandssol[bestcand];
+      val = SCIPbranchGetBranchingPoint(set, tree, var, branchcand->relaxcandssol[bestcand]);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
       assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
       assert(SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));

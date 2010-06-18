@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.52 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.53 2010/06/18 11:14:48 bzfviger Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -361,6 +361,22 @@ SCIP_Real SCIPbranchGetScoreMultiple(
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    int                   nchildren,          /**< number of children that the branching will create */
    SCIP_Real*            gains               /**< prediction of objective gain for each child */
+   );
+
+/** computes a branching point for a (not necessarily discrete) variable
+ * a suggested branching point is first projected onto the box
+ * if no point is suggested, then the value in the current LP or pseudo solution is used
+ * if this value is at infinity, then 0.0 projected onto the bounds and then moved inside the interval is used 
+ * for a discrete variable, it is ensured that the returned value is fractional
+ * for a continuous variable, the parameter branching/clamp defines how far a branching point need to be from the bounds of a variable
+ * the latter is only applied if no point has been suggested, or the suggested point is not inside the variable's interval
+ */
+extern
+SCIP_Real SCIPbranchGetBranchingPoint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR*             var,                /**< variable, of which the branching point should be computed */
+   SCIP_Real             suggestion          /**< suggestion for branching point, or SCIP_INVALID if no suggestion */
    );
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
