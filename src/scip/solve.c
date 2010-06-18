@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.299 2010/06/10 16:43:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.300 2010/06/18 10:04:40 bzfviger Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1912,6 +1912,7 @@ SCIP_RETCODE solveNodeLP(
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
 
+#if 0 /* FIXME the current code triggers assert(*cutoff) from time to time, so it's disabled for now */
       /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in separators */
       if( !(*cutoff) && SCIPtreeGetCurrentDepth(tree) == 0 )
       {
@@ -1929,6 +1930,7 @@ SCIP_RETCODE solveNodeLP(
             assert(*cutoff);
          }
       }
+#endif
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
