@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.33 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: check_cluster.sh,v 1.34 2010/06/18 23:32:00 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -155,8 +155,8 @@ do
   echo set display freq $DISPFREQ        >> $TMPFILE
   echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
   echo set save $SETFILE                 >> $TMPFILE
-  echo read /work/$i                  >> $TMPFILE
-#  echo presolve                          >> $TMPFILE
+  echo read $SCIPPATH/$i                 >> $TMPFILE
+#  echo presolve                         >> $TMPFILE
   echo optimize                          >> $TMPFILE
   echo display statistics                >> $TMPFILE
 #	    echo display solution                  >> $TMPFILE
