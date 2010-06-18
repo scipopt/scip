@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.585 2010/06/18 11:14:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.586 2010/06/18 22:23:42 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8893,7 +8893,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
                {
                   int k;
 
-                  /* check if every variable in the actual clique is in clique with the actual variable */ 
+                  /* check if every variable in the actual clique is in clique with the new variable */ 
                   for( k = ncliquevars - 1; k >= 0; --k )
                   {
                      if( !SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[k], cliquevalues[k], TRUE) )
