@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.30 2010/06/10 16:42:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.31 2010/06/18 10:45:57 bzfviger Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1506,22 +1506,54 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             assert(!isLiteralSatisfied(scip, consdata, 0));
             assert(!isLiteralViolated(scip, consdata, 0));
 
-            if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_LOWER )
+            if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->vars[0])) )
             {
-               SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[0], consdata->bounds[0], TRUE, &infeasible, &tightened) );
+               if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_LOWER )
+               {
+                  SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[0], consdata->bounds[0], TRUE, &infeasible, &tightened) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[0], consdata->bounds[0], TRUE, &infeasible, &tightened) );
+               }
+               if( infeasible )
+               {
+                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
+               assert(tightened);
+               (*nchgbds)++;
             }
             else
             {
-               SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[0], consdata->bounds[0], TRUE, &infeasible, &tightened) );
+               /* upgrade to a linear constraint, if vars[0] is multiaggregated */
+               SCIP_CONS* lincons;
+               SCIP_Real one;
+
+               one = 1.0;
+               if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_LOWER )
+               {
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons),
+                     1, &consdata->vars[0], &one, consdata->bounds[0], SCIPinfinity(scip),
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+                     SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+                     SCIPconsIsStickingAtNode(cons)) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons),
+                     1, &consdata->vars[0], &one, -SCIPinfinity(scip), consdata->bounds[0],
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+                     SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+                     SCIPconsIsStickingAtNode(cons)) );
+               }
+               SCIP_CALL( SCIPaddCons(scip, lincons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+               (*nupgdconss)++;
             }
-            if( infeasible )
-            {
-               SCIPdebugMessage(" -> infeasible fixing\n");
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            assert(tightened);
-            (*nchgbds)++;
 
             SCIP_CALL( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
