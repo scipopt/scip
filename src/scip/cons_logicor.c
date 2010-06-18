@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.137 2010/06/09 13:37:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.138 2010/06/18 22:29:31 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -1534,7 +1534,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
     * - logic or constraints have left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
     *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
     */
-   if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars
+   if( nvars > 2 && nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars
       && ((SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0))) )
    {
