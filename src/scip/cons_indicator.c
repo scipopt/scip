@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.67 2010/06/07 16:13:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.68 2010/06/19 22:11:34 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3656,7 +3656,95 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
 }
 
 /** constraint copying method of constraint handler */
-#define consCopyIndicator NULL
+static
+SCIP_DECL_CONSCOPY(consCopyIndicator)
+{
+   SCIP_CONSDATA* sourceconsdata;
+   const char* consname;
+   SCIP_VAR* sourcebinvar;
+   SCIP_VAR* targetbinvar;
+   SCIP_VAR* sourceslackvar;
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** targetvars;
+   SCIP_Real* sourcevals;
+   SCIP_Real* targetvals;
+   SCIP_Real sign;
+   SCIP_Real rhs;
+   int nvars;
+   int v;
+   int k;
+
+   assert( scip != NULL );
+   assert( sourcescip != NULL );
+   assert( sourcecons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
+
+   *success = TRUE;
+
+   if ( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+
+   SCIPdebugMessage("Copying indicator constraint <%s> ...\n", consname);
+
+   sourceconsdata = SCIPconsGetData(sourcecons);
+   assert( sourceconsdata != NULL );
+
+   sourcebinvar = sourceconsdata->binvar;
+   sourceslackvar = sourceconsdata->slackvar;
+
+   nvars = SCIPgetNVarsLinear(sourcescip, sourceconsdata->lincons);
+   sourcevars = SCIPgetVarsLinear(sourcescip, sourceconsdata->lincons);
+   assert( sourcevars != NULL );
+   sourcevals = SCIPgetValsLinear(sourcescip, sourceconsdata->lincons);
+   rhs = SCIPgetRhsLinear(sourcescip, sourceconsdata->lincons);
+
+   /* duplicate variable array */
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvals, nvars) );
+
+   /* correct constraint if rhs is infinity - may sometimes happen due to preprocessing */
+   sign = 1.0;
+   if ( SCIPisInfinity(sourcescip, rhs) )
+   {
+      rhs = -SCIPgetLhsLinear(sourcescip, sourceconsdata->lincons);
+      assert( ! SCIPisInfinity(sourcescip, -rhs) );
+      sign = -sign;
+   }
+
+   /* map variables of the source constraint to variables of the target SCIP */
+   k = 0;
+   for (v = 0; v < nvars && *success; ++v)
+   {
+      if ( sourcevars[v] != sourceslackvar )
+      {
+	 targetvals[k] = sign * sourcevals[v];
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[k], varmap) );
+	 if ( targetvars[k] == NULL )
+	    *success = FALSE;
+	 ++k;
+      }
+   }
+   assert ( k == nvars-1 );
+
+   if ( *success )
+   {
+      targetbinvar = NULL;
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap) );
+      if ( targetbinvar != NULL )
+      {
+	 SCIP_CALL( SCIPcreateConsIndicator(scip, cons, consname, targetbinvar, nvars-1, targetvars, targetvals, rhs,
+	       initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+      }
+   }
+
+   /* free buffer array */
+   SCIPfreeBufferArray(sourcescip, &targetvals);
+   SCIPfreeBufferArray(sourcescip, &targetvars);
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint parsing method of constraint handler */
