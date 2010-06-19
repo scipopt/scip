@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.32 2010/06/10 17:46:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.33 2010/06/19 21:39:35 bzfpfets Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -1694,16 +1694,7 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    assert( sourcecons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
 
-   sourceconsdata = SCIPconsGetData(sourcecons);
-   assert( sourceconsdata != NULL );
-
-   (*success) = TRUE;
-
-   /* get variables and weights of the source constraint */
-   nVars = sourceconsdata->nVars;
-
-   if ( nVars == 0 )
-      return SCIP_OKAY;
+   *success = TRUE;
 
    if ( name != NULL )
       consname = name;
@@ -1712,14 +1703,23 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
 
    SCIPdebugMessage("Copying SOS1 constraint <%s> ...\n", consname);
 
+   sourceconsdata = SCIPconsGetData(sourcecons);
+   assert( sourceconsdata != NULL );
+
+   /* get variables and weights of the source constraint */
+   nVars = sourceconsdata->nVars;
+
+   if ( nVars == 0 )
+      return SCIP_OKAY;
+
    sourcevars = sourceconsdata->Vars;
    assert( sourcevars != NULL );
    sourceweights = sourceconsdata->weights;
    assert( sourceweights != NULL );
 
    /* duplicate variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nVars) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &targetweights, sourceweights, nVars) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nVars) );
+   SCIP_CALL( SCIPduplicateBufferArray(sourcescip, &targetweights, sourceweights, nVars) );
 
    /* map variables of the source constraint to variables of the target SCIP */
    for (v = 0; v < nVars && *success; ++v)
@@ -1732,14 +1732,16 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
       if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
       {
          SCIPdebugMessage("Variable <%s> is (multi-)aggregated - cannot currently copy these variables.\n", SCIPvarGetName(var));
-         (*success) = FALSE;
+         *success = FALSE;
       }
-
-      targetvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
-      if ( targetvars[v] == NULL )
+      else
       {
-         SCIPdebugMessage("Could not map variable <%s>, copying constraint <%s> failed \n", SCIPvarGetName(var), name);    
-         (*success) = FALSE;
+	 targetvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
+	 if ( targetvars[v] == NULL )
+	 {
+	    SCIPdebugMessage("Could not map variable <%s>, copying constraint <%s> failed \n", SCIPvarGetName(var), name);    
+	    *success = FALSE;
+	 }
       }
    }
 
@@ -1750,8 +1752,8 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    }
 
    /* free buffer array */
-   SCIPfreeBufferArray(scip, &targetweights);
-   SCIPfreeBufferArray(scip, &targetvars);
+   SCIPfreeBufferArray(sourcescip, &targetweights);
+   SCIPfreeBufferArray(sourcescip, &targetvars);
 
    return SCIP_OKAY;
 }
