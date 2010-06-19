@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.113 2010/06/17 21:22:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.114 2010/06/19 11:24:40 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -31,6 +31,7 @@
 #include "scip/message.h"
 #include "scip/set.h"
 #include "scip/misc.h"
+#include "scip/intervalarith.h"
 
 #include "scip/struct_misc.h"
 
@@ -3713,7 +3714,25 @@ SCIP_Bool SCIPfindSimpleRational(
    assert(lb <= ub);
 
    center = 0.5*(lb+ub);
-   delta = 0.5*(ub-lb);
+
+   /* in order to compute a rational number that is exactly withing the bounds (as the user expects),
+    * we computed the allowed delta with downward rounding, if available
+    */
+   if( SCIPintervalHasRoundingControl() )
+   {
+      SCIP_ROUNDMODE roundmode;
+
+      roundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeDownwards();
+
+      delta = 0.5*(ub-lb);
+
+      SCIPintervalSetRoundingMode(roundmode);
+   }
+   else
+   {
+      delta = 0.5*(ub-lb);
+   }
 
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
@@ -3744,6 +3763,12 @@ SCIP_Real SCIPselectSimpleValue(
       {
          val = (SCIP_Real)nominator/(SCIP_Real)denominator;
          SCIPdebugPrintf(" %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" == %.9f\n", nominator, denominator, val);
+
+         if( val < lb || val > ub )
+         {
+            SCIPdebugPrintf(" value is out of interval bounds by %g -> failed\n", MAX(lb-val, val-ub));
+            val = 0.5*(lb+ub);
+         }
       }
       else
       {
