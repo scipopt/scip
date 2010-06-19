@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.27 2010/06/04 13:05:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.28 2010/06/19 11:06:51 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -42,33 +42,39 @@ typedef struct SCIP_Interval SCIP_INTERVAL;
 
 /** rounding mode of floating point operations (upwards, downwards, nearest, ...)
  * exact values depend on machine and compiler, so we define a corresponding enum in the header file */
-typedef int ROUNDMODE;
+typedef int SCIP_ROUNDMODE;
 
 /*
  * Interval arithmetic operations
  */
 
+/** returns whether rounding mode control is available */
+extern
+SCIP_Bool SCIPintervalHasRoundingControl(
+   void
+   );
+
 /** sets rounding mode of floating point operations */
 extern
-void setRoundingMode(
-   ROUNDMODE             roundmode           /**< rounding mode to activate */
+void SCIPintervalSetRoundingMode(
+   SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    );
 
 /** gets current rounding mode of floating point operations */
 extern
-ROUNDMODE getRoundingMode(
+SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
    void
    );
 
 /** sets rounding mode of floating point operations to downwards rounding */
 extern
-void setRoundingModeDownwards(
+void SCIPintervalSetRoundingModeDownwards(
    void
    );
 
 /** sets rounding mode of floating point operations to upwards rounding */
 extern
-void setRoundingModeUpwards(
+void SCIPintervalSetRoundingModeUpwards(
    void
    );
 
