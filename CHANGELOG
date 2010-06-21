@@ -192,6 +192,7 @@ fixed bugs:
 - fixed bug in presol_trivial.c trying to fix continuous variables, now uses a less stricter comparison to fix variables
 - fixed bug in cons_knapsack.c: In SCIPseparateRelaxedKnapsack() not all variables need to be active in deeper regions of the tree
 - fixed potential bug with pseudo solution branching on free variables
+- fixed bug in propagation of cons_sos2.c: the node can be cut off at more places - the previous version was not sucessfull in this respect
 - fixed bug in cons_bounddisjunction.c: presolve may have tried to tighten bounds on a multiaggregated variable (now upgrades to linear constraint)
 - fixed bug while deleting redundant variables, which have no influence on changing the feasibility of the linear constraints, we need to update the sides of the constraint at each step, bug number 51 in bugzilla
 - fixed potential bug where SCIPselectSimpleValue returns a value slightly outside of the given bounds due to rounding errors (probably cancelation in subtraction in SCIPfindSimpleRational), now use rounding control and check result  
