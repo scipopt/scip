@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.60 2010/06/09 13:37:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.61 2010/06/21 17:10:38 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -41,9 +41,6 @@
 #include "scip/cons_soc.h"
 #ifdef WITH_UNIVARDEFINITE
 #include "cons_univardefinite.h"
-#endif
-#ifdef WITH_CONSBRANCHNL
-#include "cons_branchnonlinear.h"
 #endif
 #ifdef WITH_SIGNPOWER
 #include "cons_signpower.h"
@@ -77,7 +74,7 @@
 #define DEFAULT_RECOVER       FALSE          /**< during fix-and-propagate, compute a new cover whenever a variable outside of the cover has been fixed? */
 #define DEFAULT_PPCSTRAT      'u'            /**< strategy for finding a ppc solution                                   */
 #define PPCSTRATS             "bcdlmtuv"     /**< strategies for finding a ppc solution                                 */
-
+#define SUBMIPSETUPCOSTS      100            /**< number of nodes equivalent for the costs for setting up a sub-MIP     */
 
 /*
  * Data structures
@@ -1135,7 +1132,7 @@ SCIP_RETCODE createSubProblem(
    SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, success) );
 #endif
-   SCIPdebugMessage("Copying the plugins to subSCIP was %s successful.", success ? "" : "not");
+   SCIPdebugMessage("Copying the plugins to subSCIP was %s successful.\n", success ? "" : "not");
 
    /* create array for ppc variables and solution values */
    SCIP_CALL( SCIPallocBufferArray(scip, &ppcvars, nvars) );
@@ -1198,9 +1195,9 @@ SCIP_RETCODE createSubProblem(
 
          SCIPdebugMessage("%s %s variable <%s> to [%g, %g] in subMIQCP\n", SCIPisEQ(scip, lb, ub) ? "fix" : "restrict", 
             SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
-            SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i]));
+            SCIPvarGetName(vars[i]), lb, ub);
          
-         ++fixingcounter;         
+         ++fixingcounter;
       }
       
       /* variable is created. domain reductions were only performed when we want to fix all variables at a time, without intermediate propagation */
@@ -1405,6 +1402,11 @@ SCIP_RETCODE createSubProblem(
       SCIP_CALL( SCIPendProbing(scip) );
 
       SCIPdebugMessage("undercover heuristic fixed %d variables (%d integer variables to rounded LP value) during probing\n", fixingcounter, roundedfixingcounter);
+   }
+   else
+   {
+      /* all variables were fixed in previous loop */
+      *success = TRUE;
    }
 
    /* If the problem is a MIP, or the LP solution was integral, undercover should not have been called */
@@ -1659,10 +1661,6 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    BMSclearMemoryArray(subvars, nvars);
 
-#ifdef WITH_CONSBRANCHNL
-   SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
-#endif
-
    success = FALSE;
 #if defined(SCIP_DEBUG) || !defined(NDEBUG)
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
@@ -1671,13 +1669,10 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
-   SCIPdebugMessage("Copying the plugins to subSCIP was %s successful.", success ? "" : "not");
+   SCIPdebugMessage("Copying the plugins to subSCIP was %s successful.\n", success ? "" : "not");
   
 #ifdef WITH_UNIVARDEFINITE
    SCIP_CALL( SCIPincludeConshdlrUnivardefinite(subscip) );
-#endif
-#ifdef WITH_SIGNPOWER
-   SCIP_CALL( SCIPincludeConshdlrSignpower(subscip) );
 #endif
 
    /* create subMIQCP */
@@ -1977,7 +1972,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    
    /* reward heuristic if it succeeded often */
    nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nstallnodes -= SUBMIPSETUPCOSTS * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    nstallnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
