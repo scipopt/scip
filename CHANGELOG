@@ -196,6 +196,8 @@ fixed bugs:
 - fixed bug in cons_bounddisjunction.c: presolve may have tried to tighten bounds on a multiaggregated variable (now upgrades to linear constraint)
 - fixed bug while deleting redundant variables, which have no influence on changing the feasibility of the linear constraints, we need to update the sides of the constraint at each step, bug number 51 in bugzilla
 - fixed potential bug where SCIPselectSimpleValue returns a value slightly outside of the given bounds due to rounding errors (probably cancelation in subtraction in SCIPfindSimpleRational), now use rounding control and check result  
+- fixed makefile system for OSTYPE=darwin w.r.t. to CPLEX as LP solver
+
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
