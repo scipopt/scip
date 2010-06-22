@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.586 2010/06/18 22:23:42 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.587 2010/06/22 16:23:30 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6278,22 +6278,6 @@ SCIP_RETCODE SCIPsolve(
             break;
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
-#if 0
-         {
-            SCIP_VAR** fixvars;
-            int nfixvars;
-            int v;
-            
-            nfixvars = SCIPgetNFixedVars(scip);
-            fixvars = SCIPgetFixedVars(scip);
-
-            for( v = nfixvars - 1; v >= 0; --v )
-            {
-               SCIP_CALL( SCIPprintVar(scip, fixvars[v], NULL) );
-            }
-            SCIP_CALL( SCIPwriteTransProblem(scip, "p0291.res_pre.lp", NULL, FALSE) );
-         }
-#endif
          /*lint -fallthrough*/
 
       case SCIP_STAGE_PRESOLVED:
