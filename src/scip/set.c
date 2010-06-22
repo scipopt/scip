@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.224 2010/06/18 11:14:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.225 2010/06/22 15:18:05 bzfwinkm Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -4042,7 +4042,7 @@ SCIP_Bool SCIPsetIsLbBetter(
 
    eps = REALABS(oldlb);
    eps = MIN(oldub - oldlb, eps);
-   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1.0));
+   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
 }
 
 /** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
@@ -4060,7 +4060,7 @@ SCIP_Bool SCIPsetIsUbBetter(
 
    eps = REALABS(oldub);
    eps = MIN(oldub - oldlb, eps);
-   return EPSLT(newub, oldub, set->num_boundstreps * MAX(eps, 1.0));
+   return EPSLT(newub, oldub, set->num_boundstreps * MAX(eps, 1e-3));
 }
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
