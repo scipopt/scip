@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.11 2010/05/19 12:38:30 bzfberth Exp $"
+
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.12 2010/06/22 14:56:14 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -1270,6 +1271,7 @@ SCIP_RETCODE computeCut(
    SCIP_ROW** rows;
    SCIP_COL** cols;
    SCIP_Real val;
+   SCIP_Real maxabsweight;
    int nrows;
 
    assert( scip != NULL );
@@ -1296,11 +1298,48 @@ SCIP_RETCODE computeCut(
    BMSclearMemoryArray(cutcoefs, nvars);
    *cutrhs = 0.0;
 
+   /* find maximal absolute weight */
+   maxabsweight = 0.0;
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIP_ROW* row;
+      SCIP_Real weight;
+
+      row = rows[i];
+      assert( row != NULL );
+
+      /* skip modifiable rows and local rows, unless allowed */
+      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+	 continue;
+
+      /* get weight from solution */
+      weight = 0.0;
+      if ( mipdata->ylhs[i] != NULL )
+      {
+	 val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
+	 if ( SCIPisFeasPositive(scip, val) )
+	    weight = -val;
+      }
+      if ( mipdata->yrhs[i] != NULL )
+      {
+	 val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
+
+	 /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+	 if ( SCIPisFeasGT(scip, val, ABS(weight)) )
+	    weight = val;
+      }
+
+      weight = REALABS(weight);
+      if ( weight > maxabsweight )
+	 maxabsweight = weight;
+   }
+
    /* calculate the row summation */
    for( i = 0; i < nrows; ++i )
    {
       SCIP_ROW* row;
       SCIP_Real weight;
+      SCIP_Real absweight;
       SCIP_Bool uselhs;
 
       row = rows[i];
@@ -1334,8 +1373,9 @@ SCIP_RETCODE computeCut(
 	    weight = val;
       }
 
-      /* add row if weight is nonzero */
-      if( ! SCIPisSumZero(scip, weight) )
+      /* add row if weight is nonzero and lies within range */
+      absweight = REALABS(weight);
+      if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
       {
 	 SCIP_COL** rowcols;
 	 SCIP_Real* rowvals;
