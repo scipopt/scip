@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.72 2010/06/17 12:04:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.73 2010/06/22 17:50:43 bzfpfets Exp $"
 
 /**@file   lpi.h
  * @ingroup PUBLICMETHODS
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -320,6 +321,30 @@ SCIP_RETCODE SCIPlpiGetRows(
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   );
+
+/** gets column names */
+extern
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   );
+
+/** gets row names */
+extern
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    );
 
 /** gets objective coefficients from LP problem object */

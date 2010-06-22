@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.31 2010/06/18 10:45:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.32 2010/06/22 17:50:43 bzfpfets Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1765,7 +1765,7 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    
    assert(success != NULL);
    
-   (*success) = TRUE;
+   *success = TRUE;
 
    /* get source data */
    sourcevars = SCIPgetVarsBounddisjunction(sourcescip, sourcecons);
@@ -1778,17 +1778,18 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    /* map source variables to active variables of the target SCIP */
    for( v = 0; v < nvars && (*success); ++v )
    {
-      if( SCIPvarGetStatus(sourcevars[v]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(sourcevars[v]) ==  SCIP_VARSTATUS_COLUMN 
+      if ( SCIPvarGetStatus(sourcevars[v]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(sourcevars[v]) ==  SCIP_VARSTATUS_COLUMN 
          || SCIPvarGetStatus(sourcevars[v]) == SCIP_VARSTATUS_LOOSE )
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap) );
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, success) );
+	 assert( *success == TRUE );
       }
-      else 
+      else
          *success = FALSE;
    }
 
    /* create new copied constraint in target SCIP */
-   if( *success )
+   if ( *success )
    {
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons,  SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
             bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );      

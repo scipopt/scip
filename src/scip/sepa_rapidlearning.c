@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.11 2010/06/11 15:57:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.12 2010/06/22 17:50:44 bzfpfets Exp $"
 #define SCIP_DEBUG
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -91,7 +91,7 @@ SCIP_RETCODE createSubproblem(
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_rapidsub", SCIPgetProbName(scip));
 
    /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, SCIPgetProbData(scip)) );
 
    /* create the variables of the subproblem */
    for( i = 0; i < nvars; i++ )
@@ -101,7 +101,7 @@ SCIP_RETCODE createSubproblem(
       SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]),
             SCIPvarGetUbLocal(vars[i]), SCIPvarGetObj(vars[i]), 
             SCIPvarGetType(vars[i]) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_INTEGER : SCIPvarGetType(vars[i]),
-            SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
+            SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,SCIPvarGetData(vars[i])) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       SCIP_CALL( SCIPhashmapInsert(varmapfw, vars[i], subvars[i]) );
    }
@@ -376,10 +376,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
   
    /* set limits for the subproblem */
    nodelimit = SCIPgetNLPIterations(scip);
+#if 0
    nodelimit = MAX(500, nodelimit);
    nodelimit = MIN(5000, nodelimit);
+#endif
+   nodelimit = MAX(20000, nodelimit);
+   nodelimit = MIN(100000, nodelimit);
+
+   restarts = -1;
+   restartnum = INT_MAX;
+#if 0
    restarts = 0;
    restartnum = 1000;
+#endif
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) ); 
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
@@ -387,6 +396,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
    /* forbid recursive call of heuristics solving subMIPs */
+#if 0
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
@@ -394,6 +404,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
+#else
+   SCIP_CALL( SCIPaddBoolParam(subscip, "coloring/fixTriangle", "Fix the upper right triangle to 0?", NULL, TRUE, TRUE, NULL, NULL) );
+#endif
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
 
    /* disable cut separation in sub problem */

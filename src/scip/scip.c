@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.587 2010/06/22 16:23:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.588 2010/06/22 17:50:43 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -986,8 +986,9 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_VAR*             sourcevar,          /**< source variable */
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
-   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables */
+   SCIP_Bool*            success             /**< pointer to store whether copy of variable was successfully retrieved */
    )
 {
    /* check stages for both, the source and the target SCIP data structure */
@@ -998,8 +999,11 @@ SCIP_RETCODE SCIPgetVarCopy(
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
    assert(varmap != NULL);
+   assert(success != NULL);
+   
+   *success = TRUE;
 
-   /* try to retrieve vcopied variable from hashmap */
+   /* try to retrieve copied variable from hashmap */
    *targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
    
    /* if variable does not exists yet in target SCIP, create it */
@@ -1016,12 +1020,14 @@ SCIP_RETCODE SCIPgetVarCopy(
 
       case SCIP_VARSTATUS_AGGREGATED:
       {
-         SCIPerrorMessage("Copying of aggregated variables not implemented yet");
+	 *success = FALSE;
+         SCIPwarningMessage("Copying of aggregated variables not implemented yet");
          return SCIP_OKAY;                  
       }
       case SCIP_VARSTATUS_MULTAGGR:
       {
-         SCIPerrorMessage("Copying of multiaggregated variables not implemented yet");
+	 *success = FALSE;
+         SCIPwarningMessage("Copying of multiaggregated variables not implemented yet");
          return SCIP_OKAY;                  
       }
       case SCIP_VARSTATUS_NEGATED:
@@ -1035,15 +1041,18 @@ SCIP_RETCODE SCIPgetVarCopy(
          assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
 
          /* get copy of negated source variable */         
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap) );
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap, success) );
          assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
-         
-         /* get negation of copied negated source variable, this is the target variable */
-         SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
-         assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
 
-         SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *targetvar) );
-         
+	 if ( *success )
+	 {
+	    /* get negation of copied negated source variable, this is the target variable */
+	    SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
+	    assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
+
+	    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *targetvar) );
+	 }
+
          return SCIP_OKAY;         
       }
       default:

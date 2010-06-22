@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.68 2010/06/19 22:11:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.69 2010/06/22 17:50:43 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2761,7 +2761,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
       consdata->lincons = sourcedata->lincons;
    else
       SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
-      
+
    if ( consdata->linconsActive )
    {
       /* if slack variable is fixed to be nonzero */  
@@ -3720,9 +3720,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       if ( sourcevars[v] != sourceslackvar )
       {
 	 targetvals[k] = sign * sourcevals[v];
-	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[k], varmap) );
-	 if ( targetvars[k] == NULL )
-	    *success = FALSE;
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[k], varmap, success) );
 	 ++k;
       }
    }
@@ -3731,8 +3729,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( *success )
    {
       targetbinvar = NULL;
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap) );
-      if ( targetbinvar != NULL )
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, success) );
+      if ( *success )
       {
 	 SCIP_CALL( SCIPcreateConsIndicator(scip, cons, consname, targetbinvar, nvars-1, targetvars, targetvals, rhs,
 	       initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );

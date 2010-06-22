@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.34 2010/06/19 21:39:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.35 2010/06/22 17:50:43 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS 
@@ -1795,29 +1795,9 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nVars) );
    SCIP_CALL( SCIPduplicateBufferArray(sourcescip, &targetweights, sourceweights, nVars) );
 
-   /* map variables of the source constraint to variables of the target SCIP */
+   /* get copied variables in target SCIP */
    for (v = 0; v < nVars && *success; ++v)
-   {
-      SCIP_VAR* var;
-
-      var = sourcevars[v];
-
-      /* we cannot currently copy (multi-)aggregated variables */
-      if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
-      {
-         SCIPdebugMessage("Variable <%s> is (multi-)aggregated - cannot currently copy these variables.\n", SCIPvarGetName(var));
-         *success = FALSE;
-      }
-      else
-      {
-	 targetvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
-	 if ( targetvars[v] == NULL )
-	 {
-	    SCIPdebugMessage("Could not map variable <%s>, copying constraint <%s> failed \n", SCIPvarGetName(var), name);    
-	    *success = FALSE;
-	 }
-      }
-   }
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &(targetvars[v]), varmap, success) );
 
    if ( *success )
    {

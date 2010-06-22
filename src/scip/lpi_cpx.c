@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.130 2010/06/17 12:04:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.131 2010/06/22 17:50:43 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -1729,6 +1729,75 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert(beg == NULL);
       assert(ind == NULL);
       assert(val == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets column names */
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   int retcode;
+
+   assert( cpxenv != NULL );
+   assert( lpi != NULL );
+   assert( lpi->cpxlp != NULL );
+   assert( colnames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
+   assert( 0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(cpxenv, lpi->cpxlp) );
+
+   SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
+
+   retcode =  CPXgetcolname(cpxenv, lpi->cpxlp, colnames, namestorage, namestoragesize, storageleft, firstcol, lastcol);
+   assert( namestoragesize != 0 || retcode == CPXERR_NEGATIVE_SURPLUS );
+   if ( namestoragesize != 0 )
+   {
+      CHECK_ZERO( retcode );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets row names */
+extern
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   int retcode;
+
+   assert( cpxenv != NULL );
+   assert( lpi != NULL );
+   assert( lpi->cpxlp != NULL );
+   assert( rownames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
+   assert( 0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(cpxenv, lpi->cpxlp) );
+
+   SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
+
+   retcode = CPXgetrowname(cpxenv, lpi->cpxlp, rownames, namestorage, namestoragesize, storageleft, firstrow, lastrow);
+   assert( namestoragesize != 0 || retcode == CPXERR_NEGATIVE_SURPLUS );
+   if ( namestoragesize != 0 )
+   {
+      CHECK_ZERO( retcode );
    }
 
    return SCIP_OKAY;

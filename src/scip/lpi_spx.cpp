@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.103 2010/06/17 12:04:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.104 2010/06/22 17:50:43 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -129,6 +129,8 @@ class SPxSCIP : public SPxSolver
    bool             m_strongbranching;  /**< was last lp solve a strong branching call? */
    SPxSolver::VarStatus* m_rowstat;     /**< basis status of rows before starting strong branching (if m_strongbranching == true, NULL otherwise) */
    SPxSolver::VarStatus* m_colstat;     /**< basis status of columns before starting strong branching (if m_strongbranching == true, NULL otherwise) */
+   NameSet*         m_rownames;         /**< row names */
+   NameSet*         m_colnames;         /**< column names */
 
 public:
    SPxSCIP(const char* probname = NULL)
@@ -144,7 +146,9 @@ public:
           m_rowrep(false),
           m_strongbranching(false),
           m_rowstat(NULL),
-          m_colstat(NULL)
+          m_colstat(NULL),
+	  m_rownames(0),
+	  m_colnames(0)
    {
       /* note: next line only done for initializing m_sense, which has to be distinct to the next parameter in the 
        * line afterwards */
@@ -501,6 +505,107 @@ public:
       SPxSolver::clear();
       freePreStrongbranchingBasis();
       m_stat = NO_PROBLEM;
+   }
+
+   bool readLP(const char* fname)
+   {
+      if ( m_rownames != 0 )
+	 delete m_rownames;
+      if ( m_colnames != 0 )
+	 delete m_colnames;
+      m_rownames = new NameSet;
+      m_colnames = new NameSet;
+      return SPxSolver::readFile(fname, m_rownames, m_colnames);
+   }
+
+   /** copy column names into namestorage with access via colnames */
+   void getColNames(
+      int                   firstcol,           /**< first column to get name from LP */
+      int                   lastcol,            /**< last column to get name from LP */
+      char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+      char*                 namestorage,        /**< storage for col names */
+      int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+      int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+      )
+   {
+      assert( m_colnames != NULL );
+
+      // compute size
+      if ( namestoragesize == 0 )
+      {
+	 // the following may overestimate the space requirements
+	 *storageleft = -m_colnames->memSize();
+      }
+      else
+      {
+	 NameSet* names = m_colnames;
+	 assert( names != 0 );
+	 int sizeleft = namestoragesize;
+	 char* s = namestorage;
+	 for (int j = firstcol; j <= lastcol; ++j)
+	 {
+	    const char* t = (*names)[j];
+	    colnames[j-firstcol] = s;
+	    while( *t != '\0' && sizeleft >= 0 )
+	    {
+	       *(s++) = *(t++);
+	       --sizeleft;
+	    }
+	    *(s++) = '\0';
+	 }
+	 if ( sizeleft == 0 )
+	 {
+	    *storageleft = namestoragesize - m_colnames->memSize();
+	    assert( *storageleft <= 0 );
+	 }
+	 else
+	    *storageleft = sizeleft;
+      }
+   }
+
+   /** copy row names into namestorage with access via row */
+   void getRowNames(
+      int                   firstrow,           /**< first row to get name from LP */
+      int                   lastrow,            /**< last row to get name from LP */
+      char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+      char*                 namestorage,        /**< storage for row names */
+      int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+      int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+      )
+   {
+      assert( m_rownames != NULL );
+
+      // compute size
+      if ( namestoragesize == 0 )
+      {
+	 // the following may overestimate the space requirements
+	 *storageleft = -m_rownames->memSize();
+      }
+      else
+      {
+	 NameSet* names = m_rownames;
+	 assert( names != 0 );
+	 int sizeleft = namestoragesize;
+	 char* s = namestorage;
+	 for (int i = firstrow; i <= lastrow; ++i)
+	 {
+	    const char* t = (*names)[i];
+	    rownames[i-firstrow] = s;
+	    while( *t != '\0' && sizeleft >= 0 )
+	    {
+	       *(s++) = *(t++);
+	       --sizeleft;
+	    }
+	    *(s++) = '\0';
+	 }
+	 if ( sizeleft == 0 )
+	 {
+	    *storageleft = m_rownames->memSize() - namestoragesize;
+	    assert( *storageleft <= 0 );
+	 }
+	 else
+	    *storageleft = sizeleft;
+      }
    }
 }; /*lint !e1748*/
 
@@ -1703,6 +1808,59 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert(ind == NULL);
       assert(val == NULL);
    }
+
+   return SCIP_OKAY;
+}
+
+/** gets column names */
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   assert( lpi != NULL );
+   assert( lpi->spx != NULL );
+   assert( colnames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
+   assert( 0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols() );
+
+   SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
+
+   lpi->spx->getColNames(firstcol, lastcol, colnames, namestorage, namestoragesize, storageleft);
+
+   return SCIP_OKAY;
+}
+
+/** gets row names */
+extern
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   assert( lpi != NULL );
+   assert( lpi->spx != NULL );
+   assert( rownames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
+   assert( 0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows() );
+
+   SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
+
+   lpi->spx->getRowNames(firstrow, lastrow, rownames, namestorage, namestoragesize, storageleft);
 
    return SCIP_OKAY;
 }
@@ -3596,7 +3754,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    try
    {
-      if( !lpi->spx->readFile(fname) )
+      if( !lpi->spx->readLP(fname) )
 	 return SCIP_READERROR;
    }
    catch(SPxException x)

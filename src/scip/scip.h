@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.386 2010/06/18 11:14:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.387 2010/06/22 17:50:44 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -292,8 +292,9 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_VAR*             sourcevar,          /**< source variable */
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
-   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables */
+   SCIP_Bool*            success             /**< pointer to store whether copy of variable was successfully retrieved */
    );
 
 /** copies all active variables from source to target SCIP and captures it in target SCIP */
