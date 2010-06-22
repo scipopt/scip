@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.35 2010/06/22 07:47:05 bzfheinz Exp $
+# $Id: check_cluster_cplex.sh,v 1.1 2010/06/22 07:47:05 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -47,7 +47,7 @@ QUEUE=gbe
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
-BINID=$4
+BINID=$BINNAME.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
@@ -55,8 +55,6 @@ FEASTOL=$8
 DISPFREQ=$9
 CONTINUE=${10}
 LOCK=${11}
-VERSION=${12}
-LPS=${13}
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -71,7 +69,7 @@ then
     mkdir $SCIPPATH/locks
 fi
 
-LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
+LOCKFILE=locks/$TSTNAME.$SETNAME.lock
 
 SETTINGS=$SCIPPATH/../settings/$SETNAME.set
 
@@ -139,29 +137,29 @@ do
   echo $BASENAME >> $EVALFILE
   
   echo > $TMPFILE
-  if test $SETNAME != "default"
-      then
-      echo set load $SETTINGS            >>  $TMPFILE
-  fi
+  echo ""                              > $TMPFILE
   if test $FEASTOL != "default"
-      then
-      echo set numerics feastol $FEASTOL >> $TMPFILE
+  then
+      echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
+      echo set mip tolerances integrality $FEASTOL >> $TMPFILE
   fi
-  echo set limits time $TIMELIMIT        >> $TMPFILE
-  echo set limits nodes $NODELIMIT       >> $TMPFILE
-  echo set limits memory $MEMLIMIT       >> $TMPFILE
-  echo set timing clocktype 1            >> $TMPFILE
-  echo set display verblevel 4           >> $TMPFILE
-  echo set display freq $DISPFREQ        >> $TMPFILE
-  echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-  echo set save $SETFILE                 >> $TMPFILE
-  echo read $SCIPPATH/$i                 >> $TMPFILE
-#  echo presolve                         >> $TMPFILE
-  echo optimize                          >> $TMPFILE
-  echo display statistics                >> $TMPFILE
-#	    echo display solution                  >> $TMPFILE
-  echo checksol                          >> $TMPFILE
-  echo quit                              >> $TMPFILE
+  echo set timelimit $TIMELIMIT           >> $TMPFILE
+  echo set clocktype 0                    >> $TMPFILE
+  echo set mip display 3                  >> $TMPFILE
+  echo set mip interval 10000             >> $TMPFILE
+  if test $MIPGAP != "default"
+  then
+      echo set mip tolerances mipgap $MIPGAP >> $TMPFILE
+  fi
+  echo set mip limits nodes $NODELIMIT    >> $TMPFILE
+  echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+  echo set threads $THREADS               >> $TMPFILE
+  echo set parallel 1                     >> $TMPFILE
+  echo write $SETFILE                     >> $TMPFILE
+  echo read $SCIPPATH/$i                  >> $TMPFILE
+  echo display problem stats              >> $TMPFILE
+  echo optimize                           >> $TMPFILE
+  echo quit                               >> $TMPFILE
 
   qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
 
