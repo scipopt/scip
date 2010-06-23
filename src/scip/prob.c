@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.112 2010/04/15 17:55:03 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.113 2010/06/23 17:03:15 bzfpfets Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -668,7 +668,7 @@ SCIP_RETCODE SCIPprobAddVar(
    /* check if we add this variables to the same scip, where we created it */
    if( var->scip != set->scip )
    {
-      SCIPerrorMessage("try to add a variable of another scip instance\n");
+      SCIPerrorMessage("variable belongs to a different scip instance\n");
       return SCIP_INVALIDDATA;
    }
 #endif
@@ -928,7 +928,7 @@ SCIP_RETCODE SCIPprobAddCons(
    /* check if we add this constraint to the same scip, where we create the constraint */
    if( cons->scip != set->scip )
    {
-      SCIPerrorMessage("try to add a constraint of another scip instance\n");
+      SCIPerrorMessage("constraint belongs to different scip instance\n");
       return SCIP_INVALIDDATA;
    }
 #endif
