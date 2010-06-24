@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.11 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.12 2010/06/24 13:07:29 bzfhende Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -293,7 +293,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_exec(
       {
          SCIP_CALL( SCIPsetSolVal(scip, sol, successor[i]->var, 1.0) );
       }
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
       SCIP_CALL( SCIPfreeSol(scip, &sol) );

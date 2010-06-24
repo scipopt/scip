@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_init.c,v 1.6 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_init.c,v 1.7 2010/06/24 13:07:29 bzfhende Exp $"
 
 /**@file   heur_init.c
  * @brief  initial primal heuristic for coloring
@@ -673,7 +673,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, COLORprobGetVarForStableSet(scip, i), 1.0) );
    }
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, &stored) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &stored) );
    assert(stored);
 
    /* set maximal number of variables to be priced in each round */

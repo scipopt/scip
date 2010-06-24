@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.7 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.8 2010/06/24 13:07:29 bzfhende Exp $"
 
 /**@file   HeurFrats.cpp
  * @brief  fractional travelling salesman heuristic - Rounding heuristic for TSP
@@ -235,7 +235,7 @@ SCIP_RETCODE HeurFrats::scip_exec(
       
       success = FALSE;
       /* due to construction we already know, that the solution will be feasible */
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
    }
