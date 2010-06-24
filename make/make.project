@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.19 2010/04/28 09:49:13 bzfviger Exp $
+# $Id: make.project,v 1.20 2010/06/24 21:15:21 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -150,7 +150,7 @@ DFLAGS		+=	$(USRDFLAGS)
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
-LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
                         $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
