@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.h,v 1.1 2010/06/24 10:53:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.h,v 1.2 2010/06/24 12:19:45 bzfheinz Exp $"
 
 /**@file   cons_linking.h
  * @brief  constraint handler for linking binary variables to an integer variable
@@ -95,14 +95,6 @@ SCIP_VAR* SCIPgetIntvarLinking(
    SCIP_CONS*            cons                /**< linking constraint */
    );
 
-/** returns the integer variable if this binary variable is linked to an INTEGER variable, or NULL, inefficient method */
-extern
-SCIP_VAR* SCIPgetIntvarFromBinvarLinking(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             binvar              /**< binary variable */
-   );
-
-
 /** returns the binary variables of the linking constraint */
 extern
 SCIP_RETCODE SCIPgetBinvarsLinking(
@@ -124,36 +116,6 @@ extern
 int SCIPgetOffsetLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
-   );
-
-/** returns whether a given solution satisfies intvar = \sum_t  (t * x_{jt}) && \exist t: x_{jt} = 1 */
-extern
-SCIP_Bool SCIPcheckConsLinking(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linking constraint to be checked */
-   SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo solution */
-   );
-
-/** returns whether this constraint is able to branch or not */
-SCIP_Bool SCIPisLPCandLinking(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons               /**< linking constraint to be checked */
-   );
-
-/** returns value for fractionality of this constraint in an arbitrary solution (current LP or pseudo) */
-SCIP_Real SCIPgetFractionalityLinking(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons               /**< linking constraint to be checked */
-   );
-
-/** returns array of constraints that are able to perform branching and probing */
-extern
-SCIP_RETCODE SCIPgetLPCandsLinking(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< linking constraint handler */
-   SCIP_CONS**           conscands,          /**< array to store the constraints that are able to branch */
-   SCIP_Real*            conscandsfracs,     /**< array with fractionalities for each constraint */
-   int*                  nconscands          /**< pointer to store number of constraint candidates */
    );
 
 #ifdef __cplusplus
