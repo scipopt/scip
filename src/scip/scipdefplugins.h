@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.44 2010/04/26 14:39:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.45 2010/06/24 10:53:50 bzfheinz Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -46,6 +46,7 @@
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_linking.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_or.h"
 #include "scip/cons_orbitope.h"

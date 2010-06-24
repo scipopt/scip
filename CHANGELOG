@@ -131,6 +131,7 @@ features:
 - varbound constraint handler can handle implicit binary variables
 - xor constraint handler can handle implicit binary variables
 - cliques can contain implicit binary variables
+- new constraint handler cons_linking.{c,h} (see cons_linking.c for more details)
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
