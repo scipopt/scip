@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.69 2010/06/22 17:50:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.70 2010/06/26 18:34:55 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3819,11 +3819,8 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    }
 
    /* create indicator constraint */
-   SCIP_CALL( SCIPcreateConsIndicator(scip, cons, name, binvar, 0, NULL, NULL, SCIPgetRhsLinear(scip, lincons), 
+   SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, name, binvar, lincons, slackvar, 
 	 initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-
-   SCIP_CALL( SCIPsetSlackVarIndicator(scip, *cons, slackvar) );
-   SCIP_CALL( SCIPsetLinearConsIndicator(scip, *cons, lincons) );
 
    return SCIP_OKAY;
 }
@@ -4104,15 +4101,10 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
 
 
-/** creates and captures a indicator constraint
- *
- *  We set the constraint to not be modifiable. If the weights are non NULL, the variables are
- *  ordered according to these weights (in ascending order).
+/** creates and captures an indicator constraint
  *
  *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
  *  procedures reading an instance.
- *
- *  Note: if @a nvars is 0, the linear constraint (and slack variable) is not added, but should be supplied later
  */
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4243,6 +4235,115 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    consdata->lincons = lincons;
    
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+	 local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+
+
+/** creates and captures an indicator constraint with given linear constraint and slack variable
+ *
+ *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
+ *  procedures reading an instance.
+ *
+ *  Note: we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
+ *  the role of a slackvariable!
+ */
+SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             binvar,             /**< binary indicator variable */
+   SCIP_CONS*            lincons,            /**< linear constraint */
+   SCIP_VAR*             slackvar,           /**< slack variable */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool modifiable;
+
+   modifiable = FALSE;
+
+   /* find the indicator constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if ( conshdlr == NULL )
+   {
+      SCIPerrorMessage("<%s> constraint handler not found\n", CONSHDLR_NAME);
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->noLinconsCont && ! conshdlrdata->sepaAlternativeLP )
+   {
+      SCIPerrorMessage("constraint handler <%s>: need parameter <sepaAlternativeLP> to be true if parameter <noLinconsCont> is true.\n", CONSHDLR_NAME);
+      return SCIP_INVALIDDATA;
+   }
+
+   /* create constraint data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
+   consdata->binvar = binvar;
+   consdata->nFixedNonzero = 0;
+   consdata->colIndex = -1;
+   consdata->linconsActive = TRUE;
+   consdata->slackvar = slackvar;
+   consdata->lincons = lincons;
+
+   /* mark slack variable not to be multi-aggregated */
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
+
+   /* if the problem should be decomposed if only non-integer variables are present */
+   if ( conshdlrdata->noLinconsCont )
+   {
+      SCIP_Bool onlyCont = TRUE;
+      int v;
+      int nvars;
+      SCIP_VAR** vars;
+      
+      nvars = SCIPgetNVarsLinear(scip, lincons);
+      vars = SCIPgetVarsLinear(scip, lincons);
+
+      /* check whether call variables are non-integer */
+      for (v = 0; v < nvars; ++v)
+      {
+	 SCIP_VARTYPE vartype;
+	 
+	 vartype = SCIPvarGetType(vars[v]);
+	 if ( vartype != SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_IMPLINT )
+	 {
+	    onlyCont = FALSE;
+	    break;
+	 }
+      }
+      
+      if ( onlyCont )
+	 consdata->linconsActive = FALSE;
+   }
+      
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
 	 local, modifiable, dynamic, removable, stickingatnode) );
