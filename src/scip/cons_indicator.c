@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.70 2010/06/26 18:34:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.71 2010/06/26 18:40:08 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -4315,6 +4315,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
 
    /* mark slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
+
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    /* if the problem should be decomposed if only non-integer variables are present */
    if ( conshdlrdata->noLinconsCont )
