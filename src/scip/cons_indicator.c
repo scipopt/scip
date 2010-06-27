@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.71 2010/06/26 18:40:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.72 2010/06/27 19:13:18 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3659,20 +3659,14 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
 static
 SCIP_DECL_CONSCOPY(consCopyIndicator)
 {
+   char linconsname[SCIP_MAXSTRLEN];
    SCIP_CONSDATA* sourceconsdata;
    const char* consname;
    SCIP_VAR* sourcebinvar;
    SCIP_VAR* targetbinvar;
    SCIP_VAR* sourceslackvar;
-   SCIP_VAR** sourcevars;
-   SCIP_VAR** targetvars;
-   SCIP_Real* sourcevals;
-   SCIP_Real* targetvals;
-   SCIP_Real sign;
-   SCIP_Real rhs;
-   int nvars;
-   int v;
-   int k;
+   SCIP_VAR* targetslackvar;
+   SCIP_CONS* targetlincons;
 
    assert( scip != NULL );
    assert( sourcescip != NULL );
@@ -3694,52 +3688,28 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    sourcebinvar = sourceconsdata->binvar;
    sourceslackvar = sourceconsdata->slackvar;
 
-   nvars = SCIPgetNVarsLinear(sourcescip, sourceconsdata->lincons);
-   sourcevars = SCIPgetVarsLinear(sourcescip, sourceconsdata->lincons);
-   assert( sourcevars != NULL );
-   sourcevals = SCIPgetValsLinear(sourcescip, sourceconsdata->lincons);
-   rhs = SCIPgetRhsLinear(sourcescip, sourceconsdata->lincons);
-
-   /* duplicate variable array */
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvals, nvars) );
-
-   /* correct constraint if rhs is infinity - may sometimes happen due to preprocessing */
-   sign = 1.0;
-   if ( SCIPisInfinity(sourcescip, rhs) )
-   {
-      rhs = -SCIPgetLhsLinear(sourcescip, sourceconsdata->lincons);
-      assert( ! SCIPisInfinity(sourcescip, -rhs) );
-      sign = -sign;
-   }
-
-   /* map variables of the source constraint to variables of the target SCIP */
-   k = 0;
-   for (v = 0; v < nvars && *success; ++v)
-   {
-      if ( sourcevars[v] != sourceslackvar )
-      {
-	 targetvals[k] = sign * sourcevals[v];
-	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[k], varmap, success) );
-	 ++k;
-      }
-   }
-   assert ( k == nvars-1 );
-
+   /* find corresponding copied variables */
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, success) );
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, success) );
    if ( *success )
    {
-      targetbinvar = NULL;
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, success) );
-      if ( *success )
-      {
-	 SCIP_CALL( SCIPcreateConsIndicator(scip, cons, consname, targetbinvar, nvars-1, targetvars, targetvals, rhs,
-	       initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-      }
-   }
+      /* @warning We require that the linear constraints are copied before the indicator constraints! */
+      /* construct linear constraint name */
+      (void) SCIPsnprintf(linconsname, SCIP_MAXSTRLEN, "indlin_%s", SCIPconsGetName(sourcecons)+2);
 
-   /* free buffer array */
-   SCIPfreeBufferArray(sourcescip, &targetvals);
-   SCIPfreeBufferArray(sourcescip, &targetvars);
+      /* find copied linear constraint */
+      targetlincons = SCIPfindCons(scip, linconsname);
+      if ( targetlincons == NULL )
+      {
+	 SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown linear constraint <%s>\n", linconsname);
+	 *success = FALSE;
+	 return SCIP_OKAY;
+      }
+
+      /* create indicator constraint */
+      SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar, 
+	    initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+   }
 
    return SCIP_OKAY;
 }
