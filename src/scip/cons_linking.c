@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.4 2010/06/29 10:44:05 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.5 2010/06/29 10:46:07 bzfheinz Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -1218,7 +1218,7 @@ SCIP_Bool checkCons(
    linksumbound = SCIPgetSolVal(scip, sol, consdata->intvar)  + 2*SCIPfeastol(scip);
    setpartsumbound = 1.0 + 2*SCIPfeastol(scip);
   
-   for( b = 0; b < nbinvars && setpartsum < setpartsumbound ++b )  /* if sum >= sumbound, the feasibility is clearly decided */
+   for( b = 0; b < nbinvars && setpartsum < setpartsumbound; ++b )  /* if sum >= sumbound, the feasibility is clearly decided */
    {
       assert(SCIPvarIsBinary(binvars[b]));
       solval = SCIPgetSolVal(scip, sol, binvars[b]);
