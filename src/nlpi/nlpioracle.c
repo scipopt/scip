@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.6 2010/06/04 17:57:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.7 2010/06/30 20:27:20 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1314,6 +1314,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             {
                assert(lininds[i][j] >= 0);
                assert(lininds[i][j] <= oracle->nvars);
+               assert(j == 0 || lininds[i][j-1] != lininds[i][j]); /* in gradient evaluation, we do not like duplicate indices */
                oracle->vardegrees[lininds[i][j]] = MAX(1, oracle->vardegrees[lininds[i][j]]);
             }
          }
