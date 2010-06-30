@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.5 2010/06/29 10:46:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.6 2010/06/30 12:12:16 bzfheinz Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -354,7 +354,6 @@ SCIP_RETCODE consdataLinearize(
    SCIP_Real offset;
    int b;
    
-   printf("linearized linking constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebugMessage("linearized linking constraint <%s>\n", SCIPconsGetName(cons));
 
    /* create set partitioning constraint for the binary variables */
