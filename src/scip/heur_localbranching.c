@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.42 2010/06/27 19:22:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.43 2010/06/30 10:06:51 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -208,8 +208,8 @@ SCIP_RETCODE addLocalBranchingConstraint(
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
       
    /* free local memory */
-   SCIPfreeBufferArray(scip,&consvals);
-   SCIPfreeBufferArray(scip,&consvars);
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
 
    return SCIP_OKAY;
 }
@@ -502,8 +502,10 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
  
+#ifndef SCIP_DEBUG
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+#endif
 
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
