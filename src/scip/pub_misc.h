@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.71 2010/06/07 16:41:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.72 2010/06/30 09:29:23 bzfberth Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -2875,7 +2875,7 @@ extern
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< length of the interval that should be subject to shuffling (array size for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
    ); 
 

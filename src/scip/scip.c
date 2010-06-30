@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.588 2010/06/22 17:50:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.589 2010/06/30 09:29:23 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1167,12 +1167,7 @@ SCIP_RETCODE SCIPcopyConss(
          assert(conss[c] != NULL);
 
          if( !SCIPconsIsEnabled(conss[c]) )
-         {
-#ifndef NDEBUG
-            ++nskipped;
-#endif
             continue;
-         }
          
          /* use the copy constructor of each constraint handler to create subSCIP */
          SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, conshdlrs[i], sourcescip, conss[c], varmap,
@@ -1183,13 +1178,7 @@ SCIP_RETCODE SCIPcopyConss(
          /* add the copied constraint to subSCIP, print a warning if conshdlr does not support copying */
          if( succeed )
          {
-            if( targetcons == NULL )
-            {
-#ifndef NDEBUG
-               ++nskipped;
-#endif
-               continue;
-            }
+            assert(targetcons != NULL);
 
             SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
 	      
@@ -1206,6 +1195,9 @@ SCIP_RETCODE SCIPcopyConss(
          }
          else
          {
+#ifndef NDEBUG
+            ++nskipped;
+#endif
             *success = FALSE;
             SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(conss[c]));
          }

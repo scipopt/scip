@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.199 2010/06/07 19:22:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.200 2010/06/30 09:29:23 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3062,7 +3062,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             SCIP_Longint oldnprobdomchgs;
             SCIP_Longint lastpropdomchgcount;
             int lastnusefulpropconss;
-         
+
             SCIPdebugMessage("propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, %d useful)\n",
                firstcons, firstcons + nconss - 1, conshdlr->npropconss, conshdlr->name,
                !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new", nusefulconss);

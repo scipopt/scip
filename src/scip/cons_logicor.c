@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.138 2010/06/18 22:29:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.139 2010/06/30 09:29:23 bzfberth Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -1977,6 +1977,7 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    /* propagate all useful logic or constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      SCIPdebugMessage(" propagate constraint %s\n", SCIPconsGetName(conss[c]));
       SCIP_CALL( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &reduceddom, &addcut, &mustcheck) );
    }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.69 2010/05/30 14:23:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.70 2010/06/30 09:29:23 bzfberth Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2861,7 +2861,7 @@ SCIP_RETCODE SCIPparamsetCopyParams(
       paramname = SCIPparamGetName(sourceparamset->params[i]);
       targetparam = (SCIP_PARAM*)SCIPhashtableRetrieve(targetparamset->hashtable, (void*)paramname);
 
-      /* if a plugin was not copies, the parameter does not exist in the target SCIP */
+      /* if a plugin was not copied, the parameter does not exist in the target SCIP */
       if( targetparam == NULL )
          continue;
       
