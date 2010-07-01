@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.59 2010/05/20 16:05:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.60 2010/07/01 17:36:44 bzfpfets Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -154,6 +154,7 @@ struct SCIP_Stat
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */
+   SCIP_Bool             inrestart;          /**< are we currently restarting the system? */
 };
 
 #ifdef __cplusplus
