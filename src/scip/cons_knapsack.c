@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.201 2010/06/09 13:37:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.202 2010/07/01 16:54:57 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -5724,7 +5724,7 @@ SCIP_RETCODE addNegatedCliques(
       
          for( v = 0; v < nposcliquevars; ++v )
          {
-            cliquevars[0] = poscliquevars[v];
+            SCIP_CALL( SCIPgetNegatedVar(scip, poscliquevars[v], &cliquevars[0]) );
             ncliquevars = 1;
             lastweight = gainweights[v];
             beforelastweight = -1;
