@@ -65,6 +65,7 @@ interface:
 - added SCIPsortLongPtrInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - SCIP can now manage a list of external codes (e.g., LP or NLP solver, ZIMPL)
 - new method SCIPlpiGetSolverDesc() to get a descriptive string of an LP solver (developer, webpage, ...) 
+- new method SCIPinrestart() to detect whether we are currently restarting
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -198,7 +199,7 @@ fixed bugs:
 - fixed bug while deleting redundant variables, which have no influence on changing the feasibility of the linear constraints, we need to update the sides of the constraint at each step, bug number 51 in bugzilla
 - fixed potential bug where SCIPselectSimpleValue returns a value slightly outside of the given bounds due to rounding errors (probably cancelation in subtraction in SCIPfindSimpleRational), now use rounding control and check result  
 - fixed makefile system for OSTYPE=darwin w.r.t. to CPLEX as LP solver
-
+- fixed bug with debugging a solution: during restarts erroneously it was claimed that the primal solution is cut off
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
