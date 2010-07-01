@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.115 2010/06/30 09:29:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.116 2010/07/01 16:14:21 bzfpfets Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3764,7 +3764,7 @@ SCIP_Real SCIPselectSimpleValue(
          val = (SCIP_Real)nominator/(SCIP_Real)denominator;
          SCIPdebugPrintf(" %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" == %.9f\n", nominator, denominator, val);
 
-         if( val < lb || val > ub )
+         if( val - lb < 0.0 || val - ub > 0.0 )
          {
             SCIPdebugPrintf(" value is out of interval bounds by %g -> failed\n", MAX(lb-val, val-ub));
             val = 0.5*(lb+ub);
