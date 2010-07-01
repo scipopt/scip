@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.237 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.238 2010/07/01 17:41:35 bzfpfets Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -41,6 +41,7 @@
 #include "scip/nodesel.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
+#include "scip/scip.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
@@ -776,6 +777,7 @@ SCIP_RETCODE nodeReleaseParent(
    SCIP_NODE*            node,               /**< child node */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -868,7 +870,7 @@ SCIP_RETCODE nodeReleaseParent(
       /* free parent, if it is not on the current active path */
       if( freeParent && !parent->active )
       {
-         SCIP_CALL( SCIPnodeFree(&node->parent, blkmem, set, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&node->parent, blkmem, set, stat, tree, lp) );
       }
 
       /* update the effective root depth */
@@ -963,6 +965,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIP_NODE**           node,               /**< node data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -979,7 +982,7 @@ SCIP_RETCODE SCIPnodeFree(
       SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* inform solution debugger, that the node has been freed */
-   SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) ); /*lint !e506 !e774*/
+   SCIP_CALL( stat->inrestart || SCIPdebugRemoveNode(blkmem, set, *node) ); /*lint !e506 !e774*/
 
    /* free nodetype specific data, and release no longer needed LPI states */
    switch( SCIPnodeGetType(*node) )
@@ -1050,7 +1053,7 @@ SCIP_RETCODE SCIPnodeFree(
    /* free common data */
    SCIP_CALL( SCIPconssetchgFree(&(*node)->conssetchg, blkmem, set) );
    SCIP_CALL( SCIPdomchgFree(&(*node)->domchg, blkmem, set) );
-   SCIP_CALL( nodeReleaseParent(*node, blkmem, set, tree, lp) );
+   SCIP_CALL( nodeReleaseParent(*node, blkmem, set, stat, tree, lp) );
 
    /* check, if the node is the current probing root */
    if( *node == tree->probingroot )
@@ -1437,7 +1440,7 @@ SCIP_RETCODE nodeDeactivate(
    }
    if( freeNode ) 
    {
-      SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
+      SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, tree, lp) );
    }
 
    return SCIP_OKAY;
@@ -3138,7 +3141,7 @@ SCIP_RETCODE nodeToLeaf(
    {
       /* delete node due to bound cut off */
       SCIPvbcCutoffNode(stat->vbc, stat, *node);
-      SCIP_CALL( SCIPnodeFree(node, blkmem, set, tree, lp) );
+      SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, tree, lp) );
    }
    assert(*node == NULL);
 
@@ -3589,7 +3592,7 @@ SCIP_RETCODE SCIPnodeFocus(
       {
          SCIP_CALL( SCIPnodepqRemove(tree->leaves, set, *node) );
       }
-      SCIP_CALL( SCIPnodeFree(node, blkmem, set, tree, lp) );
+      SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, tree, lp) );
 
       return SCIP_OKAY;
    }
@@ -3857,7 +3860,7 @@ SCIP_RETCODE SCIPnodeFocus(
       int oldeffectiverootdepth;
 
       oldeffectiverootdepth = tree->effectiverootdepth;
-      SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, tree, lp) );
+      SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, tree, lp) );
       assert(oldeffectiverootdepth <= tree->effectiverootdepth);
       assert(tree->effectiverootdepth < tree->pathlen || *node == NULL || *cutoff);
       if( tree->effectiverootdepth > oldeffectiverootdepth && *node != NULL && !(*cutoff) )
@@ -3956,6 +3959,7 @@ SCIP_RETCODE SCIPtreeFree(
    SCIP_TREE**           tree,               /**< pointer to tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -3969,7 +3973,7 @@ SCIP_RETCODE SCIPtreeFree(
    SCIPdebugMessage("free tree\n");
 
    /* free node queue */
-   SCIP_CALL( SCIPnodepqFree(&(*tree)->leaves, blkmem, set, *tree, lp) );
+   SCIP_CALL( SCIPnodepqFree(&(*tree)->leaves, blkmem, set, stat, *tree, lp) );
    
    /* free pointer arrays */
    BMSfreeMemoryArrayNull(&(*tree)->path);
@@ -3991,6 +3995,7 @@ SCIP_RETCODE SCIPtreeClear(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -4003,7 +4008,7 @@ SCIP_RETCODE SCIPtreeClear(
    SCIPdebugMessage("clearing tree\n");
 
    /* clear node queue */
-   SCIP_CALL( SCIPnodepqClear(tree->leaves, blkmem, set, tree, lp) );
+   SCIP_CALL( SCIPnodepqClear(tree->leaves, blkmem, set, stat, tree, lp) );
    assert(tree->root == NULL);
    
    /* mark working arrays to be empty and reset data */
@@ -4140,7 +4145,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    assert(tree->pathlen == 0);
 
    /** reset tree data structure */
-   SCIP_CALL( SCIPtreeClear(tree, blkmem, set, lp) );
+   SCIP_CALL( SCIPtreeClear(tree, blkmem, set, stat, lp) );
 
    return SCIP_OKAY;
 }
@@ -4223,7 +4228,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
          SCIPvbcCutoffNode(stat->vbc, stat, node);
-         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, tree, lp) );
       }
    }
 
@@ -4236,7 +4241,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
          SCIPvbcCutoffNode(stat->vbc, stat, node);
-         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, tree, lp) );
       }
    }
 
@@ -4941,7 +4946,7 @@ SCIP_RETCODE treeBacktrackProbing(
 	 SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
 
 	 /* free the probing node */
-	 SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, tree, lp) );
+	 SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp) );
 	 tree->pathlen--;
       }
       assert(tree->pathlen == newpathlen);
