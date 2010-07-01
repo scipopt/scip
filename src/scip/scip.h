@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.388 2010/07/01 12:57:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.389 2010/07/01 17:38:08 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -21,6 +21,7 @@
  * @author Timo Berthold
  * @author Thorsten Koch
  * @author Alexander Martin
+ * @author Marc Pfetsch
  * @author Kati Wolter
  */
 
@@ -2165,6 +2166,12 @@ SCIP_RETCODE SCIPinterruptSolve(
 /** restarts solving process as soon as possible (e.g., after the current node has been solved) */
 extern
 SCIP_RETCODE SCIPrestartSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** whether we are in the restarting phase */
+extern
+SCIP_Bool SCIPinrestart(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
