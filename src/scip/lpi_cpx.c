@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.131 2010/06/22 17:50:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.132 2010/07/01 22:26:35 bzfheinz Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -56,7 +56,7 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 #define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
 
 /* CPLEX parameter lists which can be changed */
-#define NUMINTPARAM  9
+#define NUMINTPARAM  10
 static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
@@ -66,7 +66,8 @@ static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_PPRIIND,
    CPX_PARAM_DPRIIND,
    CPX_PARAM_SIMDISPLAY,
-   CPX_PARAM_SCRIND
+   CPX_PARAM_SCRIND,
+   CPX_PARAM_THREADS
 };
 #define NUMDBLPARAM  7
 static const int dblparam[NUMDBLPARAM] = {
@@ -932,7 +933,7 @@ SCIP_RETCODE SCIPlpiCreate(
       cpxenv = CPXopenCPLEX(&restat);
       CHECK_ZERO( restat );
 
-#if CPX_VERSION >= 1100
+#if CPX_VERSION == 1100
       /* manually set number of threads to 1 to avoid huge system load due to CPLEX bug */
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_THREADS, 1) );
 #endif
@@ -3333,6 +3334,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       if( *ival >= CPX_INT_MAX )
          *ival = INT_MAX;
       break;
+   case SCIP_LPPAR_THREADS:
+      *ival = getIntParam(lpi, CPX_PARAM_THREADS);
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3420,6 +3424,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPITLIM:
       ival = MIN(ival, CPX_INT_MAX);
       setIntParam(lpi, CPX_PARAM_ITLIM, ival);
+      break;
+   case SCIP_LPPAR_THREADS:
+      ival = MIN(ival, CPX_INT_MAX);
+      setIntParam(lpi, CPX_PARAM_THREADS, ival);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

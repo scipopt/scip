@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.225 2010/06/22 15:18:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.226 2010/07/01 22:26:35 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -169,6 +169,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_SIMPLEXROWREP     FALSE /**< should simplex algorithm use row representation of the basis? */
+#define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
 
 /* NLP */
 
@@ -989,6 +990,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/simplexrowrep",
          "should simplex algorithm use row representation of the basis?",
          &(*set)->lp_simplexrowrep, TRUE, SCIP_DEFAULT_LP_SIMPLEXROWREP,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "lp/threads",
+         "number of threads used for solving the LP (0: automatic)",
+         &(*set)->lp_threads, TRUE, SCIP_DEFAULT_LP_THREADS, 0, 64,
          NULL, NULL) );
 
    /* NLP parameters */

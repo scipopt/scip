@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.339 2010/05/20 15:28:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.340 2010/07/01 22:26:35 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2033,6 +2033,31 @@ SCIP_RETCODE lpSetScaling(
       SCIP_CALL( lpSetBoolpar(lp, SCIP_LPPAR_SCALING, scaling, success) );
       if( *success )
          lp->lpiscaling = scaling;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sets the number of THREADS  of the LP solver */
+static
+SCIP_RETCODE lpSetThreads(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   threads,            /**< new number of threads used to solve the LP */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( lpCheckBoolpar(lp, SCIP_LPPAR_THREADS, lp->lpithreads) );
+
+   if( threads != lp->lpithreads )
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_THREADS, threads, success) );
+      if( *success )
+         lp->lpithreads = threads;
    }
    else
       *success = FALSE;
@@ -6168,6 +6193,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
+   (*lp)->lpithreads = 0;
 
    /* set default parameters in LP solver */
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
@@ -6253,6 +6279,13 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: simplexrowrep setting not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_THREADS, (*lp)->lpithreads, &success) );
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: number of threads settings not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
 
@@ -10575,6 +10608,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetPresolving(lp, set->lp_presolving, &success) );
    SCIP_CALL( lpSetSimplexRowRep(lp, set->lp_simplexrowrep, &success) );
    SCIP_CALL( lpSetPricingChar(lp, set->lp_pricing) );
+   SCIP_CALL( lpSetThreads(lp, set->lp_threads, &success) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
