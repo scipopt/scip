@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.590 2010/07/01 13:58:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.591 2010/07/01 17:42:38 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -20,6 +20,7 @@
  * @author Timo Berthold
  * @author Thorsten Koch
  * @author Alexander Martin
+ * @author Marc Pfetsch
  * @author Kati Wolter
  *
  *@todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
@@ -1020,13 +1021,13 @@ SCIP_RETCODE SCIPgetVarCopy(
 
       case SCIP_VARSTATUS_AGGREGATED:
       {
-	 *success = FALSE;
+         *success = FALSE;
          SCIPwarningMessage("Copying of aggregated variables not implemented yet");
          return SCIP_OKAY;                  
       }
       case SCIP_VARSTATUS_MULTAGGR:
       {
-	 *success = FALSE;
+         *success = FALSE;
          SCIPwarningMessage("Copying of multiaggregated variables not implemented yet");
          return SCIP_OKAY;                  
       }
@@ -6008,7 +6009,7 @@ SCIP_RETCODE freeSolve(
    /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
     */
-   SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, restart) );
@@ -6051,7 +6052,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->solvemem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->solvemem) );
-   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    if( scip->nlp != NULL )
@@ -6141,7 +6142,7 @@ SCIP_RETCODE SCIPpresolve(
                   scip->stat->status = SCIP_STATUS_OPTIMAL;
 
                   /* remove the root node from the tree, s.t. the lower bound is set to +infinity */
-                  SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+                  SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
                }
                else
                {
@@ -6253,6 +6254,9 @@ SCIP_RETCODE SCIPsolve(
    {
       if( restart )
       {
+         /* mark that we are restarting */
+         scip->stat->inrestart = TRUE;
+
          /* free the solving process data in order to restart */
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
          if( scip->stat->userrestart )
@@ -6268,6 +6272,9 @@ SCIP_RETCODE SCIPsolve(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
+
+         /* restarting finished */
+         scip->stat->inrestart = FALSE;
       }
       restart = FALSE;
       scip->stat->userrestart = FALSE;
@@ -6488,7 +6495,6 @@ SCIP_RETCODE SCIPinterruptSolve(
    return SCIP_OKAY;
 }
 
-
 /** restarts solving process as soon as possible (e.g., after the current node has been solved) */
 SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
@@ -6500,6 +6506,18 @@ SCIP_RETCODE SCIPrestartSolve(
    scip->stat->userrestart = TRUE;
 
    return SCIP_OKAY;
+}
+
+/** whether we are in the restarting phase */
+extern
+SCIP_Bool SCIPinrestart(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPinrestart", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   /* return the restart status */
+   return scip->stat->inrestart;
 }
 
 
