@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.52 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.53 2010/07/01 17:39:31 bzfpfets Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -62,6 +62,7 @@ SCIP_RETCODE SCIPnodepqFree(
    SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -72,6 +73,7 @@ SCIP_RETCODE SCIPnodepqClear(
    SCIP_NODEPQ*          nodepq,             /**< node priority queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
