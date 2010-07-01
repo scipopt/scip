@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.387 2010/06/22 17:50:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.388 2010/07/01 12:57:20 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -102,6 +102,7 @@
 #include "scip/struct_scip.h"
 #include "scip/set.h"
 #include "scip/tree.h"
+#include "scip/misc.h"
 #endif
 
 #ifdef __cplusplus
