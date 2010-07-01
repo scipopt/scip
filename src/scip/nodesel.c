@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.63 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.64 2010/07/01 17:40:07 bzfpfets Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -109,6 +109,7 @@ SCIP_RETCODE SCIPnodepqFree(
    SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -117,7 +118,7 @@ SCIP_RETCODE SCIPnodepqFree(
    assert(*nodepq != NULL);
 
    /* free the nodes of the queue */
-   SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, tree, lp) );
+   SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, tree, lp) );
    
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
@@ -130,6 +131,7 @@ SCIP_RETCODE SCIPnodepqClear(
    SCIP_NODEPQ*          nodepq,             /**< node priority queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -143,7 +145,7 @@ SCIP_RETCODE SCIPnodepqClear(
    {
       assert(nodepq->slots[i] != NULL);
       assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
-      SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, tree, lp) );
+      SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, stat, tree, lp) );
    }
 
    /* reset data */
@@ -630,7 +632,7 @@ SCIP_RETCODE SCIPnodepqBound(
          SCIPvbcCutoffNode(stat->vbc, stat, node);
 
          /* free memory of the node */
-         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, tree, lp) );
       }
       else
          pos--;
