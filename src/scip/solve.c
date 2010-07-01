@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.301 2010/06/30 09:29:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.302 2010/07/01 18:33:29 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1919,9 +1919,8 @@ SCIP_RETCODE solveNodeLP(
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
 
-#if 0 /* FIXME the current code triggers assert(*cutoff) from time to time, so it's disabled for now */
       /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in separators */
-      if( !(*cutoff) && SCIPtreeGetCurrentDepth(tree) == 0 )
+      if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror) )
       {
          SCIP_Bool stored;
          SCIP_SOL* sol;
@@ -1933,11 +1932,12 @@ SCIP_RETCODE solveNodeLP(
          if( stored )
          {          
             SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, lp) );
             SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
             assert(*cutoff);
          }
       }
-#endif
+
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -3206,6 +3206,7 @@ SCIP_RETCODE SCIPsolveCIP(
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
       assert(SCIPtreeGetFocusNode(tree) == focusnode);
 
+
       /* check for restart */
       if( !(*restart) )
       {
@@ -3307,7 +3308,15 @@ SCIP_RETCODE SCIPsolveCIP(
          if( nnodes != SCIPtreeGetNNodes(tree) || SCIPsolveIsStopped(set, stat, TRUE) )
             nextnode = NULL;
       }
+      else if( !infeasible )
+      {
+         SCIP_SOL* sol;
+         SCIP_Bool stored;
 
+         SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
+         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+      }
+         
       /* trigger restart due to conflicts */
       nsuccessconflicts = SCIPconflictGetNPropSuccess(conflict) + SCIPconflictGetNInfeasibleLPSuccess(conflict)
          + SCIPconflictGetNBoundexceedingLPSuccess(conflict) + SCIPconflictGetNStrongbranchSuccess(conflict)
