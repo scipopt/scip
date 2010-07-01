@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.94 2010/06/09 13:37:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.95 2010/07/01 22:41:35 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -341,7 +341,6 @@ SCIP_RETCODE propagateCons(
    SCIP_Real yub;
    SCIP_Real newlb;
    SCIP_Real newub;
-   SCIP_Bool infeasible;
    SCIP_Bool tightened;
    SCIP_Bool tightenedround;
 
@@ -373,8 +372,10 @@ SCIP_RETCODE propagateCons(
       tightenedround = FALSE;
 
       /* propagate left hand side inequality: lhs <= x + c*y */
-      if( !(*cutoff) && !SCIPisInfinity(scip, -consdata->lhs) )
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
+         assert(!(*cutoff));
+
          /* propagate bounds on x:
           *  (1) left hand side and bounds on y -> lower bound on x
           */
@@ -400,8 +401,8 @@ SCIP_RETCODE propagateCons(
                SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
                   SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
                SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, FALSE,
-                     &infeasible, &tightened) );
-               *cutoff = *cutoff || infeasible;
+                     cutoff, &tightened) );
+
                if( tightened )
                {
                   tightenedround = TRUE;
@@ -414,7 +415,7 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on y:
           *  (2) left hand side and upper bound on x -> bound on y
           */
-         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, xub) ) /* cannot change bounds of multaggr vars */
+         if( !(*cutoff) && SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, xub) ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
             {
@@ -424,8 +425,8 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2, FALSE,
-                        &infeasible, &tightened) );
-                  *cutoff = *cutoff || infeasible;
+                        cutoff, &tightened) );
+
                   if( tightened )
                   {
                      tightenedround = TRUE;
@@ -442,8 +443,8 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2, FALSE,
-                        &infeasible, &tightened) );
-                  *cutoff = *cutoff || infeasible;
+                        cutoff, &tightened) );
+
                   if( tightened )
                   {
                      tightenedround = TRUE;
@@ -483,8 +484,8 @@ SCIP_RETCODE propagateCons(
                SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
                   SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
                SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, FALSE,
-                     &infeasible, &tightened) );
-               *cutoff = *cutoff || infeasible;
+                     cutoff, &tightened) );
+
                if( tightened )
                {
                   tightenedround = TRUE;
@@ -497,7 +498,7 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on y:
           *  (4) right hand side and lower bound on x -> bound on y
           */
-         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, -xlb) ) /* cannot change bounds of multaggr vars */
+         if( !(*cutoff) && SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, -xlb) ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
             {
@@ -507,8 +508,8 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4, FALSE,
-                        &infeasible, &tightened) );
-                  *cutoff = *cutoff || infeasible;
+                        cutoff, &tightened) );
+
                   if( tightened )
                   {
                      tightenedround = TRUE;
@@ -525,8 +526,8 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", 
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4, FALSE,
-                        &infeasible, &tightened) );
-                  *cutoff = *cutoff || infeasible;
+                        cutoff, &tightened) );
+
                   if( tightened )
                   {
                      tightenedround = TRUE;
@@ -539,9 +540,9 @@ SCIP_RETCODE propagateCons(
       }
    }
    while( !(*cutoff) && tightenedround );
-
+   
    /* check for redundancy */
-   if( (SCIPisInfinity(scip, -consdata->lhs)
+   if( !(*cutoff) && (SCIPisInfinity(scip, -consdata->lhs)
          || (consdata->vbdcoef > 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
          || (consdata->vbdcoef < 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs)))
       && (SCIPisInfinity(scip, consdata->rhs)
@@ -946,7 +947,7 @@ SCIP_RETCODE applyFixings(
    }
 
    /* delete a redundant constraint */
-   if( redundant )
+   if( !(*cutoff) && redundant )
    {
       SCIPdebugMessage(" -> variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
