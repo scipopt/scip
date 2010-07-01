@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.238 2010/07/01 17:41:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.239 2010/07/01 18:07:21 bzfpfets Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -41,7 +41,6 @@
 #include "scip/nodesel.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
-#include "scip/scip.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
