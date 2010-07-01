@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.41 2010/06/07 16:41:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.42 2010/07/01 22:42:03 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2355,7 +2355,7 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    SCIP_CALL( SCIPcreateConsAlldifferent(scip, &cons, fname, nvars, vars, 
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
    
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    /* add and release the constraint to the problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
