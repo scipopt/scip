@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.226 2010/07/01 22:26:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.227 2010/07/01 22:57:00 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -272,6 +272,7 @@
                                                  *   created */
 #define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
                                                  *   in VBC output? */
+#define SCIP_DEFAULT_VBC_DISPSOLS         FALSE /**< should the node where solutions are found be visualized? */
 
 
 
@@ -1323,6 +1324,11 @@ SCIP_RETCODE SCIPsetCreate(
          "vbc/realtime",
          "should the real solving time be used instead of a time step counter in VBC output?",
          &(*set)->vbc_realtime, FALSE, SCIP_DEFAULT_VBC_REALTIME,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "vbc/dispsols",
+         "should the node where solutions are found be visualized?",
+         &(*set)->vbc_dispsols, FALSE, SCIP_DEFAULT_VBC_DISPSOLS,
          NULL, NULL) );
 
    return SCIP_OKAY;

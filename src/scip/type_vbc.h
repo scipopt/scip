@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_vbc.h,v 1.17 2010/01/04 20:35:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_vbc.h,v 1.18 2010/07/01 22:57:00 bzfheinz Exp $"
 
 /**@file   type_vbc.h
  * @brief  type definitions for VBC Tool output
@@ -58,7 +58,7 @@ enum SCIP_VBCColor
    SCIP_VBCCOLOR_CONFLICT   = 15,       /**< color for nodes where a conflict constraint was found */
    SCIP_VBCCOLOR_MARKREPROP = 11,       /**< color for nodes that were marked to be repropagated */
    SCIP_VBCCOLOR_REPROP     = 12,       /**< color for repropagated nodes */
-   SCIP_VBCCOLOR_SOLUTION   = -1,       /**< color for solved nodes, where a solution has been found */
+   SCIP_VBCCOLOR_SOLUTION   = 14,       /**< color for solved nodes, where a solution has been found */
    SCIP_VBCCOLOR_NONE       = -1        /**< color should not be changed */
 };
 typedef enum SCIP_VBCColor SCIP_VBCCOLOR;

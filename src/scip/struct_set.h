@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.95 2010/07/01 22:26:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.96 2010/07/01 22:57:00 bzfheinz Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -318,6 +318,7 @@ struct SCIP_Set
    /* VBC tool settings */
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
+   SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
 };
 
 #ifdef __cplusplus

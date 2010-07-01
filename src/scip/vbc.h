@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.19 2010/01/04 20:35:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.20 2010/07/01 22:57:00 bzfheinz Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -114,6 +114,7 @@ void SCIPvbcRepropagatedNode(
 extern
 void SCIPvbcFoundSolution(
    SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node where the solution was found, or NULL */
    );

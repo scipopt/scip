@@ -240,6 +240,7 @@ parameters:
 - added parameter <heuristics/nlp/runalways> to specify that NLP solver should be run everytime the heuristic is called and a start candidate is available
 - added parameter <constraints/knapsack/dualpresolving> to switch dualpresolving on/off inside the knapsack constraint handler, default is TRUE
 - added parameter <lp/threads> to change the number of threads used to solve the LP relaxation (default is 0: automatic)
+- added parameter <vbc/dispsols> to propose if the nodes where solutions are found should be visualized in the branch and bound tree
 
 SCIP version 1.2.0
 ===============

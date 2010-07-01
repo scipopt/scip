@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.93 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.94 2010/07/01 22:57:00 bzfheinz Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -488,7 +488,7 @@ SCIP_RETCODE primalAddSol(
    }
 
    /* change color of node in VBC output */
-   SCIPvbcFoundSolution(stat->vbc, stat, SCIPtreeGetCurrentNode(tree));
+   SCIPvbcFoundSolution(stat->vbc, set, stat, SCIPtreeGetCurrentNode(tree));
 
    /* check, if the global upper bound has to be updated */
    obj = SCIPsolGetObj(sol, set, prob);

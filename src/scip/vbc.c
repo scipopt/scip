@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.36 2010/05/24 17:32:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.37 2010/07/01 22:57:00 bzfheinz Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -367,11 +367,12 @@ void SCIPvbcRepropagatedNode(
 /** changes the color of the node to the color of nodes with a primal solution */
 void SCIPvbcFoundSolution(
    SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node where the solution was found, or NULL */
    )
 {
-   if( node != NULL )
+   if( node != NULL && set->vbc_dispsols )
       vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
 }
 
