@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.106 2010/06/07 16:41:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.107 2010/07/01 17:44:58 bzfpfets Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -71,6 +71,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIP_NODE**           node,               /**< node data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -285,6 +286,7 @@ SCIP_RETCODE SCIPtreeFree(
    SCIP_TREE**           tree,               /**< pointer to tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -294,6 +296,7 @@ SCIP_RETCODE SCIPtreeClear(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
