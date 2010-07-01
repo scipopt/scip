@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.591 2010/07/01 17:42:38 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.592 2010/07/01 18:02:29 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5976,6 +5976,10 @@ SCIP_RETCODE freeSolve(
    assert(scip->stat != NULL);
    assert(scip->set->stage == SCIP_STAGE_SOLVING || scip->set->stage == SCIP_STAGE_SOLVED);
 
+   /* mark that we are currenlty restarting */
+   if ( restart )
+      scip->stat->inrestart = TRUE;
+
    /* remove focus from the current focus node */
    if( SCIPtreeGetFocusNode(scip->tree) != NULL )
    {
@@ -6027,6 +6031,10 @@ SCIP_RETCODE freeSolve(
 
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
+
+   /* restart finished */
+   assert( ! restart || scip->stat->inrestart );
+   scip->stat->inrestart = FALSE;
 
    return SCIP_OKAY;
 }
@@ -6254,9 +6262,6 @@ SCIP_RETCODE SCIPsolve(
    {
       if( restart )
       {
-         /* mark that we are restarting */
-         scip->stat->inrestart = TRUE;
-
          /* free the solving process data in order to restart */
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
          if( scip->stat->userrestart )
@@ -6272,9 +6277,6 @@ SCIP_RETCODE SCIPsolve(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
-
-         /* restarting finished */
-         scip->stat->inrestart = FALSE;
       }
       restart = FALSE;
       scip->stat->userrestart = FALSE;
