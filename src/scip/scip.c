@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.589 2010/06/30 09:29:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.590 2010/07/01 13:58:56 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1167,8 +1167,12 @@ SCIP_RETCODE SCIPcopyConss(
          assert(conss[c] != NULL);
 
          if( !SCIPconsIsEnabled(conss[c]) )
+         {
+#ifndef NDEBUG
+            ++nskipped;
+#endif
             continue;
-         
+         }
          /* use the copy constructor of each constraint handler to create subSCIP */
          SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, conshdlrs[i], sourcescip, conss[c], varmap,
                SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]), SCIPconsIsChecked(conss[c]),
