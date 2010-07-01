@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.389 2010/07/01 17:38:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.390 2010/07/01 18:27:06 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2171,7 +2171,7 @@ SCIP_RETCODE SCIPrestartSolve(
 
 /** whether we are in the restarting phase */
 extern
-SCIP_Bool SCIPinrestart(
+SCIP_Bool SCIPisInRestart(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

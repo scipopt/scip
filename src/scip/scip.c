@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.592 2010/07/01 18:02:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.593 2010/07/01 18:27:06 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6512,11 +6512,11 @@ SCIP_RETCODE SCIPrestartSolve(
 
 /** whether we are in the restarting phase */
 extern
-SCIP_Bool SCIPinrestart(
+SCIP_Bool SCIPisInRestart(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPinrestart", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPisInRestart", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    /* return the restart status */
    return scip->stat->inrestart;
