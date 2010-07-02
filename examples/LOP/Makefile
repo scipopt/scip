@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.15 2010/01/11 19:26:48 bzfheinz Exp $
+# $Id: Makefile,v 1.16 2010/07/02 18:42:36 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a linear ordering solver
@@ -56,7 +56,7 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
+.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK) $(OBJDIR)/genRandomLOPInstance.o
 endif
 
 .PHONY: all
@@ -104,16 +104,28 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
+ifeq ($(VERBOSE),true)
 		$(LINKCXX) $(MAINOBJFILES) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o)$@
+else
+		@$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o)$@
+endif
 
 genRandomLOPInstance: $(BINDIR)/genRandomLOPInstance
 $(BINDIR)/genRandomLOPInstance: $(BINDIR) $(OBJDIR) $(OBJDIR)/genRandomLOPInstance.o
 		@echo "-> linking $@"
+ifeq ($(VERBOSE),true)
 		$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LINKCXX_o)$@
+else
+		@$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LINKCXX_o)$@
+endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
