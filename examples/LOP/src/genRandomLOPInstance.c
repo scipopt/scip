@@ -12,6 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: genRandomLOPInstance.c,v 1.6 2010/07/02 18:43:34 bzfpfets Exp $"
+
 /**@file   genRandomLOPInstance.c
  * @brief  generate a random linear ordering problem instance
  * @author Marc Pfetsch
@@ -73,7 +75,10 @@ int getRandomInt(
 
 int main(int argc, char** argv)
 {
-   int n, d, i, j;
+   int n;
+   int d;
+   int i;
+   int j;
    unsigned int seed;
    FILE *file;
 

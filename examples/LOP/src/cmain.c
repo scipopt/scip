@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.7 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.8 2010/07/02 18:43:34 bzfpfets Exp $"
 
 /**@file   cmain.c
  * @brief  main file for linear ordering example
@@ -21,8 +21,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scip.h"
-#include "scip/scipdefplugins.h"
+#include <scip/scip.h>
+#include <scip/scipdefplugins.h>
 
 #include "probdata_lop.h"
 #include "cons_linearordering.h"
@@ -59,11 +59,11 @@ SCIP_RETCODE readParams(
 
 
 
-
+/** main function, which starts the solution of the linear ordering problem */
 int main(
-	 int    argc,
-	 char** argv
-	 )
+   int    argc,
+   char** argv
+   )
 {
    SCIP* scip = NULL;
 
@@ -75,6 +75,8 @@ int main(
    }
 
    /* output version information */
+   printf("Solving the linear ordering problem using SCIP.\n\n");
+
    SCIPprintVersion(NULL);
    printf("\n");
 
@@ -99,7 +101,10 @@ int main(
 
    /* print model */
    if ( LOPgetNElements(scip) <= 10 )
+   {
       SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
+      SCIPinfoMessage(scip, NULL, "\n");
+   }
 
    /* solve the model */
    SCIP_CALL( SCIPsolve(scip) );
