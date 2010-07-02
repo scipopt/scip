@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.73 2010/07/02 13:55:50 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.74 2010/07/02 14:20:51 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2500,7 +2500,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIndicator)
 /** initialization method of constraint handler (called after problem was transformed) */
 static
 SCIP_DECL_CONSINIT(consInitIndicator)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
@@ -3778,7 +3778,7 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
 /** constraint copying method of constraint handler */
 static
 SCIP_DECL_CONSCOPY(consCopyIndicator)
-{
+{  /*lint --e{715}*/
    char linconsname[SCIP_MAXSTRLEN];
    SCIP_CONSDATA* sourceconsdata;
    const char* consname;
@@ -3844,7 +3844,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseIndicator)
-{
+{  /*lint --e{715}*/
    char binvarname[1024];
    char slackvarname[1024];
    SCIP_VAR* binvar;
@@ -4805,7 +4805,6 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
 
 /** adds additional linear constraint that is not connected with an indicator constraint, but can be used for separation */
-extern
 SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
