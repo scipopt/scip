@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.202 2010/07/01 16:54:57 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.203 2010/07/02 13:33:34 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -3559,8 +3559,11 @@ SCIP_RETCODE delCoefPos(
       assert(consdata->cliquepartition != NULL);
       /* if the clique number is equal to the number of variables we have only cliques with one element, so we don't 
        * change the clique number */
-      if( consdata->cliquepartition[consdata->nvars-1] != consdata->nvars - 1 )
+      if( consdata->cliquepartition[consdata->nvars - 1] != consdata->nvars - 1 )
       {
+         int oldcliqenum;
+         
+         oldcliqenum = consdata->cliquepartition[pos];
          consdata->cliquepartition[pos] = consdata->cliquepartition[consdata->nvars-1];
 	 
 	 /* the following if and else cases assure that we have increasing cliquenumbers */
@@ -3571,14 +3574,32 @@ SCIP_RETCODE delCoefPos(
 	    int i;
 	    int cliquenumbefore;
 
-	    i = pos - 1;
-	    cliquenumbefore = consdata->cliquepartition[pos] - 1;
-	    
-	    /* search for a clique element with the clique number number before our actual clique number */
-	    while( i >= cliquenumbefore && consdata->cliquepartition[i] < cliquenumbefore ) --i;
-	    /* no previous clique found */
-	    if( i < cliquenumbefore )
-	       consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
+            /* if the old clique number was greater than the new one we have to check that before a bigger cliquenumber 
+             * occurs the same as the old one is still in the cliquepartition */
+            if( oldcliqenum > consdata->cliquepartition[pos] )
+            {
+               for( i = 0; i < consdata->nvars; ++i )
+                  if( oldcliqenum == consdata->cliquepartition[i] )
+                     break;
+                  else if( oldcliqenum < consdata->cliquepartition[i] )
+                  {
+                     consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
+                     break;
+                  }
+            }
+            /* if the old clique number was smaller than the new one we have to check the front for an element with 
+             * cliquenumber minus 1 */
+            else if( oldcliqenum < consdata->cliquepartition[pos] )
+            {
+               cliquenumbefore = consdata->cliquepartition[pos] - 1;
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] <= cliquenumbefore; --i )
+                  if( cliquenumbefore == consdata->cliquepartition[i] )
+                     break;
+
+               if( i < cliquenumbefore )
+                  consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
+            }
+            /* if the old clique number is equal to the new one the cliquepartition should be ok */
 	 }
       }
       else
@@ -3592,6 +3613,9 @@ SCIP_RETCODE delCoefPos(
        * change the clique number */
       if( consdata->negcliquepartition[consdata->nvars-1] != consdata->nvars - 1 )
       {
+         int oldcliqenum;
+         
+         oldcliqenum = consdata->negcliquepartition[pos];
          consdata->negcliquepartition[pos] = consdata->negcliquepartition[consdata->nvars-1];
 	 
 	 /* the following if and else cases assure that we have increasing cliquenumbers */
@@ -3602,14 +3626,32 @@ SCIP_RETCODE delCoefPos(
 	    int i;
 	    int cliquenumbefore;
 
-	    i = pos - 1;
-	    cliquenumbefore = consdata->negcliquepartition[pos] - 1;
-	    
-	    /* search for a clique element with the clique number number before our actual clique number */
-	    while( i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore ) --i;
-	    /* no previous clique found */
-	    if( i < cliquenumbefore )
-	       consdata->negcliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
+            /* if the old clique number was greater than the new one we have to check that before a bigger cliquenumber 
+             * occurs the same as the old one is still in the negcliquepartition */
+            if( oldcliqenum > consdata->negcliquepartition[pos] )
+            {
+               for( i = 0; i < consdata->nvars; ++i )
+                  if( oldcliqenum == consdata->negcliquepartition[i] )
+                     break;
+                  else if( oldcliqenum < consdata->negcliquepartition[i] )
+                  {
+                     consdata->negcliquepartitioned = FALSE; /* recalculate the negated clique partition after a coefficient was removed */
+                     break;
+                  }
+            }
+            /* if the old clique number was smaller than the new one we have to check the front for an element with 
+             * cliquenumber minus 1 */
+            else if( oldcliqenum < consdata->negcliquepartition[pos] )
+            {
+               cliquenumbefore = consdata->negcliquepartition[pos] - 1;
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] <= cliquenumbefore; --i )
+                  if( cliquenumbefore == consdata->negcliquepartition[i] )
+                     break;
+
+               if( i < cliquenumbefore )
+                  consdata->negcliquepartitioned = FALSE; /* recalculate the negated clique partition after a coefficient was removed */
+            }
+            /* if the old clique number is equal to the new one the cliquepartition should be ok */
 	 }
       }
       else
