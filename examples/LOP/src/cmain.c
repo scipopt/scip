@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.8 2010/07/02 18:43:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.9 2010/07/02 19:24:46 bzfpfets Exp $"
 
 /**@file   cmain.c
  * @brief  main file for linear ordering example
@@ -97,7 +97,7 @@ int main(
    SCIP_CALL( LOPcreateProb(scip, argv[1]) );
 
    /* generate linear ordering model */
-   LOPgenerateModel(scip);
+   SCIP_CALL( LOPgenerateModel(scip) );
 
    /* print model */
    if ( LOPgetNElements(scip) <= 10 )

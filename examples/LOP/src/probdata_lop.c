@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.10 2010/07/02 18:44:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.11 2010/07/02 19:24:46 bzfpfets Exp $"
 
 #include "probdata_lop.h"
 
@@ -22,9 +22,9 @@
 
 struct SCIP_ProbData
 {
-   int n;             /**< number of elements */
+   int         n;     /**< number of elements */
    SCIP_Real** W;     /**< weight matrix */
-   SCIP_VAR*** Vars;  /**< variables */
+   SCIP_VAR*** vars;  /**< variables */
 };
 
 
@@ -34,26 +34,26 @@ struct SCIP_ProbData
 /** delete problem data */
 static
 SCIP_DECL_PROBDELORIG(probdelorigLOP)
-{
+{  /*lint --e{831} */
    int i, j;
 
-   assert(probdata != NULL);
-   assert(*probdata != NULL);
+   assert( probdata != NULL );
+   assert( *probdata != NULL );
 
    /* free matrix and release and free variables */
    assert( (*probdata)->W != NULL );
-   assert( (*probdata)->Vars != NULL );
+   assert( (*probdata)->vars != NULL );
    for (i = 0; i < (*probdata)->n; ++i)
    {
       for (j = 0; j < (*probdata)->n; ++j)
       {
 	 if (j != i)
-	    SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->Vars[i][j]) );
+	    SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i][j]) );
       }
-      SCIPfreeMemoryArray(scip, &(*probdata)->Vars[i]);
+      SCIPfreeMemoryArray(scip, &(*probdata)->vars[i]);
       SCIPfreeMemoryArray(scip, &((*probdata)->W[i]));
    }
-   SCIPfreeMemoryArray(scip, &(*probdata)->Vars);
+   SCIPfreeMemoryArray(scip, &(*probdata)->vars);
    SCIPfreeMemoryArray(scip, &((*probdata)->W));
 
    /* free probdata */
@@ -119,7 +119,7 @@ SCIP_RETCODE LOPreadFile(
    /* set up matrix */
    SCIP_CALL( SCIPallocMemoryArray(scip, &W, n) );
    for (i = 0; i < n; ++i)
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &(W[i]), n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(W[i]), n) );
    probdata->W = W;
 
    /* read matrix */
@@ -160,8 +160,8 @@ SCIP_RETCODE getProblemName(
    )
 {
    int i = 0;
-   int l = -1;
    int j = 0;
+   int l;
 
    /* first find end of string */
    while ( filename[i] != 0)
@@ -218,7 +218,7 @@ SCIP_RETCODE LOPcreateProb(
 
    /* read file */
    SCIP_CALL( LOPreadFile(scip, filename, probdata) );
-   probdata->Vars = NULL;
+   probdata->vars = NULL;
 
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigLOP, probtransLOP, probdeltransLOP,
 	 probinitsolLOP, probexitsolLOP, probdata) );
@@ -241,33 +241,33 @@ SCIP_RETCODE LOPgenerateModel(
    assert( probdata != NULL );
 
    /* generate variables */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->Vars, probdata->n) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, probdata->n) );
    for (i = 0; i < probdata->n; ++i)
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->Vars[i]), probdata->n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->vars[i]), probdata->n) );
       for (j = 0; j < probdata->n; ++j)
       {
 	 if (j != i)
 	 {
 	    char s[SCIP_MAXSTRLEN];
-	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
-	    SCIP_CALL( SCIPcreateVar(scip, &(probdata->Vars[i][j]), s, 0.0, 1.0, probdata->W[i][j], SCIP_VARTYPE_BINARY,
+	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
+	    SCIP_CALL( SCIPcreateVar(scip, &(probdata->vars[i][j]), s, 0.0, 1.0, probdata->W[i][j], SCIP_VARTYPE_BINARY,
 		  TRUE, FALSE, NULL, NULL, NULL, NULL));
-	    SCIP_CALL( SCIPaddVar(scip, probdata->Vars[i][j]) );
+	    SCIP_CALL( SCIPaddVar(scip, probdata->vars[i][j]) );
 	 }
 	 else
-	    probdata->Vars[i][j] = NULL;
+	    probdata->vars[i][j] = NULL;
       }
    }
 
    /* generate linear ordering constraint */
-   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, &cons, "LOP", probdata->n, probdata->Vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, &cons, "LOP", probdata->n, probdata->vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
 	 FALSE, FALSE, FALSE, FALSE));
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* set maximization */
-   SCIP_CALL_ABORT( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
+   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
 
    return SCIP_OKAY;
 }
@@ -290,10 +290,10 @@ SCIP_RETCODE LOPevalSolution(
    /* get problem data */
    probdata = SCIPgetProbData(scip);
    assert( probdata != NULL );
-   assert( probdata->Vars != NULL );
+   assert( probdata->vars != NULL );
 
    n = probdata->n;
-   vars = probdata->Vars;
+   vars = probdata->vars;
    sol = SCIPgetBestSol(scip);
 
    if ( sol == NULL )
