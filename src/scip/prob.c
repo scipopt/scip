@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.113 2010/06/23 17:03:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.114 2010/07/02 23:01:29 bzfwinkm Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1495,7 +1495,7 @@ SCIP_VAR* SCIPprobFindVar(
    if( prob->varnames == NULL )
    {
       SCIPerrorMessage("Cannot find variable if variable-names hashtable was disabled (due to parameter <misc/usevartable>)\n");
-      SCIPABORT();
+      SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
       return (SCIP_VAR*) NULL;
    }
 
@@ -1514,7 +1514,7 @@ SCIP_CONS* SCIPprobFindCons(
    if( prob->consnames == NULL )
    {
       SCIPerrorMessage("Cannot find constraint if constraint-names hashtable was disabled (due to parameter <misc/useconstable>)\n");
-      SCIPABORT();
+      SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
       return (SCIP_CONS*) NULL;
    }
 
