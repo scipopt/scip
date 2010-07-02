@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.10 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.11 2010/07/02 18:44:27 bzfpfets Exp $"
+
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
@@ -27,7 +28,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "cons_linearordering.h"
+#include <cons_linearordering.h>
 
 #include <assert.h>
 #include <string.h>
@@ -53,25 +54,27 @@
 /** constraint data for linear ordering constraints */
 struct SCIP_ConsData
 {
-   int n;             /**< number of elements */
-   SCIP_VAR*** Vars;  /**< variables */
+   int         n;     /**< number of elements */
+   SCIP_VAR*** vars;  /**< variables */
 };
 
 
 /** separate symmetry equations and triangle inequalities */
 static
 SCIP_RETCODE LinearOrderingSeparate(
-   SCIP* scip,         /**< SCIP pointer */
-   int n,              /**< number of elements */
-   SCIP_VAR*** Vars,   /**< n x n matrix of variables */
-   SCIP_SOL* sol,      /**< solution to be separated */
-   int* nGen           /**< output: number of added rows */
+   SCIP*       scip,          /**< SCIP pointer */
+   int         n,             /**< number of elements */
+   SCIP_VAR*** vars,          /**< n x n matrix of variables */
+   SCIP_SOL*   sol,           /**< solution to be separated */
+   int*        nGen           /**< output: number of added rows */
    )
 {
-   int i, j, k;
+   int i;
+   int j;
+   int k;
 
    assert( scip != NULL );
-   assert( Vars != NULL );
+   assert( vars != NULL );
    assert( nGen != NULL );
 
    for (i = 0; i < n; ++i)
@@ -82,10 +85,10 @@ SCIP_RETCODE LinearOrderingSeparate(
 	 if (j == i)
 	    continue;
 
-	 valIJ = SCIPgetSolVal(scip, sol, Vars[i][j]);
+	 valIJ = SCIPgetSolVal(scip, sol, vars[i][j]);
 
 	 /* if symmetry equations are violated - should not be the case, if they are added in the beginning */
-	 if ( ! SCIPisFeasEQ(scip, valIJ + SCIPgetSolVal(scip, sol, Vars[j][i]), 1.0) )
+	 if ( ! SCIPisFeasEQ(scip, valIJ + SCIPgetSolVal(scip, sol, vars[j][i]), 1.0) )
 	 {
 	    SCIP_ROW *row;
 	    char s[SCIP_MAXSTRLEN];
@@ -94,8 +97,8 @@ SCIP_RETCODE LinearOrderingSeparate(
 
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-	    SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[i][j], 1.0) );
-	    SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[j][i], 1.0) );
+	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
+	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
 	    SCIPdebug( SCIProwPrint(row, NULL) );
@@ -112,7 +115,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	    if (k == i || k == j)
 	       continue;
 
-	    sum = valIJ + SCIPgetSolVal(scip, sol, Vars[j][k]) + SCIPgetSolVal(scip, sol, Vars[k][i]);
+	    sum = valIJ + SCIPgetSolVal(scip, sol, vars[j][k]) + SCIPgetSolVal(scip, sol, vars[k][i]);
 
 	    /* if sum - 2.0 > 0, i.e., the cut is violated */
 	    if ( SCIPisEfficacious(scip, sum - 2.0) )
@@ -124,9 +127,9 @@ SCIP_RETCODE LinearOrderingSeparate(
 
 	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-	       SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[i][j], 1.0) );
-	       SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[j][k], 1.0) );
-	       SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[k][i], 1.0) );
+	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
+	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][k], 1.0) );
+	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
 	       SCIPdebug( SCIProwPrint(row, NULL) );
@@ -187,7 +190,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
 static
 SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
 {
-   int i, n;
+   int i;
+   int n;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -195,14 +199,14 @@ SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
    assert( cons != NULL );
    assert( consdata != NULL);
    assert( *consdata != NULL);
-   assert( (*consdata)->Vars != NULL );
+   assert( (*consdata)->vars != NULL );
 
    SCIPdebugMessage("deleting linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
    n = (*consdata)->n;
    for (i = 0; i < n; ++i)
-      SCIPfreeBlockMemoryArray(scip, &((*consdata)->Vars[i]), n);
-   SCIPfreeBlockMemoryArray(scip, &((*consdata)->Vars), n);
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars[i]), n);
+   SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars), n);
    SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
@@ -214,7 +218,9 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
 {
    SCIP_CONSDATA* consdata;
    SCIP_CONSDATA* sourcedata;
-   int i, j, n;
+   int i;
+   int j;
+   int n;
    char s[SCIP_MAXSTRLEN];
 
    assert( scip != NULL );
@@ -236,16 +242,16 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
    consdata->n = n;
 
    /* transform variables */
-   SCIPallocBlockMemoryArray(scip, &consdata->Vars, n);
+   SCIPallocBlockMemoryArray(scip, &consdata->vars, n);
    for (i = 0; i < n; ++i)
    {
-      SCIPallocBlockMemoryArray(scip, &(consdata->Vars[i]), n);
+      SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n);
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
 	 {
-	    assert( sourcedata->Vars[i][j] != NULL );
-	    SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->Vars[i][j], &(consdata->Vars[i][j])) );
+	    assert( sourcedata->vars[i][j] != NULL );
+	    SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->vars[i][j], &(consdata->vars[i][j])) );
 	 }
       }
    }
@@ -279,7 +285,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
    {
       SCIP_CONSDATA* consdata;
       int i, j, n;
-      SCIP_VAR*** Vars;
+      SCIP_VAR*** vars;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
@@ -287,9 +293,9 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-      assert( consdata->Vars != NULL );
+      assert( consdata->vars != NULL );
       n = consdata->n;
-      Vars = consdata->Vars;
+      vars = consdata->vars;
 
       /* add symmetry equation */
       for (i = 0; i < n; ++i)
@@ -302,8 +308,8 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, FALSE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-	    SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[i][j], 1.0) );
-	    SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[j][i], 1.0) );
+	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
+	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
 	    SCIPdebug( SCIProwPrint(row, NULL) );
@@ -333,6 +339,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
+
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
    {
@@ -347,7 +354,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, consdata->n, consdata->Vars, NULL, &nGen) );
+      SCIP_CALL( LinearOrderingSeparate(scip, consdata->n, consdata->vars, NULL, &nGen) );
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -370,6 +377,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
+
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
    {
@@ -384,7 +392,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, consdata->n, consdata->Vars, sol, &nGen) );
+      SCIP_CALL( LinearOrderingSeparate(scip, consdata->n, consdata->vars, sol, &nGen) );
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -406,13 +414,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
+
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_VAR*** Vars;
-      int i, j, k, n;
+      SCIP_VAR*** vars;
+      int i;
+      int j;
+      int k;
+      int n;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -422,8 +434,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
       assert( consdata != NULL );
 
       n = consdata->n;
-      Vars = consdata->Vars;
-      assert( Vars != NULL );
+      vars = consdata->vars;
+      assert( vars != NULL );
 
       for (i = 0; i < n; ++i)
       {
@@ -433,10 +445,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	    if (j == i)
 	       continue;
 
-	    valIJ = SCIPgetSolVal(scip, NULL, Vars[i][j]);
+	    valIJ = SCIPgetSolVal(scip, NULL, vars[i][j]);
 
 	    /* if symmetry equations are violated - should not be the case, if they are added in the beginning */
-	    if ( ! SCIPisFeasEQ(scip, 1.0 - valIJ, SCIPgetSolVal(scip, NULL, Vars[j][i])) )
+	    if ( ! SCIPisFeasEQ(scip, 1.0 - valIJ, SCIPgetSolVal(scip, NULL, vars[j][i])) )
 	    {
 	       SCIP_ROW *row;
 	       char s[SCIP_MAXSTRLEN];
@@ -445,8 +457,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 
 	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-	       SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[i][j], 1.0) );
-	       SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[j][i], 1.0) );
+	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
+	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
 	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
 	       SCIPdebug( SCIProwPrint(row, NULL) );
@@ -463,7 +475,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	       if (k == i || k == j)
 		  continue;
 
-	       sum = valIJ + SCIPgetSolVal(scip, NULL, Vars[j][k]) + SCIPgetSolVal(scip, NULL, Vars[k][i]);
+	       sum = valIJ + SCIPgetSolVal(scip, NULL, vars[j][k]) + SCIPgetSolVal(scip, NULL, vars[k][i]);
 
 	       /* if sum > 2.0, i.e., the cut is violated */
 	       if ( SCIPisFeasGT(scip, sum, 2.0) ) /* this is the only difference to the separation call */
@@ -475,9 +487,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 
 		  SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 		  SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-		  SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[i][j], 1.0) );
-		  SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[j][k], 1.0) );
-		  SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[k][i], 1.0) );
+		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
+		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][k], 1.0) );
+		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[k][i], 1.0) );
 		  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_DEBUG
 		  SCIPdebug( SCIProwPrint(row, NULL) );
@@ -517,8 +529,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_VAR*** Vars;
-      int i, j, k, n;
+      SCIP_VAR*** vars;
+      int i;
+      int j;
+      int k;
+      int n;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -526,8 +541,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
-      assert( consdata->Vars != NULL );
-      Vars = consdata->Vars;
+      assert( consdata->vars != NULL );
+      vars = consdata->vars;
       n = consdata->n;
 
       /* check triangle inequalities */
@@ -540,11 +555,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 	       continue;
 
 	    /* the priorities should ensure that the solution is integral */
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[i][j])) );
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[j][i])) );
-	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[i][j]), 0.5);
+	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[i][j])) );
+	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][i])) );
+	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[i][j]), 0.5);
 
-	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[j][i]), 0.5) )
+	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[j][i]), 0.5) )
 	    {
 	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
@@ -557,10 +572,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 	       if (k == i || k == j)
 		  continue;
 
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[j][k])) );
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[k][i])) );
-	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[j][k]), 0.5);
-	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[k][i]), 0.5);
+	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][k])) );
+	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[k][i])) );
+	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[j][k]), 0.5);
+	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[k][i]), 0.5);
 
 	       /* if triangle inequality is violated */
 	       if ( oneIJ && oneJK && oneKI )
@@ -595,8 +610,11 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_VAR*** Vars;
-      int i, j, k, n;
+      SCIP_VAR*** vars;
+      int i;
+      int j;
+      int k;
+      int n;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -604,8 +622,8 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
-      assert( consdata->Vars != NULL );
-      Vars = consdata->Vars;
+      assert( consdata->vars != NULL );
+      vars = consdata->vars;
       n = consdata->n;
 
       /* check triangle inequalities and symmetry equations */
@@ -618,12 +636,12 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	       continue;
 
 	    /* the priorities should ensure that the solution is integral */
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, Vars[i][j])) );
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, Vars[j][i])) );
-	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5);
+	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[i][j])) );
+	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][i])) );
+	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[i][j]), 0.5);
 
 	    /* check symmetry equations */
-	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, sol, Vars[j][i]), 0.5) )
+	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[j][i]), 0.5) )
 	    {
 	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
@@ -631,8 +649,8 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
                {
                   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                   SCIPinfoMessage(scip, NULL, "violation: symmetry equation violated <%s> = %.15g and <%s> = %.15g\n",
-                     SCIPvarGetName(Vars[i][j]), SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5,
-                     SCIPvarGetName(Vars[j][i]), SCIPgetSolVal(scip, sol, Vars[j][i]), 0.5);
+                     SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]), 0.5,
+                     SCIPvarGetName(vars[j][i]), SCIPgetSolVal(scip, sol, vars[j][i]), 0.5);
                }
 	       return SCIP_OKAY;
 	    }
@@ -643,10 +661,10 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	       if (k == i || k == j)
 		  continue;
 
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, Vars[j][k])) );
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, Vars[k][i])) );
-	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, sol, Vars[j][k]), 0.5);
-	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, sol, Vars[k][i]), 0.5);
+	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][k])) );
+	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[k][i])) );
+	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[j][k]), 0.5);
+	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[k][i]), 0.5);
 
 	       /* if triangle inequality is violated */
 	       if ( oneIJ && oneJK && oneKI )
@@ -658,9 +676,9 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
                      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                      SCIPinfoMessage(scip, NULL, 
                         "violation: triangle inequality violated <%s> = %.15g, <%s> = %.15g, <%s> = %.15g\n",
-                        SCIPvarGetName(Vars[i][j]), SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5,
-                        SCIPvarGetName(Vars[j][k]), SCIPgetSolVal(scip, sol, Vars[j][k]), 0.5,
-                        SCIPvarGetName(Vars[k][i]), SCIPgetSolVal(scip, sol, Vars[k][i]), 0.5);
+                        SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]), 0.5,
+                        SCIPvarGetName(vars[j][k]), SCIPgetSolVal(scip, sol, vars[j][k]), 0.5,
+                        SCIPvarGetName(vars[k][i]), SCIPgetSolVal(scip, sol, vars[k][i]), 0.5);
                   }
 		  return SCIP_OKAY;
 	       }
@@ -692,8 +710,11 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_VAR*** Vars;
-      int i, j, k, n;
+      SCIP_VAR*** vars;
+      int i;
+      int j;
+      int k;
+      int n;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -702,8 +723,8 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
       *result = SCIP_DIDNOTFIND;
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
-      assert( consdata->Vars != NULL );
-      Vars = consdata->Vars;
+      assert( consdata->vars != NULL );
+      vars = consdata->vars;
       n = consdata->n;
 
       /* check triangle inequalities */
@@ -715,10 +736,10 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       continue;
 
 	    /* if x[i][j] == 1 then x[j][i] = 0 */
-	    if ( (SCIPvarGetLbLocal(Vars[i][j]) > 0.5) )
+	    if ( (SCIPvarGetLbLocal(vars[i][j]) > 0.5) )
 	    {
 	       SCIP_Bool infeasible, tightened;
-	       SCIP_CALL( SCIPinferBinvarCons(scip, Vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
+	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
 	       if ( infeasible )
 	       {
 		  SCIPdebugMessage(" -> node infeasible.\n");
@@ -730,10 +751,10 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	    }
 
 	    /* if x[i][j] == 0 then x[j][i] = 1 */
-	    if ( (SCIPvarGetUbLocal(Vars[i][j]) < 0.5) )
+	    if ( (SCIPvarGetUbLocal(vars[i][j]) < 0.5) )
 	    {
 	       SCIP_Bool infeasible, tightened;
-	       SCIP_CALL( SCIPinferBinvarCons(scip, Vars[j][i], TRUE, cons, i*n + j, &infeasible, &tightened) );
+	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], TRUE, cons, i*n + j, &infeasible, &tightened) );
 	       if ( infeasible )
 	       {
 		  SCIPdebugMessage(" -> node infeasible.\n");
@@ -750,10 +771,10 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  continue;
 
 	       /* if x[i][j] == 1 and x[j][k] == 1 then x[k][i] = 0 */
-	       if ( (SCIPvarGetLbLocal(Vars[i][j]) > 0.5) && (SCIPvarGetLbLocal(Vars[j][k]) > 0.5))
+	       if ( (SCIPvarGetLbLocal(vars[i][j]) > 0.5) && (SCIPvarGetLbLocal(vars[j][k]) > 0.5))
 	       {
 		  SCIP_Bool infeasible, tightened;
-		  SCIP_CALL( SCIPinferBinvarCons(scip, Vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
+		  SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
 		  if ( infeasible )
 		  {
 		     SCIPdebugMessage(" -> node infeasible.\n");
@@ -784,7 +805,7 @@ static
 SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR*** Vars;
+   SCIP_VAR*** vars;
    int n;
 
    assert( scip != NULL );
@@ -800,29 +821,31 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL);
-   assert( consdata->Vars != NULL );
+   assert( consdata->vars != NULL );
 
    n = consdata->n;
-   Vars = consdata->Vars;
+   vars = consdata->vars;
 
    assert( 0 <= inferinfo && inferinfo < n*n + n*n*n );
 
    /* if the conflict came from an equation */
    if ( inferinfo < (n*n) )
    {
-      int index1, index2;
+      int index1;
+      int index2;
+
       index1 = inferinfo/n;
       index2 = inferinfo % n;
       assert( 0 <= index1 && index1 < n );
       assert( 0 <= index2 && index2 < n );
-      assert( Vars[index2][index1] == infervar );
+      assert( vars[index2][index1] == infervar );
 
       /* if the variable was fixed to 0 */
       if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
       {
 	 SCIPdebugMessage(" -> reason for x[%d][%d] == 0 was x[%d][%d] = 1.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 1 */
-	 SCIP_CALL( SCIPaddConflictLb(scip, Vars[index1][index2], bdchgidx) );
+	 SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
 	 *result = SCIP_SUCCESS;
 	 return SCIP_OKAY;
       }
@@ -832,7 +855,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
       {
 	 SCIPdebugMessage(" -> reason for x[%d][%d] == 1 was x[%d][%d] = 0.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 0 */
-	 SCIP_CALL( SCIPaddConflictUb(scip, Vars[index1][index2], bdchgidx) );
+	 SCIP_CALL( SCIPaddConflictUb(scip, vars[index1][index2], bdchgidx) );
 	 *result = SCIP_SUCCESS;
 	 return SCIP_OKAY;
       }
@@ -840,7 +863,10 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
    else
    {
       /* otherwise the conflict came from a triangle inequality */
-      int index1, index2, index3;
+      int index1;
+      int index2;
+      int index3;
+
       index1 = (inferinfo - n*n)/(n*n);
       index2 = (inferinfo - n*n - index1 * n*n)/n;
       index3 = (inferinfo - n*n) % n;
@@ -849,15 +875,15 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
       assert( 0 <= index2 && index2 < n );
       assert( 0 <= index3 && index3 < n );
       assert( index1 != index2 && index2 != index3 && index1 != index3 );
-      assert( Vars[index3][index1] == infervar );
+      assert( vars[index3][index1] == infervar );
 
       /* the variable should have been fixed to 0 */
       assert( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 );
 
       /* the reason was that x[index1][index2] and x[index2][index3] were fixed to 1 */
       SCIPdebugMessage(" -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 0.\n", index3, index1, index1, index2, index2, index3);
-      SCIP_CALL( SCIPaddConflictLb(scip, Vars[index1][index2], bdchgidx) );
-      SCIP_CALL( SCIPaddConflictLb(scip, Vars[index2][index3], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx) );
       *result = SCIP_SUCCESS;
    }
 
@@ -868,9 +894,10 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
 static
 SCIP_DECL_CONSLOCK(consLockLinearOrdering)
 {
-   int i, j;
+   int i;
+   int j;
    SCIP_CONSDATA* consdata;
-   SCIP_VAR*** Vars;
+   SCIP_VAR*** vars;
    int n;
 
    assert( scip != NULL );
@@ -883,9 +910,9 @@ SCIP_DECL_CONSLOCK(consLockLinearOrdering)
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL);
-   assert( consdata->Vars != NULL );
+   assert( consdata->vars != NULL );
    n = consdata->n;
-   Vars = consdata->Vars;
+   vars = consdata->vars;
 
    for (i = 0; i < n; ++i)
    {
@@ -894,7 +921,7 @@ SCIP_DECL_CONSLOCK(consLockLinearOrdering)
 	 if (i != j)
 	 {
 	    /* the constaint may be violated in any way */
-	    SCIPaddVarLocks(scip, Vars[i][j], nlockspos + nlocksneg, nlockspos + nlocksneg);
+	    SCIPaddVarLocks(scip, vars[i][j], nlockspos + nlocksneg, nlockspos + nlocksneg);
 	 }
       }
    }
@@ -919,8 +946,10 @@ static
 SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR*** Vars;
-   int i, j, n;
+   SCIP_VAR*** vars;
+   int i;
+   int j;
+   int n;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -929,9 +958,9 @@ SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->Vars != NULL );
+   assert( consdata->vars != NULL );
    n = consdata->n;
-   Vars = consdata->Vars;
+   vars = consdata->vars;
 
    SCIPinfoMessage(scip, file, "linearordering[");
    for (i = 0; i < n; ++i)
@@ -945,7 +974,7 @@ SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
 	 {
 	    if ( j > 0 && (i > 0 || j > 1) )
 	       SCIPinfoMessage(scip, file, ",");
-	    SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(Vars[i][j]));
+	    SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(vars[i][j]));
 	 }
       }
       SCIPinfoMessage(scip, file, ")");
@@ -956,7 +985,63 @@ SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
 }
 
 /** constraint copying method of constraint handler */
-#define consCopyLinearOrdering NULL
+static
+SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* sourcedata;
+   SCIP_VAR*** sourcevars;
+   SCIP_VAR*** vars;
+   int i;
+   int j;
+   int n;
+
+   assert( scip != 0 );
+   assert( conshdlr != 0 );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( cons != 0 );
+   assert( sourcescip != 0 );
+   assert( sourcecons != 0 );
+   assert( varmap != 0 );
+
+   *success = TRUE;
+
+   SCIPdebugMessage("Copying method for linear ordering constraint handler.\n");
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
+   assert( sourcedata->vars != NULL );
+
+   n = sourcedata->n;
+   sourcevars = sourcedata->vars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, n) );
+   for (i = 0; i < n && *success; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) );
+
+      for (j = 0; j < n && *success; ++j)
+      {
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, success) );
+	 assert( vars[i][j] != 0 );
+      }
+   }
+
+   if ( *success )
+   {
+      /* create copied constraint */
+      if ( name == 0 )
+	 name = SCIPconsGetName(sourcecons);
+      
+      SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
+	    initial, separate, enforce, check, propagate, local, dynamic, modifiable, removable, stickingatnode) );
+   }
+
+   for (i = 0; i < n; ++i)
+      SCIPfreeBufferArray(scip, &vars[i]);
+   SCIPfreeBufferArray(scip, &vars);
+ 
+   return SCIP_OKAY;
+}
 
 /** constraint parsing method of constraint handler */
 #define consParseLinearOrdering NULL
@@ -991,7 +1076,7 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   n,                  /**< number of elements */
-   SCIP_VAR***           Vars,               /**< n x n matrix of binary variables */
+   SCIP_VAR***           vars,               /**< n x n matrix of binary variables */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
@@ -1007,7 +1092,8 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   int i, j;
+   int i;
+   int j;
 
    /* find the linear ordering constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -1021,16 +1107,16 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
    consdata->n = n;
-   SCIPallocBlockMemoryArray(scip, &consdata->Vars, n);
+   SCIPallocBlockMemoryArray(scip, &consdata->vars, n);
    for (i = 0; i < n; ++i)
    {
-      SCIPallocBlockMemoryArray(scip, &(consdata->Vars[i]), n);
+      SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n);
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
 	 {
-	    assert( Vars[i][j] != NULL );
-	    consdata->Vars[i][j] = Vars[i][j];
+	    assert( vars[i][j] != NULL );
+	    consdata->vars[i][j] = vars[i][j];
 	 }
       }
    }
