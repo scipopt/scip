@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.390 2010/07/01 18:27:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.391 2010/07/02 12:58:10 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2211,6 +2211,25 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
+/** outputs the variable name to the file stream */
+extern
+SCIP_RETCODE SCIPwriteVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
+   SCIP_VAR*             var                 /**< variable array to outpout */
+   );
+
+/** methods print the given list of variables to output stream separated by a comma; the variables x1, x2, ..., xn are
+ *  written as: <x1>, <x2>, ..., <xn>; the method SCIPparseVarsList() can parse such a string;
+ */
+extern
+SCIP_RETCODE SCIPwriteVarsList(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
+   SCIP_VAR**            vars,               /**< variable array to outpout */
+   int                   nvars               /**< number of variables */
+   );
+
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a variable is
  *  creates and captures; if variable is of integral type, fractional bounds are automatically rounded; an integer
  *  variable with bounds zero and one is automatically converted into a binary variable
@@ -2227,6 +2246,37 @@ SCIP_RETCODE SCIPparseVar(
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
+   );
+
+/** parses the given string for a variable name and stores the variable in the corresponding pointer if such a variable
+ *  exits;
+ */
+extern
+SCIP_RETCODE SCIPparseVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< stirng to parse */
+   SCIP_VAR**            var                 /**< pointer to store the problem variable, or NULL if it not exits */
+   );
+
+/** method parse the given string as variable list (<x1>, <x2>, ..., <xn>) (see SCIPwriteVarsList() ); if it was
+ *  successful, the pointer success is set to TRUE;
+ *
+ * @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
+ *
+ *  if the number of variables (parsed) is greater than the available slots in the variable array, nothing happens
+ *  except that the required size is stored in the corresponding integer; the reason for this approach is that we cannot
+ *  reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP memory
+ *  functions).
+ */
+extern
+SCIP_RETCODE SCIPparseVarsList( 
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< stirng to parse */
+   SCIP_VAR**            vars,               /**< array to store the parsed variable */
+   int*                  nvars,              /**< pointer to store number of parsed variables */
+   int                   varssize,           /**< size of the variable array */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    );
 
 /** increases usage counter of variable */

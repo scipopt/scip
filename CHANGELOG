@@ -133,6 +133,10 @@ features:
 - xor constraint handler can handle implicit binary variables
 - cliques can contain implicit binary variables
 - new constraint handler cons_linking.{c,h} (see cons_linking.c for more details)
+- new method SCIPwriteVarName() which writes a variable in cip-format to given stream
+- new method SCIPwriteVarList() which writes an array of variables in cip-Format to given stream
+- new method SCIPparseVarName() which parses a string in cip-format as a variable name
+- new method SCIPparsearList() which parses an string as a variable list in cip-format 
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

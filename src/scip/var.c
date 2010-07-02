@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.279 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.280 2010/07/02 12:58:10 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9136,14 +9136,15 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      return SCIPvarSetRelaxSol(var->data.original.transvar, set, relaxation, solval, updateobj);
-
+      SCIP_CALL( SCIPvarSetRelaxSol(var->data.original.transvar, set, relaxation, solval, updateobj) );
+      break;
+      
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       if ( updateobj )
          SCIPrelaxationSolObjAdd(relaxation, var->obj * (solval - var->relaxsol));
       var->relaxsol = solval;
-      return SCIP_OKAY;
+      break;
 
    case SCIP_VARSTATUS_FIXED:
       if( !SCIPsetIsEQ(set, solval, var->glbdom.lb) )
@@ -9152,23 +9153,27 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
             SCIPvarGetName(var), var->glbdom.lb, solval);
          return SCIP_INVALIDDATA;
       }
-      return SCIP_OKAY;
+      break;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      return SCIPvarSetRelaxSol(var->data.aggregate.var, set, relaxation, (solval - var->data.aggregate.constant)/var->data.aggregate.scalar, updateobj);
-
+      SCIP_CALL( SCIPvarSetRelaxSol(var->data.aggregate.var, set, relaxation, 
+            (solval - var->data.aggregate.constant)/var->data.aggregate.scalar, updateobj) );
+      break;
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarSetRelaxSol(var->negatedvar, set, relaxation, var->data.negate.constant - solval, updateobj);
+      SCIP_CALL( SCIPvarSetRelaxSol(var->negatedvar, set, relaxation, var->data.negate.constant - solval, updateobj) );
+      break;
       
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
+
+   return SCIP_OKAY;
 }
 
 /** returns the solution value of the problem variable in the relaxation solution */

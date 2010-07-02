@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.593 2010/07/01 18:27:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.594 2010/07/02 12:58:10 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -528,11 +528,11 @@ SCIP_RETCODE SCIPcreate(
 
    if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
    {
-      SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc());
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc()) );
    }
    if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
    {
-      SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc());
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
    }
 
    return SCIP_OKAY;
@@ -2983,7 +2983,7 @@ SCIP_DECL_PARAMCHGD(paramChgdNlpiPriority)
    assert(paramdata != NULL);
 
    /* use SCIPsetSetPriorityNlpi() to mark the nlpis unsorted */
-   SCIPsetNlpiPriority(scip, (SCIP_NLPI*)paramdata, SCIPparamGetInt(param));
+   SCIP_CALL( SCIPsetNlpiPriority(scip, (SCIP_NLPI*)paramdata, SCIPparamGetInt(param)) );
 
    return SCIP_OKAY;
 }
@@ -6511,13 +6511,12 @@ SCIP_RETCODE SCIPrestartSolve(
 }
 
 /** whether we are in the restarting phase */
-extern
 SCIP_Bool SCIPisInRestart(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPisInRestart", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisInRestart", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
    /* return the restart status */
    return scip->stat->inrestart;
 }
@@ -6578,6 +6577,68 @@ SCIP_RETCODE SCIPcreateVar(
    return SCIP_OKAY;
 }
 
+/** outputs the variable name to the file stream */
+SCIP_RETCODE SCIPwriteVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
+   SCIP_VAR*             var                 /**< variable array to outpout */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   
+   SCIP_CALL( checkStage(scip, "SCIPwriteVarName", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   /* print variable name */
+   if( SCIPvarIsNegated(var) )
+   {
+      SCIP_VAR* negatedvar;
+      
+      SCIP_CALL( SCIPgetNegatedVar(scip, var, &negatedvar) );
+      SCIPinfoMessage(scip, file, "<~%s>", SCIPvarGetName(negatedvar));
+   }
+   else
+   {
+      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(var));
+   }
+
+   /* print vatiable type */
+   SCIPinfoMessage(scip, file, "[%c]", 
+      SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? 'B' :
+      SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? 'I' :
+      SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+   
+   return SCIP_OKAY;
+}
+
+/** methods print the given list of variables to output stream separated by a comma; the variables x1, x2, ..., xn are
+ *  written as: <x1>, <x2>, ..., <xn>; the method SCIPparseVarsList() can parse such a string;
+ */
+SCIP_RETCODE SCIPwriteVarsList(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
+   SCIP_VAR**            vars,               /**< variable array to outpout */
+   int                   nvars               /**< number of variables */
+   )
+{
+   int v;
+   
+   SCIP_CALL( checkStage(scip, "SCIPwriteVarsList", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   for( v = 0; v < nvars; ++v )
+   {
+      if( v > 0 )
+      {
+         SCIPinfoMessage(scip, file, ", ");
+      }
+      
+      /* print variable name */
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[v]) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a variable is
  *  creates and captures; if variable is of integral type, fractional bounds are automatically rounded; an integer
  *  variable with bounds zero and one is automatically converted into a binary variable
@@ -6618,6 +6679,144 @@ SCIP_RETCODE SCIPparseVar(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** parses the given string for a variable name and stores the variable in the corresponding pointer if such a variable
+ *  exits;
+ */
+SCIP_RETCODE SCIPparseVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< stirng to parse */
+   SCIP_VAR**            var                 /**< pointer to store the problem variable, or NULL if it not exits */
+   )
+{
+   SCIP_Bool negated;
+   char* strcopy;
+   char* saveptr;
+   char* varname;
+
+   SCIP_CALL( checkStage(scip, "SCIPparseVarName", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   /* copy input string such that it can be truncated */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1) );
+
+   /* start truncation of thr string */
+   varname = SCIPstrtok(strcopy, ">", &saveptr);
+
+   /* cutoff all characters which do not belong to the variable name */
+   while(*varname != '<')
+      varname++;
+      
+   /* cutoff the '<' */
+   varname++;
+
+   /* check if have a negated variable */
+   if( *varname == '~' )
+   {
+      /* cutoff the '~' */
+      varname++;
+      negated = TRUE;
+      SCIPdebugMessage("parsed negated variable name <%s>\n", varname);
+   }
+   else
+   {
+      negated = FALSE;
+      SCIPdebugMessage("parsed variable name <%s>\n", varname);
+   }
+   
+   /* search for the variable */
+   (*var) = SCIPfindVar(scip, varname);
+   
+   if( negated )
+   {
+      SCIP_CALL( SCIPgetNegatedVar(scip, *var, var) );
+   }
+   
+   /* free buffer */
+   SCIPfreeBufferArray(scip, &varname);
+
+   return SCIP_OKAY;
+}
+
+/** method parse the given string as variable list (<x1>, <x2>, ..., <xn>) (see SCIPwriteVarsList() ); if it was
+ *  successful, the pointer success is set to TRUE;
+ *
+ *  if the number of variables (parsed) is greater than the available slots in the variable array, nothing happens
+ *  except that the required size is stored in the corresponding integer; the reason for this approach is that we cannot
+ *  reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP memory
+ *  functions).
+ */
+SCIP_RETCODE SCIPparseVarsList( 
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< stirng to parse */
+   SCIP_VAR**            vars,               /**< array to store the parsed variable */
+   int*                  nvars,              /**< pointer to store number of parsed variables */
+   int                   varssize,           /**< size of the variable array */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   )
+{
+   SCIP_VAR** tmpvars;
+   SCIP_VAR* var;
+   char* line;
+   char* varname;
+   char* saveptr;
+   int ntmpvars;
+   int v;
+   
+   SCIP_CALL( checkStage(scip, "SCIPparseVarsList", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* copy input string such that it can be truncated */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &line, str, strlen(str)+1) );
+
+   /* allocate buffer memory for temporary storing the parsed variables */
+   SCIP_CALL (SCIPallocBufferArray(scip, &tmpvars, varssize) );
+
+   ntmpvars = 0;
+   (*success) = TRUE;
+   
+   /* start truncation of thr string */
+   varname = SCIPstrtok(line, ",", &saveptr);
+      
+   do
+   {
+      /* parse variable name */ 
+      SCIP_CALL( SCIPparseVarName(scip, varname, &var) );
+
+      if( var == NULL )
+      {
+         SCIPdebugMessage("variable with name <%s> does not exits\n", varname);
+         (*success) = FALSE;
+         break;
+      }
+
+      /* store the variable in the tmp array */
+      if( ntmpvars < varssize )
+         tmpvars[ntmpvars] = var;
+      
+      ntmpvars++;
+   }
+   while( (varname = SCIPstrtok(NULL, ",", &saveptr)) != NULL );
+
+   /* if all variable name searches were successfully and the variable array has enough slots copy the collected
+    * variables 
+    */
+   if( (*success) && ntmpvars < varssize )
+   {
+      for( v = 0; v < ntmpvars; ++v )
+         vars[v] = tmpvars[v];
+      
+      (*nvars) = ntmpvars;
+   }
+   else
+      (*nvars) = 0;
+   
+   (*requiredsize) = ntmpvars;
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &tmpvars);
+   SCIPfreeBufferArray(scip, &line);
 
    return SCIP_OKAY;
 }
@@ -7025,7 +7224,7 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
 
    SCIP_CALL( checkStage(scip, "SCIPsetRelaxSolVal", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPvarSetRelaxSol(var, scip->set, scip->relaxation, val, TRUE);
+   SCIP_CALL( SCIPvarSetRelaxSol(var, scip->set, scip->relaxation, val, TRUE) );
 
    if( val != 0.0 )
       SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
@@ -7054,8 +7253,10 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    for( v = 0; v < nvars; v++ )
-      SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, 0.0, FALSE);
-
+   {
+      SCIP_CALL( SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, 0.0, FALSE) );
+   }
+   
    SCIPrelaxationSetSolObj(scip->relaxation, 0.0);
    SCIPrelaxationSetSolZero(scip->relaxation, TRUE);
 
@@ -7084,7 +7285,9 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP_CALL( SCIPclearRelaxSolVals(scip) );
 
    for( v = 0; v < nvars; v++ )
-      SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, vals[v], TRUE);
+   {
+      SCIP_CALL( SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, vals[v], TRUE) );
+   }
 
    SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
    SCIPrelaxationSetSolValid(scip->relaxation, TRUE); 
@@ -7119,7 +7322,9 @@ SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP_CALL( SCIPclearRelaxSolVals(scip) );
 
    for( v = 0; v < nvars; v++ )
-      SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, vals[v], FALSE);
+   {
+      SCIP_CALL( SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, vals[v], FALSE) );
+   }       
 
    SCIPrelaxationSetSolObj(scip->relaxation, SCIPsolGetObj(sol, scip->set, scip->transprob));
 
@@ -8305,9 +8510,9 @@ SCIP_RETCODE SCIPinferVarLbProp(
    }
    newbound = MIN(newbound, ub);
 
-   if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
-
+   
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -8330,7 +8535,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
-
+   
    if( tightened != NULL )
       *tightened = TRUE;
 
@@ -8378,9 +8583,9 @@ SCIP_RETCODE SCIPinferVarUbProp(
    }
    newbound = MAX(newbound, lb);
 
-   if( !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
-
+   
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -8978,6 +9183,9 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
       return SCIP_OKAY;
    }
 
+   /* to satisfy flexlint */
+   assert(vars != NULL);
+   
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &negvars, nvars) );
    
@@ -9903,7 +10111,6 @@ SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
 }
 
 /** returns the variable's conflict score value */
-extern
 SCIP_Real SCIPgetVarVSIDS(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -9916,7 +10123,6 @@ SCIP_Real SCIPgetVarVSIDS(
 }
 
 /** returns the variable's conflict score value only using conflicts of the current run */
-extern
 SCIP_Real SCIPgetVarVSIDSCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -12453,10 +12659,10 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
 
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPbufferAllocMem(scip->set->buffer, scip->set, (void**)&vals, SCIPnlpGetNVars(scip->nlp) * sizeof(SCIP_Real)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, SCIPnlpGetNVars(scip->nlp)) );
       SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPnlpGetNVars(scip->nlp), SCIPnlpGetVars(scip->nlp), vals) );
       SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), vals) );
-      SCIPbufferFreeMem(scip->set->buffer, (void**)&vals, 0);
+      SCIPfreeBufferArray(scip, &vals);
    }
    else
    {
@@ -12542,7 +12748,7 @@ SCIP_Real SCIPgetNLPObjval(
    else
    {
       SCIPerrorMessage("NLP has not been not constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALID;
    }
 }
 
