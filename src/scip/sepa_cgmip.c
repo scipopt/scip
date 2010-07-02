@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.15 2010/07/02 14:20:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.16 2010/07/02 14:28:10 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -69,7 +69,7 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_TIMELIMIT          1e20 /**< time limit for sub-MIP */
 #define DEFAULT_MEMORYLIMIT        1e20 /**< memory limit for sub-MIP */
-#define DEFAULT_NODELIMIT         10000 /**< node limit for sub-MIP */
+#define DEFAULT_NODELIMIT       10000LL /**< node limit for sub-MIP */
 #define DEFAULT_OBJWEIGHT         1e-03 /**< objective weight for artificial variables */
 #define DEFAULT_USECMIR            TRUE /**< use CMIR-generator (otherwise add cut directly) */
 #define DEFAULT_CMIROWNBOUNDS     FALSE /**< tell CMIR-generator which bounds to used in rounding? */
@@ -227,7 +227,8 @@ SCIP_RETCODE storeCutInArrays(
          if ( !SCIPisZero(scip, val) )
          {
             act += val * varsolvals[v];
-            norm = MAX(norm, REALABS(val));
+            if ( REALABS(val) > norm )
+               REALABS(val);
             cutvars[len] = vars[v];
             cutvals[len++] = val;
          }
@@ -1925,7 +1926,7 @@ SCIP_RETCODE createCGCutsCMIR(
    assert( (int) mipdata->nrows == nrows );
 
    /* @todo more advanced settings - compare sepa_gomory.c */
-   maxdnom = CUTCOEFBND+1;
+   maxdnom = (SCIP_Longint) CUTCOEFBND+1;
    maxscale = 10000.0;
 
    /* get the type of norm to use for efficacy calculations */
