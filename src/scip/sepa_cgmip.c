@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.16 2010/07/02 14:28:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.17 2010/07/02 14:30:18 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -228,7 +228,7 @@ SCIP_RETCODE storeCutInArrays(
          {
             act += val * varsolvals[v];
             if ( REALABS(val) > norm )
-               REALABS(val);
+               norm = REALABS(val);
             cutvars[len] = vars[v];
             cutvals[len++] = val;
          }
@@ -2431,7 +2431,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "separating/cgmip/nodelimit",
          "node limit for sub-MIP (-1: unlimited)",
-         &sepadata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1, SCIP_LONGINT_MAX, NULL, NULL) );
+         &sepadata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cgmip/objweight",
          "weight used for the row combination coefficent in the sub-MIP objective",
