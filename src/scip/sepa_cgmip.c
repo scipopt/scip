@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.14 2010/07/02 14:00:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.15 2010/07/02 14:20:37 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -85,7 +85,7 @@
 
 #define EPSILONVALUE              1e-03 /**< epsilon value needed to model strict-inequalities */
 #define BETAEPSILONVALUE          1e-02 /**< epsilon value for fracbeta - is larger than EPSILONVALUE for numerical stability */
-#define CUTCOEFBND                 1000 /**< bounds on the values of the coefficients in the CG-cut */
+#define CUTCOEFBND               1000.0 /**< bounds on the values of the coefficients in the CG-cut */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
 #define BOUNDSWITCH              0.9999
@@ -862,8 +862,8 @@ SCIP_RETCODE createSubscip(
    mipdata->n += cnt + ucnt + 2;
 
    /* get temporary storage */
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, mipdata->n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, mipdata->n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, (int) mipdata->n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, (int) mipdata->n) );
 
    /* create constraints for alpha variables of CG-cut */
    cnt = 0;
@@ -1998,6 +1998,9 @@ SCIP_RETCODE createCGCutsCMIR(
       {
          int typefortrans;
 
+         assert( boundsfortrans != NULL );
+         assert( boundtypesfortrans != NULL );
+
          if ( sepadata->allowlocal )
             typefortrans = -2;
          else
@@ -2157,7 +2160,7 @@ SCIP_RETCODE freeSubscip(
 
    for (j = 0; j < mipdata->ncols; ++j)
    {
-      if ( mipdata->colType == colPresent )
+      if ( mipdata->colType[j] == colPresent )
       {
 	 assert( mipdata->alpha[j] != NULL );
 	 SCIP_CALL( SCIPreleaseVar(subscip, &(mipdata->alpha[j])) );
@@ -2427,7 +2430,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "separating/cgmip/nodelimit",
          "node limit for sub-MIP (-1: unlimited)",
-         &sepadata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1, INT_MAX, NULL, NULL) );
+         &sepadata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cgmip/objweight",
          "weight used for the row combination coefficent in the sub-MIP objective",

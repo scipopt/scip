@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.34 2010/06/22 17:50:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.35 2010/07/02 14:20:37 bzfpfets Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -1651,7 +1651,7 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintSOS1)
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int j;
 
@@ -1679,7 +1679,7 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
 /** constraint copying method of constraint handler */
 static
 SCIP_DECL_CONSCOPY(consCopySOS1)
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* sourceconsdata;
    SCIP_VAR** sourcevars;
    SCIP_VAR** targetvars;
@@ -1742,7 +1742,7 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseSOS1)
-{
+{  /*lint --e{715}*/
    char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
    SCIP_Real weight;
