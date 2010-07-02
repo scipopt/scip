@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.h,v 1.4 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_lop.h,v 1.5 2010/07/02 18:44:09 bzfpfets Exp $"
 
-#ifndef __HCP_PROBDATA_LOP__
-#define __HCP_PROBDATA_LOP__
+#ifndef __LOP_PROBDATA_LOP__
+#define __LOP_PROBDATA_LOP__
 
 #include <scip/scip.h>
 
