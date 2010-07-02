@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.13 2010/06/22 15:37:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.14 2010/07/02 14:00:56 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -31,10 +30,21 @@
  * Projected Chv&aacute;tal-Gomory cuts for mixed integer linear programs,@n
  * Mathematical Programming 113, No. 2 (2008)
  *
- * This separator should be used carefully - it may require a long separation time.
+ *
+ * There are two versions to generate the final cut:
+ *
+ * - The CMIR-routines of SCIP can be used (if usecmir is true). One can determine which bound is
+ *   used in the rounding operation (if cmirownbounds is true) or let SCIP choose the best. This
+ *   version is generally numerically more stable than the second one.
+ * - One can directly generate the CG-cut as computed (usecmir = false). The cut is not take from
+ *   the solution of the MIP, but is recomputed, and some care (but not as much as in the first
+ *   version) has been taken to create a valid cut.
+ *
  *
  * @todo Check whether one can weaken the conditions on the continuous variables.
+ *
  * @warning This plugin is not yet fully tested.
+ * @warning This separator should be used carefully - it may require a long separation time.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -61,12 +71,14 @@
 #define DEFAULT_MEMORYLIMIT        1e20 /**< memory limit for sub-MIP */
 #define DEFAULT_NODELIMIT         10000 /**< node limit for sub-MIP */
 #define DEFAULT_OBJWEIGHT         1e-03 /**< objective weight for artificial variables */
-#define DEFAULT_USECMIR           FALSE /**< use CMIR-generator (otherwise add cut directly) */
+#define DEFAULT_USECMIR            TRUE /**< use CMIR-generator (otherwise add cut directly) */
+#define DEFAULT_CMIROWNBOUNDS     FALSE /**< tell CMIR-generator which bounds to used in rounding? */
 #define DEFAULT_ALLOWLOCAL        FALSE /**< allow to generate local cuts */
 #define DEFAULT_ONLYINTVARS       FALSE /**< generate cuts for problems with only integer variables? */
 #define DEFAULT_ONLYACTIVEROWS     TRUE /**< use only active rows to generate cuts? */
 #define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts? */
 #define DEFAULT_PRIMALSEPARATION   TRUE /**< only separate cuts that are tight for the best feasible solution? */
+#define DEFAULT_ONLYRANKONE       FALSE /**< whether only rank 1 inequalities should be separated */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -89,7 +101,7 @@
 #if 0
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 #endif
-#define MAXAGGRLEN(nvars)          (nvars*(nvars))    /**< currently very large to allow any generation */
+#define MAXAGGRLEN(nvars)          nvars              /**< currently very large to allow any generation */
 
 /** separator data */
 struct SCIP_SepaData
@@ -102,11 +114,13 @@ struct SCIP_SepaData
    SCIP_Real             memorylimit;        /**< memory limit for subscip */
    SCIP_Longint          nodelimit;          /**< node limit for subscip */
    SCIP_Bool             usecmir;            /**< use CMIR-generator (otherwise add cut directly) */
+   SCIP_Bool             cmirownbounds;      /**< tell CMIR-generator which bounds to used in rounding? */
    SCIP_Bool             allowlocal;         /**< allow local cuts */
    SCIP_Bool             onlyintvars;        /**< generate cuts for problems with only integer variables? */
    SCIP_Bool             onlyActiveRows;     /**< use only active rows to generate cuts? */
    SCIP_Bool             useCutpool;         /**< use cutpool to store CG-cuts? */
    SCIP_Bool             primalSeparation;   /**< only separate cuts that are tight for the best feasible solution? */
+   SCIP_Bool             onlyrankone;        /**< whether only rank 1 inequalities should be separated */
 };
 
 
@@ -712,6 +726,23 @@ SCIP_RETCODE createSubscip(
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	 continue;
 
+      /* check whether we want to skip cut produced by the CGMIP separator */
+      if ( sepadata->onlyrankone )
+      {
+         const char* rowname;
+         rowname = SCIProwGetName(row);
+         if ( strlen(rowname) > 5 )
+         {
+            /* check for name "cgcut..." */
+            if ( rowname[0] == 'c' && rowname[1] == 'g' && rowname[2] == 'c' && rowname[3] == 'u' && rowname[4] == 't' )
+            {
+               mipdata->ylhs[i] = NULL;
+               mipdata->yrhs[i] = NULL;
+               continue;
+            }
+         }
+      }
+
       /* if we have an equation */
       if ( SCIPisEQ(scip, lhs[i], rhs[i]) )
       {
@@ -1094,8 +1125,8 @@ SCIP_RETCODE createSubscip(
    SCIPfreeBufferArray(scip, &lhs);
 
 #ifdef SCIP_DEBUG
-   // SCIPdebug( SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, NULL, FALSE) ) );
-   SCIP_CALL( SCIPwriteOrigProblem(subscip, "debug.lp", "lp", FALSE) );
+   /* SCIPdebug( SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, NULL, FALSE) ) ); */
+   /* SCIP_CALL( SCIPwriteOrigProblem(subscip, "debug.lp", "lp", FALSE) ); */
 #endif
 
    return SCIP_OKAY;
@@ -1260,7 +1291,8 @@ SCIP_RETCODE computeCut(
    SCIP_Real*      cutcoefs,            /**< coefficients of the cut */
    SCIP_Real*      cutrhs,              /**< rhs of the cut */
    SCIP_Bool*      localrowsused,       /**< pointer to store whether local rows were used in summation */
-   SCIP_Bool*      localboundsused      /**< pointer to store whether local bounds were used in summation */
+   SCIP_Bool*      localboundsused,     /**< pointer to store whether local bounds were used in summation */
+   SCIP_Bool*      success              /**< whether we produced a valid cut */
    )
 {
    SCIP* subscip;
@@ -1281,6 +1313,7 @@ SCIP_RETCODE computeCut(
    assert( cutcoefs != NULL );
    assert( cutrhs != NULL );
    assert( localrowsused != NULL );
+   assert( success != NULL );
 
    subscip = mipdata->subscip;
    assert( subscip != NULL );
@@ -1293,6 +1326,7 @@ SCIP_RETCODE computeCut(
    assert( ncols == (int) mipdata->ncols );
 
    /* init */
+   *success = TRUE;
    *localrowsused = FALSE;
    *localboundsused = FALSE;
    BMSclearMemoryArray(cutcoefs, nvars);
@@ -1302,6 +1336,9 @@ SCIP_RETCODE computeCut(
    maxabsweight = 0.0;
    for (i = 0; i < nrows; ++i)
    {
+#ifndef NDEBUG
+      const char* rowname;
+#endif
       SCIP_ROW* row;
       SCIP_Real weight;
 
@@ -1312,6 +1349,10 @@ SCIP_RETCODE computeCut(
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	 continue;
 
+#ifndef NDEBUG
+      rowname = SCIProwGetName(row);
+#endif
+
       /* get weight from solution */
       weight = 0.0;
       if ( mipdata->ylhs[i] != NULL )
@@ -1319,6 +1360,9 @@ SCIP_RETCODE computeCut(
 	 val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
 	 if ( SCIPisFeasPositive(scip, val) )
 	    weight = -val;
+
+         assert( ! sepadata->onlyrankone || strlen(rowname) <= 5 || 
+            rowname[0] != 'c' || rowname[1] != 'g' || rowname[2] != 'c' || rowname[3] != 'u' || rowname[4] != 't' );
       }
       if ( mipdata->yrhs[i] != NULL )
       {
@@ -1327,6 +1371,9 @@ SCIP_RETCODE computeCut(
 	 /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
 	 if ( SCIPisFeasGT(scip, val, ABS(weight)) )
 	    weight = val;
+
+         assert( ! sepadata->onlyrankone || strlen(rowname) <= 5 || 
+            rowname[0] != 'c' || rowname[1] != 'g' || rowname[2] != 'c' || rowname[3] != 'u' || rowname[4] != 't' );
       }
 
       weight = REALABS(weight);
@@ -1587,6 +1634,17 @@ SCIP_RETCODE computeCut(
       {
 	 /* force coefficients of all continuous variables or of variables not in the lp to zero */
 	 assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || pos == -1 );
+
+         /* check whether all cofficients for continuous variables are nonnegative */
+         if ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if ( SCIPisNegative(scip, cutcoefs[j]) )
+            {
+               *success = FALSE;
+               break;
+            }
+         }
+
 	 cutcoefs[j] = 0.0;
       }
    }
@@ -1620,6 +1678,7 @@ SCIP_RETCODE createCGCutsDirect(
    SCIP_Real* cutvals;
    SCIP_Real* varsolvals;
    SCIP_Bool cutislocal;
+   SCIP_Bool success;
    char normtype;
    int nvars;
 
@@ -1680,8 +1739,15 @@ SCIP_RETCODE createCGCutsDirect(
       sol = sols[s];
 
       /* compute coefficients */
-      SCIP_CALL( computeCut(scip, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused) );
+      SCIP_CALL( computeCut(scip, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &success) );
       cutislocal = localrowsused || localboundsused;
+
+      /* take next solution if cut was not valid */
+      if ( ! success )
+      {
+         SCIPdebugMessage("cut not valid - skipping ...\n");
+         continue;
+      }
 
       /* compute activity */
       cutact = 0.0;
@@ -1827,6 +1893,9 @@ SCIP_RETCODE createCGCutsCMIR(
    SCIP_Real maxscale;
    SCIP_Longint maxdnom;
 
+   int* boundsfortrans;
+   SCIP_BOUNDTYPE* boundtypesfortrans;
+
    assert( scip != NULL );
    assert( sepadata != NULL );
    assert( mipdata != NULL );
@@ -1856,8 +1925,8 @@ SCIP_RETCODE createCGCutsCMIR(
    assert( (int) mipdata->nrows == nrows );
 
    /* @todo more advanced settings - compare sepa_gomory.c */
-   maxdnom = CUTCOEFBND;
-   maxscale = 1000.0;
+   maxdnom = CUTCOEFBND+1;
+   maxscale = 10000.0;
 
    /* get the type of norm to use for efficacy calculations */
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
@@ -1881,6 +1950,18 @@ SCIP_RETCODE createCGCutsCMIR(
 	 varsolvals[k] = 0.0;
    }
 
+   /* prepare arrays for bound information, if requested */
+   if ( sepadata->cmirownbounds )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &boundsfortrans, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &boundtypesfortrans, nvars) );
+   }
+   else
+   {
+      boundsfortrans = NULL;
+      boundtypesfortrans = NULL;
+   }
+
    /* loop through solutions found */
    for (s = 0; s < nsols; ++s)
    {
@@ -1891,7 +1972,7 @@ SCIP_RETCODE createCGCutsCMIR(
       for (k = 0; k < nrows; ++k)
       {
 	 SCIP_Real val;
-
+ 
 	 weights[k] = 0;
 	 if ( mipdata->ylhs[k] != NULL )
 	 {
@@ -1906,15 +1987,68 @@ SCIP_RETCODE createCGCutsCMIR(
 	    val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[k]);
 	    assert( ! SCIPisFeasNegative(subscip, val) );
 
-	    if ( SCIPisFeasPositive(subscip, val) )
-	       weights[k] = val;  /* not both should be positive */
+            /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
+            if ( SCIPisFeasGT(scip, val, ABS(weights[k])) )
+               weights[k] = val;
 	 }
+      }
+
+      /* set up data for bounds to use */
+      if ( sepadata->cmirownbounds )
+      {
+         int typefortrans;
+
+         if ( sepadata->allowlocal )
+            typefortrans = -2;
+         else
+            typefortrans = -1;
+
+         /* check all variables */
+         for (k = 0; k < nvars; ++k)
+         {
+            int pos;
+            SCIP_VAR* var;
+
+            var = vars[k];
+            assert( var != NULL );
+            pos = SCIPcolGetLPPos(SCIPvarGetCol(var));
+
+            boundsfortrans[k] = typefortrans;
+            boundtypesfortrans[k] = SCIP_BOUNDTYPE_LOWER;
+
+            if ( pos < 0 || ! SCIPvarIsIntegral(var) )
+               continue;
+
+            assert( pos < (int) mipdata->ncols );
+            assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN );
+
+            /* check upper bound */
+            if ( mipdata->z[pos] != NULL && SCIPisSumPositive(subscip, SCIPgetSolVal(subscip, sol, mipdata->z[pos])) )
+            {
+               boundsfortrans[k] = typefortrans;
+
+               /* check whether variable is complemented */
+               if ( ! mipdata->isComplemented[pos] )
+                  boundtypesfortrans[k] = SCIP_BOUNDTYPE_UPPER;
+               /* otherwise use lower bound */
+            }
+            else
+            {
+               /* check lower bounds */
+               boundsfortrans[k] = typefortrans;
+
+               /* check whether variable is complemented */
+               if ( mipdata->isComplemented[pos] )
+                  boundtypesfortrans[k] = SCIP_BOUNDTYPE_UPPER;
+               /* otherwise use lower bound */
+            }
+         }
       }
 
       /* create a MIR cut using the above calculated weights */
       cutact = -1.0;
       cutrhs = -1.0;
-      SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, NULL, NULL,
+      SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans, boundtypesfortrans,
 	    (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
 	    weights, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
       assert( sepadata->allowlocal || !cutislocal );
@@ -1938,7 +2072,7 @@ SCIP_RETCODE createCGCutsCMIR(
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-	    /* SCIPdebug(SCIPprintRow(scip, cut, NULL)); */
+            /* SCIPdebug(SCIPprintRow(scip, cut, NULL)); */
 
 	    assert(success);
 #ifdef MAKECUTINTEGRAL
@@ -1990,6 +2124,9 @@ SCIP_RETCODE createCGCutsCMIR(
    }
 
    /* free temporary memory */
+   SCIPfreeBufferArrayNull(scip, &boundsfortrans);
+   SCIPfreeBufferArrayNull(scip, &boundtypesfortrans);
+
    SCIPfreeBufferArray(scip, &cutvals);
    SCIPfreeBufferArray(scip, &cutvars);
    SCIPfreeBufferArrayNull(scip, &varsolvals);
@@ -2231,6 +2368,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    if ( ngen > 0 )
       *result = SCIP_SEPARATED;
 
+#ifdef SCIP_OUTPUT
+   /* SCIP_CALL( SCIPwriteLP(scip, "cuts.lp") ); */
+   /* SCIP_CALL( SCIPwriteMIP(scip, "cuts.lp", FALSE, TRUE) ); */
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -2295,6 +2437,10 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "use CMIR-generator (otherwise add cut directly)?",
          &sepadata->usecmir, FALSE, DEFAULT_USECMIR, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/cmirownbounds",
+         "tell CMIR-generator which bounds to used in rounding?",
+         &sepadata->cmirownbounds, FALSE, DEFAULT_CMIROWNBOUNDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/allowlocal",
          "allow to generate local cuts?",
          &sepadata->allowlocal, FALSE, DEFAULT_ALLOWLOCAL, NULL, NULL) );
@@ -2307,13 +2453,17 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "use only active rows to generate cuts?",
          &sepadata->onlyActiveRows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cgmip/useCutpool",
+         "separating/cgmip/usecutpool",
          "use cutpool to store CG-cuts?",
          &sepadata->useCutpool, FALSE, DEFAULT_USECUTPOOL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/primalSeparation",
          "only separate cuts that are tight for the best feasible solution?",
          &sepadata->primalSeparation, FALSE, DEFAULT_PRIMALSEPARATION, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/onlyrankone",
+         "whether only rank 1 inequalities should be separated",
+         &sepadata->onlyrankone, FALSE, DEFAULT_ONLYRANKONE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
