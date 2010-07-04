@@ -12,7 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.11 2010/07/02 19:24:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.12 2010/07/04 18:29:56 bzfpfets Exp $"
+
+/**@file   probdata_lop.h
+ * @brief  handling of data needed for solving linear ordering problems
+ * @author Marc Pfetsch
+ */
 
 #include "probdata_lop.h"
 
@@ -143,11 +148,6 @@ SCIP_RETCODE LOPreadFile(
 }
 
 
-
-
-
-/* ----------------- outside interface functions ------------------------ */
-
 /** get problem name
  *
  *  Returns NULL on error
@@ -196,6 +196,9 @@ SCIP_RETCODE getProblemName(
    return SCIP_OKAY;
 }
 
+
+
+/* ----------------- public interface functions ------------------------ */
 
 
 /** create linear ordering problem instance */

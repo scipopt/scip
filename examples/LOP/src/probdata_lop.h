@@ -12,7 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.h,v 1.5 2010/07/02 18:44:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.h,v 1.6 2010/07/04 18:29:56 bzfpfets Exp $"
+
+/**@file   probdata_lop.h
+ * @brief  handling of data needed for solving linear ordering problems
+ * @author Marc Pfetsch
+ */
 
 #ifndef __LOP_PROBDATA_LOP__
 #define __LOP_PROBDATA_LOP__
