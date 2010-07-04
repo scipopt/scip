@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.9 2010/06/22 17:50:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.10 2010/07/04 18:32:58 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1285,10 +1285,10 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
 static
 SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 {  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
+   assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1339,10 +1339,10 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 {  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
+   assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1395,10 +1395,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
    int ncuts;
    int c;
 
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
+   assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
    ncuts = 0;
@@ -1903,13 +1903,13 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    int nspcons;
    int nblocks;
 
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( cons != 0 );
-   assert( sourcescip != 0 );
-   assert( sourcecons != 0 );
-   assert( varmap != 0 );
+   assert( cons != NULL );
+   assert( sourcescip != NULL );
+   assert( sourcecons != NULL );
+   assert( varmap != NULL );
 
    *success = TRUE;
 
