@@ -137,6 +137,8 @@ features:
 - new method SCIPwriteVarList() which writes an array of variables in cip-Format to given stream
 - new method SCIPparseVarName() which parses a string in cip-format as a variable name
 - new method SCIPparsearList() which parses an string as a variable list in cip-format 
+- constraint handler "logicor" can pares its output 
+- constraint handler "and" can pares its output 
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.57 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.58 2010/07/05 11:02:28 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -660,7 +660,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - cons            : pointer to store the created constraint
- *  - name            : name of the constrint
+ *  - name            : name of the constraint
  *  - str             : string to parse 
  *  - initial         : should the LP relaxation of constraint be in the initial LP?
  *  - separate        : should the constraint be separated during LP processing?

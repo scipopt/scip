@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.118 2010/06/09 13:37:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.119 2010/07/05 11:02:27 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -488,25 +488,27 @@ SCIP_RETCODE consdataFree(
 
 /** prints and constraint to file stream */
 static
-void consdataPrint(
+SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< and constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int v;
-
    assert(consdata != NULL);
 
-   /* print coefficients */
-   SCIPinfoMessage(scip, file, "<%s> == and(", SCIPvarGetName(consdata->resvar));
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      if( v > 0 )
-         SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
-   }
+   /* print resultant */
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar) );
+
+   /* start the variable list */
+   SCIPinfoMessage(scip, file, " == and(");
+
+   /* print variable list */
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars) );
+
+   /* close the variable list */
    SCIPinfoMessage(scip, file, ")");
+
+   return SCIP_OKAY;
 }
 
 /** adds coefficient to and constraint */
@@ -833,7 +835,7 @@ SCIP_RETCODE applyFixings(
    SCIPfreeBufferArray(scip, &contained);
 
    SCIPdebugMessage("after fixings: ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
    SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
@@ -2662,7 +2664,7 @@ SCIP_DECL_CONSPRINT(consPrintAnd)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
       
    return SCIP_OKAY;
 }
@@ -2714,7 +2716,81 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseAnd NULL
+static
+SCIP_DECL_CONSPARSE(consParseAnd)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR* resvar;
+   char* strcopy;
+   char* token;
+   char* saveptr;
+   int requiredsize;
+   int varssize;
+   int nvars;
+   
+   SCIPdebugMessage("pasre <%s> as and constraint\n", str);
+
+   /* copy string for truncating it */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1));
+
+   /* cutoff "and" form the constraint string */
+   token = SCIPstrtok(strcopy, "=", &saveptr ); 
+
+   /* parse variable name */ 
+   SCIP_CALL( SCIPparseVarName(scip, token, &resvar) );
+
+   if( resvar == NULL )
+   {
+      SCIPdebugMessage("resultant variable %s does not exist \n", token);
+      *success = FALSE;
+   }
+   else
+   {
+      /* cutoff "and" form the constraint string */
+      token = SCIPstrtok(NULL, "(", &saveptr ); 
+
+      /* cutoff ")" form the constraint string */
+      token = SCIPstrtok(NULL, ")", &saveptr ); 
+   
+      varssize = 100;
+      nvars = 0;
+
+      /* allocate buffer array for variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+      /* pasre string */
+      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+   
+      if( *success )
+      {
+         /* check if the size of the variable array was great enough */
+         if( varssize < requiredsize )
+         {
+            /* reallocate memory */
+            varssize = requiredsize;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+            
+            /* parse string again with the correct size of the variable array */
+            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+         }
+         
+         assert(*success);
+         assert(varssize >= requiredsize);
+
+         /* create and constraint */
+         SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, nvars, vars, 
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
+
+      /* free variable buffer */
+      SCIPfreeBufferArray(scip, &vars);
+   }
+   
+   /* free string buffer */
+   SCIPfreeBufferArray(scip, &strcopy);
+   
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.139 2010/06/30 09:29:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.140 2010/07/05 11:02:27 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -240,30 +240,28 @@ SCIP_RETCODE consdataFree(
 
 /** prints logic or constraint to file stream */
 static
-void consdataPrint(
+SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< logic or constraint data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             endline             /**< should an endline be set? */
    )
 {
-   int v;
-
    assert(consdata != NULL);
 
-   /* print coefficients */
+   /* print constraint type */
    SCIPinfoMessage(scip, file, "logicor(");
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      assert(consdata->vars[v] != NULL);
-      if( v > 0 )
-         SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
-   }
+
+   /* print variable list */
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars) );
+   
+   /* close bracket */
    SCIPinfoMessage(scip, file, ")");
    
    if( endline )
       SCIPinfoMessage(scip, file, "\n");
+
+   return SCIP_OKAY;
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -437,7 +435,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMessage("after fixings: ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    return SCIP_OKAY;
 }
@@ -2293,7 +2291,7 @@ SCIP_DECL_CONSACTIVE(consActiveLogicor)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMessage("activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    /* catch events on watched variables */
    if( consdata->watchedvar1 != -1 )
@@ -2332,7 +2330,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMessage("deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    /* drop events on watched variables */
    if( consdata->watchedvar1 != -1 )
@@ -2371,7 +2369,7 @@ SCIP_DECL_CONSPRINT(consPrintLogicor)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   consdataPrint(scip, SCIPconsGetData(cons), file, FALSE);
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file, FALSE) );
     
    return SCIP_OKAY;
 }
@@ -2397,7 +2395,7 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
          1.0, SCIPinfinity(scip), varmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
-
+   
    return SCIP_OKAY;
 }
 
@@ -2405,18 +2403,61 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
 static
 SCIP_DECL_CONSPARSE(consParseLogicor)
 {  /*lint --e{715}*/
+   SCIP_VAR** vars;
 
-#if 0
-   char* name;
+   char* strcopy;
+   char* token;
+   char* saveptr;
+   int requiredsize;
+   int varssize;
+   int nvars;
    
+   SCIPdebugMessage("pasre <%s> as logicor constraint\n", str);
 
+   /* copy string for truncating it */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1));
 
-   SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   /* cutoff "logicor" form the constraint string */
+   token = SCIPstrtok(strcopy, "(", &saveptr ); 
 
-#endif
+   /* cutoff ")" form the constraint string */
+   token = SCIPstrtok(NULL, ")", &saveptr ); 
+   
+   varssize = 100;
+   nvars = 0;
+
+   /* allocate buffer array for variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+   /* pasre string */
+   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+   
+   if( *success )
+   {
+      /* check if the size of the variable array was great enough */
+      if( varssize < requiredsize )
+      {
+         /* reallocate memory */
+         varssize = requiredsize;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+         
+         /* parse string again with the correct size of the variable array */
+         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+      }
+      
+      assert(*success);
+      assert(varssize >= requiredsize);
+
+      /* create logicor constraint */
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,  
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   /* free buffers */
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &strcopy);
+   
    return SCIP_OKAY;
-
 }
 
 

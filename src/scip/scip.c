@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.595 2010/07/04 18:32:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.596 2010/07/05 11:02:28 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6734,7 +6734,7 @@ SCIP_RETCODE SCIPparseVarName(
    }
    
    /* free buffer */
-   SCIPfreeBufferArray(scip, &varname);
+   SCIPfreeBufferArray(scip, &strcopy);
 
    return SCIP_OKAY;
 }
