@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.15 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: evalcheck_cluster.sh,v 1.16 2010/07/05 19:54:53 bzfheinz Exp $
 
 export LANG=C
 
@@ -118,8 +118,10 @@ do
 
       echo create results for $EVALFILE
 
+      # detect used queue
       QUEUE=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
+      # detect test set
       if test "$QUEUE" = "gbe"
       then
 	  TSTNAME=`echo $EVALFILE | sed 's/check.gbe.\([a-zA-Z0-9_-]*\).*/\1/g'`
@@ -132,8 +134,12 @@ do
 	  fi
       fi
 
-      echo $QUEUE
-      echo $TSTNAME
+      # detect test used solver
+      SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\3/g'`
+      
+      echo "Queue   " $QUEUE
+      echo "Testset " $TSTNAME
+      echo "Solver  " $SOLVER
 
       if test -f $TSTNAME.test
       then
@@ -154,6 +160,11 @@ do
 	  fi
       fi
 
-      awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+      if test  "$SOLVER" = "cplex"
+      then
+	  awk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
+      else
+	  awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+      fi	  
   fi
 done
