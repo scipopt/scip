@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.12 2010/06/22 17:50:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.13 2010/07/05 20:19:56 bzfheinz Exp $"
 #define SCIP_DEBUG
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -359,7 +359,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
-   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
+   SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
    
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
