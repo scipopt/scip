@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.74 2010/07/02 14:20:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.75 2010/07/05 18:57:34 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -139,7 +139,7 @@
  *      & s \leq 0. \\
  *    \end{array}
  * \f]
- * Note that we forbid aggregation of the \f$s\f$ variables in order to be able to change their
+ * Note that we forbid multi-aggregation of the \f$s\f$ variables in order to be able to change their
  * bounds in propagation/branching. The corresponding alternative system is the following:
  * \f[
  *    \begin{array}{ll}
@@ -159,7 +159,7 @@
  * where the second form arises by substituting \f$v \geq 0\f$. A closer look at this system reveals
  * that it is not larger than the original one:
  *
- * - Aggregation of variables \f$x\f$ will remove these variables from the formulation, such that
+ * - (Multi-)Aggregation of variables \f$x\f$ will remove these variables from the formulation, such that
  *   the corresponding column of \f$\tilde{A}\f$ (row of \f$\tilde{A}^T\f$) will be zero.
  *
  * - The rows of \f$\tilde{B}^T\f$ are not unit vectors, i.e., do not correspond to redundant
@@ -168,6 +168,14 @@
  * Taken together, these two observations yield the conclusion that the new system is roughly as
  * large as the original one.
  *
+ * @note Because of possible (multi-)aggregation it might happen that the linear constraint
+ * corresponding to an indicator constraint becomes redundant and is deleted. From this we cannot
+ * conclude that the indicator constraint is redundant as well (i.e. always fulfilled), because the
+ * corresponding slack variable is still present and its setting to 0 or not influences other
+ * (linear) constraints. Thus, we have to rely on the dual presolving of the linear constraints to
+ * detect this case: If the linear constraint is really redundant, i.e., is always fulfilled, it is
+ * deleted and the slack variable can is fixed to 0. In this case, the indicator constraint can be
+ * deleted as well.
  *
  * @todo Accept arbitrary ranged linear constraints as input (in particular: equations). Internally
  * create two indicator constraints or correct alternative polyhedron accordingly (need to split the
@@ -2046,26 +2054,38 @@ SCIP_RETCODE propIndicator(
       assert( !SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
    }
-   else
-   {
-      /* if the linear constraint is not active or disabled, we disable the indicator constraint as well */
+   else 
+   { 
+      /* Note that because of possible mulit-aggregation we cannot simply remove the indicator
+       * constraint if the linear constraint is not active or disabled - see the note in @ref
+       * PREPROC. We have to check whether the slackvariable is not locked by a constraint.
+       */
+
+      /* if the linear constraint is not active or disabled */
       if ( ! SCIPconsIsActive(consdata->lincons) || ! SCIPconsIsEnabled(consdata->lincons) )
       {
-         SCIP_Bool infeasible, tightened;
-
          assert( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->slackvar), 0.0) );
 	 assert( SCIPvarGetStatus(consdata->slackvar) != SCIP_VARSTATUS_MULTAGGR );
 
-         /* fix slackvariable to 0 */
-         SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, 0.0, cons, 2, FALSE, &infeasible, &tightened) );
-         assert( ! infeasible );
-         if ( tightened )
-            ++(*nGen);
+         /* if the slack variable is only locked by the current indicator constraint */
+         if ( SCIPvarGetNLocksDown(consdata->slackvar) == 0 && SCIPvarGetNLocksUp(consdata->slackvar) == 1 )
+         {
+            SCIP_Bool infeasible, tightened;
 
-         /* delete constraint */
-         assert( ! SCIPconsIsModifiable(cons) );
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            SCIPdebugMessage("Slack variable <%s> is only locked by the indicator constraint -> fix it to 0 and delete indicator constraint.\n",
+               SCIPvarGetName(consdata->slackvar));
+
+            /* fix slackvariable to 0 */
+            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, 0.0, cons, 2, FALSE, &infeasible, &tightened) );
+            assert( ! infeasible );
+            if ( tightened )
+               ++(*nGen);
+
+            /* delete constraint */
+            assert( ! SCIPconsIsModifiable(cons) );
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
       }
    }
 
@@ -2258,9 +2278,6 @@ SCIP_RETCODE enforceIndicators(
       {
 	 /* binary variable is not fixed - otherwise we would not be infeasible */
 	 assert( SCIPvarGetLbLocal(binvar) < 0.5 && SCIPvarGetUbLocal(binvar) > 0.5 );
-
-         /* the linear constraint is should be active/enabled */
-         assert( SCIPconsIsEnabled(consdata->lincons) && SCIPconsIsActive(consdata->lincons) );
 
          if ( valSlack > maxSlack )
          {
@@ -3075,16 +3092,10 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 	    continue;
 	 }
 
-         /* if the linear constraint is deleted, we delete the indicator constraint as well */
-         if ( SCIPconsIsDeleted(consdata->lincons) )
-         {
-	    /* delete constraint */
-	    assert( ! SCIPconsIsModifiable(cons) );
-	    SCIP_CALL( SCIPdelCons(scip, cons) );
-	    ++(*ndelconss);
-	    *result = SCIP_SUCCESS;
-	    continue;
-         }
+         /* Note that because of possible mulit-aggregation we cannot simply remove the indicator
+          * constraint if the linear constraint is not active or disabled - see the note in @ref
+          * PREPROC.
+          */
       }
    }
 
@@ -3805,8 +3816,12 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert( sourceconsdata != NULL );
 
-   /* the linear constraint should be enabled */
-   assert( SCIPconsIsEnabled(sourceconsdata->lincons) && SCIPconsIsActive(sourceconsdata->lincons) );
+   /* if the linear constraint is disabled or not active -> do not copy (may happen due to (multi-)aggregation) */
+   if ( ! SCIPconsIsEnabled(sourceconsdata->lincons) || SCIPconsIsActive(sourceconsdata->lincons) )
+   {
+      *cons = NULL;
+      return SCIP_OKAY;
+   }
 
    sourcebinvar = sourceconsdata->binvar;
    sourceslackvar = sourceconsdata->slackvar;
