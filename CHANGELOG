@@ -65,7 +65,8 @@ interface:
 - added SCIPsortLongPtrInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - SCIP can now manage a list of external codes (e.g., LP or NLP solver, ZIMPL)
 - new method SCIPlpiGetSolverDesc() to get a descriptive string of an LP solver (developer, webpage, ...) 
-- new method SCIPinrestart() to detect whether we are currently restarting
+- new method SCIPisInRestart() to detect whether we are currently restarting
+- new method SCIPgetResultantOr() which returns the resultant of an "or" constraint
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -139,6 +140,8 @@ features:
 - new method SCIPparsearList() which parses an string as a variable list in cip-format 
 - constraint handler "logicor" can pares its output 
 - constraint handler "and" can pares its output 
+- constraint handler "or" can pares its output 
+- constraint handler "or" can copy its constraints 
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

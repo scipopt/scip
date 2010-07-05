@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.80 2010/06/09 13:37:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.81 2010/07/05 19:15:17 bzfheinz Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -471,25 +471,27 @@ SCIP_RETCODE consdataFree(
 
 /** prints or constraint to file stream */
 static
-void consdataPrint(
+SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< or constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int v;
-
    assert(consdata != NULL);
 
-   /* print coefficients */
-   SCIPinfoMessage(scip, file, "<%s> == or(", SCIPvarGetName(consdata->resvar));
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      if( v > 0 )
-         SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
-   }
+   /* print resultant */
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar) );
+
+   /* start the variable list */
+   SCIPinfoMessage(scip, file, " == or(");
+
+   /* print variable list */
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars) );
+
+   /* close the variable list */
    SCIPinfoMessage(scip, file, ")");
+
+   return SCIP_OKAY;
 }
 
 /** adds coefficient in or constraint */
@@ -654,7 +656,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMessage("after fixings: ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
    SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
@@ -1324,8 +1326,67 @@ SCIP_RETCODE upgradeCons(
    return SCIP_OKAY;
 }
 
+/* maps a binary variable of source SCIP to corresponding variable in the target SCIP */
+static
+SCIP_RETCODE mapVariable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            repvar,             /**< pointer to store the corresponding variable in the target SCIP */
+   SCIP*                 sourcescip,         /**< SCIP data structure of the source SCIP */
+   SCIP_VAR*             var,                /**< source variable of source SCIP */
+   SCIP_HASHMAP*         varmap,             /**< mapping variables of the source SCIP to corresponding variables of the
+                                              *   target SCIP */
+   SCIP_Bool*            success             /**< pointer to store whether the mapping  was successful or not */
+   )
+{
+   SCIP_Bool negated;
+   
+   assert(scip != NULL);
+   assert(repvar != NULL);
+   assert(sourcescip != NULL);
+   assert(var != NULL);
+   assert(varmap != NULL);
+   assert(success != NULL);
+   assert(*success == TRUE);
 
+   *repvar = NULL;
 
+   SCIP_CALL( SCIPgetBinvarRepresentative(sourcescip, var, &var, &negated) );
+   
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_NEGATED:
+      /* returnsform a negated variable to an active variable */
+      SCIP_CALL( SCIPgetNegatedVar(sourcescip, var, &var) );
+      negated = !negated;
+      /*lint -fallthrough*/
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      /* get corresponding variable in the target SCIP */
+      (*repvar) = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
+      
+      /* if there does not exist a corresponding variable, return */
+      if( (*repvar) == NULL )
+      {
+         (*success) = FALSE;
+         return SCIP_OKAY;
+      }
+      
+      /* if the relationship is negated, get the negated variable */
+      if( negated )
+         SCIP_CALL( SCIPgetNegatedVar(scip, *repvar, repvar) );
+      break;
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* it is not clear how to handle muliaggr variables; therefore, stop copying */
+      (*success) = FALSE;
+      break;
+   default:
+      SCIPerrorMessage("invalid variable status\n");
+      return SCIP_INVALIDDATA;
+   }  /*lint !e788*/
+   
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -1785,16 +1846,133 @@ SCIP_DECL_CONSPRINT(consPrintOr)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
  
    return SCIP_OKAY;
 }
 
 /** constraint copying method of constraint handler */
-#define consCopyOr NULL
+static
+SCIP_DECL_CONSCOPY(consCopyOr)
+{  /*lint --e{715}*/
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** vars;
+   SCIP_VAR* sourceresvar;
+   SCIP_VAR* resvar;
+   int nvars;
+   int v;
+
+   assert(success != NULL);
+
+   (*success) = TRUE;
+   
+   sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons);
+
+   /* map resultant to active variable of the target SCIP  */
+   SCIP_CALL( mapVariable(scip, &resvar, sourcescip, sourceresvar, varmap, success) );
+   if( !(*success) )
+      return SCIP_OKAY;
+   
+   /* map operand variables to active variables of the target SCIP  */
+   sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
+   nvars = SCIPgetNVarsOr(sourcescip, sourcecons);
+
+   /* allocate buffer array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   
+   for( v = 0; v < nvars && (*success); ++v )
+   {
+      SCIP_CALL( mapVariable(scip, &vars[v], sourcescip, sourcevars[v], varmap, success) );
+   }
+   
+   if( *success )
+   {
+      SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+      
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &vars);
+   
+   return SCIP_OKAY;
+}
 
 /** constraint parsing method of constraint handler */
-#define consParseOr NULL
+static
+SCIP_DECL_CONSPARSE(consParseOr)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR* resvar;
+   char* strcopy;
+   char* token;
+   char* saveptr;
+   int requiredsize;
+   int varssize;
+   int nvars;
+   
+   SCIPdebugMessage("pasre <%s> as or constraint\n", str);
+
+   /* copy string for truncating it */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1));
+
+   /* cutoff "or" form the constraint string */
+   token = SCIPstrtok(strcopy, "=", &saveptr ); 
+
+   /* parse variable name */ 
+   SCIP_CALL( SCIPparseVarName(scip, token, &resvar) );
+
+   if( resvar == NULL )
+   {
+      SCIPdebugMessage("resultant variable %s does not exist \n", token);
+      *success = FALSE;
+   }
+   else
+   {
+      /* cutoff "or" form the constraint string */
+      token = SCIPstrtok(NULL, "(", &saveptr ); 
+
+      /* cutoff ")" form the constraint string */
+      token = SCIPstrtok(NULL, ")", &saveptr ); 
+   
+      varssize = 100;
+      nvars = 0;
+
+      /* allocate buffer array for variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+      /* pasre string */
+      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+   
+      if( *success )
+      {
+         /* check if the size of the variable array was great enough */
+         if( varssize < requiredsize )
+         {
+            /* reallocate memory */
+            varssize = requiredsize;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+            
+            /* parse string again with the correct size of the variable array */
+            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+         }
+         
+         assert(*success);
+         assert(varssize >= requiredsize);
+
+         /* create and constraint */
+         SCIP_CALL( SCIPcreateConsOr(scip, cons, name, resvar, nvars, vars, 
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
+
+      /* free variable buffer */
+      SCIPfreeBufferArray(scip, &vars);
+   }
+   
+   /* free string buffer */
+   SCIPfreeBufferArray(scip, &strcopy);
+   
+   return SCIP_OKAY;
+}
 
 
 
@@ -1963,3 +2141,22 @@ SCIP_VAR** SCIPgetVarsOr(
    return consdata->vars;
 }
 
+/** gets the resultant variable in or constraint */
+SCIP_VAR* SCIPgetResultantOr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a or constraint\n");
+      SCIPABORT();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   return consdata->resvar;
+}

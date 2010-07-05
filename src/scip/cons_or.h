@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.h,v 1.22 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.h,v 1.23 2010/07/05 19:15:17 bzfheinz Exp $"
 
 /**@file   cons_or.h
  * @brief  constraint handler for or constraints
@@ -81,6 +81,13 @@ int SCIPgetNVarsOr(
 /** gets array of variables in or constraint */
 extern
 SCIP_VAR** SCIPgetVarsOr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the resultant variable in or constraint */
+extern
+SCIP_VAR* SCIPgetResultantOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
