@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.61 2010/06/21 17:10:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.62 2010/07/06 17:29:45 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -336,8 +336,8 @@ SCIP_RETCODE createPpcProblem(
       for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
       {
          SCIP_CONS* quadcons;
-         SCIP_Real* sqrcoefs;
-         SCIP_Real* bilincoefs;
+         SCIP_QUADVARTERM* quadvarterms;
+         SCIP_BILINTERM* bilinterms;
 
          SCIP_Bool infeas;
          SCIP_Bool fixed;
@@ -347,16 +347,16 @@ SCIP_RETCODE createPpcProblem(
          /* get coefficient arrays of constraint */
          quadcons = SCIPconshdlrGetConss(conshdlr)[i];
          assert(quadcons != NULL);
-         sqrcoefs = SCIPgetSqrCoefsQuadVarsQuadratic(scip, quadcons);
-         bilincoefs = SCIPgetBilinCoefsQuadratic(scip, quadcons);
+         quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, quadcons);
+         bilinterms = SCIPgetBilinTermsQuadratic(scip, quadcons);
          BMSclearMemoryArray(consmarker, nvars);
 
          /* fix variable in quadratic terms to linearize/convexify it */
-         for( t = 0; t < SCIPgetNQuadVarsQuadratic(scip, quadcons); ++t )
+         for( t = 0; t < SCIPgetNQuadVarTermsQuadratic(scip, quadcons); ++t )
          {
             SCIP_VAR* quadvar;
          
-            quadvar = SCIPgetQuadVarsQuadratic(scip, quadcons)[t];
+            quadvar = quadvarterms[t].var;
             assert(quadvar != NULL);
 
             /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
@@ -367,10 +367,10 @@ SCIP_RETCODE createPpcProblem(
                goto TERMINATE;
             }
 
-            if( termIsLinear(scip, quadvar, sqrcoefs[t], local) )
-               continue;     
+            if( termIsLinear(scip, quadvar, quadvarterms[t].sqrcoef, local) )
+               continue;
 
-            if( onlyconvexify && termIsConvex(scip, SCIPgetLhsQuadratic(scip, quadcons), SCIPgetRhsQuadratic(scip, quadcons), sqrcoefs[t] >= 0) )
+            if( onlyconvexify && termIsConvex(scip, SCIPgetLhsQuadratic(scip, quadcons), SCIPgetRhsQuadratic(scip, quadcons), quadvarterms[t].sqrcoef >= 0) )
                continue;
 
             SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[probindex], 1.0, &infeas, &fixed) );
@@ -394,8 +394,8 @@ SCIP_RETCODE createPpcProblem(
             int probindex1;
             int probindex2;
 
-            bilinvar1 = SCIPgetBilinVars1Quadratic(scip, quadcons)[t];
-            bilinvar2 = SCIPgetBilinVars2Quadratic(scip, quadcons)[t];
+            bilinvar1 = bilinterms[t].var1;
+            bilinvar2 = bilinterms[t].var2;
             assert(bilinvar1 != NULL);
             assert(bilinvar2 != NULL);
 
@@ -409,7 +409,7 @@ SCIP_RETCODE createPpcProblem(
             }
 
             /* if the term is linear, because one of the variables is fixed or the coefficient is zero, continue */
-            if( termIsLinear(scip, bilinvar1, bilincoefs[t], local) || termIsLinear(scip, bilinvar2, bilincoefs[t], local) )
+            if( termIsLinear(scip, bilinvar1, bilinterms[t].coef, local) || termIsLinear(scip, bilinvar2, bilinterms[t].coef, local) )
                continue;
 
             /* get name of the original constraint and add the string "_bilin.." */

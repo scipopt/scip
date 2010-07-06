@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.40 2010/05/25 16:12:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.41 2010/07/06 17:29:45 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -572,14 +572,10 @@ SCIP_RETCODE printQuadraticRow(
    int                   nlinvars,           /**< number of linear terms */
    SCIP_VAR**            linvars,            /**< variables in linear part */ 
    SCIP_Real*            lincoeffs,          /**< coefficients of variables in linear part */ 
-   int                   nquadvars,          /**< number of quadratic terms */
-   SCIP_VAR**            quadvars,           /**< variables in quadratic terms */
-   SCIP_Real*            quadlincoeffs,      /**< linear coefficients of quadratic variables */
-   SCIP_Real*            quadsqrcoeffs,      /**< coefficients of square terms of quadratic variables */
+   int                   nquadvarterms,      /**< number of quadratic variable terms */
+   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
    int                   nbilinterms,        /**< number of bilinear terms */
-   SCIP_VAR**            bilinvars1,         /**< first variable in bilinear term */
-   SCIP_VAR**            bilinvars2,         /**< second variable in bilinear term */
-   SCIP_Real*            bilincoeffs,        /**< coefficient of bilinear term */
+   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
@@ -596,9 +592,9 @@ SCIP_RETCODE printQuadraticRow(
    assert( strlen(rowname) > 0 || strlen(rownameextension) > 0 );
    assert( strcmp(type, "=e=") == 0 || strcmp(type, "=l=") == 0 || strcmp(type, "=g=") == 0 );
    assert( nlinvars == 0 || (linvars != NULL && lincoeffs != NULL) );
-   assert( nquadvars == 0 || (quadvars != NULL && quadlincoeffs != NULL && quadsqrcoeffs != NULL) );
-   assert( nbilinterms == 0 || (bilinvars1 != NULL && bilinvars2 != NULL && bilincoeffs != NULL) );
-   assert( nquadvars > 0 || nbilinterms == 0 );
+   assert( nquadvarterms == 0 || quadvarterms != NULL );
+   assert( nbilinterms == 0 || bilinterms != NULL );
+   assert( nquadvarterms > 0 || nbilinterms == 0 );
 
    clearLine(linebuffer, &linecnt);
 
@@ -616,39 +612,50 @@ SCIP_RETCODE printQuadraticRow(
    {
       SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nlinvars, linvars, lincoeffs, transformed) );
    }
-   /* print quadratic terms */
-   if( nquadvars > 0 )
+   
+   /* print linear coefficients of quadratic terms */
+   for( t = 0; t < nquadvarterms; ++t )
    {
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nquadvars, quadvars, quadlincoeffs, transformed) );
-   }
-
-   for( t = 0; t < nquadvars; ++t )
-   {
-      var = quadvars[t];
+      var = quadvarterms[t].var;
       assert( var != NULL );
 
-      if( !SCIPisZero(scip, quadsqrcoeffs[t]) )
+      if( !SCIPisZero(scip, quadvarterms[t].sqrcoef) )
       {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*sqr", quadsqrcoeffs[t]);
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*", quadvarterms[t].lincoef);
 
          SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, NULL, 1, &var, NULL, transformed) );
       }
    }
 
+   /* print square coefficients of quadratic terms */
+   for( t = 0; t < nquadvarterms; ++t )
+   {
+      var = quadvarterms[t].var;
+      assert( var != NULL );
+
+      if( !SCIPisZero(scip, quadvarterms[t].sqrcoef) )
+      {
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*sqr", quadvarterms[t].sqrcoef);
+
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, NULL, 1, &var, NULL, transformed) );
+      }
+   }
+
+   /* print bilinear terms */
    for( t = 0; t < nbilinterms; ++t )
    {
-      if( !SCIPisZero(scip, bilincoeffs[t]) )
+      if( !SCIPisZero(scip, bilinterms[t].coef) )
       {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*", bilincoeffs[t]);
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*", bilinterms[t].coef);
 
          /* print first variable (retransformed to active variables) */
-         var = bilinvars1[t];
+         var = bilinterms[t].var1;
          assert( var != NULL );
 
          SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, "", 1, &var, NULL, transformed) );
 
          /* print second variable (retransformed to active variables) */
-         var = bilinvars2[t];
+         var = bilinterms[t].var2;
          assert( var != NULL );
 
          SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "*", " ", 1, &var, NULL, transformed) );
@@ -663,7 +670,7 @@ SCIP_RETCODE printQuadraticRow(
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
 
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s %.15g;", (nlinvars == 0 && nquadvars == 0) ? "0 " : "", type, rhs);
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s %.15g;", (nlinvars == 0 && nquadvarterms == 0) ? "0 " : "", type, rhs);
 
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
@@ -683,14 +690,10 @@ SCIP_RETCODE printQuadraticCons(
    int                   nlinvars,           /**< number of linear terms */
    SCIP_VAR**            linvars,            /**< variables in linear part */ 
    SCIP_Real*            lincoeffs,          /**< coefficients of variables in linear part */ 
-   int                   nquadvars,          /**< number of quadratic terms */
-   SCIP_VAR**            quadvars,           /**< variables in quadratic terms */
-   SCIP_Real*            quadlincoeffs,      /**< linear coefficients of quadratic variables */
-   SCIP_Real*            quadsqrcoeffs,      /**< coefficients of square terms of quadratic variables */
+   int                   nquadvarterms,      /**< number of quadratic variable terms */
+   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
    int                   nbilinterms,        /**< number of bilinear terms */
-   SCIP_VAR**            bilinvars1,         /**< first variable in bilinear term */
-   SCIP_VAR**            bilinvars2,         /**< second variable in bilinear term */
-   SCIP_Real*            bilincoeffs,        /**< coefficient of bilinear term */
+   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
@@ -699,9 +702,9 @@ SCIP_RETCODE printQuadraticCons(
    assert( scip != NULL );
    assert( rowname != NULL );
    assert( nlinvars == 0 || (linvars != NULL && lincoeffs != NULL) );
-   assert( nquadvars == 0 || (quadvars != NULL && quadlincoeffs != NULL && quadsqrcoeffs != NULL) );
-   assert( nbilinterms == 0 || (bilinvars1 != NULL && bilinvars2 != NULL && bilincoeffs != NULL) );
-   assert( nquadvars > 0 || nbilinterms == 0 );
+   assert( nquadvarterms == 0 || quadvarterms != NULL );
+   assert( nbilinterms == 0 || bilinterms != NULL );
+   assert( nquadvarterms > 0 || nbilinterms == 0 );
    assert( lhs <= rhs );
    
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
@@ -715,8 +718,8 @@ SCIP_RETCODE printQuadraticCons(
       /* print equality constraint */
       SCIP_CALL( printQuadraticRow(scip, file, rowname, "", "=e=",
          nlinvars, linvars, lincoeffs,
-         nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed) );
+         nquadvarterms, quadvarterms,
+         nbilinterms, bilinterms, rhs, transformed) );
    }
    else
    {
@@ -725,16 +728,16 @@ SCIP_RETCODE printQuadraticCons(
          /* print inequality ">=" */
          SCIP_CALL( printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
             nlinvars, linvars, lincoeffs,
-            nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-               nbilinterms, bilinvars1, bilinvars2, bilincoeffs, lhs, transformed) );
+            nquadvarterms, quadvarterms,
+            nbilinterms, bilinterms, lhs, transformed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
             nlinvars, linvars, lincoeffs,
-            nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-               nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed) );
+            nquadvarterms, quadvarterms,
+            nbilinterms, bilinterms, rhs, transformed) );
       }
    }
    
@@ -1634,10 +1637,8 @@ SCIP_RETCODE SCIPwriteGms(
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
                SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-               SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons), SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons),
-               SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons),
-               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinVars1Quadratic(scip, cons), SCIPgetBilinVars2Quadratic(scip, cons),
-               SCIPgetBilinCoefsQuadratic(scip, cons),
+               SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
                SCIPgetLhsQuadratic(scip, cons),  SCIPgetRhsQuadratic(scip, cons), transformed) );
 
          nlcons = TRUE;

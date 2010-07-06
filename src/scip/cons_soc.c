@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.26 2010/06/15 13:31:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.27 2010/07/06 17:29:45 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -1287,30 +1287,28 @@ SCIP_RETCODE presolveReplaceInactiveVariables(
       if( consdata->nvars > 1 )
       { /* upgrade to quadratic constraint */
          SCIP_CONS* quadcons;
-         SCIP_Real* sqrcoefs;
-         SCIP_Real* lincoefs;
+         SCIP_QUADVARTERM* quadvarterms;
          SCIP_Real  rhs;
          
-         SCIP_CALL( SCIPallocBufferArray(scip, &sqrcoefs, consdata->nvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, consdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvarterms, consdata->nvars) );
+         BMSclearMemoryArray(quadvarterms, consdata->nvars);
          rhs = consdata->rhscoeff * consdata->rhsoffset;
          rhs = rhs*rhs - consdata->constant;
          
          for( i = 0; i < consdata->nvars; ++i )
          {
-            sqrcoefs[i] = consdata->coefs ? (consdata->coefs[i]*consdata->coefs[i]) : 1.0;
+            quadvarterms[i].var = consdata->vars[i];
+            quadvarterms[i].sqrcoef = consdata->coefs ? (consdata->coefs[i]*consdata->coefs[i]) : 1.0;
             if( consdata->offsets && consdata->offsets[i] )
             {
-               lincoefs[i] = 2 * consdata->offsets[i] * sqrcoefs[i];
-               rhs -= sqrcoefs[i] * consdata->offsets[i]*consdata->offsets[i];
+               quadvarterms[i].lincoef = 2 * consdata->offsets[i] * quadvarterms[i].sqrcoef;
+               rhs -= quadvarterms[i].sqrcoef * consdata->offsets[i]*consdata->offsets[i];
             }
-            else
-               lincoefs[i] = 0.0;
          }
          
          assert(!SCIPconsIsStickingAtNode(cons));
          SCIP_CALL( SCIPcreateConsQuadratic2(scip, &quadcons, SCIPconsGetName(cons), 0, NULL, NULL,
-            consdata->nvars, consdata->vars, lincoefs, sqrcoefs, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), rhs,
+            consdata->nvars, quadvarterms, 0, NULL, -SCIPinfinity(scip), rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
@@ -1320,8 +1318,7 @@ SCIP_RETCODE presolveReplaceInactiveVariables(
          
          SCIP_CALL( SCIPreleaseCons(scip, &quadcons) );
          
-         SCIPfreeBufferArray(scip, &sqrcoefs);
-         SCIPfreeBufferArray(scip, &lincoefs);
+         SCIPfreeBufferArray(scip, &quadvarterms);
          
          *result = SCIP_SUCCESS;
          ++*nupgdconss;
@@ -2089,6 +2086,7 @@ SCIP_RETCODE propagateBounds(
    SCIP_INTERVAL* lhsranges;
    SCIP_INTERVAL  rhsrange;
    SCIP_INTERVAL  a, b, c;
+   SCIP_ROUNDMODE roundmode;
    SCIP_Bool      infeas, tightened;
    int            i;
    
@@ -2171,7 +2169,26 @@ SCIP_RETCODE propagateBounds(
          if( SCIPvarGetStatus(consdata->vars[i]) == SCIP_VARSTATUS_MULTAGGR )
             continue;
          
-         SCIPintervalUndoSub(SCIPinfinity(scip), &a, b, lhsranges[i]);
+         roundmode = SCIPintervalGetRoundingMode();
+         if( !SCIPisInfinity(scip, b.sup) )
+         {
+            SCIPintervalSetRoundingModeUpwards();
+            a.sup = b.sup + lhsranges[i].inf;
+         }
+         else
+         {
+            a.sup = SCIPinfinity(scip);
+         }
+         if( !SCIPisInfinity(scip, -b.inf) )
+         {
+            SCIPintervalSetRoundingModeDownwards();
+            a.inf = b.inf + lhsranges[i].sup;
+         }
+         else
+         {
+            a.inf = -SCIPinfinity(scip);
+         }
+         SCIPintervalSetRoundingMode(roundmode);
          SCIPintervalSquareRoot(SCIPinfinity(scip), &a, a);
          
          c = a;
@@ -2375,7 +2392,7 @@ static
 SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 {
    int            nquadvars;
-   SCIP_VAR*      var;
+   SCIP_QUADVARTERM* term;
    SCIP_VAR**     lhsvars;
    SCIP_Real*     lhscoefs = NULL;
    SCIP_Real*     lhsoffsets = NULL;
@@ -2384,7 +2401,6 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    SCIP_VAR*      rhsvar = NULL; 
    SCIP_Real      rhscoef = 0.0;
    SCIP_Real      rhsoffset = 0.0;
-   SCIP_Real      sqrcoef, lincoef;
    int            i, j;
    
    assert(scip != NULL);
@@ -2406,7 +2422,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    if( SCIPgetNBilinTermsQuadratic(scip, cons) )
       return SCIP_OKAY;
 
-   nquadvars = SCIPgetNQuadVarsQuadratic(scip, cons);
+   nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lhsvars, nquadvars-1) );
 
@@ -2416,13 +2432,11 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       for( i = 0; i < nquadvars; ++i )
       {
-         var  = SCIPgetQuadVarsQuadratic(scip, cons)[i];
-         sqrcoef = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons)[i];
-         lincoef = SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons)[i];
+         term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
          
-         assert(sqrcoef != 0.0);
+         assert(term->sqrcoef != 0.0); /* otherwise it's not a quadratic variable */
             
-         if( sqrcoef > 0.0 )
+         if( term->sqrcoef > 0.0 )
          {
             if( lhscount >= nquadvars - 1 )
             { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
@@ -2430,9 +2444,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
                break;
             }
             
-            lhsvars[lhscount] = var;
+            lhsvars[lhscount] = term->var;
 
-            if( sqrcoef != 1.0 )
+            if( term->sqrcoef != 1.0 )
             {
                if( !lhscoefs )
                {
@@ -2440,12 +2454,12 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
                   for( j = 0; j < lhscount; ++j )
                      lhscoefs[j] = 1.0;
                }
-               lhscoefs[lhscount] = sqrt(sqrcoef);
+               lhscoefs[lhscount] = sqrt(term->sqrcoef);
             }
             else if( lhscoefs )
                lhscoefs[lhscount] = 1.0;
 
-            if( lincoef != 0.0 )
+            if( term->lincoef != 0.0 )
             {
                if( !lhsoffsets )
                {
@@ -2453,15 +2467,15 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
                   for( j = 0; j < lhscount; ++j )
                      lhsoffsets[j] = 0.0;
                }
-               lhsoffsets[lhscount] = lincoef / (2 * sqrcoef);
-               lhsconstant -= lincoef * lincoef / (4 * sqrcoef);
+               lhsoffsets[lhscount] = term->lincoef / (2 * term->sqrcoef);
+               lhsconstant -= term->lincoef * term->lincoef / (4 * term->sqrcoef);
             }
             else if( lhsoffsets )
                lhsoffsets[lhscount] = 0.0;
 
             ++lhscount;
          }
-         else if( rhsvar != NULL || SCIPisLT(scip, SCIPvarGetLbGlobal(var), lincoef / (2*sqrcoef)) )
+         else if( rhsvar != NULL || SCIPisLT(scip, SCIPvarGetLbGlobal(term->var), term->lincoef / (2*term->sqrcoef)) )
          { /* second variable with negative coefficient -> cannot be SOC */
             /* or lower bound of variable does not ensure positivity of right hand side */
             rhsvar = NULL;
@@ -2469,10 +2483,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
          else
          {
-            rhsvar       = var;
-            rhscoef      = sqrt(-sqrcoef);
-            rhsoffset    = lincoef / (2 * sqrcoef);
-            lhsconstant -= lincoef * lincoef / (4 * sqrcoef);
+            rhsvar       = term->var;
+            rhscoef      = sqrt(-term->sqrcoef);
+            rhsoffset    = term->lincoef / (2 * term->sqrcoef);
+            lhsconstant -= term->lincoef * term->lincoef / (4 * term->sqrcoef);
          }
       }
    }
@@ -2499,11 +2513,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       {
          SCIP_CALL( SCIPcreateConsQuadratic2(scip, &(*upgdconss)[1], SCIPconsGetName(cons),
             SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-            SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons),
-            SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons), SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons),
-            SCIPgetNAdjBilinQuadratic(scip, cons), SCIPgetAdjBilinQuadratic(scip, cons),
-            SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinVars1Quadratic(scip, cons), SCIPgetBilinVars2Quadratic(scip, cons),
-            SCIPgetBilinCoefsQuadratic(scip, cons),
+            SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+            SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
             SCIPgetLhsQuadratic(scip, cons), SCIPinfinity(scip),
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
@@ -2521,13 +2532,11 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       for (i = 0; i < nquadvars; ++i)
       {
-         var  = SCIPgetQuadVarsQuadratic(scip, cons)[i];
-         sqrcoef = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons)[i];
-         lincoef = SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons)[i];
+         term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
          
-         assert(sqrcoef != 0.0);
+         assert(term->sqrcoef != 0.0);
          
-         if( sqrcoef < 0.0 )
+         if( term->sqrcoef < 0.0 )
          {
             if( lhscount >= nquadvars )
             { /* too many variables on lhs, i.e., all variables seem to have negative coefficient */
@@ -2535,9 +2544,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
                break;
             }
 
-            lhsvars[lhscount] = var;
+            lhsvars[lhscount] = term->var;
 
-            if( sqrcoef != -1.0 )
+            if( term->sqrcoef != -1.0 )
             {
                if( !lhscoefs )
                {
@@ -2545,12 +2554,12 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
                   for( j = 0; j < lhscount; ++j )
                      lhscoefs[j] = 1.0;
                }
-               lhscoefs[lhscount] = sqrt(-sqrcoef);
+               lhscoefs[lhscount] = sqrt(-term->sqrcoef);
             }
             else if( lhscoefs )
                lhscoefs[lhscount] = 1.0;
 
-            if( lincoef != 0.0 )
+            if( term->lincoef != 0.0 )
             {
                if( !lhsoffsets )
                {
@@ -2558,15 +2567,15 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
                   for( j = 0; j < lhscount; ++j )
                      lhsoffsets[j] = 0.0;
                }
-               lhsoffsets[lhscount] = lincoef / (2 * sqrcoef);
-               lhsconstant += lincoef * lincoef / (4 * sqrcoef);
+               lhsoffsets[lhscount] = term->lincoef / (2 * term->sqrcoef);
+               lhsconstant += term->lincoef * term->lincoef / (4 * term->sqrcoef);
             }
             else if( lhsoffsets )
                lhsoffsets[lhscount] = 0.0;
 
             ++lhscount;
          }
-         else if( rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(var), lincoef / (2*sqrcoef)) )
+         else if( rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(term->var), term->lincoef / (2*term->sqrcoef)) )
          { /* second variable with positive coefficient -> cannot be SOC */
             /* or lower bound of variable does not ensure positivity of right hand side */
             rhsvar = NULL;
@@ -2574,10 +2583,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
          else
          {
-            rhsvar       = var;
-            rhscoef      = sqrt(sqrcoef);
-            rhsoffset    = lincoef / (2 * sqrcoef);
-            lhsconstant += lincoef * lincoef / (4 * sqrcoef);
+            rhsvar       = term->var;
+            rhscoef      = sqrt(term->sqrcoef);
+            rhsoffset    = term->lincoef / (2 * term->sqrcoef);
+            lhsconstant += term->lincoef * term->lincoef / (4 * term->sqrcoef);
          }
       }
       
@@ -2603,11 +2612,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          {
             SCIP_CALL( SCIPcreateConsQuadratic2(scip, &(*upgdconss)[1], SCIPconsGetName(cons),
                SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-               SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons),
-               SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons), SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons),
-               SCIPgetNAdjBilinQuadratic(scip, cons), SCIPgetAdjBilinQuadratic(scip, cons),
-               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinVars1Quadratic(scip, cons), SCIPgetBilinVars2Quadratic(scip, cons),
-               SCIPgetBilinCoefsQuadratic(scip, cons),
+               SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
                -SCIPinfinity(scip), SCIPgetRhsQuadratic(scip, cons),
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),

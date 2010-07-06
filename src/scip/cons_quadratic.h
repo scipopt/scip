@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.18 2010/06/15 13:31:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.19 2010/07/06 17:29:45 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -31,6 +31,7 @@
 #define __SCIP_CONS_QUADRATIC_H__
 
 #include "scip/scip.h"
+#include "scip/intervalarith.h"
 #include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
@@ -38,6 +39,34 @@ extern "C" {
 #endif
    
 typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constraint update method */
+
+/** data structure to store a single term associated to a quadratic variable
+ */
+struct SCIP_QuadVarTerm
+{
+   SCIP_VAR*             var;                /**< quadratic variable */
+   SCIP_Real             lincoef;            /**< linear coefficient of variable */
+   SCIP_Real             sqrcoef;            /**< square coefficient of variable */
+
+   int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
+   int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
+   int*                  adjbilin;           /**< indices of associated bilinear terms */
+
+   SCIP_EVENTDATA*       eventdata;          /**< event data for bound change events */
+};
+typedef struct SCIP_QuadVarTerm SCIP_QUADVARTERM;
+
+/** data structure to store a single bilinear term (similar to SCIP_QUADELEM)
+ * except for temporary reasons, we assume that the index of var1 is smaller than the index of var2
+ */
+struct SCIP_BilinTerm
+{
+   SCIP_VAR*             var1;
+   SCIP_VAR*             var2;
+   SCIP_Real             coef;
+};
+typedef struct SCIP_BilinTerm SCIP_BILINTERM;
+
 
 /** upgrading method for quadratic constraints into more specific constraints
  * 
@@ -130,25 +159,18 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
  * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
  * \f]
  */
-extern
 SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nlinvars,           /**< number of linear terms (n) */
-   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) or NULL if nlinvars == 0 */ 
-   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) or NULL if nlinvars == 0 */ 
-   int                   nquadvars,          /**< number of quadratic terms (m) */
-   SCIP_VAR**            quadvars,           /**< array with variables in quadratic terms (y_j) or NULL if nquadvars == 0 */
-   SCIP_Real*            quadlincoefs,       /**< array with linear coefficients of quadratic variables (b_j) or NULL if nquadvars == 0 */
-   SCIP_Real*            quadsqrcoefs,       /**< array with coefficients of square terms of quadratic variables (a_j) or NULL if nquadterms == 0 */
-   int*                  nadjbilin,          /**< number of bilinear terms where the variable is involved or NULL if nquadterms == 0 */
-   int**                 adjbilin,           /**< indices of bilinear terms in which variable is involved or NULL if nquadterms == 0 */
-   int                   nbilin,             /**< number of bilinear terms (p) */
-   SCIP_VAR**            bilinvars1,         /**< array with first variables in bilinear term (v_k) or NULL if nbilin == 0 */
-   SCIP_VAR**            bilinvars2,         /**< array with second variables in bilinear term (w_k) or NULL if nbilin == 0 */
-   SCIP_Real*            bilincoefs,         /**< array with coefficients of bilinear term (c_k) or NULL if nbilin == 0 */
-   SCIP_Real             lhs,                /**< constraint left hand side (l) */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */ 
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */ 
+   int                   nquadvarterms,      /**< number of quadratic terms (m) */
+   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
+   int                   nbilinterms,        /**< number of bilinear terms (p) */
+   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
+   SCIP_Real             lhs,                /**< constraint left hand side (ell) */
    SCIP_Real             rhs,                /**< constraint right hand side (u) */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
@@ -178,23 +200,6 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the number of variables in the quadratic part of a quadratic constraint.
- */
-extern
-int SCIPgetNQuadVarsQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets the variables in the quadratic part of a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic.
- */
-extern
-SCIP_VAR** SCIPgetQuadVarsQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
 /** Gets the coefficients in the linear part of a quadratic constraint.
  *  Length is given by SCIPgetNQuadVarsQuadratic.
  */
@@ -204,25 +209,24 @@ SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the linear coefficients in the quadratic part of a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic.
+/** Gets the number of quadratic variable terms of a quadratic constraint.
  */
 extern
-SCIP_Real* SCIPgetLinearCoefsQuadVarsQuadratic(
+int SCIPgetNQuadVarTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the square coefficients in the quadratic part of a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic.
+/** Gets the quadratic variable terms of a quadratic constraint.
+ *  Length is given by SCIPgetNQuadVarTermsQuadratic.
  */
 extern
-SCIP_Real* SCIPgetSqrCoefsQuadVarsQuadratic(
+SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the number of bilinear terms in a quadratic constraint.
+/** Gets the number of bilinear terms of a quadratic constraint.
  */
 extern
 int SCIPgetNBilinTermsQuadratic(
@@ -230,47 +234,11 @@ int SCIPgetNBilinTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the first variables in the bilinear terms in a quadratic constraint.
+/** Gets the bilinear terms of a quadratic constraint.
  *  Length is given by SCIPgetNBilinTermQuadratic.
  */
 extern
-SCIP_VAR** SCIPgetBilinVars1Quadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets the second variables in the bilinear terms in a quadratic constraint.
- *  Length is given by SCIPgetNBilinTermQuadratic.
- */
-extern
-SCIP_VAR** SCIPgetBilinVars2Quadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets the coefficients of the bilinear terms in a quadratic constraint.
- *  Length is given by SCIPgetNBilinTermQuadratic.
- */
-extern
-SCIP_Real* SCIPgetBilinCoefsQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets for each quadratic variable the number of bilinear terms in which the variable is involved in a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic
- */
-extern
-int* SCIPgetNAdjBilinQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets for each quadratic variable the indices of bilinear terms in which the variable is involved in a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic, length of each entry is given by SCIPgetNAdjBilinQuadratic.
- */
-extern
-int** SCIPgetAdjBilinQuadratic(
+SCIP_BILINTERM* SCIPgetBilinTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
@@ -287,6 +255,14 @@ SCIP_Real SCIPgetLhsQuadratic(
  */
 extern
 SCIP_Real SCIPgetRhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** Check the quadratic function of a quadratic constraint for its semi-definitness, if not done yet.
+ */
+extern
+SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.28 2010/06/19 11:06:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.29 2010/07/06 17:29:45 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -107,10 +107,9 @@ void SCIPintervalSetBounds(
    SCIP_Real             sup                 /**< value to store as supremum */
    );
 
-/** sets interval to empty interval, which will be [infinity, -infinity] */
+/** sets interval to empty interval, which will be [1.0, -1.0] */
 extern
 void SCIPintervalSetEmpty(
-   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
    );
 
@@ -138,13 +137,16 @@ SCIP_Bool SCIPintervalIsEntire(
 
 /* In optimized mode, some methods are implemented as defines to reduce the number of function calls and
  * speed up the algorithms.
+ * With SCIPintervalSetBounds we need to be a bit careful, since i and s could use resultant->inf and resultant->sup,
+ * e.g., SCIPintervalSetBounds(&resultant, -resultant->sup, -resultant->inf).
+ * So we need to make sure that we first evaluate both terms before setting resultant. 
  */
 
 #define SCIPintervalGetInf(interval)               (interval).inf
 #define SCIPintervalGetSup(interval)               (interval).sup
-#define SCIPintervalSet(resultant, value)          do { (resultant)->inf = (value);     (resultant)->sup = (value);     } while( FALSE )
-#define SCIPintervalSetBounds(resultant, i, s)     do { (resultant)->inf = (i);         (resultant)->sup = (s);         } while( FALSE )
-#define SCIPintervalSetEmpty(infinity, resultant)  do { (resultant)->inf =  (infinity); (resultant)->sup = -(infinity); } while( FALSE )
+#define SCIPintervalSet(resultant, value)          do { (resultant)->inf = (value); (resultant)->sup = (resultant)->inf; } while( FALSE )
+#define SCIPintervalSetBounds(resultant, i, s)     do { SCIP_Real scipintervaltemp; scipintervaltemp = (s); (resultant)->inf = (i); (resultant)->sup = scipintervaltemp; } while( FALSE )
+#define SCIPintervalSetEmpty(resultant)            do { (resultant)->inf = 1.0; (resultant)->sup = -1.0; } while( FALSE )
 #define SCIPintervalSetEntire(infinity, resultant) do { (resultant)->inf = -(infinity); (resultant)->sup =  (infinity); } while( FALSE )
 #define SCIPintervalIsEmpty(operand)               ( (operand).sup < (operand).inf )
 #define SCIPintervalIsEntire(infinity, operand)    ( (operand).inf <= -(infinity) && (operand).sup >= (infinity) )
@@ -209,21 +211,6 @@ void SCIPintervalSubScalar(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
-   );
-
-/** undoes a substraction operation.
- * 
- * In number arithmetic, this would be addition.
- * Substractions of unbounded intervals cannot be undone, but resultant gives still a valid (but probably larger) interval.
- * 
- * This is a ''dirty'' operation.
- */
-extern
-void SCIPintervalUndoSub(
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_INTERVAL         operand1,           /**< first operand of operation */
-   SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
 /** multiplies operand1 with operand2 and stores result in resultant */

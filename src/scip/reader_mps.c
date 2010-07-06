@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.121 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.122 2010/07/06 17:29:45 bzfviger Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1291,8 +1291,23 @@ SCIP_RETCODE readBounds(
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
       {
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
+         /* if variable did not appear in columns section before, then it may still come in later sections (QCMATRIX, QMATRIX, SOS, ...)
+          * thus add it as continuous variables, which has default bounds 0.0 <= x, and default cost 0.0 */
          if( var == NULL )
-            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname, SCIP_VERBLEVEL_NORMAL);
+         {
+            SCIP_Bool dynamiccols;
+            SCIP_VAR* varcpy;
+            
+            SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
+
+            SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
+               !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL) );
+            
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            varcpy = var;
+            SCIP_CALL( SCIPreleaseVar(scip, &varcpy) );
+            /* mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname, SCIP_VERBLEVEL_NORMAL); */
+         }
          else
          {
             if( mpsinputField4(mpsi) == NULL )
@@ -1801,7 +1816,7 @@ SCIP_RETCODE readQCMatrix(
       if( var1 == NULL )
       {
          /* ignore unkown variables - we would not know the type anyway */
-         mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "QCMatrix", "QCMATRIX", SCIP_VERBLEVEL_NORMAL);
+         mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "QCMatrix", SCIPconsGetName(lincons), SCIP_VERBLEVEL_NORMAL);
       }
       else
       {
@@ -1810,7 +1825,7 @@ SCIP_RETCODE readQCMatrix(
          if( var2 == NULL )
          {
             /* ignore unkown variables - we would not know the type anyway */
-            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QCMatrix", "QCMATRIX", SCIP_VERBLEVEL_NORMAL);
+            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QCMatrix", SCIPconsGetName(lincons), SCIP_VERBLEVEL_NORMAL);
          }
          else
          {
@@ -3314,9 +3329,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       }
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
+         SCIP_VAR** quadvars;
+         SCIP_Real* quadvarlincoefs;
+         int j;
+         
          /* store constraint */
          consQuadratic[nConsQuadratic++] = cons;
 
+         /* collect linear coefficients of quadratic part */
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars,        SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvarlincoefs, SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
+         for( j = 0; j < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++j )
+         {
+            quadvars[j]        = SCIPgetQuadVarTermsQuadratic(scip, cons)[j].var;
+            quadvarlincoefs[j] = SCIPgetQuadVarTermsQuadratic(scip, cons)[j].lincoef;
+         }
+         
          lhs = SCIPgetLhsQuadratic(scip, cons);
          rhs = SCIPgetRhsQuadratic(scip, cons);
 
@@ -3343,16 +3371,19 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             
             /* compute column entries for linear part in quadratic part */
             SCIP_CALL( getLinearCoeffs(scip, consname, 
-                  SCIPgetQuadVarsQuadratic(scip, cons), SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons),
-                  SCIPgetNQuadVarsQuadratic(scip, cons), transformed, matrix, &rhss[c]) );
+                  quadvars, quadvarlincoefs, SCIPgetNQuadVarTermsQuadratic(scip, cons),
+                  transformed, matrix, &rhss[c]) );
          }
          
          /* check for aggregated variables in quadratic part of quadratic constraints for later output of
           * aggregations as linear constraints */
-         consvars = SCIPgetQuadVarsQuadratic(scip, cons);
-         nconsvars = SCIPgetNQuadVarsQuadratic(scip, cons);
-                  
+         consvars = quadvars;
+         nconsvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
+
          SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregatedHash) );
+         
+         SCIPfreeBufferArray(scip, &quadvars);
+         SCIPfreeBufferArray(scip, &quadvarlincoefs);
       }
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
@@ -3575,10 +3606,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
     */
    if( nConsQuadratic > 0 )
    {
-      SCIP_Real*  sqrcoefs;
-      SCIP_VAR**  bilinvars1;
-      SCIP_VAR**  bilinvars2;
-      SCIP_Real*  bilincoefs;
+      SCIP_QUADVARTERM* quadvarterms;
+      SCIP_BILINTERM*   bilinterms;
       int         nbilin;
       const char* varname2;
       
@@ -3588,14 +3617,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       for( c = 0; c < nConsQuadratic; ++c )
       {
          cons = consQuadratic[c];
-         consvars = SCIPgetQuadVarsQuadratic(scip, cons);
-         nconsvars = SCIPgetNQuadVarsQuadratic(scip, cons);
-         sqrcoefs = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons);
-         
-         bilinvars1 = SCIPgetBilinVars1Quadratic(scip, cons);
-         bilinvars2 = SCIPgetBilinVars2Quadratic(scip, cons);
-         bilincoefs = SCIPgetBilinCoefsQuadratic(scip, cons);
+         nconsvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
+         quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
          nbilin     = SCIPgetNBilinTermsQuadratic(scip, cons);
+         bilinterms = SCIPgetBilinTermsQuadratic(scip, cons);
          
          (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
 
@@ -3604,15 +3629,15 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* print x^2 terms */
          for( v = 0; v < nconsvars; ++v )
          {
-            if( sqrcoefs[v] == 0.0 )
+            if( quadvarterms[v].sqrcoef == 0.0 )
                continue;
             
             /* get variable name */
-            assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            assert ( SCIPhashmapExists(varnameHashmap, quadvarterms[v].var) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, quadvarterms[v].var);
 
             /* get coefficient as string */
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sqrcoefs[v]);
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", quadvarterms[v].sqrcoef);
 
             /* print "x x coeff" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
@@ -3625,19 +3650,19 @@ SCIP_DECL_READERWRITE(readerWriteMps)
           * I.e., we have to split bilinear coefficients into two off diagonal elements */
          for( v = 0; v < nbilin; ++v )
          {
-            if( bilincoefs[v] == 0.0 )
+            if( bilinterms[v].coef == 0.0 )
                continue;
             
             /* get name of first variable */
-            assert ( SCIPhashmapExists(varnameHashmap, bilinvars1[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinvars1[v]);
+            assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var1) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var1);
             
             /* get name of second variable */
-            assert ( SCIPhashmapExists(varnameHashmap, bilinvars2[v]) );
-            varname2 = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinvars2[v]);
+            assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var2) );
+            varname2 = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var2);
             
             /* get coefficient as string */
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.5*bilincoefs[v]);
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.5*bilinterms[v].coef);
 
             /* print "x y coeff/2" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
