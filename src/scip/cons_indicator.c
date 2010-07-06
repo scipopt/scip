@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.75 2010/07/05 18:57:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.76 2010/07/06 17:44:19 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -4254,7 +4254,9 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_CONS* lincons;
    SCIP_VAR* slackvar;
    SCIP_Bool modifiable;
+   SCIP_VARTYPE slackvartype;
    char s[SCIP_MAXSTRLEN];
+   int i;
 
    if ( nvars < 0 )
    {
@@ -4312,10 +4314,21 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       if ( onlyCont )
 	 consdata->linconsActive = FALSE;
    }
+
+   /* check if slack variable can be made implicity integer */
+   slackvartype = SCIP_VARTYPE_IMPLINT;
+   for (i = 0; i < nvars; ++i)
+   {
+      if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]) )
+      {
+         slackvartype = SCIP_VARTYPE_CONTINUOUS;
+         break;
+      }
+   }
       
    /* create slack variable */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-   SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+   SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
 	 NULL, NULL, NULL, NULL) );
       
    SCIP_CALL( SCIPaddVar(scip, slackvar) );
