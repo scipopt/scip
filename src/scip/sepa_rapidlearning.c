@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.13 2010/07/05 20:19:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.14 2010/07/06 07:11:38 bzfberth Exp $"
 #define SCIP_DEBUG
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -376,19 +376,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
   
    /* set limits for the subproblem */
    nodelimit = SCIPgetNLPIterations(scip);
-#if 0
    nodelimit = MAX(500, nodelimit);
    nodelimit = MIN(5000, nodelimit);
-#endif
-   nodelimit = MAX(20000, nodelimit);
-   nodelimit = MIN(100000, nodelimit);
 
-   restarts = -1;
-   restartnum = INT_MAX;
-#if 0
    restarts = 0;
    restartnum = 1000;
-#endif
+
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) ); 
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
@@ -396,7 +389,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
    /* forbid recursive call of heuristics solving subMIPs */
-#if 0
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
@@ -404,9 +396,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
-#else
-   SCIP_CALL( SCIPaddBoolParam(subscip, "coloring/fixTriangle", "Fix the upper right triangle to 0?", NULL, TRUE, TRUE, NULL, NULL) );
-#endif
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
 
    /* disable cut separation in sub problem */
