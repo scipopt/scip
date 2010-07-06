@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.596 2010/07/05 11:02:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.597 2010/07/06 12:37:45 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1022,13 +1022,13 @@ SCIP_RETCODE SCIPgetVarCopy(
       case SCIP_VARSTATUS_AGGREGATED:
       {
          *success = FALSE;
-         SCIPwarningMessage("Copying of aggregated variables not implemented yet");
+         SCIPwarningMessage("Copying of aggregated variables not implemented yet\n");
          return SCIP_OKAY;                  
       }
       case SCIP_VARSTATUS_MULTAGGR:
       {
          *success = FALSE;
-         SCIPwarningMessage("Copying of multiaggregated variables not implemented yet");
+         SCIPwarningMessage("Copying of multiaggregated variables not implemented yet\n");
          return SCIP_OKAY;                  
       }
       case SCIP_VARSTATUS_NEGATED:

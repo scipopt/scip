@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.14 2010/07/06 07:11:38 bzfberth Exp $"
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.15 2010/07/06 12:37:45 bzfberth Exp $"
+
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
  * @brief  rapidlearning separator
@@ -72,13 +72,12 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
    SCIP_HASHMAP*         varmapfw,           /**< mapping of SCIP variables to subSCIP variables                */
-   SCIP_HASHMAP*         varmapbw,           /**< mapping of subSCIP variables to SCIP variables                */
-   SCIP_Bool*            success,            /**< pointer to store whether the problem was created successfully */
-   SCIP_Bool*            disabledualreds     /**< TRUE, if dual reductions in sub-SCIP are not valid for SCIP  */
+   SCIP_HASHMAP*         varmapbw            /**< mapping of subSCIP variables to SCIP variables                */
    )
 {
    SCIP_CONSHDLR** conshdlrs;
    SCIP_VAR** vars;                          /* original SCIP variables */
+   SCIP_Bool allcopied;                      /* could all constraints be copied? */
    int nvars;
    int i; 
  
@@ -107,7 +106,8 @@ SCIP_RETCODE createSubproblem(
    }
 
    conshdlrs = SCIPgetConshdlrs(scip);
- 
+   allcopied = TRUE;
+
    /* copy problem: loop through all constraint handlers */  
    for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
    {
@@ -146,14 +146,21 @@ SCIP_RETCODE createSubproblem(
          }
          else
          {
-            SCIPdebugMessage("failed to copy constraint %s, disabled dual reductions\n", SCIPconsGetName(cons));
-            *disabledualreds = TRUE;
+            SCIPdebugMessage("failed to copy constraint <%s>, disabled dual reductions\n", SCIPconsGetName(cons));
+            allcopied = FALSE;
          }
       }
    }
 
-   *success = TRUE;
-
+   /* this avoids dual presolving */
+   if( !allcopied )
+   {
+      for( i = 0; i < nvars; i++ )
+      {     
+         SCIP_CALL( SCIPaddVarLocks(subscip, subvars[i], 1, 1 ) );
+      }
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -424,15 +431,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPhashmapCreate(&varmapbw, SCIPblkmem(scip), nvars) );
 
    /* copy the problem */
-   success = FALSE;
-   disabledualreductions = FALSE;
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, varmapfw, varmapbw, &success, &disabledualreductions) );
-
-   if( !success )
-   {
-     *result = SCIP_DIDNOTRUN;
-     goto TERMINATE;
-   } 
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, varmapfw, varmapbw) );
 
    /* add an objective cutoff */
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
@@ -533,6 +532,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
+   disabledualreductions = FALSE;
+
    /* check, whether a solution was found */
    if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPfindHeur(scip, "trysol") != NULL )
    {
@@ -596,7 +597,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                
                cons = conss[c];
                assert(cons != NULL);        
-               
+
+               success = FALSE;
                SCIP_CALL( SCIPcopyCons(scip, &conscopy, NULL, conshdlrs[i], subscip, cons, varmapbw,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
@@ -690,8 +692,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPfreeBufferArray(scip, &oldnconss);
    SCIPfreeBufferArray(scip, &conshdlrs);
 
- TERMINATE:
-   
    SCIPhashmapFree(&varmapbw);
    SCIPhashmapFree(&varmapfw);
 

@@ -210,6 +210,7 @@ fixed bugs:
 - fixed potential bug where SCIPselectSimpleValue returns a value slightly outside of the given bounds due to rounding errors (probably cancelation in subtraction in SCIPfindSimpleRational), now use rounding control and check result  
 - fixed makefile system for OSTYPE=darwin w.r.t. to CPLEX as LP solver
 - fixed bug with debugging a solution: during restarts erroneously it was claimed that the primal solution is cut off
+- fixed bug in copy procedure of AND constraint handler, negated variables have been copied to their originals
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
