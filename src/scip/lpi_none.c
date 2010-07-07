@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_none.c,v 1.11 2010/06/17 12:04:26 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.12 2010/07/07 07:27:13 bzfheinz Exp $"
 
 /**@file   lpi_none.c
  * @ingroup LPIS
@@ -26,6 +26,9 @@
 
 #include "scip/lpi.h"
 #include "scip/message.h"
+
+#define LPINAME          "NONE"              /**< name of the LPI interface */
+#define LPIINFINITY       1e20               /**< infinity value */
 
 
 /*
@@ -59,7 +62,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   return "NONE";
+   return LPINAME;
 }
 
 /** gets description of LP solver (developer, webpage, ...) */
@@ -961,9 +964,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 
 /**@} */
 
-
-
-
 /*
  * Numerical Methods
  */
@@ -976,8 +976,7 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
-   return 0.0;
+   return LPIINFINITY;
 }
 
 /** checks if given value is treated as infinity in the LP solver */
@@ -986,7 +985,8 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   if ( val >= LPIINFINITY )
+      return TRUE;
    return FALSE;
 }
 
