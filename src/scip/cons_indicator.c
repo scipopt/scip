@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.76 2010/07/06 17:44:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.77 2010/07/07 12:45:38 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3820,6 +3820,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( ! SCIPconsIsEnabled(sourceconsdata->lincons) || SCIPconsIsActive(sourceconsdata->lincons) )
    {
       *cons = NULL;
+      *success = FALSE;
       return SCIP_OKAY;
    }
 
