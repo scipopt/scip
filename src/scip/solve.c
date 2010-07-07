@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.302 2010/07/01 18:33:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.303 2010/07/07 13:19:48 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2900,6 +2900,9 @@ SCIP_RETCODE solveNode(
                      SCIPerrorMessage("pricing was aborted, but no branching could be created!\n", result);
                      return SCIP_INVALIDRESULT;
                   }
+
+                  SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+                     "(node: %"SCIP_LONGINT_FORMAT") forcing the solution of an LP ...\n", stat->nnodes, stat->nlps);
 
                   /* solve the LP in the next loop */
                   SCIPtreeSetFocusNodeLP(tree, TRUE);
