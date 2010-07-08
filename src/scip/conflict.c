@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.155 2010/06/09 13:37:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.156 2010/07/08 13:51:51 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1186,13 +1186,9 @@ int conflictCalcMaxsize(
    assert(set != NULL);
    assert(prob != NULL);
 
-#if 1 /*??????????????? try to change this! current implementation uses nbinvars; better might be nvars */
-   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
-#else
-   maxsize = (int)(set->conf_maxvarsfac * prob->nvars);
-#endif
+   maxsize = (int)(set->conf_maxvarsfac * (prob->nvars - prob->ncontvars));
    maxsize = MAX(maxsize, set->conf_minmaxvars);
-
+   
    return maxsize;
 }
 
