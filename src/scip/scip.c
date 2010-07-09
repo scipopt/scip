@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.597 2010/07/06 12:37:45 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.598 2010/07/09 12:53:24 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11937,6 +11937,9 @@ SCIP_RETCODE SCIPwriteMIP(
 {
    SCIP_CALL( checkStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
+   /* we need a flushed lp to write the current mip */
+   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->solvemem, scip->set) );
+   
    SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, fname, genericnames,
          origobj, scip->origprob->objsense, scip->transprob->objscale, scip->transprob->objoffset) );
 
