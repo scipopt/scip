@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.104 2010/06/22 17:50:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.105 2010/07/09 13:27:13 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -150,9 +150,7 @@ public:
 	  m_rownames(0),
 	  m_colnames(0)
    {
-      /* note: next line only done for initializing m_sense, which has to be distinct to the next parameter in the 
-       * line afterwards */
-      m_sense = SPxLP::MAXIMIZE;
+      m_sense = sense();
       setSense(SPxLP::MINIMIZE);
       setSolver(&m_slu);
       setTester(&m_ratio);
@@ -243,11 +241,14 @@ public:
    SPxLP::SPxSense getSense() const
    {
       assert(m_sense == sense());
+
       return m_sense;
    }
 
    void setSense(const SPxLP::SPxSense sen)
    {
+      assert(m_sense == sense());
+
       if( m_sense != sen )
       {
          m_sense = sen;
