@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.105 2010/07/09 13:27:13 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.106 2010/07/11 12:56:55 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -30,6 +30,36 @@
                                               *   strong branching phase, which however seems to mostly increase strong
                                               *   branching time and iterations */
 
+/* in this case the SoPlex results are double checked using CPLEX */
+#ifdef WITH_LPSCHECK
+extern "C"
+{
+#include <cplex.h>
+}
+
+#define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
+#define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
+#define EXIT_AT_WRONG_RESULT            false/**< shall program be exited if CPLEX returns different result than SoPlex? */
+#define EXIT_AT_CPXERROR                false/**< shall program be exited if CPLEX returns an error? */
+
+#define CPX_CALL(x)                     do                                                                                  \
+                                        {                                                                                   \
+                                           int _cpxstat_;                                                                   \
+                                           if( (_cpxstat_ = (x)) != 0 )                                                     \
+                                           {                                                                                \
+                                              SCIPwarningMessage("CPLEX error <%d>; SoPlex result unchecked\n", _cpxstat_); \
+                                              if( EXIT_AT_CPXERROR )                                                        \
+                                              {                                                                             \
+                                                 exit(1);                                                                   \
+                                              }                                                                             \
+                                              else                                                                          \
+                                              {                                                                             \
+                                                 goto ENDCHECK;                                                             \
+                                              }                                                                             \
+                                           }                                                                                \
+                                        }                                                                                   \
+                                        while( false )
+#endif
 
 /* remember the original value of the SCIP_DEBUG define and undefine it */
 #ifdef SCIP_DEBUG
@@ -132,6 +162,12 @@ class SPxSCIP : public SPxSolver
    NameSet*         m_rownames;         /**< row names */
    NameSet*         m_colnames;         /**< column names */
 
+#ifdef WITH_LPSCHECK
+   bool             m_doublecheck;
+   CPXENVptr        m_cpxenv;           /**< CPLEX memory environment */
+   CPXLPptr         m_cpxlp;            /**< CPLEX lp structure */
+#endif
+
 public:
    SPxSCIP(const char* probname = NULL)
         : SPxSolver(LEAVE, COLUMN),
@@ -159,6 +195,14 @@ public:
 
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
+
+#ifdef WITH_LPSCHECK
+      int cpxstat;
+      m_cpxenv = CPXopenCPLEX(&cpxstat);
+      assert(m_cpxenv != NULL);
+      m_cpxlp = CPXcreateprob(m_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
+      (void) CPXsetintparam(m_cpxenv, CPX_PARAM_SCRIND, 0);
+#endif
    }
 
    virtual ~SPxSCIP()
@@ -167,6 +211,11 @@ public:
          spx_free(m_probname);  /*lint !e1551*/
 
       freePreStrongbranchingBasis();
+
+#ifdef WITH_LPSCHECK
+      (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
+      (void) CPXcloseCPLEX(&m_cpxenv);
+#endif
    }
 
    void setAutoPricer(bool initialphase)
@@ -307,6 +356,76 @@ public:
       m_objUpLimit = limit;
    }
 
+#ifdef WITH_LPSCHECK
+   bool getDoubleCheck() const
+   {
+      return m_doublecheck;
+   }
+
+   void setDoubleCheck(bool dc)
+   {
+      m_doublecheck = dc;
+   }
+
+   const char* spxStatusString(const SPxSolver::Status stat)
+   {
+      switch( stat )
+      {
+      case SPxSolver::ABORT_TIME:
+         return "ABORT_TIME";
+      case SPxSolver::ABORT_ITER:
+         return "ABORT_ITER";
+      case SPxSolver::ABORT_VALUE:
+         return "ABORT_VALUE";
+      case SPxSolver::SINGULAR:
+         return "SINGULAR";
+      case SPxSolver::REGULAR:
+         return "REGULAR";
+      case SPxSolver::UNKNOWN:
+         return "UNKNOWN";
+      case SPxSolver::OPTIMAL:
+         return "OPTIMAL";
+      case SPxSolver::UNBOUNDED:
+         return "UNBOUNDED";
+      case SPxSolver::INFEASIBLE:
+         return "INFEASIBLE";
+      default:
+         return "UNKNOWN";
+      }  /*lint !e788*/
+
+      return "UNKNOWN";
+   }
+
+   const char* cpxStatusString(const int stat)
+   {
+      switch( stat )
+      {
+      case CPX_STAT_ABORT_TIME_LIM:
+         return "ABORT_TIME";
+      case CPX_STAT_ABORT_IT_LIM:
+         return "ABORT_ITER";
+      case CPX_STAT_ABORT_OBJ_LIM:
+         return "ABORT_VALUE";
+      case CPX_STAT_OPTIMAL:
+         return "OPTIMAL";
+      case CPX_STAT_OPTIMAL_INFEAS:
+         return "CPX_STAT_OPTIMAL_INFEAS: OPT SOL INFEASIBLE AFTER UNSCALING";
+      case CPX_STAT_UNBOUNDED:
+         return "UNBOUNDED";
+      case CPX_STAT_INFEASIBLE:
+         return "INFEASIBLE";
+      case CPX_STAT_INForUNBD:
+         return "INFEASIBLE or UNBOUNDED";
+      case CPX_STAT_NUM_BEST:
+         return "CPX_STAT_NUM_BEST: SOL AVAILABLE BUT NOT PROVEN OPTIMAL DUE TO NUM TROUBLE";
+      default:
+         return "UNKNOWN";
+      }  /*lint !e788*/
+
+      return "UNKNOWN";
+   }
+#endif
+
    void trySolve()
    {
       try
@@ -346,6 +465,12 @@ public:
 	 }
       }
 
+#ifdef WITH_LPSCHECK
+      /* dump LP with current basis and settings saved in SoPlex */
+      if( getDoubleCheck() )
+         writeState("spxcheck", NULL, NULL);
+#endif
+
       if ( getLpInfo() )
 	 Param::setVerbose(5);
       else 
@@ -377,6 +502,112 @@ public:
          if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
             m_stat = ABORT_VALUE;
       }
+
+#ifdef WITH_LPSCHECK
+      /* if SoPlex gave a definite answer, we double check if it is consistent with CPLEX's answer */
+      if( getDoubleCheck() && (m_stat == SPxSolver::OPTIMAL || m_stat == SPxSolver::UNBOUNDED || m_stat == SPxSolver::INFEASIBLE || m_stat == SPxSolver::ABORT_VALUE) )
+      {
+         SCIP_Real cpxobj;
+         int cpxstat;
+
+         /* read LP with basis */
+         CPX_CALL( CPXreadcopyprob(m_cpxenv, m_cpxlp, "spxcheck.mps", NULL) );
+         CPX_CALL( CPXreadcopybase(m_cpxenv, m_cpxlp, "spxcheck.bas") );
+
+         /* set tolerances */
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPOPT, delta()) );
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPRHS, delta()) );
+
+         /* solve LP */
+         CPX_CALL( CPXlpopt(m_cpxenv, m_cpxlp) );
+
+         /* get solution status and objective value */
+         CPX_CALL( CPXsolution(m_cpxenv, m_cpxlp, &cpxstat, &cpxobj, NULL, NULL, NULL, NULL) );
+         if( getSense() == SPxLP::MAXIMIZE )
+            cpxobj *= -1.0;
+
+         /* check for inconsistent statuses */
+         if( (m_stat == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
+            || (m_stat == SPxSolver::UNBOUNDED && cpxstat != CPX_STAT_UNBOUNDED)
+            || (m_stat == SPxSolver::INFEASIBLE && cpxstat != CPX_STAT_INFEASIBLE) )
+         {
+            SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+               m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+            if( EXIT_AT_WRONG_RESULT )
+               exit(1);
+         }
+         else if( m_stat == SPxSolver::ABORT_VALUE )
+         {
+            switch( cpxstat )
+            {
+            case CPX_STAT_OPTIMAL:
+               if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*delta()))
+                  || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*delta())) )
+               {
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                     m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+                  if( EXIT_AT_WRONG_RESULT )
+                     exit(1);
+               }
+               else if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
+                  || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
+               {
+                  SCIPwarningMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                     m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+               }
+               break;
+            case CPX_STAT_OPTIMAL_INFEAS:
+            case CPX_STAT_NUM_BEST:
+               if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
+                  || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
+               {
+                  SCIPwarningMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                     m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
+                     getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
+               }
+               break;
+            case CPX_STAT_INFEASIBLE:
+               break;
+            case CPX_STAT_UNBOUNDED:
+               SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+               if( EXIT_AT_WRONG_RESULT )
+                  exit(1);
+               break;
+            case CPX_STAT_INForUNBD:
+            default:
+               SCIPwarningMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+                  m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+               break;
+            }  /*lint !e788*/
+         }
+         /* check for same objective values */
+         else if( m_stat == SPxSolver::OPTIMAL )
+         {
+            if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*delta()))
+               || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*delta())) )
+            {
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good\n", value(),
+                  m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj);
+               if( EXIT_AT_WRONG_RESULT )
+                  exit(1);
+            }
+            else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*delta()))
+               || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*delta())) )
+            {
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal\n", value(),
+                  m_probname, getSense() == SPxSolver::MINIMIZE ? ">" : "<", cpxobj);
+               if( EXIT_AT_WRONG_RESULT )
+                  exit(1);
+            }
+         }
+      }
+
+   ENDCHECK:
+#endif
+
       return m_stat;
    }
 
@@ -877,7 +1108,11 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
+#ifdef WITH_LPSCHECK
+   return "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) - including CPLEX double check";
+#else
    return "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)";
+#endif
 }
 
 /** gets pointer for LP solver - use only with great care */
@@ -2001,6 +2236,10 @@ SCIP_RETCODE spxSolve(
    /* set the algorithm type */
    lpi->spx->setType(type);
 
+#ifdef WITH_LPSCHECK
+   lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
+#endif
+
    SPxSolver::Status status = lpi->spx->solve();
    SCIPdebugMessage(" -> SoPlex status: %d, basis status: %d\n", lpi->spx->getStatus(), lpi->spx->basis().status());
    lpi->solved = TRUE;
@@ -2169,6 +2408,9 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       spx->setTerminationIter(itlim);
       do
       {
+#ifdef WITH_LPSCHECK
+         spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
+#endif
          status = spx->solve();
          SCIPdebugMessage(" --> Terminate with status %d\n", status);
          switch( status )
@@ -2243,6 +2485,9 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          spx->setTerminationIter(itlim);
          do
          {
+#ifdef WITH_LPSCHECK
+            spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
+#endif
             status = spx->solve();
             SCIPdebugMessage(" --> Terminate with status %d\n", status);
             switch( status )
