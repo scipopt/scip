@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.599 2010/07/12 14:58:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.600 2010/07/12 17:54:06 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6802,7 +6802,7 @@ SCIP_RETCODE SCIPparseVarsList(
    /* if all variable name searches were successfully and the variable array has enough slots copy the collected
     * variables 
     */
-   if( (*success) && ntmpvars < varssize )
+   if( (*success) && ntmpvars <= varssize )
    {
       for( v = 0; v < ntmpvars; ++v )
          vars[v] = tmpvars[v];
