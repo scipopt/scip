@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.102 2010/07/06 17:29:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.103 2010/07/12 14:57:53 bzfpfets Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5046,7 +5046,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
    return SCIP_OKAY;
 }
 
-/** tries to deduce domain reductions for x in xsqrcoef x^2 + xlincoef x + ysqrcoef y^2 + ylincoef y + bilincoef x y \in rhs
+/** tries to deduce domain reductions for x in xsqrcoef x^2 + xlincoef x + ysqrcoef y^2 + ylincoef y + bilincoef x y \\in rhs
  * NOTE that domain reductions for y are not deduced 
  */
 static
