@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.391 2010/07/02 12:58:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.392 2010/07/12 14:58:20 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2220,7 +2220,7 @@ SCIP_RETCODE SCIPwriteVarName(
    );
 
 /** methods print the given list of variables to output stream separated by a comma; the variables x1, x2, ..., xn are
- *  written as: <x1>, <x2>, ..., <xn>; the method SCIPparseVarsList() can parse such a string;
+ *  written as: \<x1\>, \<x2\>, ..., \<xn\>; the method SCIPparseVarsList() can parse such a string
  */
 extern
 SCIP_RETCODE SCIPwriteVarsList(
@@ -2231,7 +2231,7 @@ SCIP_RETCODE SCIPwriteVarsList(
    );
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a variable is
- *  creates and captures; if variable is of integral type, fractional bounds are automatically rounded; an integer
+ *  created and captured; if variable is of integral type, fractional bounds are automatically rounded; an integer
  *  variable with bounds zero and one is automatically converted into a binary variable
  */
 extern
@@ -2258,12 +2258,12 @@ SCIP_RETCODE SCIPparseVarName(
    SCIP_VAR**            var                 /**< pointer to store the problem variable, or NULL if it not exits */
    );
 
-/** method parse the given string as variable list (<x1>, <x2>, ..., <xn>) (see SCIPwriteVarsList() ); if it was
+/** method to parse the given string as variable list (\<x1\>, \<x2\>, ..., \<xn\>) (see SCIPwriteVarsList() ); if it was
  *  successful, the pointer success is set to TRUE;
  *
  * @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
  *
- *  if the number of variables (parsed) is greater than the available slots in the variable array, nothing happens
+ *  If the number of variables (parsed) is greater than the available slots in the variable array, nothing happens
  *  except that the required size is stored in the corresponding integer; the reason for this approach is that we cannot
  *  reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP memory
  *  functions).
