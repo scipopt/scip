@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.62 2010/07/06 17:29:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.63 2010/07/14 14:47:24 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -161,6 +161,137 @@ void  incConsCounter(
    return;
 }
 
+static
+/** analysis a nonlinear row for constraints or fixing to the Ppc problem */
+SCIP_RETCODE processNlRow(
+   SCIP*                 scip,               /**< original SCIP data structure                                        */
+   SCIP*                 ppcscip,            /**< SCIP data structure for the set covering problem                    */
+   SCIP_VAR**            ppcvars,            /**< the variables of the set covering problem                           */
+   int*                  termcounter,
+   SCIP_Bool*            consmarker,
+   int*                  conscounter,
+   SCIP_Bool             local,              /**< shall locally fixed variables be treated as constants               */
+   SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity?        */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row representation of a nonlinear constraint              */
+   SCIP_Bool             isconvex,           /**< indicates whether the function of the row is convex                 */
+   SCIP_Bool             isconcave,          /**< indicates whether the function of the row is concave                */
+   SCIP_Bool*            success             /**< a buffer where to store if row was successfully processed           */
+   )
+{
+   SCIP_VAR** vars;
+   int        nvars;
+   int        ncontvars;
+   int        t;
+   char       name[SCIP_MAXSTRLEN];
+
+   SCIP_Bool infeas;
+   SCIP_Bool fixed;
+
+   /* TODO: if onlyconvexify, then use SCIPisConvexQuadratic and SCIPisConcaveQuadratic to decide here if the whole constraint does not need to be considered */
+
+   /* think positive */
+   *success = TRUE;
+
+   if( SCIPnlrowGetExprtree(nlrow) != NULL )
+   {
+      SCIPdebugMessage("handling of expression trees not implemented yet\n");
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* get required data of the original problem */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
+
+   BMSclearMemoryArray(consmarker, nvars);
+
+   /* fix square variable in quadratic terms to linearize/convexify it,
+    * create set covering constraints: fix at least one variable in each bilinear term
+    */
+   for( t = 0; t < SCIPnlrowGetNQuadElems(nlrow); ++t )
+   {
+      SCIP_QUADELEM* quadelem;
+      SCIP_VAR* bilinvar1;
+      SCIP_VAR* bilinvar2;
+      int probindex1;
+      int probindex2;
+
+      quadelem = &SCIPnlrowGetQuadElems(nlrow)[t];
+
+      bilinvar1 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1];
+      bilinvar2 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2];
+      assert(bilinvar1 != NULL);
+      assert(bilinvar2 != NULL);
+
+      /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+      probindex1 = SCIPvarGetProbindex(bilinvar1);
+      probindex2 = SCIPvarGetProbindex(bilinvar2);
+      if( probindex1 == -1 || probindex2 == -1 )
+      {
+         SCIPdebugMessage("undercover heuristic detected nonlinear row <%s> with inactive variables\n", SCIPnlrowGetName(nlrow));
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      if( bilinvar1 == bilinvar2 )
+      {
+         /* actually it's a square term */
+         if( termIsLinear(scip, bilinvar1, quadelem->coef, local) )
+            continue;
+
+         if( onlyconvexify && termIsConvex(scip, SCIPnlrowGetLhs(nlrow), SCIPnlrowGetRhs(nlrow), quadelem->coef >= 0) )
+            continue;
+
+         SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[probindex1], 1.0, &infeas, &fixed) );
+         assert(!infeas);
+         assert(fixed);
+
+         ++termcounter[probindex1];
+         if( !consmarker[probindex1] )
+            incConsCounter(conscounter, consmarker, probindex1);
+
+         SCIPdebugMessage("undercover heuristic: fixing var <%s> in set covering problem to 1.\n", SCIPvarGetName(ppcvars[probindex1]));
+      }
+      else
+      {
+         SCIP_VAR* ppcconsvars[2];
+         SCIP_CONS* ppccons;
+
+         /* if the term is linear, because one of the variables is fixed or the coefficient is zero, continue */
+         if( termIsLinear(scip, bilinvar1, quadelem->coef, local) || termIsLinear(scip, bilinvar2, quadelem->coef, local) )
+            continue;
+
+         /* get name of the original constraint and add the string "_bilin.." */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_bilin%d", SCIPnlrowGetName(nlrow), t);
+
+         ppcconsvars[0] = ppcvars[probindex1];
+         ppcconsvars[1] = ppcvars[probindex2];
+
+         SCIP_CALL( SCIPcreateConsSetcover(ppcscip, &ppccons, name, 2, ppcconsvars,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+         if(ppccons == NULL)
+         {
+            SCIPdebugMessage("failed to create set covering constraint <%s>: terminating undercover heuristic\n", name);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( SCIPaddCons(ppcscip, ppccons) );
+         SCIP_CALL( SCIPreleaseCons(ppcscip, &ppccons) );
+
+         /* increase appearance counters for both variables */
+         ++termcounter[probindex1];
+         if( !consmarker[probindex1] )
+            incConsCounter(conscounter, consmarker, probindex1);
+
+         ++termcounter[probindex2];
+         if( !consmarker[probindex2] )
+            incConsCounter(conscounter, consmarker, probindex2);
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** creates a set covering/packing problem to determine a number of variables to be fixed */
 static
@@ -333,6 +464,31 @@ SCIP_RETCODE createPpcProblem(
    conshdlr = SCIPfindConshdlr(scip, "quadratic");
    if( conshdlr != NULL )
    {
+#if 1
+      for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
+      {
+         SCIP_CONS* quadcons;
+         SCIP_NLROW* nlrow;
+         SCIP_Bool processsuccess;
+
+         quadcons = SCIPconshdlrGetConss(conshdlr)[i];
+         assert(quadcons != NULL);
+
+         SCIP_CALL( SCIPgetNlRowQuadratic(scip, quadcons, &nlrow) );
+         assert(nlrow != NULL);
+
+         if( onlyconvexify )
+         {
+            SCIP_CALL( SCIPcheckCurvatureQuadratic(scip, quadcons) );
+         }
+
+         SCIP_CALL( processNlRow(scip, ppcscip, ppcvars, termcounter, consmarker, conscounter, local, onlyconvexify, nlrow,
+            SCIPisConvexQuadratic(scip, quadcons), SCIPisConcaveQuadratic(scip, quadcons), &processsuccess) );
+
+         if( processsuccess == FALSE )
+            goto TERMINATE;
+      }
+#else
       for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
       {
          SCIP_CONS* quadcons;
@@ -440,6 +596,7 @@ SCIP_RETCODE createPpcProblem(
                incConsCounter(conscounter, consmarker, probindex2);
          }        
       }
+#endif
    }
 
    /* go through all SOC constraints in the original problem */
@@ -1409,12 +1566,12 @@ SCIP_RETCODE createSubProblem(
       *success = TRUE;
    }
 
+   if( !(*success) )
+      goto TERMINATE;
+
    /* If the problem is a MIP, or the LP solution was integral, undercover should not have been called */
    assert(fixingcounter != 0);
    assert(fixingcounter != nvars || roundedfixingcounter != 0);
-
-   if( !(*success) )
-      goto TERMINATE;
 
    /* copy all constraints */
    for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
