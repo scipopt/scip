@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.19 2010/07/06 17:29:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.20 2010/07/14 14:46:37 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -181,6 +181,15 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint dynamic? */
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
+   );
+
+/** Gets the quadratic constraint as a nonlinear row representation.
+ */
+extern
+SCIP_RETCODE SCIPgetNlRowQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
    );
 
 /** Gets the number of variables in the linear part of a quadratic constraint.

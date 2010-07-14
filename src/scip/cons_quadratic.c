@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.103 2010/07/12 14:57:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.104 2010/07/14 14:46:37 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -96,6 +96,8 @@ struct SCIP_ConsData
    int                   nbilinterms;        /**< number of bilinear terms */
    int                   bilintermssize;     /**< length of bilinear term arrays */
    SCIP_BILINTERM*       bilinterms;         /**< bilinear terms array */
+
+   SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 
    unsigned int          linvarssorted:1;    /**< are the linear variables already sorted? */
    unsigned int          linvarsmerged:1;    /**< are equal linear variables already merged? */
@@ -1162,6 +1164,12 @@ SCIP_RETCODE consdataFree(
    /* free bilinear terms */
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bilinterms, (*consdata)->bilintermssize);
 
+   /* free nonlinear row representation */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
+   }
+
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
    
@@ -1583,6 +1591,12 @@ SCIP_RETCODE addLinearCoef(
    /* invalidate activity information */
    consdata->activity = SCIP_INVALID;
 
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
    /* install rounding locks for new variable */
    SCIP_CALL( lockLinearVariable(scip, cons, var, coef) );
    
@@ -1656,6 +1670,12 @@ SCIP_RETCODE delLinearCoefPos(
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
 
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
    consdata->ispropagated = FALSE;
    consdata->ispresolved  = FALSE;
 
@@ -1692,6 +1712,12 @@ SCIP_RETCODE chgLinearCoefPos(
 
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
 
    /* if necessary, update the rounding locks of the variable */
    if( SCIPconsIsLocked(cons) && newcoef * coef < 0.0 )
@@ -1785,6 +1811,12 @@ SCIP_RETCODE addQuadVarTerm(
    consdata->rhsviol  = SCIP_INVALID;
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
    /* install rounding locks for new variable */
    SCIP_CALL( lockQuadraticVariable(scip, cons, var) );
 
@@ -1858,6 +1890,12 @@ SCIP_RETCODE delQuadVarTermPos(
    
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
 
    consdata->ispropagated  = FALSE;
    consdata->ispresolved   = FALSE;
@@ -2012,6 +2050,12 @@ SCIP_RETCODE replaceQuadVarTermPos(
    consdata->rhsviol  = SCIP_INVALID;
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
    /* install rounding locks for new variable */
    SCIP_CALL( lockQuadraticVariable(scip, cons, var) );
 
@@ -2093,6 +2137,12 @@ SCIP_RETCODE addBilinearTerm(
    /* invalidate activity information */
    consdata->activity = SCIP_INVALID;
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
 
    consdata->ispropagated = FALSE;
    consdata->ispresolved  = FALSE;
@@ -2196,7 +2246,16 @@ SCIP_RETCODE removeBilinearTermsPos(
    consdata->ispresolved   = FALSE;
    consdata->iscurvchecked = FALSE;
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+
+   /* invalidate activity */
+   consdata->activity = SCIP_INVALID;
    
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2266,6 +2325,12 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
       {
          quadvarterm->lincoef += quadvarterm->sqrcoef;
          quadvarterm->sqrcoef = 0.0;
+
+         /* invalidate nonlinear row */
+         if( consdata->nlrow != NULL )
+         {
+            SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+         }
       }
 
       /* if its 0.0 or linear, get rid of it */
@@ -2723,6 +2788,119 @@ SCIP_RETCODE removeFixedVariables(
    SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
    SCIP_CALL( mergeAndCleanLinearVars(scip, cons) );
    
+   return SCIP_OKAY;
+}
+
+/** create a nonlinear row representation of the constraint and stores them in consdata */
+static
+SCIP_RETCODE createNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< quadratic constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int        nquadvars;     /* number of variables in quadratic terms */
+   SCIP_VAR** quadvars;      /* variables in quadratic terms */
+   int        nquadelems;    /* number of quadratic elements (square and bilinear terms) */
+   SCIP_QUADELEM* quadelems; /* quadratic elements (square and bilinear terms) */
+   int        nquadlinterms; /* number of linear terms using variables that are in quadratic terms */
+   SCIP_VAR** quadlinvars;   /* variables of linear terms using variables that are in quadratic terms */
+   SCIP_Real* quadlincoefs;  /* coefficients of linear terms using variables that are in quadratic terms */
+   int i;
+   int idx1;
+   int idx2;
+   int lincnt;
+   int elcnt;
+   SCIP_VAR* lastvar;
+   int lastvaridx;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow != NULL )
+   {
+      SCIPreleaseNlRow(scip, &consdata->nlrow);
+   }
+
+   nquadvars = consdata->nquadvars;
+   nquadelems = consdata->nbilinterms;
+   nquadlinterms = 0;
+   for( i = 0; i < nquadvars; ++i )
+   {
+      if( consdata->quadvarterms[i].sqrcoef != 0.0 )
+         ++nquadelems;
+      if( consdata->quadvarterms[i].lincoef != 0.0 )
+         ++nquadlinterms;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars,  nquadvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nquadelems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadlinvars,  nquadlinterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadlincoefs, nquadlinterms) );
+
+   lincnt = 0;
+   elcnt = 0;
+   for( i = 0; i < nquadvars; ++i )
+   {
+      quadvars[i] = consdata->quadvarterms[i].var;
+
+      if( consdata->quadvarterms[i].sqrcoef != 0.0 )
+      {
+         assert(elcnt < nquadelems);
+         quadelems[elcnt].idx1 = i;
+         quadelems[elcnt].idx2 = i;
+         quadelems[elcnt].coef = consdata->quadvarterms[i].sqrcoef;
+         ++elcnt;
+      }
+
+      if( consdata->quadvarterms[i].lincoef != 0.0 )
+      {
+         assert(lincnt < nquadlinterms);
+         quadlinvars [lincnt] = consdata->quadvarterms[i].var;
+         quadlincoefs[lincnt] = consdata->quadvarterms[i].lincoef;
+      }
+   }
+
+   /* bilinear terms are sorted first by first variable, then by second variable
+    * thus, it makes sense to remember the index of the previous first variable for the case a series of bilinear terms with the same first var appears */
+   lastvar = NULL;
+   lastvaridx = -1;
+   for( i = 0; i < consdata->nbilinterms; ++i )
+   {
+      if( lastvar == consdata->bilinterms[i].var1 )
+      {
+         assert(lastvaridx >= 0);
+         assert(consdata->quadvarterms[lastvaridx].var == consdata->bilinterms[i].var1);
+      }
+      else
+      {
+         lastvar = consdata->bilinterms[i].var1;
+         SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, lastvar, &lastvaridx) );
+      }
+      idx1 = lastvaridx;
+
+      SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, consdata->bilinterms[i].var2, &idx2) );
+
+      assert(elcnt < nquadelems);
+      quadelems[elcnt].idx1 = MIN(idx1, idx2);
+      quadelems[elcnt].idx2 = MAX(idx1, idx2);
+      quadelems[elcnt].coef = consdata->bilinterms[i].coef;
+      ++elcnt;
+   }
+
+   SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+      consdata->nlinvars, consdata->linvars, consdata->lincoefs,
+      nquadvars, quadvars, nquadelems, quadelems,
+      NULL, consdata->lhs, consdata->rhs) );
+
+   SCIPfreeBufferArray(scip, &quadvars);
+   SCIPfreeBufferArray(scip, &quadelems);
+   SCIPfreeBufferArray(scip, &quadlinvars);
+   SCIPfreeBufferArray(scip, &quadlincoefs);
+
    return SCIP_OKAY;
 }
 
@@ -6478,6 +6656,8 @@ static
 SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int c;
    
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6504,6 +6684,18 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
    conshdlrdata->nlpheur    = NULL;
    conshdlrdata->rensnlheur = NULL;
    conshdlrdata->trysolheur = NULL;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* free nonlinear row representation */
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -8234,6 +8426,32 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
       
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** Gets the quadratic constraint as a nonlinear row representation.
+ */
+SCIP_RETCODE SCIPgetNlRowQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons  != NULL);
+   assert(nlrow != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_CALL( createNlRow(scip, cons) );
+   }
+   assert(consdata->nlrow != NULL);
+   *nlrow = consdata->nlrow;
 
    return SCIP_OKAY;
 }
