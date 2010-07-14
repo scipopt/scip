@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.7 2010/04/09 20:55:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.h,v 1.8 2010/07/14 15:24:06 bzfviger Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints
@@ -93,6 +93,15 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< SOC constraints */
    SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */
+   );
+
+/** Gets the SOC constraint as a nonlinear row representation.
+ */
+extern
+SCIP_RETCODE SCIPgetNlRowSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
    );
 
 /** Gets the number of variables on the left hand side of a SOC constraint.

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.27 2010/07/06 17:29:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.28 2010/07/14 15:24:06 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -31,6 +31,7 @@
 #include "scip/cons_linear.h"
 #include "scip/heur_nlp.h"
 #include "scip/intervalarith.h"
+#include "scip/expression.h"
 #include "nlpi/nlpi.h"
 
 
@@ -77,6 +78,8 @@ struct SCIP_ConsData
    SCIP_Real             rhscoeff;           /**< coefficient of square term on right hand side (alpha_{n+1}) */
    SCIP_Real             rhsoffset;          /**< offset for variable on right hand side (beta_{n+1}) */
    
+   SCIP_NLROW*           nlrow;              /**< nonlinear row representation of constraint */
+
    SCIP_Real             lhsval;             /**< value of left hand side in current point */
    SCIP_Real             violation;          /**< violation of constraint in current point */
    
@@ -146,6 +149,12 @@ SCIP_RETCODE consdataMultCoef(
       consdata->coefs[idx] *= factor;
    }
    
+   /* free nonlinear row representation */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -176,6 +185,12 @@ SCIP_RETCODE consdataSetOffset(
 
    consdata->offsets[idx] = newoffset;
    
+   /* free nonlinear row representation */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -261,6 +276,96 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    return SCIP_OKAY;
 }
 
+/** create a nonlinear row representation of the constraint and stores them in consdata */
+static
+SCIP_RETCODE createNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< quadratic constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* exprterm;
+   SCIP_EXPR* expr2;
+   SCIP_EXPRTREE* exprtree;
+   int i;
+   SCIP_Real lincoef;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow != NULL )
+   {
+      SCIPreleaseNlRow(scip, &consdata->nlrow);
+   }
+
+   /* construct expression \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} */
+
+   if( consdata->constant != 0.0 )
+   {
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_CONST, consdata->constant) );  /* gamma */
+   }
+   else
+   {
+      exprterm = NULL;
+   }
+
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, i) );  /* x_i */
+      if( consdata->offsets != NULL && consdata->offsets[i] != 0.0 )
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->offsets[i]) );  /* beta_i */
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_PLUS, expr, expr2) );  /* x_i + beta_i */
+      }
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_SQUARE, expr) );  /* (x_i + beta_i)^2 */
+      if( consdata->coefs != NULL && consdata->coefs[i] != 1.0 )
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->coefs[i]) );  /* alpha_i */
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MUL, expr, expr2) );  /* alpha_i * (x_i + beta_i)^2 */
+      }
+      if( exprterm != NULL )
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_PLUS, exprterm, expr) );
+      }
+      else
+      {
+         exprterm = expr;
+      }
+   }
+
+   if( exprterm != NULL )
+   {
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_SQRT, exprterm) );  /* sqrt(gamma + sum_i (...)^2) */
+      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, exprterm, consdata->nvars, 0, NULL) );
+      SCIP_CALL( SCIPexprtreeSetVars(exprtree, consdata->nvars, consdata->vars) );
+   }
+   else
+   {
+      assert(consdata->nvars == 0);
+      assert(consdata->constant == 0.0);
+      exprtree = NULL;
+   }
+
+   /* linear and constant part is -\alpha_{n+1} (x_{n+1}+\beta_{n+1}) */
+   lincoef = -consdata->rhscoeff;
+   SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+      -consdata->rhscoeff * consdata->rhsoffset,
+      1, &consdata->rhsvar, &lincoef,
+      0, NULL, 0, NULL,
+      exprtree, -SCIPinfinity(scip), 0.0) );
+
+   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+   SCIPdebugMessage("created nonlinear row representation of SOC constraint\n");
+   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIPprintNlRow(scip, consdata->nlrow, NULL) );
+
+   return SCIP_OKAY;
+}
 
 /** evaluates the left hand side of a SOC constraint */ 
 static
@@ -1188,6 +1293,12 @@ SCIP_RETCODE presolveReplaceInactiveVariables(
    {
       SCIPdebugMessage("no change\n");
       return SCIP_OKAY;
+   }
+
+   /* free nonlinear row representation */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
    do
@@ -2605,7 +2716,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, &(*upgdconss)[0], NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, (*upgdconss)[0], NULL) ) );
 
          /* create constraint that is equal to cons except that lhs is now -infinity */
          if( !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
@@ -3179,6 +3290,7 @@ SCIP_DECL_CONSTRANS(consTransSOC)
    if( SCIPvarIsActive(consdata->rhsvar) )
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->rhsvar) );
 
+   consdata->nlrow = NULL;
    consdata->lhsbndchgeventdatas = NULL;
    consdata->ispropagated = FALSE;
    consdata->isapproxadded = FALSE;
@@ -3987,6 +4099,8 @@ SCIP_RETCODE SCIPcreateConsSOC(
    if( SCIPvarIsActive(rhsvar) )
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, rhsvar) );
 
+   consdata->nlrow = NULL;
+
    consdata->lhsbndchgeventdatas = NULL;
    consdata->ispropagated        = FALSE;
    consdata->isapproxadded       = FALSE;
@@ -4002,6 +4116,32 @@ SCIP_RETCODE SCIPcreateConsSOC(
       
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** Gets the SOC constraint as a nonlinear row representation.
+ */
+SCIP_RETCODE SCIPgetNlRowSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons  != NULL);
+   assert(nlrow != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_CALL( createNlRow(scip, cons) );
+   }
+   assert(consdata->nlrow != NULL);
+   *nlrow = consdata->nlrow;
 
    return SCIP_OKAY;
 }
