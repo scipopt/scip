@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.62 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.63 2010/07/16 18:32:52 bzfpfets Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -257,6 +257,13 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
+   );
+
+/** forbids upgrading of constraint */
+extern
+SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linear constraint to mark */
    );
 
 #ifdef __cplusplus
