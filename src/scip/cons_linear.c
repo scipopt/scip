@@ -12,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.365 2010/06/18 22:08:59 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.366 2010/07/16 18:33:46 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
  * @brief  constraint handler for linear constraints
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Marc Pfetsch
  * @author Kati Wolter
  *
  *  Linear constraints are separated with a high priority, because they are easy
@@ -152,6 +153,7 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
    unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
+   unsigned int          donotupgrade:1;     /**< should the constraint not be upgraded? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
@@ -1103,6 +1105,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->normalized = FALSE;
    (*consdata)->upgradetried = FALSE;
    (*consdata)->upgraded = FALSE;
+   (*consdata)->donotupgrade = FALSE;
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
    (*consdata)->cliquesadded = FALSE;
@@ -6939,6 +6942,7 @@ SCIP_RETCODE aggregateConstraints(
 
       /* copy the upgraded flag from the old cons0 to the new constraint */
       newconsdata->upgraded = consdata0->upgraded;
+      newconsdata->donotupgrade = consdata0->donotupgrade;
 
       /* normalize the new constraint */
       SCIP_CALL( normalizeCons(scip, newcons) );
@@ -8615,6 +8619,9 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
          sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+
+   /* copy the donotupgrade mark */
+   targetdata->donotupgrade = sourcedata->donotupgrade;
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -10740,6 +10747,10 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    if( consdata->upgraded )
       return SCIP_OKAY;
 
+   /* do not upgrade marked constraints */
+   if ( consdata->donotupgrade )
+      return SCIP_OKAY;
+
    /* check, if the constraint is already stored as LP row */
    if( consdata->row != NULL )
    {
@@ -10883,6 +10894,33 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       SCIP_CALL( SCIPprintCons(scip, *upgdcons, NULL) );
    }
 #endif
+
+   return SCIP_OKAY;
+}
+
+
+/** forbids upgrading of constraint */
+SCIP_RETCODE SCIPmarkDoNotUpgradeConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linear constraint to mark */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   /* get the constraint handler and check, if it's really a linear constraint */
+   conshdlr = SCIPconsGetHdlr(cons);
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* get data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   consdata->donotupgrade = TRUE;
 
    return SCIP_OKAY;
 }
