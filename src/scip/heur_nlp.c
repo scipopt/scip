@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.67 2010/06/09 14:21:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.68 2010/07/16 18:38:47 bzfpfets Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -915,6 +915,7 @@ SCIP_RETCODE SCIPapplyNlpHeur(
             if( refpoint || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
             {
                SCIPdebugMessage("skip NLP heuristic because start candidate not integer feasible: var %d is %g\n", i, discrfix[i]);
+               SCIPfreeBufferArray(scip, &discrfix);
                SCIPfreeBufferArray(scip, &startpoint);
                if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
                {
