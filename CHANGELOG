@@ -67,6 +67,7 @@ interface:
 - new method SCIPlpiGetSolverDesc() to get a descriptive string of an LP solver (developer, webpage, ...) 
 - new method SCIPisInRestart() to detect whether we are currently restarting
 - new method SCIPgetResultantOr() which returns the resultant of an "or" constraint
+- new method SCIPmarkDoNotUpgradeConsLinear() in cons_linear.?, which allows to forbid upgrading of linear constraints
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -142,6 +143,7 @@ features:
 - constraint handler "and" can pares its output 
 - constraint handler "or" can pares its output 
 - constraint handler "or" can copy its constraints 
+- can now forbid upgrading of individual linear constraints (SCIPmarkDoNotUpgradeConsLinear())
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
