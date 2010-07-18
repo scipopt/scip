@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.42 2010/07/01 22:42:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.43 2010/07/18 20:26:04 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1218,9 +1218,9 @@ static
 SCIP_RETCODE parseArrayAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
-   char***               elements,
-   int*                  nelements,
-   int                   selements
+   char***               elements,           /**< pointer to string array to store the parsed elements */
+   int*                  nelements,          /**< pointer to store the number of parsed elements */
+   int                   selements           /**< size of the string array elements */
    )
 {
    assert(scip != NULL);
@@ -1601,7 +1601,7 @@ void parseValue(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    SCIP_Real*            value,              /**< pointer to store value */
-   const char*           assignment
+   const char*           assignment          /**< assignment to parse a value */
    )
 {
    if( isValue(assignment, value) )
