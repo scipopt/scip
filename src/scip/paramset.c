@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.71 2010/07/19 12:25:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.72 2010/07/19 13:40:01 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2839,12 +2839,41 @@ SCIP_RETCODE SCIPparamsetSetToSeparatingOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   /* turn off separation in the root node */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsroot", 0, quiet) );
+   SCIP_SEPA** sepas;
+   SCIP_CONSHDLR** conshdlrs;
+   char paramname[SCIP_MAXSTRLEN];
+   int nsepas;
+   int nconshdlrs;
+   int i;
 
-   /* turn off separation in each node */
-   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxrounds", 0, quiet) );
+   sepas = SCIPgetSepas(scip);
+   nsepas = SCIPgetNSepas(scip);
+   
+   /* turn each individual separator off */
+   for( i = 0; i < nsepas; ++i )
+   {
+      const char* sepaname;
+      sepaname = SCIPsepaGetName(sepas[i]);
+      
+      /* get frequency parameter of separator */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, -1, quiet) );
+   }
 
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+
+   /* turn off separation for each individual constraint handler */
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      const char* conshdlrname;
+      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+      
+      /* get separation frequency parameter of constraint handler */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", conshdlrname);
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, -1, quiet) );
+   }
+   
    return SCIP_OKAY;
 }
 

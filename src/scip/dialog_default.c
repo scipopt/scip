@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.108 2010/07/19 12:25:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.109 2010/07/19 13:40:01 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1775,6 +1775,39 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set heuristics aggressive command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetSeparatingAggressive(scip, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set heuristics fast command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetSeparatingFast(scip, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set heuristics off command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingOff)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetSeparatingOff(scip, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -3363,6 +3396,39 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
+   }
+
+   /* set separating aggressive */
+   if( !SCIPdialogHasEntry(submenu, "aggressive") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetSeparatingAggressive, NULL, NULL,
+            "aggressive", "sets separating <aggressive>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set separating fast */
+   if( !SCIPdialogHasEntry(submenu, "fast") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetSeparatingFast, NULL, NULL,
+            "fast", "sets separating <fast>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set separating off */
+   if( !SCIPdialogHasEntry(submenu, "off") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetSeparatingOff, NULL, NULL,
+            "off", "turns <off> all separation", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
    /* set timing */
