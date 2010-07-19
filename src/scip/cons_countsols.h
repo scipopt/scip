@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.h,v 1.10 2010/01/08 12:00:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.h,v 1.11 2010/07/19 15:17:27 bzfheinz Exp $"
 
 /**@file   cons_countsols.h
  * @brief  constraint handler for counting feasible solutions
@@ -45,8 +45,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
    
 /** execution method of dialog for writing all solutions */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecAllsolutions);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);
 
+/** set parameters for a valid counting process */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetCounting);
+   
 /** creates the handler for countsol constraints and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeConshdlrCountsols(
@@ -90,8 +94,8 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
    SCIP*                 scip                /**< SCIP data structure */
    ); 
 
-/** method to get the sparse solution; note that you get the pointer to the
- *  sparse solutions stored in the constraint handler (not a copy) */
+/** method to get the sparse solution; note that you get the pointer to the sparse solutions stored in the constraint
+ *  handler (not a copy) */
 extern 
 void SCIPgetCountedSparseSolutions( 
    SCIP*                 scip,               /**< SCIP data structure */
@@ -99,6 +103,12 @@ void SCIPgetCountedSparseSolutions(
    int*                  nvars,              /**< number of varibales */
    SPARSESOLUTION***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
+   );
+
+/** setting SCIP parameters for such that a valid counting process is possible */
+extern
+SCIP_RETCODE SCIPsetParamsCountsols(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

@@ -146,6 +146,9 @@ features:
 - can now forbid upgrading of individual linear constraints (SCIPmarkDoNotUpgradeConsLinear())
 - added new dialog for setting presolving to aggressive, fast, or off in interactive shell
 - added new dialog for setting separation to aggressive, fast, or off in interactive shell
+- added new dialog for setting setting for counting "SCIP> set counting"
+- new method SCIPsetParamsCountsols() which sets the parameter for a valid counting process 
+- SCIP can now handle problems with continuous variables w.r.t. to counting (the projection to the integral variables are counted)
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.109 2010/07/19 13:40:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.110 2010/07/19 15:17:27 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -2816,8 +2816,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(root, "set") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &setmenu,
-            NULL,
-            SCIPdialogExecMenu, NULL, NULL,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
             "set", "load/save/change parameters", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, setmenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &setmenu) );
