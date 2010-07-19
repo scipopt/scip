@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.70 2010/06/30 09:29:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.71 2010/07/19 12:25:45 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2616,8 +2616,42 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   /* set maximum üpresolving round to zero (no presolving at all) */
-   SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrounds", 0, quiet) );
+   SCIP_PRESOL** presols;
+   SCIP_CONSHDLR** conshdlrs;
+   char paramname[SCIP_MAXSTRLEN];
+   int npresols;
+   int nconshdlrs;
+   int i;
+
+   presols = SCIPgetPresols(scip);
+   npresols = SCIPgetNPresols(scip);
+   
+   /* turn each individual presolver off */
+   for( i = 0; i < npresols; ++i )
+   {
+      const char* presolname;
+      presolname = SCIPpresolGetName(presols[i]);
+      
+      /* get maxrounds parameter of presolvers */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", presolname);
+      
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, 0, quiet) );
+   }
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+
+   /* turn off presolving for each individual constraint handler */
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      const char* conshdlrname;
+      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+      
+      /* get maxprerounds parameter of presolvers */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", conshdlrname);
+      
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, 0, quiet) );
+   }
    
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.107 2010/05/20 16:05:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.108 2010/07/19 12:25:45 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1742,6 +1742,39 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set heuristics aggressive command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetPresolvingAggressive(scip, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set heuristics fast command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetPresolvingFast(scip, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set heuristics off command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   SCIP_CALL( SCIPsetPresolvingOff(scip, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -3000,7 +3033,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* set heuristics off */
+   /* set heuristics fast */
    if( !SCIPdialogHasEntry(submenu, "fast") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
@@ -3022,7 +3055,6 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
    
-
    /* set limits */
    if( !SCIPdialogHasEntry(setmenu, "limits") )
    {
@@ -3191,6 +3223,39 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
+   }
+
+   /* set presolving aggressive */
+   if( !SCIPdialogHasEntry(submenu, "aggressive") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetPresolvingAggressive, NULL, NULL,
+            "aggressive", "sets presolving <aggressive>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set presolving fast */
+   if( !SCIPdialogHasEntry(submenu, "fast") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetPresolvingFast, NULL, NULL,
+            "fast", "sets presolving <fast>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set presolving off */
+   if( !SCIPdialogHasEntry(submenu, "off") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecSetPresolvingOff, NULL, NULL,
+            "off", "turns <off> all presolving", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
    /* set pricing */

@@ -144,6 +144,7 @@ features:
 - constraint handler "or" can pares its output 
 - constraint handler "or" can copy its constraints 
 - can now forbid upgrading of individual linear constraints (SCIPmarkDoNotUpgradeConsLinear())
+- added new dialog for setting presolving to aggressive, fast, or off in interactive shell
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

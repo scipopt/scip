@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.38 2010/05/03 15:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.39 2010/07/19 12:25:45 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -198,6 +198,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast);
 /** dialog execution method for the set heuristics off command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff);
+
+/** dialog execution method for the set presolving aggressive command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive);
+
+/** dialog execution method for the set presolving fast command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast);
+
+/** dialog execution method for the set presolving off command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff);
 
 /** dialog execution method for the set limits objective command */
 extern
