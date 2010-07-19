@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.41 2010/07/19 15:17:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.42 2010/07/19 16:32:42 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -63,7 +63,7 @@ typedef SCIP_Longint         Int;
 #define DEFAULT_DISCARDSOLS        TRUE /**< is it allowed to discard solutions */
 #define DEFAULT_ACTIVE            FALSE /**< is the constraint handler active */
 #define DEFAULT_COLLECT           FALSE /**< should the solutions be collected */
-#define DEFAULT_SOLLIMIT             -1 /**< counting stops, if the given number of solutions were found (-1: no limit) */
+#define DEFAULT_SOLLIMIT           -1LL /**< counting stops, if the given number of solutions were found (-1: no limit) */
 
 /* default column settings */
 #define DISP_SOLS_NAME             "sols"
@@ -130,7 +130,7 @@ static
 void allocInt(
    Int*          value                       /**< pointer to the value to allocate memory */
    )
-{
+{  /*lint --e{715}*/
 #ifdef WITH_GMP
    mpz_init(*value);
 #endif
@@ -141,7 +141,7 @@ void allocInt(
 static
 void setInt(
    Int*          value,                       /**< pointer to the value to initialize */
-   int           newvalue                     /**< new value */
+   SCIP_Longint  newvalue                     /**< new value */
    )
 {
 #ifdef WITH_GMP
@@ -157,7 +157,7 @@ static
 void freeInt(
    Int*          value                      /**< pointer to the value to free */
    )
-{
+{  /*lint --e{715}*/
 #ifdef WITH_GMP
    mpz_clear(*value);
 #endif
@@ -601,12 +601,12 @@ SCIP_RETCODE collectSolution(
    {
       if( sol == NULL )
       {
-         lbvalues[v] = SCIPvarGetLbLocal(conshdlrdata->vars[v]);
-         ubvalues[v] = SCIPvarGetUbLocal(conshdlrdata->vars[v]);
+         lbvalues[v] = (int)SCIPvarGetLbLocal(conshdlrdata->vars[v]);
+         ubvalues[v] = (int)SCIPvarGetUbLocal(conshdlrdata->vars[v]);
       }
       else
       {
-         lbvalues[v] = SCIPgetSolVal(scip, sol, conshdlrdata->vars[v]);
+         lbvalues[v] = (int)SCIPgetSolVal(scip, sol, conshdlrdata->vars[v]);
          ubvalues[v] = lbvalues[v];
       }
    } 
@@ -664,14 +664,24 @@ SCIP_RETCODE countSparsesol(
       assert( SCIPgetNPseudoBranchCands(scip) != 0 );
       
       allocInt(&newsols);
-      setInt(&newsols, 1);
+      
+      /* set newsols to one */
+      setInt(&newsols, 1LL);
       
       if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
       {
-         SCIP_Longint factor = 1;
-
-         assert( SCIPgetNPseudoBranchCands(scip) < 64 );
-         multInt(&newsols, (factor <<= SCIPgetNPseudoBranchCands(scip)) );
+         SCIP_Longint nsols;
+         int npseudocans;
+         
+         nsols = 1;
+         npseudocans = SCIPgetNPseudoBranchCands(scip);
+         assert(npseudocans < 64);
+         
+         /* bit shift the factor by npseudocans; this means factor = 2^npseudocans */
+         nsols <<= npseudocans;
+         
+         /* set newsols to the computed number */
+         setInt(&newsols, nsols);
       }
       else
       {
@@ -717,7 +727,7 @@ SCIP_RETCODE countSparsesol(
    }
    else if(!conshdlrdata->discardsols)
    {
-      conshdlrdata->cutoffSolution(scip, sol, conshdlrdata);
+      SCIP_CALL( conshdlrdata->cutoffSolution(scip, sol, conshdlrdata) );
       addOne(&conshdlrdata->nsols);
       conshdlrdata->nNonSparseSols++;
       if( conshdlrdata->collect )
@@ -734,22 +744,23 @@ SCIP_RETCODE countSparsesol(
 
 /** checks if the new solution is feasible for the logicor constraints */
 static 
-SCIP_Bool checkLogicor(
+SCIP_RETCODE checkLogicor(
    SCIP*                      scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss            /**< number of enabled constraints */
-   
+   int                        nconss,           /**< number of enabled constraints */
+   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
    ) 
 {
    /**@note the logicor constraints are not fully propagated; therefore, we have to check
     *       them by hand if they are satisfied or not; if a constraint is satisfied we
     *       delete it locally from the branch and bound tree. */
    
-   int c, v;
    SCIP_CONS** conss;
-   int nvars;
    SCIP_VAR** vars;
-   SCIP_Bool satisfied;
+   SCIP_Bool fixedone;
+   int nvars;
+   int c;
+   int v;
 
    SCIPdebugMessage("check logicor %d contraints\n", nconss);
   
@@ -761,13 +772,13 @@ SCIP_Bool checkLogicor(
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
    
+   (*satisfied) = TRUE;
    c = SCIPconshdlrGetNActiveConss(conshdlr) - 1;
-
-   for( ; c >= 0 && nconss > 0; --c )
+         
+   for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
       SCIPdebugMessage("logicor contraint %d\n", c);
     
-
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
     
@@ -777,51 +788,51 @@ SCIP_Bool checkLogicor(
       vars = SCIPgetVarsLogicor(scip, conss[c]);
     
       /* calculate the constraint's activity */
-      satisfied = FALSE;
-      for( v = 0; v < nvars && !satisfied; ++v )
+      fixedone = FALSE;
+      for( v = 0; v < nvars && !fixedone; ++v )
       {
          assert(SCIPvarIsBinary(vars[v]));
 
          if( !varIsUnfixedLocal(vars[v] ) ) 
-            satisfied = SCIPvarGetLbLocal(vars[v]) > 0.5;
+            fixedone = SCIPvarGetLbLocal(vars[v]) > 0.5;
       }
 
-      if( !satisfied )
+      if( !fixedone )
       {
          SCIPdebugMessage("constraint <%s> cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         return FALSE;
+         (*satisfied) = FALSE;
       }
       
       /* delete constraint from the problem locally since it is satisfied */
       SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
-   return TRUE;
+   
+   return SCIP_OKAY;
 }
 
 
 /** checks if the new solution is feasible for the knapsack constraints */
 static 
-SCIP_Bool checkKnapsack(
+SCIP_RETCODE checkKnapsack(
    SCIP*                      scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss            /**< number of enabled constraints */
-   
+   int                        nconss,           /**< number of enabled constraints */
+   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
    ) 
 {
    /**@note the knapsack constraints are not fully propagated; therefore, we have to check
     *       them by hand if they are satisfied or not; if a constraint is satisfied we
     *       delete it locally from the branch and bound tree. */
    
-   int c, v;
-
    SCIP_CONS** conss;
-
-   int nvars;
    SCIP_VAR** vars;
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    SCIP_Real capa;
+   int nvars;
+   int c;
+   int v;
 
    SCIPdebugMessage("check knapsack %d contraints\n", nconss);
   
@@ -833,10 +844,10 @@ SCIP_Bool checkKnapsack(
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
   
-
+   (*satisfied) = TRUE;
    c = SCIPconshdlrGetNActiveConss(conshdlr) - 1;
 
-   for( ; c >= 0 && nconss > 0; --c )
+   for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
       SCIPdebugMessage("knapsack contraint %d\n", c);
     
@@ -882,37 +893,37 @@ SCIP_Bool checkKnapsack(
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         return FALSE;
+         (*satisfied) = FALSE;
       }
     
       /* delete constraint from the problem locally since it is satisfied */
       SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
-   return TRUE;
+   return SCIP_OKAY;
 }
 
 
 /** checks if the new solution is feasible for the bounddisjunction constraints */
 static 
-SCIP_Bool checkBounddisjunction(
+SCIP_RETCODE checkBounddisjunction(
    SCIP*                      scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss            /**< number of enabled constraints */
+   int                        nconss,           /**< number of enabled constraints */
+   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
    ) 
 {
    /**@note the bounddisjunction constraints are not fully propagated; therefore, we have to check
     *       them by hand if they are satisfied or not; if a constraint is satisfied we
     *       delete it locally from the branch and bound tree */
-  
-   int c, v;
-
+   
    SCIP_CONS** conss;
-
-   int nvars;
    SCIP_VAR** vars;
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real* bounds;
-   SCIP_Bool satisfied;
+   SCIP_Bool satisfiedbound;
+   int nvars;
+   int c;
+   int v;
   
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -922,15 +933,16 @@ SCIP_Bool checkBounddisjunction(
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
   
-
+   (*satisfied) = TRUE;
    c = SCIPconshdlrGetNActiveConss(conshdlr) - 1;
-   for( ; c >= 0 && nconss > 0; --c )
+
+   for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
       if( !SCIPconsIsEnabled(conss[c]) )
          continue;
     
       nconss--;
-      satisfied = FALSE;
+      satisfiedbound = FALSE;
     
       nvars = SCIPgetNVarsBounddisjunction(scip, conss[c]);
       vars = SCIPgetVarsBounddisjunction(scip, conss[c]);
@@ -938,55 +950,55 @@ SCIP_Bool checkBounddisjunction(
       boundtypes = SCIPgetBoundtypesBounddisjunction(scip, conss[c]);
       bounds = SCIPgetBoundsBounddisjunction(scip, conss[c]);
     
-      for( v = nvars-1; v >= 0 && !satisfied; --v )
+      for( v = nvars-1; v >= 0 && !satisfiedbound; --v )
       {
          SCIPdebug( SCIPprintVar(scip, vars[v], NULL) );
          assert( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS );
       
          /* variable should be in right bounds to delete constraint */
          if (boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
-            satisfied = SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[v]), bounds[v]);
+            satisfiedbound = SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[v]), bounds[v]);
          else
          {
             assert( boundtypes[v] == SCIP_BOUNDTYPE_UPPER );
-            satisfied = SCIPisFeasLE(scip, SCIPvarGetUbLocal(vars[v]), bounds[v]);
+            satisfiedbound = SCIPisFeasLE(scip, SCIPvarGetUbLocal(vars[v]), bounds[v]);
          }
       }
     
-      if (!satisfied)
+      if (!satisfiedbound)
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         return FALSE;
+         (*satisfied) = FALSE;
       }
     
       /* delete constraint from the problem locally since it is satisfied */
       SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
-   return TRUE;
+   return SCIP_OKAY;
 }
 
 
 /** checks if the new solution is feasible for the varbound constraints */
 static
-SCIP_Bool checkVarbound(
+SCIP_RETCODE checkVarbound(
    SCIP*                      scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss            /**< number of enabled constraints */
-   
+   int                        nconss,           /**< number of enabled constraints */
+   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
    ) 
 {
    /**@note the varbound constraints are not fully propagated; therefore, we have to check
     *       them by hand if they are satisfied or not; if a constraint is satisfied we
     *       delete it locally from the branch and bound tree. */
    
-   int c;
-
    SCIP_CONS** conss;
-
    SCIP_VAR* var_x;
    SCIP_VAR* var_y;
-   SCIP_Real lhs, rhs, coef;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Real coef;
+   int c;
 
    SCIPdebugMessage("check varbound %d contraints\n", nconss);
   
@@ -998,10 +1010,10 @@ SCIP_Bool checkVarbound(
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
   
-
+   (*satisfied) = TRUE;
    c = SCIPconshdlrGetNActiveConss(conshdlr) - 1;
 
-   for( ; c >= 0 && nconss > 0; --c )
+   for( ; c >= 0 && nconss > 0 && (*satisfied); --c )
    {
       SCIPdebugMessage("varbound contraint %d\n", c);
     
@@ -1028,14 +1040,14 @@ SCIP_Bool checkVarbound(
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
          SCIPdebugMessage("%s\t lb: %lf\t ub: %lf\n",SCIPvarGetName(var_x), SCIPvarGetLbLocal(var_x), SCIPvarGetUbLocal(var_x));
          SCIPdebugMessage("%s\t lb: %lf\t ub: %lf\n",SCIPvarGetName(var_y), SCIPvarGetLbLocal(var_y), SCIPvarGetUbLocal(var_y));
-         
-         return FALSE;
+         (*satisfied) = FALSE;
       }
       
       /* delete constraint from the problem locally since it is satisfied */
       SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
-   return TRUE;
+   
+   return SCIP_OKAY;
 }
 
 
@@ -1083,12 +1095,16 @@ SCIP_RETCODE checkFeasSubtree(
 
       if( nconss > 0 )
       {
+         SCIP_Bool satisfied;
+         
          SCIPdebugMessage("constraint handler %s has %d active constraint(s)\n",
             SCIPconshdlrGetName(conshdlr), nconss );
-
+         
          if (strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0)
          {
-            if (checkLogicor(scip, conshdlr, nconss) == FALSE )
+            
+            SCIP_CALL( checkLogicor(scip, conshdlr, nconss, &satisfied) );
+            if( !satisfied )
             {
                SCIPdebugMessage("a <logicor> constraint cannot be disabled\n");
                return SCIP_OKAY;
@@ -1096,7 +1112,8 @@ SCIP_RETCODE checkFeasSubtree(
          }
          else if (strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0)
          {
-            if (checkKnapsack(scip, conshdlr, nconss) == FALSE )
+            SCIP_CALL( checkKnapsack(scip, conshdlr, nconss, &satisfied) );
+            if( !satisfied )
             {
                SCIPdebugMessage("a <knapsack> constraint cannot be disabled\n");
                return SCIP_OKAY;
@@ -1104,7 +1121,8 @@ SCIP_RETCODE checkFeasSubtree(
          }
          else if (strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0)
          {
-            if (checkBounddisjunction(scip, conshdlr, nconss) == FALSE )
+            SCIP_CALL( checkBounddisjunction(scip, conshdlr, nconss, &satisfied) );
+            if( !satisfied )
             {
                SCIPdebugMessage("a <bounddisjunction> constraint cannot be disabled\n");
                return SCIP_OKAY;
@@ -1112,7 +1130,8 @@ SCIP_RETCODE checkFeasSubtree(
          }
          else if (strcmp(SCIPconshdlrGetName(conshdlr), "varbound") == 0)
          {
-            if (checkVarbound(scip, conshdlr, nconss) == FALSE )
+            SCIP_CALL( checkVarbound(scip, conshdlr, nconss, &satisfied) );
+            if( !satisfied )
             {
                SCIPdebugMessage("a <varbound> constraint cannot be disabled\n");
                return SCIP_OKAY;
@@ -1281,7 +1300,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
    conshdlrdata->feasST = 0;             /** number of non trivial unrestricted subtrees */
    conshdlrdata->nDiscardSols = 0;       /** number of discard solutions */
    conshdlrdata->nNonSparseSols = 0;     /** number of non sparse solutions */
-   setInt(&conshdlrdata->nsols, 0);      /** number of solutions */
+   setInt(&conshdlrdata->nsols, 0LL);      /** number of solutions */
    
    conshdlrdata->solutions = NULL;
    conshdlrdata->nsolutions = 0;
@@ -1383,9 +1402,9 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 
    /* check if the problem is binary */
    if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
-      conshdlrdata->cutoffSolution = &addBinaryCons;
+      conshdlrdata->cutoffSolution = addBinaryCons;
    else
-      conshdlrdata->cutoffSolution = &addIntegerCons;
+      conshdlrdata->cutoffSolution = addIntegerCons;
    
    return SCIP_OKAY;
 }
@@ -1718,7 +1737,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
-   }
+   } /*lint --e{616}*/
    
    SCIPdialogMessage(scip, NULL, "\n");
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1796,7 +1815,7 @@ void writeSparseSolutions(
       ubobjval = SCIPretransformObj(scip, ubobjval);
 
       /* output the objective value interval of the (sparse) solution */
-      if ( lbobjval == ubobjval )
+      if ( SCIPisEQ(scip, lbobjval, ubobjval) )
          SCIPinfoMessage(scip, file, "%g\n", lbobjval);
       else 
          SCIPinfoMessage(scip, file, "[%g,%g]\n", lbobjval, ubobjval);
@@ -2105,10 +2124,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                }
             
                SCIPdialogMessage(scip, NULL, "written solutions information to file <%s>\n", filename);
+
+               fclose(file);
             }
-
-            fclose(file);
-
+            
             /* free buffer array */
             SCIPfreeBufferArray(scip, &filename);
          }
@@ -2261,7 +2280,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
    assert( conshdlr != NULL );
    assert( SCIPconshdlrGetNConss(conshdlr) == 0 );
    
-   SCIPdispInt(file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
+   SCIPdispLongint(file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
    
    return SCIP_OKAY;
 }
@@ -2318,7 +2337,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP_CALL( SCIPaddLongintParam(scip, 
          "constraints/"CONSHDLR_NAME"/sollimit", 
          "counting stops, if the given number of solutions were found (-1: no limit)",
-         &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1, SCIP_LONGINT_MAX, NULL, NULL));
+         &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL));
    
    /* create the interactive shell dialogs for the counting process  */
    SCIP_CALL( createCountDialog(scip) );
@@ -2336,7 +2355,6 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
 
 
 /* execute counting */
-extern
 SCIP_RETCODE SCIPcount(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2410,10 +2428,10 @@ void SCIPgetNCountedSolsstr(
    if( *requiredsize <= buffersize)
       toString(conshdlrdata->nsols, buffer, buffersize);
 #else
-   if( conshdlrdata->nsols < pow(10.0, buffersize) )
+   if( conshdlrdata->nsols < pow(10.0, (double)buffersize) )
    {
       toString(conshdlrdata->nsols, buffer, buffersize);
-      *requiredsize = strlen(*buffer);
+      *requiredsize = (int)strlen(*buffer);
    }
    else
       *requiredsize = 21;
