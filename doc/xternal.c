@@ -4003,63 +4003,68 @@
  *
  *  @section SETUP Setting up the test environment
  *
- *  The first thing you should do is to create a file which contains all
- *  problems which should be part of the test. This file has be located in
- *  the the directory <code>scip/check/</code> and has to have the file extension ".test",
- *  e.g., "testrun.test", in order to be found by the <code>scip/check/chech.sh</code> script. 
+ *  At first you should create a file which contains all problem instances which should be part of the test.
+ *  This file has be located in the the directory <code>scip/check/</code> 
+ *  and has to have the file extension <code>.test</code>, e.g., <code>testrun.test</code>, 
+ *  in order to be found by the <code>scip/check/check.sh</code> script. 
  *  \n
- *  All test problems have to be listed by a relative path, e.g., "../../problems/instance1.lp" 
- *  or absolute path, e.g., "/home/problems/instance2.mps" in this file. Thereby, 
- *  only one problem per line (since the command <code>cat</code> is used to parse this file).
- *  Note that these problem have to be readable for SCIP in order to solve them. 
- *  However, you can merge different file formats.
+ *  All test problems can be listed in the <code>test</code> file by a relative path, 
+ *  e.g., <code>../../problems/instance1.lp</code> or absolute path, e.g., <code>/home/problems/instance2.mps</code> 
+ *  in this file. Thereby, note only one problem per line (since the command <code>cat</code> is used to parse this file).
+ *  Note that these problems have to be readable for SCIP in order to solve them. 
+ *  However, you can use different file formats.
  *
- *  Optionally, you can provide a "solu" file in the <code>scip/check/</code> directory containing 
+ *  Optionally, you can provide a solution file in the <code>scip/check/</code> directory containing 
  *  known information about the feasibility and the best known objective values for the test instances.
  *  SCIP can use these values to verify the results. The file has to have the same basename as the 
- *  @em test file, i.e., in our case <tt>testrun.solu</tt>. One line can only contain information 
- *  about one test instance. A line has to start with the type of information given:
+ *  <code>.test</code> file, i.e., in our case <code>testrun.solu</code>. One line can only contain 
+ *  information about one test instance. A line has to start with the type of information given:
  *
- *  - <tt>=opt=</tt> stating that a problem name with an (optional) optimal objective value follows
- *  - <tt>=best=</tt> stating that a problem name with a best know objective value follows
- *  - <tt>=inf=</tt> stating that a problem name follows which is infeasible
+ *  - <code>=opt=</code> stating that a problem name with an optimal objective value follows
+ *  - <code>=best=</code> stating that a problem name with a best know objective value follows
+ *  - <code>=inf=</code> stating that a problem name follows which is infeasible
  * 
- *  With these there information types you can code for an instance named "instance1.lp" the following
- *  information.
- *  - a known optimal (objective) values of 10 
+ *  With these information types you can encode for an instance named <code>instance1.lp</code> the following
+ *  informations:
+ *  - The instance has a known optimal (objective) value of 10.
  *   \code
  *   =opt=  instance1 10
  *   \endcode
- *  - the instance is feasible 
- *   \code
- *   =opt=  instance1
- *   \endcode
- *   Note that the third filed (objective value) is omitted.
- *  - the best known objective value is 15 
+ *  - The instance has a best known solution with objective value 15.
  *   \code
  *   =best=  instance1 15
  *   \endcode
- *  - the instance is infeasible
+ *  - The instance is infeasible.
  *   \code
  *   =inf=  instance1
  *   \endcode
  *
+ *  If you don't know whether the instance is feasible or not (so the status is unknown), 
+ *  you can omit the instance in the <code>solu</code>-file or write
+ *   \code
+ *   =unkn=  instance1
+ *   \endcode
+ * 
+ * ???????????????????? => =feas= for feasible but unknown value ????????????????????
+ * 
  * <b>Note that the in all lines the file extension of the file name is omitted.</b>
  *  \n
- *  See the files "scip/check/shortmiplib.test" and "scip/check/shortmiplib.solu" for an example of a 
- *  "test" file and its corresponding "solu" file.
- * 
+ *  See the files <code>scip/check/shortmiplib.test</code> and <code>scip/check/shortmiplib.solu</code> 
+ *  for an example of a <code>test</code>-file and its corresponding <code>solu</code>-file.
+ *  
  *
  *
  *  @section STARTING Starting a test run
  *
- *  We are now in a position to start the test run. The easiest way to do so, is by calling
+ *  We are now able to start a test run. The easiest way is to call
  *
- *  <code>make TEST=testrun test</code>
+ *  \code
+ *  make TEST=testrun test
+ *  \endcode
  *
- *  in the SCIP root directory. Note that <tt>testrun</tt> is exactly the basename of our @em test
- *  file. This will cause SCIP to solve our test instances one after another and to create various
- *  output files (see \ref EVAL).
+ *  in the SCIP root directory. Note that <code>testrun</code> is exactly the basename of our 
+ *  <code>test</code> file (<code>testrun.test</code>). This will cause SCIP to solve our test instances 
+ *  one after another and to create various output files (see \ref EVAL).
  *
  * 
  *  @section EVAL Evaluating a test run
@@ -4067,32 +4072,38 @@
  *  During computation, SCIP automatically creates the directory <code>scip/check/results/</code> 
  *  (if it does not exist yet) and stores the following output files there.
  *
- *  \arg <tt>*.out</tt> - output of <tt>stdout</tt>
- *  \arg <tt>*.err</tt> - output of <tt>stderr</tt>
- *  \arg <tt>*.set</tt> - copy of the settings file used
+ *  \arg <code>*.out</code> - output of <code>stdout</code>
+ *  \arg <code>*.err</code> - output of <code>stderr</code>
+ *  \arg <code>*.set</code> - copy of the used settings file
  *
- *  \arg <tt>*.res</tt> - ASCII table containing a summary of the computational results
- *  \arg <tt>*.tex</tt> - TeX table containing a summary of the computational results
- *  \arg <tt>*.pav</tt> - <a href="http://www.gamsworld.org/performance/paver">PAVER</a> output
+ *  \arg <code>*.res</code> - ASCII table containing a summary of the computational results
+ *  \arg <code>*.tex</code> - TeX table containing a summary of the computational results
+ *  \arg <code>*.pav</code> - <a href="http://www.gamsworld.org/performance/paver">PAVER</a> output
  *
  *  The last three files in the above list, i.e., the files containing a summary of the computational results,
- *  can also be generated manually by the user. For that, he has to call the <tt>evalcheck.sh</tt> script in the 
- *  @c check directory with the corresponding "out" file as argument. For example, this may be useful if the user stopped the 
+ *  can also be generated manually. Therefore the user has to call the <code>evalcheck.sh</code> script in the 
+ *  @c check directory with the corresponding @c out file as argument. For example, this may be useful if the user stopped the 
  *  test before it was finished, as in this case, the last three files will not automatically be generated by SCIP.
  *
+ *  Additionally the <code>evalcheck.sh</code> script can generate a <code>solu</code> file by calling
+ *  \code
+ *  ./evalcheck.sh writesolufile=1 NEWSOLUFILE=<solu-file> <out-file>
+ *  \endcode
+ *  where <code><solu-file></code> denotes the filename of the new file where the solutions shall be 
+ *  (and <code><out-file></code> denotes the output (<code>.out</code>) files to evaluate).
  *
- *  @b Note The <tt>basename</tt> of all these files is the same and has the following structure 
- *  which allows us to reconstruct the test run.
+ *  @b Note: The @em basename of all these files is the same and has the following structure 
+ *  which allows us to reconstruct the test run:
  *
  *  \code
- *  check.<test name>.<scip binary>.<machine>.<setting name>
+ *  check.<test name>.<binary>.<machine name>.<setting name>
  *  \endcode
  *
- *  - "test name" indicates the name of the the test file, e.g., "testrun"
- *  - "scip binary" defines the use scip binary, e.g., "scip-1.1.0.linux.x86.gnu.opt.spx"
- *  - "machine" tells the name of the machine, e.g., "mycomputer"
- *  - "setting name" denote the name of the used settings, e.g., "default" 
- *    means the SCIP default setting are used
+ *  \arg <<code>test name</code>> indicates the name of the the test file, e.g., <code>testrun</code>
+ *  \arg <<code>binary</code>> defines the used binary, e.g., <code>scip-1.1.0.linux.x86.gnu.opt.spx</code>
+ *  \arg <<code>machine name</code>> tells the name of the machine, e.g., <code>mycomputer</code>
+ *  \arg <<code>setting name</code>> denote the name of the used settings, e.g., <code>default</code>
+ *    means the (SCIP) default setting are used
  *
  *  Using the examples out of the previous listing the six file names would have the name:
  *
@@ -4104,39 +4115,41 @@
  *  @section USING Using customized setting files
  *
  *  It is possible to use customized settings files for the test run instead of testing SCIP with default settings. 
- *  These have to be placed in the directory <code>scip/check/settings/</code>. Note that accessing setting files 
- *  in subfolders of the @c settings directory is currently not supported.
+ *  These have to be placed in the directory <code>scip/settings/</code>.
  *
- *  To run SCIP with a custom settings file, say for example <tt>fast.set</tt>, we call
+ *  @b Note: Accessing setting files in subfolders of the @c settings directory is currently not supported.
  *
- *  <code> make TEST=testrun SETTINGS=fast test</code>
+ *  To run SCIP with a custom settings file, say for example <code>fast.set</code>, we call
+ *
+ *  \code
+ *  make TEST=testrun SETTINGS=fast test
+ *  \endcode
  *
  *  in the SCIP root directory.
  *
  * 
  *  @section ADVANCED Advanced options
  *
- *  We can further customize the test run by specifying the following options in the <tt>make</tt>
- *  call.
+ *  We can further customize the test run by specifying the following options in the <code>make</code> call:
  *
- *  \arg <tt>TIME</tt>  - time limit for each test instance in seconds [default: 3600]
- *  \arg <tt>NODES</tt> - node limit [default: 2100000000]
- *  \arg <tt>MEM</tt>   -  memory limit in MB [default: 1536]
- *  \arg <tt>DISPFREQ</tt> - display frequency of the output [default: 10000]
- *  \arg <tt>FEASTOL</tt> - LP feasibility tolerance for constraints [default: "default"]
- *  \arg <tt>LOCK</tt> - should the test run be locked to avoid other machines to perform the same test run [default: "false"]
- *  \arg <tt>CONTINUE</tt> - continue the test run if it was previously aborted [default: "false"]
-
+ *  \arg <code>TIME</code>  - time limit for each test instance in seconds [default: 3600]
+ *  \arg <code>NODES</code> - node limit [default: 2100000000]
+ *  \arg <code>MEM</code>   -  memory limit in MB [default: 1536]
+ *  \arg <code>DISPFREQ</code> - display frequency of the output [default: 10000]
+ *  \arg <code>FEASTOL</code> - LP feasibility tolerance for constraints [default: "default"]
+ *  \arg <code>LOCK</code> - should the test run be locked to avoid other machines to perform the same test run [default: "false"]
+ *  \arg <code>CONTINUE</code> - continue the test run if it was previously aborted [default: "false"]
+ * 
  * 
  *  @section COMPARE Comparing test runs for different settings
  *
  *  Often test runs are performed on the basis of different settings. In this case, it is useful to
- *  have a performance comparison. For this purpose, we can use the <tt>allcmpres.sh</tt> script in
+ *  have a performance comparison. For this purpose, we can use the <code>allcmpres.sh</code> script in
  *  the @c check directory.
  *
- *  Suppose, we performed our test run with two different settings, say <tt>fast.set</tt> and
- *  <tt>slow.set</tt>. Assuming that all other parameters (including the SCIP binary), were the same,
- *  we may have the following "res" files in the directory <code>scip/check/results/</code> 
+ *  Suppose, we performed our test run with two different settings, say <code>fast.set</code> and
+ *  <code>slow.set</code>. Assuming that all other parameters (including the SCIP binary), were the same,
+ *  we may have the following <code>res</code> files in the directory <code>scip/check/results/</code> 
  *
  *  \code
  *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res
@@ -4145,62 +4158,70 @@
  *
  *  For a comparison of both computations, we simply call
  *
- *  <code>allcmpres.sh results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res \
- *                     results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res</code>
+ *  \code
+ *  allcmpres.sh results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res \
+ *               results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res
+ *  \endcode
  *
+ *  in the @c check directory. This produces an ASCII table on the console that provide a detailed
+ *  performance comparison of both test runs. Note that the first <code>res</code> file serves as reference
+ *  computation. The following list explains the output. 
+ *  (The term "solver" can be considered as the combination of SCIP with a specific setting file.)
  *
- *  in the @c check directory. This produces two ASCII tables on the console that provide a detailed
- *  performance comparison of both test runs. Note that the first "res" file serves as the reference
- *  computation. The following list explains the output. We use the term "solver" for the
- *  combination of SCIP with a specific setting file.
+ *  \arg <code>Nodes</code> - Number of processed branch-and-bound nodes.
+ *  \arg <code>Time</code>  - Computation time in seconds.
+ *  \arg <code>F</code>     - If no feasible solution was found, then '#', empty otherwise.
+ *  \arg <code>NodQ</code>  - Equals Nodes(i) / Nodes(0), where 'i' denotes the current solver and '0' stands for the reference solver.
+ *  \arg <code>TimQ</code>  - Equals Time(i) / Time(0).
+ *  \arg <code>bounds check</code> - Status of the primal and dual bound check.
  *
- *  \arg <tt>Nodes</tt> - Number of branch-and-bound nodes processed.
- *  \arg <tt>Time</tt>  - Computation time in seconds.
- *  \arg <tt>F</tt>     - If no feasible solution was found, then '#', empty otherwise.
- *  \arg <tt>NodQ</tt>  - Equals Nodes(i) / Nodes(0), where 'i' denotes the current solver and '0' stands for the reference solver.
- *  \arg <tt>TimQ</tt>  - Equals Time(i) / Time(0).
- *  \arg <tt>bounds check</tt> - Status of the primal and dual bound check.
- *
- *  \arg <tt>proc</tt> - Number of instances processed.
- *  \arg <tt>eval</tt> - Number of instances evaluated (bounds check = "ok", i.e., solved to optimality 
+ *  \arg <code>proc</code> - Number of instances processed.
+ *  \arg <code>eval</code> - Number of instances evaluated (bounds check = "ok", i.e., solved to optimality 
  *      within the time and memory limit and result is correct). Only these instances are used in the calculation 
  *      of the mean values.
- *  \arg <tt>fail</tt> - Number of instances with bounds check = "fail".
- *  \arg <tt>time</tt> - Number of instances with timeout.
- *  \arg <tt>solv</tt> - Number of instances correctly solved within the time limit.
- *  \arg <tt>wins</tt> - Number of instances on which the solver won (i.e., the
+ *  \arg <code>fail</code> - Number of instances with bounds check = "fail".
+ *  \arg <code>time</code> - Number of instances with timeout.
+ *  \arg <code>solv</code> - Number of instances correctly solved within the time limit.
+ *  \arg <code>wins</code> - Number of instances on which the solver won (i.e., the
  *      solver was at most 10% slower than the fastest solver OR had the best
  * 	primal bound in case the instance was not solved by any solver within
  *	the time limit).
- *  \arg <tt>bett</tt>    - Number of instances on which the solver was better than the
+ *  \arg <code>bett</code>    - Number of instances on which the solver was better than the
  *	reference solver (i.e., more than 10% faster).
- *  \arg <tt>wors</tt>    - Number of instances on which the solver was worse than the
+ *  \arg <code>wors</code>    - Number of instances on which the solver was worse than the
  *	reference solver (i.e., more than 10% slower).
- *  \arg <tt>bobj</tt>    - Number of instances on which the solver had a better primal
+ *  \arg <code>bobj</code>    - Number of instances on which the solver had a better primal
  *	bound than the reference solver (i.e., a difference larger than 10%).
- *  \arg <tt>wobj</tt>    - Number of instances on which the solver had a worse primal
+ *  \arg <code>wobj</code>    - Number of instances on which the solver had a worse primal
  *	bound than the reference solver (i.e., a difference larger than 10%).
- *  \arg <tt>feas</tt>    - Number of instances for which a feasible solution was found.
- *  \arg <tt>nodes</tt>   - Geometric mean of the processed nodes over all evaluated instances.
- *  \arg <tt>shnodes</tt> - Shifted geometric mean of the processed nodes over all evaluated instances.
- *  \arg <tt>nodesQ</tt>  - Equals nodes(i) / nodes(0), where 'i' denotes the current
+ *  \arg <code>feas</code>    - Number of instances for which a feasible solution was found.
+ *  \arg <code>nodes</code>   - Geometric mean of the processed nodes over all evaluated instances.
+ *  \arg <code>shnodes</code> - Shifted geometric mean of the processed nodes over all evaluated instances.
+ *  \arg <code>nodesQ</code>  - Equals nodes(i) / nodes(0), where 'i' denotes the current
  *	solver and '0' stands for the reference solver.
- *  \arg <tt>shnodesQ</tt> - Equals shnodes(i) / shnodes(0).
- *  \arg <tt>time</tt>    - Geometric mean of the computation time over all evaluated instances.
- *  \arg <tt>shtime</tt>  - Shifted geometric mean of the computation time over all evaluated instances.
- *  \arg <tt>timeQ</tt>   - Equals time(i) / time(0).
- *  \arg <tt>shtimeQ</tt> - Equals shtime(i) / shtime(0).
- *  \arg <tt>score</tt>   - N/A
+ *  \arg <code>shnodesQ</code> - Equals shnodes(i) / shnodes(0).
+ *  \arg <code>time</code>    - Geometric mean of the computation time over all evaluated instances.
+ *  \arg <code>shtime</code>  - Shifted geometric mean of the computation time over all evaluated instances.
+ *  \arg <code>timeQ</code>   - Equals time(i) / time(0).
+ *  \arg <code>shtimeQ</code> - Equals shtime(i) / shtime(0).
+ *  \arg <code>score</code>   - N/A
  *
- *  \arg <tt>all</tt>   - All solvers.
- *  \arg <tt>optimal auto settings</tt> - Theoretical result for a solver that performed 'best of all' for every instance.
- *  \arg <tt>diff</tt>  - Solvers with instances that differ from the reference solver in the number of 
+ *  \arg <code>all</code>   - All solvers.
+ *  \arg <code>optimal auto settings</code> - Theoretical result for a solver that performed 'best of all' for every instance.
+ *  \arg <code>diff</code>  - Solvers with instances that differ from the reference solver in the number of 
  *       processed nodes or in the total number of simplex iterations.
- *  \arg <tt>equal</tt> - Solvers with instances whose number of processed nodes and total number of
+ *  \arg <code>equal</code> - Solvers with instances whose number of processed nodes and total number of
  *       simplex iterations is equal to the reference solver (including a 10% tolerance) and where no timeout
  *       occured.
- *  \arg <tt>all optimal</tt> - Solvers with instances that could be solved to optimiality by
+ *  \arg <code>all optimal</code> - Solvers with instances that could be solved to optimiality by
  *       <em>all</em> solvers; in particular, no timeout occured.
+ *  
+ *  Since this large amount of information is not always needed, one can generate a shorter table by calling:
+ *  \code
+ *  allcmpres.sh short=1 ...
+ *  \endcode
+ *  where <code>NodQ</code>, <code>TimQ</code> and the additional comparison tables are omitted.
+ *  
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
