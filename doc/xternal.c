@@ -4092,6 +4092,13 @@
  *  where <code><solu-file></code> denotes the filename of the new file where the solutions shall be 
  *  (and <code><out-file></code> denotes the output (<code>.out</code>) files to evaluate).
  *
+ *  Another feature can be enabled by calling:
+ *  \code
+ *  ./evalcheck.sh printsoltimes=1 ...
+ *  \endcode
+ *  The output has two additional columns containing the solving time until the first and the best solution was found.
+ *  
+ *  
  *  @b Note: The @em basename of all these files is the same and has the following structure 
  *  which allows us to reconstruct the test run:
  *
@@ -4221,6 +4228,13 @@
  *  allcmpres.sh short=1 ...
  *  \endcode
  *  where <code>NodQ</code>, <code>TimQ</code> and the additional comparison tables are omitted.
+ *  
+ *  If the <code>res</code> files were generated with the parameter <code>printsoltimes=1</code> 
+ *  we can enable another feature by calling:
+ *  \code
+ *  allcmpres.sh printsoltimes=1 ...
+ *  \endcode
+ *  As in the evaluation, the output contains the two additional columns of the solving time until the first and the best solution was found.
  *  
  */
 
