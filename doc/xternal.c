@@ -4302,23 +4302,74 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page COUNTER How to use SCIP to count feasible solution
  *
- * SCIP is capable of computing the number of feasible solution of a given constraint integer program 
- * with the restriction that there are no continuous variables. Therefore, 
- * you just have to load the problem in the interactive shell by using the <code>read</code> command, for example,
+ * SCIP is capable of computing the number of feasible solutions of a given constraint integer program. In case the
+ * problem contains continuous variables, the number of feasible solutions for the projection to the integral variables
+ * is computed. This means, an assignment to the integer variables is counted if the remaining problem (this is the one
+ * after fixing the integer variables w.r.t. to this assignment) is feasible.
  *
- * - <code>SCIP&gt; read &lt;file name&gt;</code>
+ * As a first step you have to load the problem. In case of using the interactive shell, you use the <code>read</code>
+ * command:
+ *
+ * <code>SCIP&gt; read &lt;file name&gt;</code>
  *
  * Afterwards you can count the number of feasible solution with the command <code>count</code>. 
  *
- * - <code>SCIP&gt; count</code>
+ * <code>SCIP&gt; count</code>
  *
- * <b>Note:</b> If you are using the default SCIP settings it is most likely that SCIP will not compute 
- * the right number of feasible solutions since <tt>dual</tt> reduction are turned on, for example, 
- * presol_dualfix.c. We recommend to load the setting file "counter.set" which is locate in the 
- * <code>settings/emphasis/</code> directory.
+ * <b>Note:</b> If you are using the default SCIP settings, it is most likely that SCIP will not compute the right
+ * number of feasible solutions since <tt>dual</tt> reduction are turned on. For example, the presolver dualfix
+ * (presol_dualfix.c) performs dual reductions as the name already says. We recommend to use the counting settings which
+ * can be found in the interactive in the sub menu "emphasis" in the "set" folder. Setting this in the interactive shell
+ * looks like that:
  *
- * The SCIP library provides a interface method SCIPcount() which allows to count the number of feasible solution with in
- * your project. The complete list of all methods which can be used for counting can be found in cons_countsols.h.
+ * <code>SCIP&gt; set emphasis counter</code>
+ *
+ * The SCIP library provides an interface method SCIPcount() which allows to count the number of feasible solution
+ * within your project. The methods SCIPsetParamsCountsols() which is also located in cons_countsols.h loads the
+ * predefined counting settings to ensure a save count. The complete list of all methods which can be used for counting
+ * via the callable library can be found in cons_countsols.h.
+ *
+ * 
+ * @section COUNTLIMIT Limit the number of solutions which should be counted
+ *
+ * It is possible to give an (soft) upper on the number solutions which should be counted. If this upper bound is
+ * exceeded SCIP will be stopped. The name of the parameter to use is <code>constraints/countsols/sollimit</code>. In
+ * the interactive shell this parameter can be set as follows:
+ *
+ * - <code>SCIP&gt; constraints countsols sollimit 1000</code>
+ * 
+ * In case of using the callable library you use the function SCIPsetLongintParam() as follows:
+ *
+ * \code
+ * SCIP_CALL( SCIPsetLongintParam( scip, "constraints/countsols/sollimit", 1000) );
+ * \endcode
+ *
+ *
+ * The reason why this upper bound is soft, comes from the fact that SCIP uses per default the so-called unrestricted
+ * subtree detection. Using this technique it is possible to detect several solutions at once. Therefore, it can happen
+ * that the solution limit is exceeded before SCIP is stopped.
+ *
+ * @section COUNTWRITE Write the counted solution to a file
+ *
+ * Using the interactive shell, it is possible to write the collected number of solutions to a file. To be able to this,
+ * you have to set the parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE). If you
+ * do this, SCIP will not only count the number of feasible solutions it will also <b>collect</b> them. Using the
+ * following command you can write the collect solution into a file:
+ *
+ * - <code>SCIP&gt; write allsolutions &lt;file name&gt;</code>
+ *
+ * @section COUNTOPTIMAL Count number of optimal solutions
+ *
+ * If you are interested to count the number of optimal solutions, this can be also done with SCIP using the
+ * <code>count</code> command. Therefore, you have to do the following:
+ *
+ *  -# Solve the original problem to optimality and let \f$c^*\f$ be the optimal value
+ *  -# Add the objective function as constraint with left and right hand side equal to \f$c^*\f$
+ *  -# load the adjusted problem into SCIP
+ *  -# use the predefined counting settings
+ *  -# start counting the number of feasible solutions
+ *
+ * If you do this, SCIP will collect all optimal solutions of the original problem.
  *
  */
 
