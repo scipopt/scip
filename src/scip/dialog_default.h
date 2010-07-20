@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.40 2010/07/19 13:40:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.41 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -189,39 +189,39 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 
 /** dialog execution method for the set heuristics aggressive command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisAggressive);
 
 /** dialog execution method for the set heuristics fast command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisFast);
 
 /** dialog execution method for the set heuristics off command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisOff);
 
 /** dialog execution method for the set presolving aggressive command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisAggressive);
 
 /** dialog execution method for the set presolving fast command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisFast);
 
 /** dialog execution method for the set presolving off command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisOff);
 
 /** dialog execution method for the set separating aggressive command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisAggressive);
 
 /** dialog execution method for the set separating fast command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisFast);
 
 /** dialog execution method for the set separating off command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingOff);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff);
 
 /** dialog execution method for the set limits objective command */
 extern

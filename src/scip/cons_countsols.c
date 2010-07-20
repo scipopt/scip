@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.42 2010/07/19 16:32:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.43 2010/07/20 15:33:43 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1622,7 +1622,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* activate constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE, TRUE) );
       }
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
@@ -1632,7 +1632,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset activity status of constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE, TRUE) );
       }
    case SCIP_STAGE_SOLVING:
       /* check if the problem contains continuous variables */
@@ -1646,24 +1646,24 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       SCIP_CALL( SCIPgetIntParam(scip, "display/primalbound/active", &displayprimalbound) );
       if( displayprimalbound != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", 0) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", 0, TRUE) );
       }
       SCIP_CALL( SCIPgetIntParam(scip, "display/gap/active", &displaygap) );
       if( displaygap != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", 0) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", 0, TRUE) );
       }
       
       /* turn on sols and feasST column */
       SCIP_CALL( SCIPgetIntParam(scip, "display/sols/active", &displaysols) );
       if( displayprimalbound != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", 2) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", 2, TRUE) );
       }
       SCIP_CALL( SCIPgetIntParam(scip, "display/feasST/active", &displayfeasST) );
       if( displayprimalbound != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", 2) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", 2, TRUE) );
       }
       
       /* find the countsols constraint handler */
@@ -1705,21 +1705,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset display columns */
       if( displayprimalbound != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", displayprimalbound) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", displayprimalbound, TRUE) );
       }
       if( displaygap != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", displaygap) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", displaygap, TRUE) );
       }
       
       /* reset sols and feasST column */
       if( displaysols != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", displaysols) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", displaysols, TRUE) );
       }
       if( displayfeasST != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", displayfeasST) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", displayfeasST, TRUE) );
       }
 
       /* evaluate retcode */
@@ -2140,13 +2140,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 }
 
 /** set parameters for a valid counting process */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetCounting)
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounting)
 {  /*lint --e{715}*/
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    /* set parameters for counting */
-   SCIP_CALL( SCIPsetParamsCountsols(scip) );
+   SCIP_CALL( SCIPsetParamsCountsols(scip, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -2159,16 +2159,16 @@ SCIP_RETCODE createCountDialog(
 {
    SCIP_DIALOG* root;
    SCIP_DIALOG* dialog;
+   SCIP_DIALOG* setmenu;
    SCIP_DIALOG* submenu;
    
-   /* add dialog entry for counting */
-   root = SCIPgetRootDialog(scip);
-   if( root == NULL )
-   {
-      SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
-   }
-   assert( root != NULL );
+   /** includes or updates the default dialog menus in SCIP */
+   SCIP_CALL( SCIPincludeDialogDefault(scip) );
    
+   root = SCIPgetRootDialog(scip);
+   assert( root != NULL );
+
+   /* add dialog entry for counting */
    if( !SCIPdialogHasEntry(root, "count") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecCount, NULL, NULL,
@@ -2177,23 +2177,15 @@ SCIP_RETCODE createCountDialog(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   if( !SCIPdialogHasEntry(root, "write") )
+   /* search for the "write" sub menu to add "allsolutions" dialog */
+   if( SCIPdialogFindEntry(root, "write", &submenu) != 1 )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &submenu, NULL, SCIPdialogExecMenu, NULL, NULL,
-            "write", "write information to file", TRUE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, submenu) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
-   }
-   else
-   {     
-      if( SCIPdialogFindEntry(root, "write", &submenu) != 1 )
-      {
-         SCIPerrorMessage("write sub menu not found\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
+      SCIPerrorMessage("write sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
    }
    assert(submenu != NULL);
 
+   /* add dialog "allsolutions" to sub menu "write" */
    if( !SCIPdialogHasEntry(submenu, "allsolutions") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecWriteAllsolutions, NULL, NULL,
@@ -2202,32 +2194,31 @@ SCIP_RETCODE createCountDialog(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
    
-   if( !SCIPdialogHasEntry(root, "set") )
+   /* search for the "set" sub menu to find the "emphasis" sub menu */
+   if( SCIPdialogFindEntry(root, "set", &setmenu) != 1 )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &submenu, NULL, SCIPdialogExecMenu, NULL, NULL,
-            "set", "load/save/change parameters", TRUE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, submenu) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+      SCIPerrorMessage("set sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
    }
-   else
-   {     
-      if( SCIPdialogFindEntry(root, "set", &submenu) != 1 )
-      {
-         SCIPerrorMessage("set sub menu not found\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
+   assert(setmenu != NULL);
+
+   /* search for the "emphasis" sub menu to add "counting" dialog */
+   if( SCIPdialogFindEntry(setmenu, "emphasis", &submenu) != 1 )
+   {
+      SCIPerrorMessage("emphasis sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
    }
    assert(submenu != NULL);
 
+   /* add "counting" dialog to "set/emphasis" sub menu */
    if( !SCIPdialogHasEntry(submenu, "counting") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetCounting, NULL, NULL,
-            "counting", "set parameters for a valid counting process", FALSE, NULL) );
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisCounting, NULL, NULL,
+            "counter", "predefined parameter settings for a valid counting process", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-
-
+   
    return SCIP_OKAY;
 }
 
@@ -2365,7 +2356,7 @@ SCIP_RETCODE SCIPcount(
    SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE, TRUE) );
    }
 
    /* check if the parameter setting allows a valid counting process */
@@ -2377,7 +2368,7 @@ SCIP_RETCODE SCIPcount(
    /* reset activity status of constraint handler cons_countsols */
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE, TRUE) );
    }
    
    return SCIP_OKAY;
@@ -2490,52 +2481,53 @@ void SCIPgetCountedSparseSolutions(
 
 /** setting SCIP parameters for such that a valid counting process is possible */
 SCIP_RETCODE SCIPsetParamsCountsols(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+    )
 {
    /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/upgrade/logicor", FALSE ) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/upgrade/logicor", FALSE, quiet) );
    
    /* turn off dual presolver */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0, quiet) );
    
    /* turn off knapsack dual presolving */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE, quiet) );
    
    /* turn off linear dual presolving */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE, quiet) );
    
    /* set priority for inference branching to highest possible value */
-   SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4) );
+   SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4, quiet) );
  
    /* set priority for depth first search to highest possible value */
-   SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+   SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
 
    /* avoid that the ZIMPL reader transforms the problem before the problem is generated */
-   SCIP_CALL( SCIPsetBoolParam(scip, "reading/zplreader/usestartsol", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "reading/zplreader/usestartsol", FALSE, quiet) );
 
    /* turn off all heuristics */
-   SCIP_CALL( SCIPsetHeuristicsOff(scip, TRUE) );
+   SCIP_CALL( SCIPsetHeuristicsOff(scip, quiet) );
 
    /* turn off all separation */
-   SCIP_CALL( SCIPsetSeparatingOff(scip, TRUE) );
+   SCIP_CALL( SCIPsetSeparatingOff(scip, quiet) );
  
    /* turn off restart */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0, quiet) );
 
    /* unlimited propagation round in any branch and bound node */
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", -1, quiet) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", -1, quiet) );
 
    /* adjust conflict analysis for depth first search */
-   SCIP_CALL( SCIPsetIntParam(scip, "conflict/fuiplevels", 1) );        
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/dynamic", FALSE) );
+   SCIP_CALL( SCIPsetIntParam(scip, "conflict/fuiplevels", 1, quiet) );        
+   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/dynamic", FALSE, quiet) );
    
    /* prefer binary variables for branching */
-   SCIP_CALL( SCIPsetBoolParam(scip, "branching/preferbinary", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "branching/preferbinary", TRUE, quiet) );
 
    /* turn on aggressive constraint aging */ 
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/agelimit", 1) );       
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/agelimit", 1, quiet) );       
    
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.72 2010/07/19 13:40:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.73 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -294,11 +294,7 @@ SCIP_RETCODE paramSetBool(
    if( param != NULL )
    {
       assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_BOOL);
-      SCIP_CALL( SCIPparamSetBool(param, scip, value) );
-      if( !quiet )
-      {
-         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPparamSetBool(param, scip, value, quiet) );
    }
 #ifndef NDEBUG
    else
@@ -326,11 +322,7 @@ SCIP_RETCODE paramSetInt(
    if( param != NULL )
    {
       assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-      SCIP_CALL( SCIPparamSetInt(param, scip, value) );
-      if( !quiet )
-      {
-         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPparamSetInt(param, scip, value, quiet) );
    }
 #ifndef NDEBUG
    else
@@ -358,11 +350,7 @@ SCIP_RETCODE paramSetLongint(
    if( param != NULL )
    {
       assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
-      SCIP_CALL( SCIPparamSetLongint(param, scip, value) );
-      if( !quiet )
-      {
-         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPparamSetLongint(param, scip, value, quiet) );
    }
 #ifndef NDEBUG
    else
@@ -371,7 +359,6 @@ SCIP_RETCODE paramSetLongint(
    }
 #endif
 
-   
    return SCIP_OKAY;
 }
 
@@ -391,11 +378,7 @@ SCIP_RETCODE paramSetReal(
    if( param != NULL )
    {
       assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL);
-      SCIP_CALL( SCIPparamSetReal(param, scip, value) );
-      if( !quiet )
-      {
-         SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
-      }
+      SCIP_CALL( SCIPparamSetReal(param, scip, value, quiet) );
    }
 #ifndef NDEBUG
    else
@@ -422,7 +405,7 @@ SCIP_RETCODE paramCopyBool(
 
    /* gett value of source parameter and copy it to target parameter */
    value = SCIPparamGetBool(sourceparam);
-   SCIP_CALL( SCIPparamSetBool(targetparam, targetscip, value) );
+   SCIP_CALL( SCIPparamSetBool(targetparam, targetscip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -442,7 +425,7 @@ SCIP_RETCODE paramCopyInt(
 
    /* get value of source parameter and copy it to target parameter */
    value = SCIPparamGetInt(sourceparam);
-   SCIP_CALL( SCIPparamSetInt(targetparam,targetscip, value) );
+   SCIP_CALL( SCIPparamSetInt(targetparam,targetscip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -462,7 +445,7 @@ SCIP_RETCODE paramCopyLongint(
 
    /* get value of source parameter and copy it to target parameter */
    value = SCIPparamGetLongint(sourceparam);
-   SCIP_CALL( SCIPparamSetLongint(targetparam,targetscip, value) );
+   SCIP_CALL( SCIPparamSetLongint(targetparam,targetscip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -482,7 +465,7 @@ SCIP_RETCODE paramCopyReal(
 
    /* get value of source parameter and copy it to target parameter */
    value = SCIPparamGetReal(sourceparam);
-   SCIP_CALL( SCIPparamSetReal(targetparam,targetscip, value) );
+   SCIP_CALL( SCIPparamSetReal(targetparam,targetscip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -502,7 +485,7 @@ SCIP_RETCODE paramCopyChar(
 
    /* get value of source parameter and copy it to target parameter */
    value = SCIPparamGetChar(sourceparam);
-   SCIP_CALL( SCIPparamSetChar(targetparam,targetscip, value) );
+   SCIP_CALL( SCIPparamSetChar(targetparam,targetscip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -522,7 +505,7 @@ SCIP_RETCODE paramCopyString(
 
    /* get value of source parameter and copy it to target parameter */
    value = SCIPparamGetString(sourceparam);
-   SCIP_CALL( SCIPparamSetString(targetparam,targetscip, value) );
+   SCIP_CALL( SCIPparamSetString(targetparam,targetscip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -794,10 +777,11 @@ char* SCIPparamGetStringDefault(
 }
 
 /** sets value of SCIP_Bool parameter */
-SCIP_RETCODE SCIPparamSetBool(
+SCIP_RETCODE  SCIPparamSetBool(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Bool             value               /**< new value of the parameter */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(param != NULL);
@@ -817,6 +801,11 @@ SCIP_RETCODE SCIPparamSetBool(
       SCIP_CALL( param->paramchgd(scip, param) );
    }
 
+   if( !quiet )
+   {
+      SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -824,7 +813,8 @@ SCIP_RETCODE SCIPparamSetBool(
 SCIP_RETCODE SCIPparamSetInt(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   int                   value               /**< new value of the parameter */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(param != NULL);
@@ -844,6 +834,11 @@ SCIP_RETCODE SCIPparamSetInt(
       SCIP_CALL( param->paramchgd(scip, param) );
    }
 
+   if( !quiet )
+   {
+      SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -851,7 +846,8 @@ SCIP_RETCODE SCIPparamSetInt(
 SCIP_RETCODE SCIPparamSetLongint(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Longint          value               /**< new value of the parameter */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(param != NULL);
@@ -871,6 +867,11 @@ SCIP_RETCODE SCIPparamSetLongint(
       SCIP_CALL( param->paramchgd(scip, param) );
    }
 
+   if( !quiet )
+   {
+      SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -878,7 +879,8 @@ SCIP_RETCODE SCIPparamSetLongint(
 SCIP_RETCODE SCIPparamSetReal(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Real             value               /**< new value of the parameter */
+   SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(param != NULL);
@@ -900,6 +902,11 @@ SCIP_RETCODE SCIPparamSetReal(
       SCIP_CALL( param->paramchgd(scip, param) );
    }
 
+   if( !quiet )
+   {
+      SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -907,7 +914,8 @@ SCIP_RETCODE SCIPparamSetReal(
 SCIP_RETCODE SCIPparamSetChar(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   char                  value               /**< new value of the parameter */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(param != NULL);
@@ -927,6 +935,11 @@ SCIP_RETCODE SCIPparamSetChar(
       SCIP_CALL( param->paramchgd(scip, param) );
    }
 
+   if( !quiet )
+   {
+      SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -934,7 +947,8 @@ SCIP_RETCODE SCIPparamSetChar(
 SCIP_RETCODE SCIPparamSetString(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*           value               /**< new value of the parameter */
+   const char*           value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(param != NULL);
@@ -960,6 +974,11 @@ SCIP_RETCODE SCIPparamSetString(
       SCIP_CALL( param->paramchgd(scip, param) );
    }
 
+   if( !quiet )
+   {
+      SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -1008,27 +1027,27 @@ SCIP_RETCODE SCIPparamSetToDefault(
    switch( param->paramtype )
    {
    case SCIP_PARAMTYPE_BOOL:
-      SCIP_CALL( SCIPparamSetBool(param, scip, SCIPparamGetBoolDefault(param)) );
+      SCIP_CALL( SCIPparamSetBool(param, scip, SCIPparamGetBoolDefault(param), TRUE) );
       break;
 
    case SCIP_PARAMTYPE_INT:
-      SCIP_CALL( SCIPparamSetInt(param, scip, SCIPparamGetIntDefault(param)) );
+      SCIP_CALL( SCIPparamSetInt(param, scip, SCIPparamGetIntDefault(param), TRUE) );
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      SCIP_CALL( SCIPparamSetLongint(param, scip, SCIPparamGetLongintDefault(param)) );
+      SCIP_CALL( SCIPparamSetLongint(param, scip, SCIPparamGetLongintDefault(param), TRUE) );
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      SCIP_CALL( SCIPparamSetReal(param, scip, SCIPparamGetRealDefault(param)) );
+      SCIP_CALL( SCIPparamSetReal(param, scip, SCIPparamGetRealDefault(param), TRUE) );
       break;
 
    case SCIP_PARAMTYPE_CHAR:
-      SCIP_CALL( SCIPparamSetChar(param, scip, SCIPparamGetCharDefault(param)) );
+      SCIP_CALL( SCIPparamSetChar(param, scip, SCIPparamGetCharDefault(param), TRUE) );
       break;
 
    case SCIP_PARAMTYPE_STRING:
-      SCIP_CALL( SCIPparamSetString(param, scip, SCIPparamGetStringDefault(param)) );
+      SCIP_CALL( SCIPparamSetString(param, scip, SCIPparamGetStringDefault(param), TRUE) );
       break;
       
    default:
@@ -1089,7 +1108,7 @@ SCIP_RETCODE paramCreateBool(
    (*param)->isadvanced = isadvanced;
    (*param)->data.boolparam.defaultvalue = defaultvalue;
 
-   SCIP_CALL( SCIPparamSetBool(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetBool(*param, NULL, defaultvalue, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1122,7 +1141,7 @@ SCIP_RETCODE paramCreateInt(
    (*param)->data.intparam.minvalue = minvalue;
    (*param)->data.intparam.maxvalue = maxvalue;
 
-   SCIP_CALL( SCIPparamSetInt(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetInt(*param, NULL, defaultvalue, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1155,7 +1174,7 @@ SCIP_RETCODE paramCreateLongint(
    (*param)->data.longintparam.minvalue = minvalue;
    (*param)->data.longintparam.maxvalue = maxvalue;
 
-   SCIP_CALL( SCIPparamSetLongint(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetLongint(*param, NULL, defaultvalue, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1188,7 +1207,7 @@ SCIP_RETCODE paramCreateReal(
    (*param)->data.realparam.minvalue = minvalue;
    (*param)->data.realparam.maxvalue = maxvalue;
 
-   SCIP_CALL( SCIPparamSetReal(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetReal(*param, NULL, defaultvalue, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1224,7 +1243,7 @@ SCIP_RETCODE paramCreateChar(
    else
       (*param)->data.charparam.allowedvalues = NULL;
 
-   SCIP_CALL( SCIPparamSetChar(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetChar(*param, NULL, defaultvalue, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1256,7 +1275,7 @@ SCIP_RETCODE paramCreateString(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*param)->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
    (*param)->data.stringparam.curvalue = NULL;
 
-   SCIP_CALL( SCIPparamSetString(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetString(*param, NULL, defaultvalue, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1317,11 +1336,11 @@ SCIP_RETCODE paramParseBool(
 
    if( strcasecmp(valuestr, "TRUE") == 0 )
    {
-      SCIP_CALL( SCIPparamSetBool(param, set->scip, TRUE) );
+      SCIP_CALL( SCIPparamSetBool(param, set->scip, TRUE, TRUE) );
    }
    else if( strcasecmp(valuestr, "FALSE") == 0 )
    {
-      SCIP_CALL( SCIPparamSetBool(param, set->scip, FALSE) );
+      SCIP_CALL( SCIPparamSetBool(param, set->scip, FALSE, TRUE) );
    }
    else
    {
@@ -1349,7 +1368,7 @@ SCIP_RETCODE paramParseInt(
 
    if( sscanf(valuestr, "%d", &value) == 1 )
    {
-      SCIP_CALL( SCIPparamSetInt(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetInt(param, set->scip, value, TRUE) );
    }
    else
    {
@@ -1377,7 +1396,7 @@ SCIP_RETCODE paramParseLongint(
 
    if( sscanf(valuestr, "%"SCIP_LONGINT_FORMAT, &value) == 1 )
    {
-      SCIP_CALL( SCIPparamSetLongint(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetLongint(param, set->scip, value, TRUE) );
    }
    else
    {
@@ -1405,7 +1424,7 @@ SCIP_RETCODE paramParseReal(
 
    if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &value) == 1 )
    {
-      SCIP_CALL( SCIPparamSetReal(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetReal(param, set->scip, value, TRUE) );
    }
    else
    {
@@ -1433,7 +1452,7 @@ SCIP_RETCODE paramParseChar(
 
    if( sscanf(valuestr, "%c", &value) == 1 )
    {
-      SCIP_CALL( SCIPparamSetChar(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetChar(param, set->scip, value, TRUE) );
    }
    else
    {
@@ -1471,7 +1490,7 @@ SCIP_RETCODE paramParseString(
    /* remove the quotes */
    valuestr[len-1] = '\0';
    valuestr++;
-   SCIP_CALL( SCIPparamSetString(param, set->scip, valuestr) );
+   SCIP_CALL( SCIPparamSetString(param, set->scip, valuestr, TRUE) );
    
    return SCIP_OKAY;
 }
@@ -1936,7 +1955,8 @@ SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Bool             value               /**< new value of the parameter */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_PARAM* param;
@@ -1959,7 +1979,7 @@ SCIP_RETCODE SCIPparamsetSetBool(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetBool(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetBool(param, set->scip, value, quiet) );
    
    return SCIP_OKAY;
 }
@@ -1969,7 +1989,8 @@ SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   int                   value               /**< new value of the parameter */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_PARAM* param;
@@ -1992,7 +2013,7 @@ SCIP_RETCODE SCIPparamsetSetInt(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetInt(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetInt(param, set->scip, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -2002,7 +2023,8 @@ SCIP_RETCODE SCIPparamsetSetLongint(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint          value               /**< new value of the parameter */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_PARAM* param;
@@ -2025,7 +2047,7 @@ SCIP_RETCODE SCIPparamsetSetLongint(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetLongint(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetLongint(param, set->scip, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -2035,7 +2057,8 @@ SCIP_RETCODE SCIPparamsetSetReal(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value               /**< new value of the parameter */
+   SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_PARAM* param;
@@ -2058,8 +2081,8 @@ SCIP_RETCODE SCIPparamsetSetReal(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetReal(param, set->scip, value) );
-
+   SCIP_CALL( SCIPparamSetReal(param, set->scip, value, quiet) );
+   
    return SCIP_OKAY;
 }
 
@@ -2068,7 +2091,8 @@ SCIP_RETCODE SCIPparamsetSetChar(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char                  value               /**< new value of the parameter */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_PARAM* param;
@@ -2091,7 +2115,7 @@ SCIP_RETCODE SCIPparamsetSetChar(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetChar(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetChar(param, set->scip, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -2101,7 +2125,8 @@ SCIP_RETCODE SCIPparamsetSetString(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   const char*           value               /**< new value of the parameter */
+   const char*           value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_PARAM* param;
@@ -2124,7 +2149,7 @@ SCIP_RETCODE SCIPparamsetSetString(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetString(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetString(param, set->scip, value, quiet) );
 
    return SCIP_OKAY;
 }

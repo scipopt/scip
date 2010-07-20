@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.115 2010/06/22 15:18:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.116 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -248,7 +248,8 @@ extern
 SCIP_RETCODE SCIPsetSetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Bool             value               /**< new value of the parameter */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing Int parameter */
@@ -256,7 +257,8 @@ extern
 SCIP_RETCODE SCIPsetSetIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   int                   value               /**< new value of the parameter */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
@@ -264,7 +266,8 @@ extern
 SCIP_RETCODE SCIPsetSetLongintParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint          value               /**< new value of the parameter */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing SCIP_Real parameter */
@@ -272,7 +275,8 @@ extern
 SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value               /**< new value of the parameter */
+   SCIP_Real             value,               /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing Char parameter */
@@ -280,7 +284,8 @@ extern
 SCIP_RETCODE SCIPsetSetCharParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char                  value               /**< new value of the parameter */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing String parameter */
@@ -288,7 +293,8 @@ extern
 SCIP_RETCODE SCIPsetSetStringParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   const char*           value               /**< new value of the parameter */
+   const char*           value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** reads parameters from a file */

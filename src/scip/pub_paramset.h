@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.20 2010/04/26 15:40:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.21 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   pub_paramset.h
  * @ingroup PUBLICMETHODS
@@ -176,7 +176,8 @@ char* SCIPparamGetStringDefault(
 SCIP_RETCODE SCIPparamSetBool(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Bool             value               /**< new value of the parameter */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets value of int parameter */
@@ -184,7 +185,8 @@ extern
 SCIP_RETCODE SCIPparamSetInt(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   int                   value               /**< new value of the parameter */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets value of SCIP_Longint parameter */
@@ -192,7 +194,8 @@ extern
 SCIP_RETCODE SCIPparamSetLongint(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Longint          value               /**< new value of the parameter */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets value of SCIP_Real parameter */
@@ -200,7 +203,8 @@ extern
 SCIP_RETCODE SCIPparamSetReal(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Real             value               /**< new value of the parameter */
+   SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets value of char parameter */
@@ -208,7 +212,8 @@ extern
 SCIP_RETCODE SCIPparamSetChar(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   char                  value               /**< new value of the parameter */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets value of string parameter */
@@ -216,7 +221,8 @@ extern
 SCIP_RETCODE SCIPparamSetString(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*           value               /**< new value of the parameter */
+   const char*           value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** returns whether the parameter is on its default setting */

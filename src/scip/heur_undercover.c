@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.63 2010/07/14 14:47:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.64 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -970,30 +970,30 @@ SCIP_RETCODE solvePpcProblem(
    *success = FALSE;
 
    /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(ppcscip, "misc/catchctrlc", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(ppcscip, "misc/catchctrlc", FALSE, TRUE) );
  
    /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 0, TRUE) );
  
    /* set limits for the ppc problem */
-   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/memory", memorylimit) );
+   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/time", timelimit, TRUE) );
+   SCIP_CALL( SCIPsetRealParam(ppcscip, "limits/memory", memorylimit, TRUE) );
 
    /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/undercover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/oneopt/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "separating/rapidlearning/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/undercover/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rens/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/crossover/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/oneopt/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/rins/freq", -1, TRUE) ); 
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/localbranching/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/mutation/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/dins/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "separating/rapidlearning/freq", -1, TRUE) );
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/freq", 100000000) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/verblevel", 5, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "display/freq", 100000000, TRUE) );
 #endif
 
    /* presolve ppc problem */
@@ -1650,29 +1650,29 @@ SCIP_RETCODE solveSubProblem(
 
    /* stop the solution process of the subscip if the last improvement of the primal solution value was over 100 nodes
     * ago */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100, TRUE) );
 #else
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes, TRUE) );
 #endif
 
    /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE, TRUE) );
  
    /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0, TRUE) );
  
    /* set limits for the sub problem */
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit, TRUE) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit, TRUE) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit, TRUE) );
 
    /* forbid recursive call of undercover heuristic */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1, TRUE) );
    
 #ifdef SCIP_DEBUG
    /* for debugging, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100, TRUE) );
 #endif
 
    /* presolve subproblem */

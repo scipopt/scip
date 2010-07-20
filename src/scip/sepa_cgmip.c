@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.17 2010/07/02 14:30:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.18 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -1165,7 +1165,7 @@ SCIP_RETCODE subscipSetParams(
       timelimit -= SCIPgetSolvingTime(scip);
    if ( timelimit > 0.0 )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit, TRUE) );
    }
    else
    {
@@ -1181,7 +1181,7 @@ SCIP_RETCODE subscipSetParams(
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if ( memorylimit > 0.0 )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit, TRUE) );
    }
    else
    {
@@ -1190,65 +1190,65 @@ SCIP_RETCODE subscipSetParams(
    }
 
    /* determine nodelimit */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", sepadata->nodelimit) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", sepadata->nodelimit, TRUE) );
 
    /* set other limits of subscip */
    /* SCIP_CALL( SCIPsetObjlimit(subscip, mipdata->objectivelimit) ); */
-   /* SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", sepadata->sollimit) ); */
+   /* SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", sepadata->sollimit, TRUE) ); */
 
    /* do not abort subscip on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE, TRUE) );
 
    /* determine output to console */
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 4) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/nsols/active", 2) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 4, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/nsols/active", 2, TRUE) );
 #else
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000, TRUE) );
 #endif
 
    /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1, TRUE) );
 
    /* set other heuristics */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1, TRUE) );
 
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/pscostdiving/freq", 1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", 3) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/pscostdiving/freq", 1, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", 3, TRUE) ); */
 
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/coefdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/guideddiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/linesearchdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/objpscostdiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/veclendiving/freq", -1) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/coefdiving/freq", -1, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/guideddiving/freq", -1, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/linesearchdiving/freq", -1, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/objpscostdiving/freq", -1, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/veclendiving/freq", -1, TRUE) ); */
 
    /* disable cut separation in subscip */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/cgmip/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/cgmip/freq", -1, TRUE) );
 
    /* disable expensive presolving */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) ); */
-   /*     SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) ); */
-   /*     SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0, TRUE) ); */
 
    /* disable conflict analysis */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); */
-   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) ); */
+   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE, TRUE) ); */
+   /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE, TRUE) ); */
 
    return SCIP_OKAY;
 }

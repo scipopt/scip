@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.227 2010/07/01 22:57:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.228 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1689,12 +1689,13 @@ SCIP_RETCODE SCIPsetGetStringParam(
 SCIP_RETCODE SCIPsetSetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Bool             value               /**< new value of the parameter */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetBool(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetBool(set->paramset, set, name, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1703,12 +1704,13 @@ SCIP_RETCODE SCIPsetSetBoolParam(
 SCIP_RETCODE SCIPsetSetIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   int                   value               /**< new value of the parameter */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, name, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1717,12 +1719,13 @@ SCIP_RETCODE SCIPsetSetIntParam(
 SCIP_RETCODE SCIPsetSetLongintParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint          value               /**< new value of the parameter */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetLongint(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetLongint(set->paramset, set, name, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1731,12 +1734,13 @@ SCIP_RETCODE SCIPsetSetLongintParam(
 SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value               /**< new value of the parameter */
+   SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetReal(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetReal(set->paramset, set, name, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1745,12 +1749,13 @@ SCIP_RETCODE SCIPsetSetRealParam(
 SCIP_RETCODE SCIPsetSetCharParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char                  value               /**< new value of the parameter */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetChar(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetChar(set->paramset, set, name, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1759,12 +1764,13 @@ SCIP_RETCODE SCIPsetSetCharParam(
 SCIP_RETCODE SCIPsetSetStringParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   const char*           value               /**< new value of the parameter */
+   const char*           value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetString(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetString(set->paramset, set, name, value, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1810,10 +1816,10 @@ SCIP_RETCODE SCIPsetResetParams(
 /** sets parameters to detect feasibility fast */
 SCIP_RETCODE SCIPsetSetEmphasisFeasibility(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToEmphasisFeasibility(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToEmphasisFeasibility(set->paramset, set->scip, quiet) );
    
    return SCIP_OKAY;
 }
@@ -1821,10 +1827,10 @@ SCIP_RETCODE SCIPsetSetEmphasisFeasibility(
 /** sets heuristic parameters to aggressive values */
 SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1832,10 +1838,10 @@ SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
 /** sets heuristic parameters to fast values */
 SCIP_RETCODE SCIPsetSetHeuristicsFast(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToHeuristicsFast(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToHeuristicsFast(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1843,10 +1849,10 @@ SCIP_RETCODE SCIPsetSetHeuristicsFast(
 /** turns off all heuristics */
 SCIP_RETCODE SCIPsetSetHeuristicsOff(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToHeuristicsOff(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToHeuristicsOff(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1854,10 +1860,10 @@ SCIP_RETCODE SCIPsetSetHeuristicsOff(
 /** sets presolving parameters to aggressive values */
 SCIP_RETCODE SCIPsetSetPresolvingAggressive(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToPresolvingAggressive(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToPresolvingAggressive(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1865,10 +1871,10 @@ SCIP_RETCODE SCIPsetSetPresolvingAggressive(
 /** sets presolving parameters to fast values */
 SCIP_RETCODE SCIPsetSetPresolvingFast(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToPresolvingFast(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToPresolvingFast(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1876,10 +1882,10 @@ SCIP_RETCODE SCIPsetSetPresolvingFast(
 /** turns off all presolving */
 SCIP_RETCODE SCIPsetSetPresolvingOff(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToPresolvingOff(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToPresolvingOff(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1887,10 +1893,10 @@ SCIP_RETCODE SCIPsetSetPresolvingOff(
 /** sets separating parameters to aggressive values */
 SCIP_RETCODE SCIPsetSetSeparatingAggressive(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToSeparatingAggressive(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToSeparatingAggressive(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1898,10 +1904,10 @@ SCIP_RETCODE SCIPsetSetSeparatingAggressive(
 /** sets separating parameters to fast values */
 SCIP_RETCODE SCIPsetSetSeparatingFast(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToSeparatingFast(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToSeparatingFast(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }
@@ -1909,10 +1915,10 @@ SCIP_RETCODE SCIPsetSetSeparatingFast(
 /** turns off all separation */
 SCIP_RETCODE SCIPsetSetSeparatingOff(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToSeparatingOff(set->paramset, set->scip, quite) );
+   SCIP_CALL( SCIPparamsetSetToSeparatingOff(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }

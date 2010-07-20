@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.33 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.34 2010/07/20 15:33:44 bzfheinz Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -196,7 +196,8 @@ SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Bool             value               /**< new value of the parameter */
+   SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing int parameter */
@@ -205,7 +206,8 @@ SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   int                   value               /**< new value of the parameter */
+   int                   value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
@@ -214,7 +216,8 @@ SCIP_RETCODE SCIPparamsetSetLongint(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint          value               /**< new value of the parameter */
+   SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing SCIP_Real parameter */
@@ -223,7 +226,8 @@ SCIP_RETCODE SCIPparamsetSetReal(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value               /**< new value of the parameter */
+   SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing char parameter */
@@ -232,7 +236,8 @@ SCIP_RETCODE SCIPparamsetSetChar(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char                  value               /**< new value of the parameter */
+   char                  value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** changes the value of an existing string parameter */
@@ -241,7 +246,8 @@ SCIP_RETCODE SCIPparamsetSetString(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   const char*           value               /**< new value of the parameter */
+   const char*           value,              /**< new value of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** reads parameters from a file */
@@ -271,7 +277,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets heuristics to aggressive */
@@ -279,7 +285,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets heuristics to fast */
@@ -287,7 +293,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToHeuristicsFast(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** turns off all heuristics */
@@ -295,7 +301,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToHeuristicsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets presolving to aggressive */
@@ -303,7 +309,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToPresolvingAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets presolving to fast */
@@ -311,7 +317,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToPresolvingFast(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** turns off all presolving */
@@ -319,7 +325,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets separating to aggressive */
@@ -327,7 +333,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToSeparatingAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets separating to fast */
@@ -335,7 +341,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToSeparatingFast(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** turns off all separation */
@@ -343,7 +349,7 @@ extern
 SCIP_RETCODE SCIPparamsetSetToSeparatingOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** returns the array of parameters */

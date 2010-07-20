@@ -68,6 +68,8 @@ interface:
 - new method SCIPisInRestart() to detect whether we are currently restarting
 - new method SCIPgetResultantOr() which returns the resultant of an "or" constraint
 - new method SCIPmarkDoNotUpgradeConsLinear() in cons_linear.?, which allows to forbid upgrading of linear constraints
+- added parameter "quiet" to SCIPset..Param() which allows to turn on an output showing the new parameter value
+- added parameter "quiet" to SCIPparamSet...() which allows to turn on an output showing the new parameter value
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
