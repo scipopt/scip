@@ -18,6 +18,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
+ * @author Stefan Heinz
  * @author Mathias Kinder
  * @author Marc Pfetsch
  * @author Kati Wolter
@@ -3645,7 +3646,9 @@
  * default plugins, the event handlers are written in C. C++ users can easily adapt the code by using the ObjEventhdlr
  * wrapper base class and implement the scip_...() virtual methods instead of the SCIP_DECL_EVENT... callback methods.
  * 
- * Additional documentation for the callback methods of an event handler can be found in the file type_event.h.
+ * Additional documentation for the callback methods of an event handler can be found in the file type_event.h. There is
+ * also an example written in C which deals with an event handler. You find this example in the directory
+ * "examples/Eventhdlr/". An C++ example can be found within the TSP project (examples/TSP/src/EventhdlrNewSol.cpp).
  *
  * Here is what you have to do to implement an event handler (assuming your event handler is named "bestsol"):
  * -# Copy the template files src/scip/event_xxx.c and src/scip/event_xxx.h into files named "event_bestsol.c"
