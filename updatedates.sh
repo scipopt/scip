@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# This bash script updates all copyrights in the SCIP files and 
-# posted those files which contain a copyrights which do not have the right format
+# This bash script updates all copyrights in the SCIP files and posted
+# those files which contain a copyright which do not have the right format
 #
 # You just have to run this script. There is nothing to adjust. 
 # The correct year is detected through the 'date' function 
@@ -11,13 +11,14 @@
 #
 # This bash script also changes the copyrights of the SCIP examples
 #
-# $Id: updatedates.sh,v 1.9 2010/01/11 11:10:23 bzfheinz Exp $
+# $Id: updatedates.sh,v 1.10 2010/07/21 21:37:54 bzfheinz Exp $
 
 NEWYEAR=`date +"%Y"`
 LASTYEAR=`expr $NEWYEAR - 1`
 
 DIRECTORIES=(check doc src src/scip src/objscip src/blockmemshell src/tclique examples examples/*/src examples/*/doc)
 EXTENSIONS=(sh awk h c hpp cpp)
+EXTRAFILES=(Makefile)
 
 for DIRECTORY in ${DIRECTORIES[@]}
 do
