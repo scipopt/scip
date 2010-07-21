@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.601 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.602 2010/07/21 08:41:03 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1486,13 +1486,12 @@ SCIP_RETCODE SCIPgetStringParam(
 SCIP_RETCODE SCIPsetBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
-   SCIP_Bool             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             value               /**< new value of the parameter */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetBoolParam(scip->set, name, value, quiet) );
+   SCIP_CALL( SCIPsetSetBoolParam(scip->set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1501,13 +1500,12 @@ SCIP_RETCODE SCIPsetBoolParam(
 SCIP_RETCODE SCIPsetIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
-   int                   value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   int                   value               /**< new value of the parameter */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetIntParam(scip->set, name, value, quiet) );
+   SCIP_CALL( SCIPsetSetIntParam(scip->set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1516,13 +1514,12 @@ SCIP_RETCODE SCIPsetIntParam(
 SCIP_RETCODE SCIPsetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint          value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Longint          value               /**< new value of the parameter */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetLongintParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetLongintParam(scip->set, name, value, quiet) );
+   SCIP_CALL( SCIPsetSetLongintParam(scip->set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1531,13 +1528,12 @@ SCIP_RETCODE SCIPsetLongintParam(
 SCIP_RETCODE SCIPsetRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetRealParam(scip->set, name, value, quiet) );
+   SCIP_CALL( SCIPsetSetRealParam(scip->set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1546,13 +1542,12 @@ SCIP_RETCODE SCIPsetRealParam(
 SCIP_RETCODE SCIPsetCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
-   char                  value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   char                  value               /**< new value of the parameter */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetCharParam(scip->set, name, value, quiet) );
+   SCIP_CALL( SCIPsetSetCharParam(scip->set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1561,13 +1556,12 @@ SCIP_RETCODE SCIPsetCharParam(
 SCIP_RETCODE SCIPsetStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
-   const char*           value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   const char*           value               /**< new value of the parameter */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetStringParam(scip->set, name, value, quiet) );
+   SCIP_CALL( SCIPsetSetStringParam(scip->set, name, value) );
 
    return SCIP_OKAY;
 }

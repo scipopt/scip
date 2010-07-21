@@ -68,7 +68,6 @@ interface:
 - new method SCIPisInRestart() to detect whether we are currently restarting
 - new method SCIPgetResultantOr() which returns the resultant of an "or" constraint
 - new method SCIPmarkDoNotUpgradeConsLinear() in cons_linear.?, which allows to forbid upgrading of linear constraints
-- added parameter "quiet" to SCIPset..Param() which allows to turn on an output showing the new parameter value
 - added parameter "quiet" to SCIPparamSet...() which allows to turn on an output showing the new parameter value
 
 features:
@@ -148,9 +147,10 @@ features:
 - can now forbid upgrading of individual linear constraints (SCIPmarkDoNotUpgradeConsLinear())
 - added new dialog for setting presolving to aggressive, fast, or off in interactive shell
 - added new dialog for setting separation to aggressive, fast, or off in interactive shell
-- added new dialog for setting setting for counting "SCIP> set counting"
+- added new dialog for setting the SCIP parameters for counting "SCIP> set emphasis counting"
 - new method SCIPsetParamsCountsols() which sets the parameter for a valid counting process 
 - SCIP can now handle problems with continuous variables w.r.t. to counting (the projection to the integral variables are counted)
+- added new dialog for setting the SCIP parameters for feasibility problems "SCIP> set emphasis feasibility"
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

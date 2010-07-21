@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.73 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.74 2010/07/21 08:41:03 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1955,8 +1955,7 @@ SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Bool             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             value               /**< new value of the parameter */
    )
 {
    SCIP_PARAM* param;
@@ -1979,7 +1978,7 @@ SCIP_RETCODE SCIPparamsetSetBool(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetBool(param, set->scip, value, quiet) );
+   SCIP_CALL( SCIPparamSetBool(param, set->scip, value, TRUE) );
    
    return SCIP_OKAY;
 }
@@ -1989,8 +1988,7 @@ SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   int                   value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   int                   value               /**< new value of the parameter */
    )
 {
    SCIP_PARAM* param;
@@ -2013,7 +2011,7 @@ SCIP_RETCODE SCIPparamsetSetInt(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetInt(param, set->scip, value, quiet) );
+   SCIP_CALL( SCIPparamSetInt(param, set->scip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2023,8 +2021,7 @@ SCIP_RETCODE SCIPparamsetSetLongint(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint          value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Longint          value               /**< new value of the parameter */
    )
 {
    SCIP_PARAM* param;
@@ -2047,7 +2044,7 @@ SCIP_RETCODE SCIPparamsetSetLongint(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetLongint(param, set->scip, value, quiet) );
+   SCIP_CALL( SCIPparamSetLongint(param, set->scip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2057,8 +2054,7 @@ SCIP_RETCODE SCIPparamsetSetReal(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    SCIP_PARAM* param;
@@ -2081,7 +2077,7 @@ SCIP_RETCODE SCIPparamsetSetReal(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetReal(param, set->scip, value, quiet) );
+   SCIP_CALL( SCIPparamSetReal(param, set->scip, value, TRUE) );
    
    return SCIP_OKAY;
 }
@@ -2091,8 +2087,7 @@ SCIP_RETCODE SCIPparamsetSetChar(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char                  value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   char                  value               /**< new value of the parameter */
    )
 {
    SCIP_PARAM* param;
@@ -2115,7 +2110,7 @@ SCIP_RETCODE SCIPparamsetSetChar(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetChar(param, set->scip, value, quiet) );
+   SCIP_CALL( SCIPparamSetChar(param, set->scip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2125,8 +2120,7 @@ SCIP_RETCODE SCIPparamsetSetString(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   const char*           value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   const char*           value               /**< new value of the parameter */
    )
 {
    SCIP_PARAM* param;
@@ -2149,7 +2143,7 @@ SCIP_RETCODE SCIPparamsetSetString(
    }
 
    /* set the parameter's current value */
-   SCIP_CALL( SCIPparamSetString(param, set->scip, value, quiet) );
+   SCIP_CALL( SCIPparamSetString(param, set->scip, value, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2411,8 +2405,7 @@ SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
    SCIP_CALL( SCIPparamsetSetToSeparatingFast(paramset, scip, quiet) );
    
    /* set priority for node selection "restartdfs" to be higher as the current used one */
-   SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/restartdfs/stdpriority", 
-         SCIPnodeselGetStdPriority(SCIPgetNodesel(scip)) + 10, quiet) );
+   SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/restartdfs/stdpriority", INT_MAX/4, quiet) );
    
    return SCIP_OKAY;
 }

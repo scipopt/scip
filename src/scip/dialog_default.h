@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.41 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.42 2010/07/21 08:41:03 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -222,6 +222,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisFast);
 /** dialog execution method for the set separating off command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff);
+
+/** dialog execution method for the set emphasis feasibility command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility);
 
 /** dialog execution method for the set limits objective command */
 extern

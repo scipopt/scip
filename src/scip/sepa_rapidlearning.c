@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.16 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.17 2010/07/21 08:41:04 bzfheinz Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -369,17 +369,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
    
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
-   SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4, TRUE) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) ); 
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
 
    /* use inference branching */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE, TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
 
    /* only create short conflicts */
-   SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05, TRUE) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
   
    /* set limits for the subproblem */
    nodelimit = SCIPgetNLPIterations(scip);
@@ -389,41 +389,41 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    restarts = 0;
    restartnum = 1000;
 
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5, TRUE) ); 
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit, TRUE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", restarts, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum, TRUE) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) ); 
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", restarts) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
    /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1, TRUE) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1, TRUE) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
 
    /* disable cut separation in sub problem */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0, TRUE) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
    
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
 
    /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE, TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
 #ifndef SCIP_DEBUG
    /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
 
    /* create the variable mapping hash map */
@@ -509,7 +509,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
 
       /* set node limit to 100% */
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit, TRUE) ); 
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) ); 
 
 #ifdef NDEBUG
       retstat = SCIPsolve(subscip);

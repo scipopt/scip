@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.341 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.342 2010/07/21 08:41:03 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11458,7 +11458,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                /* set lp pricing strategie to steepest edge */
                SCIP_CALL( SCIPsetGetCharParam(set, "lp/pricing", &tmppricingchar) );
-               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's', TRUE) );
+               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's') );
 
                /* resolve LP with an iteration limit of 1 */
                SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 1) );
@@ -11468,7 +11468,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* reinstall old cutoff bound, iteration limit and lp pricing strategie */
                lp->cutoffbound = tmpcutoff;
                SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
-               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", tmppricingchar, TRUE) );
+               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", tmppricingchar) );
 
                /* get objective value */
                SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );

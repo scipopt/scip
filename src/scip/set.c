@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.228 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.229 2010/07/21 08:41:04 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1689,13 +1689,12 @@ SCIP_RETCODE SCIPsetGetStringParam(
 SCIP_RETCODE SCIPsetSetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Bool             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetBool(set->paramset, set, name, value, quiet) );
+   SCIP_CALL( SCIPparamsetSetBool(set->paramset, set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1704,13 +1703,12 @@ SCIP_RETCODE SCIPsetSetBoolParam(
 SCIP_RETCODE SCIPsetSetIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   int                   value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   int                   value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, name, value, quiet) );
+   SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1719,13 +1717,12 @@ SCIP_RETCODE SCIPsetSetIntParam(
 SCIP_RETCODE SCIPsetSetLongintParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Longint          value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Longint          value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetLongint(set->paramset, set, name, value, quiet) );
+   SCIP_CALL( SCIPparamsetSetLongint(set->paramset, set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1734,13 +1731,12 @@ SCIP_RETCODE SCIPsetSetLongintParam(
 SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Real             value              /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetReal(set->paramset, set, name, value, quiet) );
+   SCIP_CALL( SCIPparamsetSetReal(set->paramset, set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1749,13 +1745,12 @@ SCIP_RETCODE SCIPsetSetRealParam(
 SCIP_RETCODE SCIPsetSetCharParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   char                  value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   char                  value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetChar(set->paramset, set, name, value, quiet) );
+   SCIP_CALL( SCIPparamsetSetChar(set->paramset, set, name, value) );
 
    return SCIP_OKAY;
 }
@@ -1764,13 +1759,12 @@ SCIP_RETCODE SCIPsetSetCharParam(
 SCIP_RETCODE SCIPsetSetStringParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
-   const char*           value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   const char*           value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetSetString(set->paramset, set, name, value, quiet) );
+   SCIP_CALL( SCIPparamsetSetString(set->paramset, set, name, value) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.43 2010/07/20 15:33:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.44 2010/07/21 08:41:03 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1622,7 +1622,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* activate constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE, TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
       }
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
@@ -1632,7 +1632,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset activity status of constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE, TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
       }
    case SCIP_STAGE_SOLVING:
       /* check if the problem contains continuous variables */
@@ -1646,24 +1646,24 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       SCIP_CALL( SCIPgetIntParam(scip, "display/primalbound/active", &displayprimalbound) );
       if( displayprimalbound != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", 0, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", 0) );
       }
       SCIP_CALL( SCIPgetIntParam(scip, "display/gap/active", &displaygap) );
       if( displaygap != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", 0, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", 0) );
       }
       
       /* turn on sols and feasST column */
       SCIP_CALL( SCIPgetIntParam(scip, "display/sols/active", &displaysols) );
       if( displayprimalbound != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", 2, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", 2) );
       }
       SCIP_CALL( SCIPgetIntParam(scip, "display/feasST/active", &displayfeasST) );
       if( displayprimalbound != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", 2, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", 2) );
       }
       
       /* find the countsols constraint handler */
@@ -1705,21 +1705,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset display columns */
       if( displayprimalbound != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", displayprimalbound, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", displayprimalbound) );
       }
       if( displaygap != 0 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", displaygap, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", displaygap) );
       }
       
       /* reset sols and feasST column */
       if( displaysols != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", displaysols, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", displaysols) );
       }
       if( displayfeasST != 2 )
       {
-         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", displayfeasST, TRUE) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", displayfeasST) );
       }
 
       /* evaluate retcode */
@@ -2145,8 +2145,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounting)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+   
    /* set parameters for counting */
-   SCIP_CALL( SCIPsetParamsCountsols(scip, FALSE) );
+   SCIP_CALL( SCIPsetParamsCountsols(scip) );
+   
+   /* display non default parameters */
+   SCIP_CALL( SCIPwriteParams(scip, NULL, FALSE, TRUE) );
    
    return SCIP_OKAY;
 }
@@ -2210,8 +2216,8 @@ SCIP_RETCODE createCountDialog(
    }
    assert(submenu != NULL);
 
-   /* add "counting" dialog to "set/emphasis" sub menu */
-   if( !SCIPdialogHasEntry(submenu, "counting") )
+   /* add "counter" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "counter") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisCounting, NULL, NULL,
             "counter", "predefined parameter settings for a valid counting process", FALSE, NULL) );
@@ -2356,7 +2362,7 @@ SCIP_RETCODE SCIPcount(
    SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE, TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
    }
 
    /* check if the parameter setting allows a valid counting process */
@@ -2368,7 +2374,7 @@ SCIP_RETCODE SCIPcount(
    /* reset activity status of constraint handler cons_countsols */
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE, TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
    }
    
    return SCIP_OKAY;
@@ -2481,53 +2487,52 @@ void SCIPgetCountedSparseSolutions(
 
 /** setting SCIP parameters for such that a valid counting process is possible */
 SCIP_RETCODE SCIPsetParamsCountsols(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-    )
+   SCIP*                 scip                /**< SCIP data structure */
+   )
 {
    /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/upgrade/logicor", FALSE, quiet) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/upgrade/logicor", FALSE) );
    
    /* turn off dual presolver */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0, quiet) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0) );
    
    /* turn off knapsack dual presolving */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE, quiet) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE) );
    
    /* turn off linear dual presolving */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE, quiet) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE) );
    
    /* set priority for inference branching to highest possible value */
-   SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4, quiet) );
+   SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4) );
  
    /* set priority for depth first search to highest possible value */
-   SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
+   SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
 
    /* avoid that the ZIMPL reader transforms the problem before the problem is generated */
-   SCIP_CALL( SCIPsetBoolParam(scip, "reading/zplreader/usestartsol", FALSE, quiet) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "reading/zplreader/usestartsol", FALSE) );
 
    /* turn off all heuristics */
-   SCIP_CALL( SCIPsetHeuristicsOff(scip, quiet) );
+   SCIP_CALL( SCIPsetHeuristicsOff(scip, TRUE) );
 
    /* turn off all separation */
-   SCIP_CALL( SCIPsetSeparatingOff(scip, quiet) );
+   SCIP_CALL( SCIPsetSeparatingOff(scip, TRUE) );
  
    /* turn off restart */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0, quiet) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
 
    /* unlimited propagation round in any branch and bound node */
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", -1, quiet) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", -1, quiet) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", -1) );
 
    /* adjust conflict analysis for depth first search */
-   SCIP_CALL( SCIPsetIntParam(scip, "conflict/fuiplevels", 1, quiet) );        
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/dynamic", FALSE, quiet) );
+   SCIP_CALL( SCIPsetIntParam(scip, "conflict/fuiplevels", 1) );        
+   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/dynamic", FALSE) );
    
    /* prefer binary variables for branching */
-   SCIP_CALL( SCIPsetBoolParam(scip, "branching/preferbinary", TRUE, quiet) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "branching/preferbinary", TRUE) );
 
    /* turn on aggressive constraint aging */ 
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/agelimit", 1, quiet) );       
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/agelimit", 1) );       
    
    return SCIP_OKAY;
 }

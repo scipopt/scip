@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.111 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.112 2010/07/21 08:41:03 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1802,6 +1802,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set emphasis feasibility command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for feasibility problems */
+   SCIP_CALL( SCIPsetEmphasisFeasibility(scip, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -3490,6 +3505,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( addParamDialog(scip, setmenu, params[i], paramname) );
       BMSfreeMemoryArray(&paramname);
    }
+
+   /* set emphasis feasibility */
+      /* add "counter" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "feasibility") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisFeasibility, NULL, NULL,
+            "feasibility", "predefined parameter settings for feasibility problems", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
 
    return SCIP_OKAY;
 }

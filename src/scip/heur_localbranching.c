@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.44 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.45 2010/07/21 08:41:03 bzfheinz Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -500,60 +500,60 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    }
 
    /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE, TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
  
 #ifndef SCIP_DEBUG
    /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
 
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes, TRUE) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1, TRUE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit, TRUE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit, TRUE) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
 
    /* disable heuristics which aim to feasibility instead of optimality */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/octane/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/objpscostdiving/freq", -1, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/octane/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/objpscostdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1) );
 
    /* disable cut separation in sub problem */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0, TRUE) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
    
    /* use inference branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
 
    /* use best estimate node selection */
-   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4, TRUE) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
 
    /* disable conflict analysis */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE, TRUE) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE, TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE, TRUE) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE, TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); 
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
  
    /* copy the original problem and add the local branching constraint */
    if ( heurdata->uselprows )
