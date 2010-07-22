@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.7 2010/06/30 20:27:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.8 2010/07/22 15:38:09 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1006,7 +1006,8 @@ SCIP_RETCODE printFunction(
    const SCIP_Real*      linvals,            /**< coefficients of linear variables */
    int                   quadlen,            /**< number of indices in quadratic part matrix */
    const SCIP_QUADELEM*  quadelems,          /**< elements in quadratic part matrix */
-   SCIP_EXPRTREE*        exprtree            /**< nonquadratic part */
+   SCIP_EXPRTREE*        exprtree,           /**< nonquadratic part */
+   int*                  exprvaridxs         /**< indices of variables in nonquadratic part */
    )
 {  /*lint --e{715}*/
    int i;
@@ -1044,8 +1045,31 @@ SCIP_RETCODE printFunction(
 
    if (exprtree)
    {
+      const char** varnames;
+
+      if( oracle->varnames != NULL )
+      {
+         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree)) );
+         for( i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i )
+         {
+            if( oracle->varnames[exprvaridxs[i]] == NULL )
+            {
+               /* missing variable name for this variable, thus do not print with names */
+               BMSfreeBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree));
+               break;
+            }
+            varnames[i] = oracle->varnames[exprvaridxs[i]];
+         }
+      }
+      else
+      {
+         varnames = NULL;
+      }
+
       SCIPmessageFPrintInfo(file, " +");
-      SCIPexprtreePrint(exprtree, file, NULL, NULL);
+      SCIPexprtreePrint(exprtree, file, varnames, NULL);
+      
+      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree));
    }
 
    return SCIP_OKAY;
@@ -2838,7 +2862,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP_CALL( printFunction(oracle, file,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
       oracle->objquadlen, oracle->objquadelems,
-      oracle->objexprtree) );
+      oracle->objexprtree, oracle->objexprvaridxs) );
    if( oracle->objconstant != 0.0 )
       SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
    SCIPmessageFPrintInfo(file, "\n");
@@ -2860,7 +2884,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
          (oracle->conslinlens   != NULL ? oracle->conslincoefs [i] : NULL),
          (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
          (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
-         (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
+         (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL),
+         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
       
       if( oracle->conslhss[i] == oracle->consrhss[i] )
          SCIPmessageFPrintInfo(file, " = %g", oracle->consrhss[i]);
@@ -2963,7 +2988,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_CALL( printFunction(oracle, file,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
       oracle->objquadlen, oracle->objquadelems,
-      oracle->objexprtree) );
+      oracle->objexprtree, oracle->objexprvaridxs) );
    if( oracle->objconstant != 0.0 )
       SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
    SCIPmessageFPrintInfo(file, ";\n");
@@ -2982,7 +3007,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          (oracle->conslinlens   != NULL ? oracle->conslincoefs [i] : NULL),
          (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
          (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
-         (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
+         (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL),
+         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
 
       if( oracle->conslhss[i] == oracle->consrhss[i] )
          SCIPmessageFPrintInfo(file, " =E= %g", oracle->consrhss[i]);
@@ -3008,7 +3034,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
             (oracle->conslinlens   != NULL ? oracle->conslincoefs [i] : NULL),
             (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
             (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
-            (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
+            (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL),
+            (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
          
          SCIPmessageFPrintInfo(file, " =G= %g;\n", oracle->conslhss[i]);
       }
