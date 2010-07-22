@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.77 2010/07/07 12:45:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.78 2010/07/22 16:57:03 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -22,17 +22,17 @@
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
- * An indicator constraint is given by a binary variable \f$z\f$ and an inequality \f$ax \leq
- * b\f$. It states that if \f$z = 1\f$ then \f$ax \leq b\f$ holds.
+ * An indicator constraint is given by a binary variable \f$y\f$ and an inequality \f$ax \leq
+ * b\f$. It states that if \f$y = 1\f$ then \f$ax \leq b\f$ holds.
  *
  * This constraint is handled by adding a slack variable \f$s:\; ax - s \leq b\f$ with \f$s \geq
- * 0\f$. The constraint is enforced by fixing \f$s\f$ to 0 if \f$z = 1\f$.
+ * 0\f$. The constraint is enforced by fixing \f$s\f$ to 0 if \f$y = 1\f$.
  *
  * @note The constraint only implements an implication not an equivalence, i.e., it does not ensure
- * that \f$z = 1\f$ if \f$ax \leq b\f$ or equivalently if \f$s = 0\f$ holds.
+ * that \f$y = 1\f$ if \f$ax \leq b\f$ or equivalently if \f$s = 0\f$ holds.
  *
  * This constraint is equivalent to a linear constraint \f$ax - s \leq b\f$ and an SOS1 constraint on
- * \f$z\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
+ * \f$y\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
  * separate more inequalities.
  *
  * The name indicator apparently comes from ILOG CPLEX.
@@ -86,7 +86,7 @@
  *
  * It turns out that the vertices of \f$P\f$ correspond to minimal infeasible subsystems of \f$A x
  * \leq b\f$. If \f$I\f$ is the index set of such a system, it follows that not all \f$s_i\f$ for
- * \f$i \in I\f$ can be 1. In other words, the following cut is valid:
+ * \f$i \in I\f$ can be 0, i.e., \f$y_i\f$ can be 1. In other words, the following cut is valid:
  * \f[
  *      \sum_{i \in I} y_i \leq |I| - 1.
  * \f]
@@ -100,7 +100,7 @@
  *   Marc Pfetsch, SIAM Journal on Optimization 19, No.1, 21-38 (2008)
  *
  * The first step in the separation heuristic is to apply the transformation \f$\bar{y} = 1 - y\f$, which
- * transforms the above inequality into the set covering constraint
+ * transforms the above inequality into the constraint
  * \f[
  *      \sum_{i \in I} \bar{y}_i \geq 1,
  * \f]
@@ -171,7 +171,7 @@
  * @note Because of possible (multi-)aggregation it might happen that the linear constraint
  * corresponding to an indicator constraint becomes redundant and is deleted. From this we cannot
  * conclude that the indicator constraint is redundant as well (i.e. always fulfilled), because the
- * corresponding slack variable is still present and its setting to 0 or not influences other
+ * corresponding slack variable is still present and its setting to 0 might influence other
  * (linear) constraints. Thus, we have to rely on the dual presolving of the linear constraints to
  * detect this case: If the linear constraint is really redundant, i.e., is always fulfilled, it is
  * deleted and the slack variable can is fixed to 0. In this case, the indicator constraint can be
@@ -3817,8 +3817,10 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    assert( sourceconsdata != NULL );
 
    /* if the linear constraint is disabled or not active -> do not copy (may happen due to (multi-)aggregation) */
-   if ( ! SCIPconsIsEnabled(sourceconsdata->lincons) || SCIPconsIsActive(sourceconsdata->lincons) )
+   if ( ! SCIPconsIsEnabled(sourceconsdata->lincons) )
    {
+      SCIPdebugMessage("Linear constraint <%s> disabled! Do not copy indicator constraint <%s>.\n", 
+         SCIPconsGetName(sourceconsdata->lincons), SCIPconsGetName(sourcecons));
       *cons = NULL;
       *success = FALSE;
       return SCIP_OKAY;
@@ -4320,6 +4322,9 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    slackvartype = SCIP_VARTYPE_IMPLINT;
    for (i = 0; i < nvars; ++i)
    {
+      /* temorarily mark variables to not be multi-aggregated ?????????????????? */
+      /* SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, vars[i]) ); */
+
       if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]) )
       {
          slackvartype = SCIP_VARTYPE_CONTINUOUS;
@@ -4354,6 +4359,9 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
 	    FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
+
+   /* mark linear constraint no to be upgraded - otherwise we loos control over it */
+   SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
 
    /* add slack variable */
    SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
@@ -4473,10 +4481,21 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       if ( onlyCont )
 	 consdata->linconsActive = FALSE;
    }
+
+   /* mark linear constraint no to be upgraded - otherwise we loos control over it */
+   SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
       
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
 	 local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* check whether constraint is really linear */
+   conshdlr = SCIPconsGetHdlr(lincons);
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      return SCIP_INVALIDDATA;
+   }
 
    return SCIP_OKAY;
 }
@@ -4499,6 +4518,9 @@ SCIP_RETCODE SCIPaddVarIndicator(
    assert( consdata != NULL );
 
    SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, var, val) );
+
+   /* temorarily mark variables to not be multi-aggregated ?????????????????? */
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
 
    return SCIP_OKAY;
 }
