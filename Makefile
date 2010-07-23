@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.353 2010/07/11 12:56:55 bzfgleix Exp $
+# $Id: Makefile,v 1.354 2010/07/23 13:55:17 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -785,7 +785,7 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:
+clean:          $(LIBOBJDIR) $(LIBOBJSUBDIRS) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
 		@-(cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS));
 		@-rmdir $(LIBOBJDIR)
