@@ -2824,6 +2824,11 @@
  * The HEURINIT callback is executed after the problem was transformed.
  * The primal heuristic may, e.g., use this call to initialize his primal heuristic data.
  *
+ *@subsection HEURCOPY
+ *
+ * The HEURCOPY callback is executed every time SCIP solves a sub-MIP. It is used
+ * to make heuristic data such as user defined parameters accessible to the sub-MIP solving process.
+ *
  * @subsection HEUREXIT
  *
  * The HEUREXIT callback is executed before the transformed problem is freed.

@@ -19,6 +19,14 @@
                 Student assistant
 	      </td>
 	    </tr>
+            <tr>	    
+	      <td>
+		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=hendel&amp;language=en">Gregor Hendel</a>
+	      </td>
+	      <td>
+                Student assistant
+	      </td>
+	    </tr>
 	    <tr>
 	      <td>
 		<a href="http://www.zib.de/heinz/">Stefan Heinz</a>
