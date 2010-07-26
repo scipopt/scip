@@ -4246,14 +4246,14 @@
  *  \arg <code>all optimal</code> - Solvers with instances that could be solved to optimiality by
  *       <em>all</em> solvers; in particular, no timeout occured.
  *  
- *  Since this large amount of information is not always needed, one can generate a shorter table by calling:
+ *  Since this large amount of information is not always needed, one can generate a narrower table by calling:
  *  \code
  *  allcmpres.sh short=1 ...
  *  \endcode
  *  where <code>NodQ</code>, <code>TimQ</code> and the additional comparison tables are omitted.
  *  
  *  If the <code>res</code>-files were generated with the parameter <code>printsoltimes=1</code> 
- *  we can enable another feature by calling:
+ *  we can enable the same feature here as well by calling:
  *  \code
  *  allcmpres.sh printsoltimes=1 ...
  *  \endcode
