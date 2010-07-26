@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.90 2010/06/09 15:44:14 bzfwanie Exp $
+# $Id: check.awk,v 1.91 2010/07/26 17:51:45 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -128,6 +128,7 @@ BEGIN {
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
+/=feas=/ { solstatus[$2] = "feas"; }               # no feasible solution known
 /=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
 /^@01/ { 
    filename = $2;
@@ -645,6 +646,29 @@ BEGIN {
             fail++;
          }
       }
+      else if( solstatus[prob] == "feas" )
+      {
+         if( feasible )
+         {
+            if( timeout )
+            {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               status = "ok";
+               pass++;
+            }
+         }
+         else
+         {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
+      }
       else
       {
          reltol = 1e-5 * max(abs(pb),1.0);
@@ -683,6 +707,7 @@ BEGIN {
             printf("=best= ")>NEWSOLUFILE;
          else
             printf("=unkn= ")>NEWSOLUFILE;
+         #=feas= cannot happen since the problem is reported with an objective value
 
          if( pb < +infty || pb == db )
             printf("%s %16.9g\n",prob,pb)>NEWSOLUFILE;
