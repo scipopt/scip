@@ -4016,7 +4016,7 @@
  *  and has to have the file extension <code>.test</code>, e.g., <code>testrun.test</code>, 
  *  in order to be found by the <code>scip/check/check.sh</code> script. 
  *  \n
- *  All test problems can be listed in the <code>test</code> file by a relative path, 
+ *  All test problems can be listed in the <code>test</code>-file by a relative path, 
  *  e.g., <code>../../problems/instance1.lp</code> or absolute path, e.g., <code>/home/problems/instance2.mps</code> 
  *  in this file. Thereby, note only one problem per line (since the command <code>cat</code> is used to parse this file).
  *  Note that these problems have to be readable for SCIP in order to solve them. 
@@ -4025,7 +4025,7 @@
  *  Optionally, you can provide a solution file in the <code>scip/check/</code> directory containing 
  *  known information about the feasibility and the best known objective values for the test instances.
  *  SCIP can use these values to verify the results. The file has to have the same basename as the 
- *  <code>.test</code> file, i.e., in our case <code>testrun.solu</code>. One line can only contain 
+ *  <code>.test</code>-file, i.e., in our case <code>testrun.solu</code>. One line can only contain 
  *  information about one test instance. A line has to start with the type of information given:
  *
  *  - <code>=opt=</code> stating that a problem name with an optimal objective value follows
@@ -4042,6 +4042,10 @@
  *   \code
  *   =best=  instance1 15
  *   \endcode
+ *  - The instance is feasible (but has no objective function or we don't know a solution value)
+ *   \code
+ *   =feas=  instance1
+ *   \endcode
  *  - The instance is infeasible.
  *   \code
  *   =inf=  instance1
@@ -4052,8 +4056,6 @@
  *   \code
  *   =unkn=  instance1
  *   \endcode
- * 
- * ???????????????????? => =feas= for feasible but unknown value ????????????????????
  * 
  * <b>Note that the in all lines the file extension of the file name is omitted.</b>
  *  \n
@@ -4071,7 +4073,7 @@
  *  \endcode
  *
  *  in the SCIP root directory. Note that <code>testrun</code> is exactly the basename of our 
- *  <code>test</code> file (<code>testrun.test</code>). This will cause SCIP to solve our test instances 
+ *  <code>test</code>-file (<code>testrun.test</code>). This will cause SCIP to solve our test instances 
  *  one after another and to create various output files (see \ref EVAL).
  *
  * 
@@ -4096,17 +4098,17 @@
  *  The last column of the ASCII summary table contains the solver status. We distinguish the following statuses: (in order of priority)
  *  
  *  \arg abort: solver broke before returning solution
- *  \arg fail: solver cut off a known feasible solution (value of the <code>solu</code> file is beyond the dual bound; 
+ *  \arg fail: solver cut off a known feasible solution (value of the <code>solu</code>-file is beyond the dual bound; 
  *  especially of problem is claimed to be solved but solution is not the optimal solution)
  *  \arg ok: solver solved problem with the value in solu-file
  *  \arg solved: solver solved problem which has no (optimal) value in solu-file (since we here cannot detect the direction 
  *  of optimization, it is possible that a solver claims an optimal solution which contradicts a known feasible solution)
- *  \arg better: solver found solution better than known best solution (or no solution was noted in the <code>solu</code> file so far)
+ *  \arg better: solver found solution better than known best solution (or no solution was noted in the <code>solu</code>-file so far)
  *  \arg gaplimit, sollimit: solver reached gaplimit or limit of number of solutions (at present: only in SCIP)
  *  \arg timeout: solver reached any other limit (like time or nodes)
  *  \arg unknown: otherwise
  *  
- *  Additionally the <code>evalcheck.sh</code> script can generate a <code>solu</code> file by calling
+ *  Additionally the <code>evalcheck.sh</code> script can generate a <code>solu</code>-file by calling
  *  \code
  *  ./evalcheck.sh writesolufile=1 NEWSOLUFILE=<solu-file> <out-file>
  *  \endcode
@@ -4177,7 +4179,7 @@
  *
  *  Suppose, we performed our test run with two different settings, say <code>fast.set</code> and
  *  <code>slow.set</code>. Assuming that all other parameters (including the SCIP binary), were the same,
- *  we may have the following <code>res</code> files in the directory <code>scip/check/results/</code> 
+ *  we may have the following <code>res</code>-files in the directory <code>scip/check/results/</code> 
  *
  *  \code
  *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res
@@ -4192,7 +4194,7 @@
  *  \endcode
  *
  *  in the @c check directory. This produces an ASCII table on the console that provide a detailed
- *  performance comparison of both test runs. Note that the first <code>res</code> file serves as reference
+ *  performance comparison of both test runs. Note that the first <code>res</code>-file serves as reference
  *  computation. The following list explains the output. 
  *  (The term "solver" can be considered as the combination of SCIP with a specific setting file.)
  *
@@ -4250,7 +4252,7 @@
  *  \endcode
  *  where <code>NodQ</code>, <code>TimQ</code> and the additional comparison tables are omitted.
  *  
- *  If the <code>res</code> files were generated with the parameter <code>printsoltimes=1</code> 
+ *  If the <code>res</code>-files were generated with the parameter <code>printsoltimes=1</code> 
  *  we can enable another feature by calling:
  *  \code
  *  allcmpres.sh printsoltimes=1 ...
