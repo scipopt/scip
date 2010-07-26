@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.31 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.32 2010/07/26 10:04:47 bzfgamra Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -836,7 +836,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       assert(SCIPisPositive(scip, q));
 
       /* resort the coordinates in nonincreasing order of negquotient using a variant of quicksort */
-      SCIPsortDownRealRealRealBoolPtr( negquotient, raydirection, rayorigin, sign, (void*) subspacevars, nsubspacevars);
+      SCIPsortDownRealRealRealBoolPtr( negquotient, raydirection, rayorigin, sign, (void**) subspacevars, nsubspacevars);
       
 #ifndef NDEBUG
       for( i = 0; i < nsubspacevars; i++ )

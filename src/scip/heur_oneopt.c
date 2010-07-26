@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.38 2010/06/07 16:41:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.39 2010/07/26 10:04:47 bzfgamra Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -499,7 +499,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
 
          /* sort arrays with respect to the first one */
-         SCIPsortRealPtr(objcoeffs, (void*)shiftcands, nshiftcands);
+         SCIPsortRealPtr(objcoeffs, (void**)shiftcands, nshiftcands);
 
          /* try to shift each variable -> Activities have to be updated */
          for( i = 0; i < nshiftcands; ++i )

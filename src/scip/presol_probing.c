@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.58 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.59 2010/07/26 10:04:47 bzfgamra Exp $"
 
 /**@file   presol_probing.c
  * @ingroup PRESOLVERS
@@ -184,7 +184,7 @@ SCIP_RETCODE sortVariables(
          scores[i] = -1;
    }
 
-   SCIPsortDownIntPtr(scores, (void*) vars, nvars);
+   SCIPsortDownIntPtr(scores, (void**) vars, nvars);
 
    SCIPfreeBufferArray(scip, &scores);
 
