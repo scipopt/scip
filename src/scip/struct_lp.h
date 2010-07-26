@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.57 2010/07/01 22:26:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.58 2010/07/26 10:50:19 bzfgamra Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -239,6 +239,7 @@ struct SCIP_Lp
    int                   validsollp;         /**< LP number for which the currently stored solution values are valid */
    int                   validfarkaslp;      /**< LP number for which the currently stored farkas row multipliers are valid */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
+   int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
@@ -259,7 +260,6 @@ struct SCIP_Lp
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
-   SCIP_Bool             lpifastmip;         /**< current FASTMIP setting in LPI */
    SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */
    SCIP_Bool             lpilpinfo;          /**< current LPINFO setting in LPI */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.96 2010/07/01 22:57:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.97 2010/07/26 10:50:20 bzfgamra Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -215,7 +215,7 @@ struct SCIP_Set
    SCIP_Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root LP solving? */
    SCIP_Bool             lp_checkstability;  /**< should LP solver's return status be checked for stability? */
    SCIP_Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
-   SCIP_Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
+   int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
    SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
    SCIP_Bool             lp_lexdualalgo;     /**< should the lexicographic dual algorithm be used? */

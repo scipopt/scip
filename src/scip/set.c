@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.229 2010/07/21 08:41:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.230 2010/07/26 10:50:19 bzfgamra Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -161,7 +161,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
 #define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
-#define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
+#define SCIP_DEFAULT_LP_FASTMIP               1 /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
 #define SCIP_DEFAULT_LP_LEXDUALALGO       FALSE /**< should the dual lexicographic algorithm be used? */
@@ -952,10 +952,10 @@ SCIP_RETCODE SCIPsetCreate(
          "should LP solutions be checked, resolving LP when numerical troubles occur?",
          &(*set)->lp_checkfeas, TRUE, SCIP_DEFAULT_LP_CHECKFEAS,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/fastmip",
-         "should FASTMIP setting of LP solver be used?",
-         &(*set)->lp_fastmip, TRUE, SCIP_DEFAULT_LP_FASTMIP,
+         "which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full (do not use for branch-and-price!)",
+         &(*set)->lp_fastmip, TRUE, SCIP_DEFAULT_LP_FASTMIP, 0, 2,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/scaling",

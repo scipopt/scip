@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.342 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.343 2010/07/26 10:50:19 bzfgamra Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1994,18 +1994,19 @@ SCIP_RETCODE lpSetFromscratch(
 static
 SCIP_RETCODE lpSetFastmip(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Bool             fastmip,            /**< new FASTMIP setting */
+   int                   fastmip,            /**< new FASTMIP setting */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
    assert(success != NULL);
+   assert(0 <= fastmip && fastmip <= 2);
 
-   SCIP_CALL( lpCheckBoolpar(lp, SCIP_LPPAR_FASTMIP, lp->lpifastmip) );
+   SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_FASTMIP, lp->lpifastmip) );
 
    if( fastmip != lp->lpifastmip )
    {
-      SCIP_CALL( lpSetBoolpar(lp, SCIP_LPPAR_FASTMIP, fastmip, success) );
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_FASTMIP, fastmip, success) );
       if( *success )
          lp->lpifastmip = fastmip;
    }
@@ -6185,7 +6186,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
    (*lp)->lpibarrierconvtol = SCIPsetBarrierconvtol(set);
    (*lp)->lpifromscratch = FALSE;
-   (*lp)->lpifastmip = TRUE;
+   (*lp)->lpifastmip = 1;
    (*lp)->lpiscaling = TRUE;
    (*lp)->lpipresolving = TRUE;
    (*lp)->lpilpinfo = FALSE;
@@ -6228,7 +6229,7 @@ SCIP_RETCODE SCIPlpCreate(
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch, &success) );
-   SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip, &success) );
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip, &success) );
    (*lp)->lpihasfastmip = success;
    if( !success )
    {
@@ -10563,7 +10564,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
-   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
+   int                   fastmip,            /**< which FASTMIP setting of LP solver should be used? */
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
@@ -10629,9 +10630,9 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* if FASTMIP is turned on, solve again without FASTMIP */
-   if( fastmip && simplex )
+   if( fastmip > 0 && simplex )
    {
-      SCIP_CALL( lpSetFastmip(lp, FALSE, &success) );
+      SCIP_CALL( lpSetFastmip(lp, 0, &success) );
       if( success )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -10913,7 +10914,7 @@ SCIP_RETCODE lpSolve(
    SCIP_Bool             needprimalray,      /**< if the LP is unbounded, do we need a primal ray? */
    SCIP_Bool             needdualray,        /**< if the LP is infeasible, do we need a dual ray? */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
-   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
+   int                   fastmip,            /**< which FASTMIP setting of LP solver should be used? */
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
@@ -11073,7 +11074,7 @@ SCIP_RETCODE lpFlushAndSolve(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             needprimalray,      /**< if the LP is unbounded, do we need a primal ray? */
    SCIP_Bool             needdualray,        /**< if the LP is infeasible, do we need a dual ray? */
-   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
+   int                   fastmip,            /**< which FASTMIP setting of LP solver should be used? */
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
@@ -11089,7 +11090,7 @@ SCIP_RETCODE lpFlushAndSolve(
 
    /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
-   fastmip = fastmip && !lp->flushaddedcols && !lp->flushdeletedcols; /* turn off FASTMIP if columns were changed */
+   fastmip = ((!lp->flushaddedcols && !lp->flushdeletedcols) ? fastmip : 0); /* turn off FASTMIP if columns were changed */
    
    /* select LP algorithm to apply */
    resolve = lp->solisbasic && (lp->dualfeasible || lp->primalfeasible) && !fromscratch;
@@ -11254,14 +11255,14 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    {
       SCIP_Bool primalfeasible;
       SCIP_Bool dualfeasible;
-      SCIP_Bool fastmip;
       SCIP_Bool tightfeastol;
       SCIP_Bool fromscratch;
       SCIP_Bool lazyboundsvalid;
+      int fastmip;
       int oldnlps;
 
       /* set initial LP solver settings */
-      fastmip = set->lp_fastmip && lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1;
+      fastmip = ((lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1) ? set->lp_fastmip : 0);
       tightfeastol = FALSE;
       fromscratch = FALSE;
       primalfeasible = FALSE;
@@ -11342,13 +11343,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
 
-            if( fastmip && simplex )
+            if( (fastmip > 0) && simplex )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %"SCIP_LONGINT_FORMAT") solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
-               fastmip = FALSE;
+               fastmip = 0;
                goto SOLVEAGAIN;
             }
             else if( !tightfeastol )
@@ -11426,7 +11427,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable 
           * FASTMIP and solve again.
           */
-         if( set->nactivepricers > 0 && set->lp_fastmip && lp->lpihasfastmip )
+         if( set->nactivepricers > 0 && (set->lp_fastmip > 0) && lp->lpihasfastmip )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -11437,6 +11438,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || 
                    SCIPlpiIsObjlimExc(lpi) || 
                    SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim));
+            assert(set->lp_fastmip <= 1); /* fastmip setting 2 should not be used with pricing */
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
@@ -11489,7 +11491,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   assert(!(*lperror));
 
                   SCIP_CALL( lpSolve(lp, set, stat, SCIP_LPALGO_DUALSIMPLEX, FALSE, FALSE, FALSE, 
-                        FALSE, tightfeastol, fromscratch, keepsol, lperror) );
+                        0, tightfeastol, fromscratch, keepsol, lperror) );
 
                   /* get objective value */
                   SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );

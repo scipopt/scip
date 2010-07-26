@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.132 2010/07/01 22:26:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.133 2010/07/26 10:50:19 bzfgamra Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -3284,7 +3284,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (getIntParam(lpi, CPX_PARAM_ADVIND) == CPX_OFF);
       break;
    case SCIP_LPPAR_FASTMIP:
-      *ival = (getIntParam(lpi, CPX_PARAM_FASTMIP) == CPX_ON);
+      *ival = getIntParam(lpi, CPX_PARAM_FASTMIP);
       break;
    case SCIP_LPPAR_SCALING:
 #if (CPX_VERSION <= 1100)
@@ -3364,8 +3364,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       setIntParam(lpi, CPX_PARAM_ADVIND, ival == FALSE ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_FASTMIP:
-      assert(ival == TRUE || ival == FALSE);
-      setIntParam(lpi, CPX_PARAM_FASTMIP, ival == TRUE ? CPX_ON : CPX_OFF);
+      assert(0 <= ival && ival <= 2);
+      setIntParam(lpi, CPX_PARAM_FASTMIP, ival);
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
