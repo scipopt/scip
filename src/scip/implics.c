@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.39 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.40 2010/07/27 16:39:32 bzfwinkm Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1474,28 +1474,59 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
    cliques1 = cliquelist1->cliques[value1];
    ncliques2 = cliquelist2->ncliques[value2];
    cliques2 = cliquelist2->cliques[value2];
+
    i1 = 0;
    i2 = 0;
-   while( i1 < ncliques1 && i2 < ncliques2 )
+
+   if( i1 < ncliques1 && i2 < ncliques2 )
    {
       int cliqueid;
 
-      cliqueid = SCIPcliqueGetId(cliques2[i2]);
-      while( i1 < ncliques1 && SCIPcliqueGetId(cliques1[i1]) < cliqueid )
-         i1++;
-      if( i1 == ncliques1 )
-         break;
+      /* make the bigger cliuqe the first one */
+      if( ncliques2 > ncliques1 )
+      {
+         SCIP_CLIQUE** tmpc;
+         int tmpi;
 
-      cliqueid = SCIPcliqueGetId(cliques1[i1]);
-      while( i2 < ncliques2 && SCIPcliqueGetId(cliques2[i2]) < cliqueid )
-         i2++;
-      if( i2 == ncliques2 )
-         break;
+         tmpc = cliques1;
+         tmpi = ncliques1;
+         cliques1 = cliques2;
+         ncliques1 = ncliques2;
+         cliques2 = tmpc;
+         ncliques2 = tmpi;
+      }
+    
+      /* check whether both cliquelists have a same clique */
+      while( TRUE )
+      {
+         cliqueid = SCIPcliqueGetId(cliques2[i2]);
 
-      if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
-         return TRUE;
+         /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
+            break;
+
+         while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
+         {
+            ++i1;
+            assert(i1 < ncliques1);
+         }
+         cliqueid = SCIPcliqueGetId(cliques1[i1]);
+
+         /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
+            break;
+
+         while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
+         {
+            ++i2;
+            assert(i2 < ncliques2);
+         }
+         if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
+            return TRUE;
+      }
    }
-
    return FALSE;
 }
 

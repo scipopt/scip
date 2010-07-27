@@ -163,6 +163,7 @@ performance improvements:
 - in root node, first LP solution is checked for feasibility to avoid expensive setup
 - added a dual reduction step in cons_knapsack.c
 - avoided restarting if LP solution is feasible
+- fasten check for common cliques in SCIPcliquelistsHaveCommonClique
 
 fixed bugs:
 - fixed bug in lpi_clp.cpp: SCIPlpiChgBounds checks if the column status exists in Clp before using it
