@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.7 2010/07/28 10:18:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.8 2010/07/28 13:13:00 bzfberth Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -715,9 +715,8 @@ SCIP_RETCODE processIntegerBoundChg(
    assert(nbinvars > 1);
    
    /* if more than one binary variable is fixed to one or at least nbinvars minus one variable are fixed to zero */
-   assert(consdata->nfixedones == 0 || consdata->nfixedzeros < consdata->nbinvars-1);
-   // if( consdata->nfixedones > 0  || consdata->nfixedzeros >= nbinvars-1 )
-   //    return  SCIP_OKAY;
+   if( consdata->nfixedones > 0  || consdata->nfixedzeros >= nbinvars-1 )
+      return  SCIP_OKAY;
 
    intvar = consdata->intvar;
    assert(intvar != NULL);
