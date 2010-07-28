@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.44 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.45 2010/07/28 06:01:32 bzfwanie Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -641,7 +641,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
       SCIP_Bool value;
       SCIP_VAR** implvars;
       SCIP_BOUNDTYPE* impltypes;
-      int nbinimpls;
+      int nimpls;
       int adjnodesidx;
       int j;
 
@@ -658,18 +658,21 @@ SCIP_RETCODE tcliquegraphAddImplics(
 
       /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
       /* get implications on binary variables */
-      nbinimpls = SCIPvarGetNBinImpls(var, value);
+      nimpls = SCIPvarGetNImpls(var, value);
       implvars = SCIPvarGetImplVars(var, value);
       impltypes = SCIPvarGetImplTypes(var, value);
-      for( j = 0; j < nbinimpls; ++j )
+      for( j = 0; j < nimpls; ++j )
       {
          int probidx;
          int graphidx;
          SCIP_Bool implvalue;
 
+         if( !SCIPvarIsBinary(implvars[j]) )
+            continue;
+         
          probidx = SCIPvarGetProbindex(implvars[j]);
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-         assert(0 <= probidx && probidx < SCIPgetNBinVars(scip));
+         assert(0 <= probidx && probidx < SCIPgetNVars(scip));
 
          graphidx = cliquegraphidx[implvalue][probidx];
          if( graphidx >= 0 )
