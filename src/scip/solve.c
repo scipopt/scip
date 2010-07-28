@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.303 2010/07/07 13:19:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.304 2010/07/28 13:44:48 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1929,7 +1929,7 @@ SCIP_RETCODE solveNodeLP(
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          /* if the solution was accepted, the root node can be cut off by bounding */
-         if( stored )
+         if( stored && set->nactivepricers == 0 )
          {          
             SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, lp) );
