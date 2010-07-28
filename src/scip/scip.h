@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.394 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.395 2010/07/28 17:05:34 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2227,6 +2227,20 @@ SCIP_RETCODE SCIPwriteVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to outpout */
+   int                   nvars               /**< number of variables */
+   );
+
+/** methods print the given variables and coefficients as linear sum in the following form 
+ *  c1 <x1> + c2 <x2>   ... + cn <xn>
+ *  
+ *  this string can be pasresed by the method SCIPparseVarsLinearsum():
+ */
+extern
+SCIP_RETCODE SCIPwriteVarsLinearsum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
+   SCIP_VAR**            vars,               /**< variable array to outpout */
+   SCIP_Real*            vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
    int                   nvars               /**< number of variables */
    );
 

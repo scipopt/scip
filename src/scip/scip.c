@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.602 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.603 2010/07/28 17:05:34 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6636,6 +6636,37 @@ SCIP_RETCODE SCIPwriteVarsList(
       SCIP_CALL( SCIPwriteVarName(scip, file, vars[v]) );
    }
 
+   return SCIP_OKAY;
+}
+
+/** methods print the given variables and coefficients as linear sum in the following form 
+ *  c1 \<x1\> + c2 \<x2\>   ... + cn \<xn\>
+ *  
+ *  this string can be pasresed by the method SCIPwriteVarsLinearsum():
+ */
+SCIP_RETCODE SCIPwriteVarsLinearsum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
+   SCIP_VAR**            vars,               /**< variable array to outpout */
+   SCIP_Real*            vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
+   int                   nvars               /**< number of variables */
+   )
+{
+   int v;
+   
+   SCIP_CALL( checkStage(scip, "SCIPwriteVarsLinearsum", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      if( vals != NULL )
+         SCIPinfoMessage(scip, file, " %+.15g ", vals[v]);
+      else if( nvars > 0 )
+         SCIPinfoMessage(scip, file, " + ");
+      
+      /* print variable name */
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[v]) );
+   }
+   
    return SCIP_OKAY;
 }
 

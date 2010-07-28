@@ -137,7 +137,7 @@ features:
 - cliques can contain implicit binary variables
 - new constraint handler cons_linking.{c,h} (see cons_linking.c for more details)
 - new method SCIPwriteVarName() which writes a variable in cip-format to given stream
-- new method SCIPwriteVarList() which writes an array of variables in cip-Format to given stream
+- new method SCIPwriteVarsList() which writes an array of variables in cip-Format to given stream
 - new method SCIPparseVarName() which parses a string in cip-format as a variable name
 - new method SCIPparsearList() which parses an string as a variable list in cip-format 
 - constraint handler "logicor" can pares its output 
@@ -151,6 +151,7 @@ features:
 - new method SCIPsetParamsCountsols() which sets the parameter for a valid counting process 
 - SCIP can now handle problems with continuous variables w.r.t. to counting (the projection to the integral variables are counted)
 - added new dialog for setting the SCIP parameters for feasibility problems "SCIP> set emphasis feasibility"
+- new method SCIPwriteVarsLinearsum() which writes an array of variables and coefficients as linear sum in cip-Format to given stream
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
