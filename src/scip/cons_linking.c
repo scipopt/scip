@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.6 2010/06/30 12:12:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.7 2010/07/28 10:18:50 bzfberth Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -2187,6 +2187,9 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      if( !SCIPconsIsEnabled(cons) )
+         continue;
+      
       /* in case there is only at most one binary variables, the constraints should already be disabled */
       assert(consdata->nbinvars > 1);
 
@@ -2813,7 +2816,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
       else
          consname = SCIPconsGetName(sourcecons);
 
-      SCIP_CALL( SCIPcreateConsLinking(scip, cons, name, intvar, binvars, nbinvars, offset,  
+      SCIP_CALL( SCIPcreateConsLinking(scip, cons, consname, intvar, binvars, nbinvars, offset,  
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
    
