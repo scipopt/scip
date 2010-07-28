@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.366 2010/07/16 18:33:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.367 2010/07/28 13:12:39 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -10314,8 +10314,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
       for( v = 0; v < nvars; ++v )
-         coefs[v] = 1.0;
-      
+         coefs[v] = 1.0;      
    }
 
    constant = 0.0;
@@ -10338,8 +10337,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    else
    {
       for( v = 0; v < nvars; ++v )
+      {
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &coefs[v], &constant) );
-      
+      }
    }
    
    (*success) = TRUE;
@@ -10349,14 +10349,8 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       SCIP_VAR* var;
       var = vars[v];
-      vars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
-
-      if( vars[v] == NULL )
-      {
-         SCIPdebugMessage("Could not map variable <%s>, copying constraint <%s> failed \n", SCIPvarGetName(var), name);    
-         (*success) = FALSE;
-      }
-
+      
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, success) );
    }
 
    if( *success )
