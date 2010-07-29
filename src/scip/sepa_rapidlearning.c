@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.17 2010/07/21 08:41:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.18 2010/07/29 10:05:23 bzfberth Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -49,6 +49,9 @@
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
 #define DEFAULT_MAXNCONSS         10000 /**< maximum problem size (constraints) for which rapid learning will be called */
 
+#define DEFAULT_MINNODES            500 /**< minimum number of nodes considered in rapid learning run */
+#define DEFAULT_MAXNODES           5000 /**< maximum number of nodes considered in rapid learning run */
+
 /*
  * Data structures
  */
@@ -63,107 +66,9 @@ struct SCIP_SepaData
    SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP?                      */
    int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called   */
    int                   maxnconss;          /**< maximum problem size (constraints) for which rapid learning will be called */
+   int                   minnodes;           /**< minimum number of nodes considered in rapid learning run */
+   int                   maxnodes;           /**< maximum number of nodes considered in rapid learning run */
 };
-
-/** creates a subproblem for subscip by fixing a number of variables */
-static
-SCIP_RETCODE createSubproblem(
-   SCIP*                 scip,               /**< original SCIP data structure                                  */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
-   SCIP_HASHMAP*         varmapfw,           /**< mapping of SCIP variables to subSCIP variables                */
-   SCIP_HASHMAP*         varmapbw            /**< mapping of subSCIP variables to SCIP variables                */
-   )
-{
-   SCIP_CONSHDLR** conshdlrs;
-   SCIP_VAR** vars;                          /* original SCIP variables */
-   SCIP_Bool allcopied;                      /* could all constraints be copied? */
-   int nvars;
-   int i; 
- 
-   char consname[SCIP_MAXSTRLEN];
-   
-   /* get required data of the original problem */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert(nvars == SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip));
-
-   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_rapidsub", SCIPgetProbName(scip));
-
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, SCIPgetProbData(scip)) );
-
-   /* create the variables of the subproblem */
-   for( i = 0; i < nvars; i++ )
-   {     
-      assert(SCIPvarGetLbLocal(vars[i]) == SCIPvarGetLbGlobal(vars[i]));
-      assert(SCIPvarGetUbLocal(vars[i]) == SCIPvarGetUbGlobal(vars[i]));
-      SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]),
-            SCIPvarGetUbLocal(vars[i]), SCIPvarGetObj(vars[i]), 
-            SCIPvarGetType(vars[i]) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_INTEGER : SCIPvarGetType(vars[i]),
-            SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,SCIPvarGetData(vars[i])) );
-      SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
-      SCIP_CALL( SCIPhashmapInsert(varmapfw, vars[i], subvars[i]) );
-   }
-
-   conshdlrs = SCIPgetConshdlrs(scip);
-   allcopied = TRUE;
-
-   /* copy problem: loop through all constraint handlers */  
-   for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
-   {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONS** conss;
-      SCIP_CONS* cons;
-      SCIP_CONS* conscopy;
-      SCIP_Bool succeed;
-      int nconss;
-      int c;
-
-      conshdlr = conshdlrs[i];
-
-      SCIPdebugMessage("rapid learning separator attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
-
-      conss = SCIPconshdlrGetConss(conshdlr);
-      nconss = SCIPconshdlrGetNConss(conshdlr);
-
-      /* copy problem: loop through all constraints of one type */  
-      for( c = 0; c < nconss; ++c )
-      {
-         cons = conss[c];
-         assert(cons != NULL);
-
-         /* copy each constraint */
-         SCIP_CALL( SCIPcopyCons(subscip, &conscopy, NULL, conshdlr, scip, cons, varmapfw,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-               SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-               FALSE, &succeed) );
-
-         /* add the copied constraint to subSCIP, print a warning if conshdlr does not support copying */
-         if( succeed )
-         {
-            SCIP_CALL( SCIPaddCons(subscip, conscopy) );
-            SCIP_CALL( SCIPreleaseCons(subscip, &conscopy) );
-         }
-         else
-         {
-            SCIPdebugMessage("failed to copy constraint <%s>, disabled dual reductions\n", SCIPconsGetName(cons));
-            allcopied = FALSE;
-         }
-      }
-   }
-
-   /* this avoids dual presolving */
-   if( !allcopied )
-   {
-      for( i = 0; i < nvars; i++ )
-      {     
-         SCIP_CALL( SCIPaddVarLocks(subscip, subvars[i], 1, 1 ) );
-      }
-   }
-   
-   return SCIP_OKAY;
-}
-
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
@@ -357,16 +262,27 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* initializing the subproblem */  
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
-
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    success = FALSE;
-#ifndef NDEBUG
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
-#else
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
-#endif
-   SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
+
+   /* copy the subproblem */
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", &success) );
+   
+   for( i = 0; i < nvars; i++ )
+      subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+   
+   SCIPhashmapFree(&varmapfw);
+   
+   /* this avoids dual presolving */
+   if( !success )
+   {
+      for( i = 0; i < nvars; i++ )
+      {     
+         SCIP_CALL( SCIPaddVarLocks(subscip, subvars[i], 1, 1 ) );
+      }
+   }
+
+   SCIPdebugMessage("Copying SCIP was %s successful.\n", success ? "" : "not");
    
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
@@ -383,8 +299,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
   
    /* set limits for the subproblem */
    nodelimit = SCIPgetNLPIterations(scip);
-   nodelimit = MAX(500, nodelimit);
-   nodelimit = MIN(5000, nodelimit);
+   nodelimit = MAX(sepadata->minnodes, nodelimit);
+   nodelimit = MIN(sepadata->maxnodes, nodelimit);
 
    restarts = 0;
    restartnum = 1000;
@@ -426,15 +342,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
 
-   /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-   SCIP_CALL( SCIPhashmapCreate(&varmapbw, SCIPblkmem(scip), nvars) );
-
-   /* copy the problem */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, varmapfw, varmapbw) );
-
    /* add an objective cutoff */
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapbw, SCIPblkmem(scip), nvars) );
 
    /* store reversing mapping of variables */
    SCIP_CALL( SCIPtransformProb(subscip) );
@@ -680,7 +592,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPdebugMessage("Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n", nconflicts, nbdchgs, soladded ? "found" : "no", 
       dualboundchg ? "found" : "no");
 
-   SCIPdebugMessage("Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", n1startinfers/(SCIP_Real)nvars, n2startinfers/(SCIP_Real)nvars);
+   SCIPdebugMessage("Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", 100*n1startinfers/(SCIP_Real)nvars, 100*n2startinfers/(SCIP_Real)nvars);
 
    /* change result pointer */
    if( nconflicts > 0 || dualboundchg )
@@ -693,7 +605,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPfreeBufferArray(scip, &conshdlrs);
 
    SCIPhashmapFree(&varmapbw);
-   SCIPhashmapFree(&varmapfw);
 
    /* free subproblem */
    SCIP_CALL( SCIPfreeTransform(subscip) );
@@ -760,6 +671,15 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/rapidlearning/maxnconss",
          "maximum problem size (constraints) for which rapid learning will be called",
          &sepadata->maxnconss, TRUE, DEFAULT_MAXNCONSS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/rapidlearning/maxnodes",
+         "maximum number of nodes considered in rapid learning run",
+         &sepadata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/rapidlearning/minnodes",
+         "minimum number of nodes considered in rapid learning run",
+         &sepadata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
+
    
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.603 2010/07/28 17:05:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.604 2010/07/29 10:05:23 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1062,6 +1062,7 @@ SCIP_RETCODE SCIPgetVarCopy(
          return SCIP_OKAY; /*lint !e527*/
       }
    }
+
    return SCIP_OKAY;
 }
 
@@ -1133,7 +1134,6 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    
-   *success = TRUE;
 #ifndef NDEBUG
    nskipped = 0;
 #endif

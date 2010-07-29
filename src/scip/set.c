@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.230 2010/07/26 10:50:19 bzfgamra Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.231 2010/07/29 10:05:23 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -386,8 +386,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    assert(sourceset != NULL);
    assert(targetset != NULL);
    assert(sourceset != targetset);
-
-   *success = TRUE;
 
    /* copy all reader plugins */
    if( copyreaders && sourceset->readers != NULL )
