@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.9 2010/07/29 08:47:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.10 2010/07/29 09:28:49 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1076,6 +1076,38 @@ SCIP_RETCODE printFunction(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns whether an expression is contains nonsmooth operands (min, max, abs, ...) */
+static
+SCIP_Bool exprIsNonSmooth(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   int i;
+   
+   assert(expr != NULL);
+   assert(SCIPexprGetChildren(expr) != NULL || SCIPexprGetNChildren(expr) == 0);
+
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+   {
+      if( exprIsNonSmooth(SCIPexprGetChildren(expr)[i]) )
+         return TRUE;
+   }
+
+   switch( SCIPexprGetOperator(expr) )
+   {
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      case SCIP_EXPR_SIGNPOWER:
+         return TRUE;
+
+      default: ;
+   }
+
+   return FALSE;
 }
 
 /**@} */
@@ -2911,11 +2943,15 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    )
 {  /*lint --e{777} */
    int i;
+   int nllevel; /* level of nonlinearity of problem: linear = 0, quadratic, smooth nonlinear, nonsmooth */
+   static const char* nllevelname[4] = { "LP", "QCP", "NLP", "DNLP" };
 
    assert(oracle != NULL);
    
    if( file == NULL )
       file = stdout;
+   
+   nllevel = 0;
    
    SCIPmessageFPrintInfo(file, "$offlisting\n");
    SCIPmessageFPrintInfo(file, "* NLPI Oracle Problem\n");
@@ -2927,7 +2963,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       else
          SCIPmessageFPrintInfo(file, "x%d, ", i);
    }
-   SCIPmessageFPrintInfo(file, "OBJVAR;\n\n");
+   SCIPmessageFPrintInfo(file, "NLPIORACLEOBJVAR;\n\n");
    for( i = 0; i < oracle->nvars; ++i )
    {
       if( oracle->varlbs[i] == oracle->varubs[i] )
@@ -2985,9 +3021,9 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
             SCIPmessageFPrintInfo(file, "e%d_RNG, ", i);
       }
    }
-   SCIPmessageFPrintInfo(file, "OBJ;\n\n");
+   SCIPmessageFPrintInfo(file, "NLPIORACLEOBJ;\n\n");
    
-   SCIPmessageFPrintInfo(file, "OBJ.. OBJVAR =E= ");
+   SCIPmessageFPrintInfo(file, "NLPIORACLEOBJ.. NLPIORACLEOBJVAR =E= ");
    SCIP_CALL( printFunction(oracle, file,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
       oracle->objquadlen, oracle->objquadelems,
@@ -3042,12 +3078,19 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          
          SCIPmessageFPrintInfo(file, " =G= %g;\n", oracle->conslhss[i]);
       }
+      
+      if( nllevel <= 0 && oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
+         nllevel = 1;
+      if( nllevel <= 1 && oracle->consexprtrees != NULL && oracle->consexprtrees[i] != NULL )
+         nllevel = 2;
+      if( nllevel <= 2 && oracle->consexprtrees != NULL && oracle->consexprtrees[i] != NULL && exprIsNonSmooth(SCIPexprtreeGetRoot(oracle->consexprtrees[i])) )
+         nllevel = 3;
    }
    
    SCIPmessageFPrintInfo(file, "Model m / all /;\n");
    SCIPmessageFPrintInfo(file, "option limrow = 0;\n");
    SCIPmessageFPrintInfo(file, "option limcol = 0;\n");
-   SCIPmessageFPrintInfo(file, "Solve m minimizing OBJVAR using NLP;\n");
+   SCIPmessageFPrintInfo(file, "Solve m minimizing NLPIORACLEOBJVAR using %s;\n", nllevelname[nllevel]);
 
    return SCIP_OKAY;
 }
