@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.8 2010/07/22 15:38:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.9 2010/07/29 08:47:27 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1045,31 +1045,34 @@ SCIP_RETCODE printFunction(
 
    if (exprtree)
    {
-      const char** varnames;
+      char** varnames;
+      SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree)) );
 
-      if( oracle->varnames != NULL )
+      for( i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i )
       {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree)) );
-         for( i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i )
+         if( oracle->varnames == NULL || oracle->varnames[exprvaridxs[i]] == NULL )
          {
-            if( oracle->varnames[exprvaridxs[i]] == NULL )
-            {
-               /* missing variable name for this variable, thus do not print with names */
-               BMSfreeBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree));
-               break;
-            }
-            varnames[i] = oracle->varnames[exprvaridxs[i]];
+            /* missing variable name for this variable, thus use generic name */
+            assert(exprvaridxs[i] < 1e+20);
+            BMSallocBlockMemoryArray(oracle->blkmem, &varnames[i], 22);
+            (void) SCIPsnprintf(varnames[i], 22, "x%d", exprvaridxs[i]);
+            break;
          }
-      }
-      else
-      {
-         varnames = NULL;
+         varnames[i] = oracle->varnames[exprvaridxs[i]];
       }
 
       SCIPmessageFPrintInfo(file, " +");
-      SCIPexprtreePrint(exprtree, file, varnames, NULL);
-      
-      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree));
+      SCIPexprtreePrint(exprtree, file, (const char**)varnames, NULL);
+
+      for( i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i )
+      {
+         if( oracle->varnames == NULL || oracle->varnames[exprvaridxs[i]] == NULL )
+         {
+            BMSfreeBlockMemoryArray(oracle->blkmem, &varnames[i], 22);
+         }
+      }
+
+      BMSfreeBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree));
    }
 
    return SCIP_OKAY;
