@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.343 2010/07/26 10:50:19 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.344 2010/07/29 10:08:39 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9516,6 +9516,7 @@ SCIP_RETCODE SCIPlpSetState(
    /* set LPI state in the LP solver */
    if ( lpistate == NULL )
    {
+      /**@todo the assert might be to hard since in case of solving the LP with the barrier the lpistate is also NULL */
       assert( lp->nlpicols == 0 && lp->nlpirows == 0 );
       lp->solisbasic = FALSE;
    }
