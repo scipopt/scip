@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.15 2010/07/29 09:12:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.16 2010/07/29 09:33:06 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -1391,13 +1391,16 @@ void SCIPexprPrint(
          break;
          
       case SCIP_EXPR_CONST:
-         SCIPmessageFPrintInfo(file, "%lf", expr->data.dbl );
+         if (expr->data.dbl < 0.0 )
+            SCIPmessageFPrintInfo(file, "(%lf)", expr->data.dbl );
+         else
+            SCIPmessageFPrintInfo(file, "%lf", expr->data.dbl );
          break;
 
       case SCIP_EXPR_PLUS:
          SCIPmessageFPrintInfo(file, "(");
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
-         SCIPmessageFPrintInfo(file, ") + (");
+         SCIPmessageFPrintInfo(file, " + ");
          SCIPexprPrint(expr->children[1], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ")");
          break;
@@ -1405,7 +1408,7 @@ void SCIPexprPrint(
       case SCIP_EXPR_MINUS:
          SCIPmessageFPrintInfo(file, "(");
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
-         SCIPmessageFPrintInfo(file, ") - (");
+         SCIPmessageFPrintInfo(file, " - ");
          SCIPexprPrint(expr->children[1], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ")");
          break;
@@ -1413,7 +1416,7 @@ void SCIPexprPrint(
       case SCIP_EXPR_MUL:
          SCIPmessageFPrintInfo(file, "(");
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
-         SCIPmessageFPrintInfo(file, ") * (");
+         SCIPmessageFPrintInfo(file, " * ");
          SCIPexprPrint(expr->children[1], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ")");
          break;
@@ -1421,7 +1424,7 @@ void SCIPexprPrint(
       case SCIP_EXPR_DIV:
          SCIPmessageFPrintInfo(file, "(");
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
-         SCIPmessageFPrintInfo(file, ") / (");
+         SCIPmessageFPrintInfo(file, " / ");
          SCIPexprPrint(expr->children[1], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ")");
          break;
@@ -1429,7 +1432,7 @@ void SCIPexprPrint(
       case SCIP_EXPR_POWER:
          SCIPmessageFPrintInfo(file, "(");
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
-         SCIPmessageFPrintInfo(file, ") ** (");
+         SCIPmessageFPrintInfo(file, " ** ");
          SCIPexprPrint(expr->children[1], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ")");
          break;
