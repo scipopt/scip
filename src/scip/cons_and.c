@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.121 2010/07/28 13:11:42 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.122 2010/07/29 18:03:02 bzfwinkm Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -2691,7 +2691,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    else
    {
       /* cutoff "and" form the constraint string */
-      token = SCIPstrtok(NULL, "(", &saveptr ); 
+      (void)SCIPstrtok(NULL, "(", &saveptr ); 
 
       /* cutoff ")" form the constraint string */
       token = SCIPstrtok(NULL, ")", &saveptr ); 
