@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.68 2010/07/16 18:38:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.69 2010/07/29 08:35:21 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -82,6 +82,7 @@ struct SCIP_HeurData
    SCIP_Bool             resolvefromscratch; /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
    char*                 nlpsolver;          /**< name of NLP solver to use */
    char*                 nlpoptfile;         /**< name of NLP solver specific option file */
+   SCIP_Bool             names;              /**< whether to pass variable and constraint names to the NLP */
                          
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
@@ -353,6 +354,7 @@ SCIP_RETCODE setupNLP(
 {
    SCIP_Real*            varlb;
    SCIP_Real*            varub;
+   const char**          varnames;
    SCIP_Real*            objcoeff;
    int*                  objvar;
    int                   i;
@@ -411,12 +413,22 @@ SCIP_RETCODE setupNLP(
    
    SCIP_CALL( SCIPallocBufferArray(scip, &varlb, heurdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varub, heurdata->nvars) );
+   if( heurdata->names )
+   {
+  	 SCIP_CALL( SCIPallocBufferArray(scip, &varnames, heurdata->nvars) );
+   }
+   else
+   {
+  	 varnames = NULL;
+   }
    
    cnt = 0; /* counts number of discrete variables passed so far */
    for( i = 0; i < heurdata->nvars; ++i )
    {
       varlb[i] = SCIPvarGetLbGlobal(heurdata->var_nlp2scip[i]);
       varub[i] = SCIPvarGetUbGlobal(heurdata->var_nlp2scip[i]);
+      if( varnames != NULL )
+      	varnames[i] = SCIPvarGetName(heurdata->var_nlp2scip[i]);
       
       SCIP_CALL( SCIPcaptureVar(scip, heurdata->var_nlp2scip[i]) );
 
@@ -430,10 +442,11 @@ SCIP_RETCODE setupNLP(
    }
    
    /* add variables to NLP solver */
-   SCIP_CALL( SCIPnlpiAddVars(heurdata->nlpi, heurdata->nlpiprob, heurdata->nvars, varlb, varub, NULL) );
+   SCIP_CALL( SCIPnlpiAddVars(heurdata->nlpi, heurdata->nlpiprob, heurdata->nvars, varlb, varub, varnames) );
    
    SCIPfreeBufferArray(scip, &varub);
    SCIPfreeBufferArray(scip, &varlb);
+   SCIPfreeBufferArrayNull(scip, &varnames);
 
    /* collect objective coefficients for minimization objective */
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoeff, heurdata->nvars) );
@@ -1428,6 +1441,10 @@ SCIP_RETCODE SCIPincludeHeurNlp(
          "should variable bound constraints be handled explicitly before solving the NLP instead of adding them to the NLP?",
          &heurdata->varboundexplicit, TRUE, TRUE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/names",
+         "should variable and constraint names passed to the NLP solver?",
+         &heurdata->names, FALSE, FALSE, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 
