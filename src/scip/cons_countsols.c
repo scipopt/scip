@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.44 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.45 2010/07/29 16:41:38 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1624,16 +1624,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       {
          SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
       }
+      /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
       /* presolve problem */
       SCIP_CALL( SCIPpresolve(scip) );
+      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
       /* reset activity status of constraint handler cons_countsols */
       if( !active )
       {
          SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
       }
+      /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       /* check if the problem contains continuous variables */
       if( SCIPgetNContVars(scip) != 0 )
