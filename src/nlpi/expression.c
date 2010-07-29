@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.14 2010/06/24 18:14:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.15 2010/07/29 09:12:35 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -1370,11 +1370,11 @@ void SCIPexprPrint(
          if( varnames != NULL )
          {
             assert(varnames[expr->data.intval] != NULL);
-            SCIPmessageFPrintInfo(file, "<%s>", varnames[expr->data.intval]);
+            SCIPmessageFPrintInfo(file, "%s", varnames[expr->data.intval]);
          }
          else
          {
-            SCIPmessageFPrintInfo(file, "<var%d>", expr->data.intval);
+            SCIPmessageFPrintInfo(file, "var%d", expr->data.intval);
          }
          break;
          
@@ -1382,11 +1382,11 @@ void SCIPexprPrint(
          if( paramnames != NULL )
          {
             assert(paramnames[expr->data.intval] != NULL);
-            SCIPmessageFPrintInfo(file, "<%s>", varnames[expr->data.intval]);
+            SCIPmessageFPrintInfo(file, "%s", varnames[expr->data.intval]);
          }
          else
          {
-            SCIPmessageFPrintInfo(file, "<param%d>", expr->data.intval );
+            SCIPmessageFPrintInfo(file, "param%d", expr->data.intval );
          }
          break;
          
@@ -1394,13 +1394,73 @@ void SCIPexprPrint(
          SCIPmessageFPrintInfo(file, "%lf", expr->data.dbl );
          break;
 
+      case SCIP_EXPR_PLUS:
+         SCIPmessageFPrintInfo(file, "(");
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ") + (");
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ")");
+         break;
+         
+      case SCIP_EXPR_MINUS:
+         SCIPmessageFPrintInfo(file, "(");
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ") - (");
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ")");
+         break;
+         
+      case SCIP_EXPR_MUL:
+         SCIPmessageFPrintInfo(file, "(");
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ") * (");
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ")");
+         break;
+         
+      case SCIP_EXPR_DIV:
+         SCIPmessageFPrintInfo(file, "(");
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ") / (");
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ")");
+         break;
+
+      case SCIP_EXPR_POWER:
+         SCIPmessageFPrintInfo(file, "(");
+         SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ") ** (");
+         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
+         SCIPmessageFPrintInfo(file, ")");
+         break;
+        
       case SCIP_EXPR_INTPOWER:
-         SCIPmessageFPrintInfo(file, "%s(", SCIPexprOpTable[expr->op].name);
+         SCIPmessageFPrintInfo(file, "power(");
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
          SCIPmessageFPrintInfo(file, ", %d)", expr->data.intval);
          break;
 
-      default:
+      case SCIP_EXPR_SQUARE:
+      case SCIP_EXPR_SQRT:
+      case SCIP_EXPR_EXP:
+      case SCIP_EXPR_LOG:
+      case SCIP_EXPR_SIN:
+      case SCIP_EXPR_COS:
+      case SCIP_EXPR_TAN:
+      case SCIP_EXPR_ERF:
+      case SCIP_EXPR_ERFI:
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      case SCIP_EXPR_SIGNPOWER:
+         /* @todo implement printing for the following six */
+      case SCIP_EXPR_SUM:
+      case SCIP_EXPR_PRODUCT:
+      case SCIP_EXPR_LINEAR:
+      case SCIP_EXPR_SIGNOMIAL:
+      case SCIP_EXPR_QUADRATIC:
+      case SCIP_EXPR_POLYNOM:
       {
          int i;
          
@@ -1416,6 +1476,13 @@ void SCIPexprPrint(
          }
 
          SCIPmessageFPrintInfo(file, ")");
+         break;
+      }
+
+      case  SCIP_EXPR_LAST:
+      {
+         SCIPerrorMessage("invalid expression\n");
+         SCIPABORT();
       }
    }
 }
