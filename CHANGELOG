@@ -265,6 +265,8 @@ parameters:
 - added parameter <vbc/dispsols> to propose if the nodes where solutions are found should be visualized in the branch and bound tree
 - changed parameter <lp/fastmip> from boolean to integer, possible values are 0 (off), 1 (medium, default), 2 (full, must not be used with branch-and-price).
 
+design:
+- removed to two different block memories for the original and transformed problem
 
 SCIP version 1.2.0
 ===============

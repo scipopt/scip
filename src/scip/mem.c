@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.c,v 1.27 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: mem.c,v 1.28 2010/07/29 14:01:19 bzfheinz Exp $"
 
 /**@file   mem.c
  * @brief  block memory pools and memory buffers
@@ -40,11 +40,9 @@ SCIP_RETCODE SCIPmemCreate(
 
    SCIP_ALLOC( (*mem)->setmem = BMScreateBlockMemory(1, 10) );
    SCIP_ALLOC( (*mem)->probmem = BMScreateBlockMemory(1, 10) );
-   SCIP_ALLOC( (*mem)->solvemem = BMScreateBlockMemory(1, 10) );
 
    SCIPdebugMessage("created setmem   block memory at <%p>\n", (void*)(*mem)->setmem);
    SCIPdebugMessage("created probmem  block memory at <%p>\n", (void*)(*mem)->probmem);
-   SCIPdebugMessage("created solvemem block memory at <%p>\n", (void*)(*mem)->solvemem);
 
    return SCIP_OKAY;
 }
@@ -56,7 +54,6 @@ SCIP_RETCODE SCIPmemFree(
 {
    assert(mem != NULL);
 
-   BMSdestroyBlockMemory(&(*mem)->solvemem);
    BMSdestroyBlockMemory(&(*mem)->probmem);
    BMSdestroyBlockMemory(&(*mem)->setmem);
 
@@ -72,5 +69,5 @@ SCIP_Longint SCIPmemGetUsed(
 {
    assert(mem != NULL);
 
-   return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem) + BMSgetBlockMemoryUsed(mem->solvemem);
+   return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem);
 }

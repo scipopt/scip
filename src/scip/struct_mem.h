@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_mem.h,v 1.13 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_mem.h,v 1.14 2010/07/29 14:01:20 bzfheinz Exp $"
 
 /**@file   struct_mem.h
  * @brief  datastructures for block memory pools and memory buffers
@@ -37,8 +37,7 @@ extern "C" {
 struct SCIP_Mem
 {
    BMS_BLKMEM*           setmem;             /**< memory blocks for parameter settings */
-   BMS_BLKMEM*           probmem;            /**< memory blocks for original problem */
-   BMS_BLKMEM*           solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
+   BMS_BLKMEM*           probmem;            /**< memory blocks for original problem and solution process: preprocessing, bab-tree, ... */
 };
 
 #ifdef __cplusplus
