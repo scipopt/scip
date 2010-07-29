@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.105 2010/07/29 16:26:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.106 2010/07/29 16:37:00 bzfberth Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4768,7 +4768,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   assert((SCIPeventGetType(event) | SCIP_EVENTTYPE_SOLFOUND) != 0);
+   assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_SOLFOUND) != 0);
 
    conshdlr = (SCIP_CONSHDLR*)eventdata;
 
