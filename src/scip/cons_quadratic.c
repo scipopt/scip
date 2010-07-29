@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.104 2010/07/14 14:46:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.105 2010/07/29 16:26:48 bzfberth Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2822,7 +2822,7 @@ SCIP_RETCODE createNlRow(
 
    if( consdata->nlrow != NULL )
    {
-      SCIPreleaseNlRow(scip, &consdata->nlrow);
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
    nquadvars = consdata->nquadvars;
