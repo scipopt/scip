@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.91 2010/07/26 17:51:45 bzfwanie Exp $
+# $Id: check.awk,v 1.92 2010/07/29 10:51:47 bzfhende Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -45,8 +45,9 @@ BEGIN {
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;   # should problem name be truncated to fit into column?
    writesolufile = 0;   # should a solution file be created from the results
-   NEWSOLUFILE = "new_solufile.solu";
    printsoltimes = 0;
+   headerprinted = 0;
+   NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
@@ -66,24 +67,6 @@ BEGIN {
    printf("\\bottomrule\n}\n")                                      >TEXFILE;
    printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
    printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
-
-   tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
-   tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
-   tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
-
-   if( printsoltimes ) {  
-       tablehead1 = tablehead1"----------+---------+";
-       tablehead2 = tablehead2" To First | To Best |";
-       tablehead3 = tablehead3"----------+---------+";
-   } 
-
-   tablehead1 = tablehead1"--------\n";
-   tablehead2 = tablehead2"       \n";
-   tablehead3 = tablehead3"--------\n";
-   
-   printf(tablehead1);
-   printf(tablehead2);
-   printf(tablehead3);
 
    nprobs = 0;
    sbab = 0;
@@ -363,6 +346,30 @@ BEGIN {
 # 9) otherwise => unknown
 #
 /^=ready=/ {
+   # print header of table when this regular expression is matched for the first time
+   if( !headerprinted )
+   {
+      tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
+      tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
+      tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
+
+      if( printsoltimes == 1 ) {  
+	 tablehead1 = tablehead1"----------+---------+";
+	 tablehead2 = tablehead2" To First | To Best |";
+	 tablehead3 = tablehead3"----------+---------+";
+      } 
+      
+      tablehead1 = tablehead1"--------\n";
+      tablehead2 = tablehead2"       \n";
+      tablehead3 = tablehead3"--------\n";
+   
+      printf(tablehead1);
+      printf(tablehead2);
+      printf(tablehead3);
+
+      headerprinted = 1;
+   }
+
    if( (!onlyinsolufile || solstatus[prob] != "") &&
       (!onlyintestfile || intestfile[filename]) )
    {
@@ -440,7 +447,7 @@ BEGIN {
       {
 	  timetofirst = tottime;
 	  timetobest = tottime;
-      } 
+      }
 
       lps = primlps + duallps;
       simplex = primiter + dualiter;
