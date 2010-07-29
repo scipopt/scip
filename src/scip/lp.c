@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.344 2010/07/29 10:08:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.345 2010/07/29 17:00:25 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -13887,18 +13887,18 @@ SCIP_RETCODE SCIPlpWriteMip(
          if( strlen(rowname) > 0 )
             SCIPmessageFPrintInfo(file,"%s: ", rowname);
          break;
+      case 'i':
+         SCIPmessageFPrintInfo(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
+         SCIPmessageFPrintInfo(file,"are not in a valid range. The following two constraints may be corrupted!\n");
+         SCIPwarningMessage("The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+         type = 'b';
+         /*lint -fallthrough*/
       case 'b':
          SCIPmessageFPrintInfo(file,"%s_lhs: ", rowname);
          break;
       case 'B':
          SCIPmessageFPrintInfo(file,"%s_rhs: ", rowname);
          break;
-      case 'i':
-         SCIPmessageFPrintInfo(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
-         SCIPmessageFPrintInfo(file,"are not in a valid range. The following two constraints may be corrupted!\n");
-         SCIPwarningMessage("The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
-         type = 'b';
-         goto WRITEROW;
       default:
          SCIPerrorMessage("Undefined row type!\n");
          return SCIP_ERROR;
