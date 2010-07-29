@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.92 2010/07/29 10:51:47 bzfhende Exp $
+# $Id: check.awk,v 1.93 2010/07/29 15:12:02 bzfhende Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -49,24 +49,6 @@ BEGIN {
    headerprinted = 0;
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
-
-   printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
-   printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
-   printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
-   printf("\\usepackage{supertabular}\n")                           >TEXFILE;
-   printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
-   printf("\\begin{document}\n\n")                                  >TEXFILE;
-   printf("\\begin{center}\n")                                      >TEXFILE;
-   printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
-   printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-   printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
-   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") >TEXFILE;
-   printf("\\midrule\n}\n")                                         >TEXFILE;
-   printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
-   printf("\\multicolumn{8}{r} \\; continue next page \\\\\n")      >TEXFILE;
-   printf("\\bottomrule\n}\n")                                      >TEXFILE;
-   printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
-   printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
 
    nprobs = 0;
    sbab = 0;
@@ -346,9 +328,37 @@ BEGIN {
 # 9) otherwise => unknown
 #
 /^=ready=/ {
-   # print header of table when this regular expression is matched for the first time
+
    if( !headerprinted )
    {
+      ntexcolumns = 8 + (2 * printsoltimes);
+      #print header of tex file table
+      printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
+      printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
+      printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
+      printf("\\usepackage{supertabular}\n")                           >TEXFILE;
+      printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
+      printf("\\begin{document}\n\n")                                  >TEXFILE;
+      printf("\\begin{center}\n")                                      >TEXFILE;
+      printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
+      printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
+      printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
+      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time ") >TEXFILE;
+      if( printsoltimes )
+	 printf(" &     To First      &    To Last   ") > TEXFILE;
+      printf("\\\\\n") > TEXFILE;
+
+      printf("\\midrule\n}\n")                                         >TEXFILE;
+      printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
+      printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns)      >TEXFILE;
+      printf("\\bottomrule\n}\n")                                      >TEXFILE;
+      printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
+      printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr") >TEXFILE;
+      if( printsoltimes )
+	 printf("rr") > TEXFILE;
+      printf("@{}}\n") > TEXFILE;
+
+      # print header of table when this regular expression is matched for the first time
       tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
       tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
       tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
@@ -722,10 +732,15 @@ BEGIN {
             printf("%s ?\n",prob)>NEWSOLUFILE;
       }
 
+      # write output to both the tex file and the console depending on whether printsoltimes is activated or not
       if( !onlypresolvereductions || origcons > cons || origvars > vars )
       {
-         printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+         printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
                 pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
+	 if( printsoltimes )
+	    printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
+	 printf("\\\\\n") > TEXFILE;
+
          printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
 		shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
 
@@ -767,12 +782,22 @@ END {
    shiftedtimetobestgeom -= timegeomshift;
 
    printf("\\midrule\n")                                                 >TEXFILE;
-   printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
+   printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f",
           "Total", nprobs, sbab, stottime) >TEXFILE;
-   printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
+   if( printsoltimes )
+      printf(" & %8.1f & %8.1f", stimetofirst, stimetobest) > TEXFILE;
+   printf("\\\\\n") > TEXFILE;
+   printf("%-14s      &        &        &                &                &        & %9d & %8.1f",
           "Geom. Mean", nodegeom, timegeom) >TEXFILE;
-   printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
+   if( printsoltimes )
+      printf(" & %8.1f & %8.1f", timetofirstgeom, timetobestgeom) > TEXFILE;
+   printf("\\\\\n") > TEXFILE;
+   printf("%-14s      &        &        &                &                &        & %9d & %8.1f ",
           "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+   if( printsoltimes )
+      printf(" & %8.1f & %8.1f", shiftedtimetofirstgeom, shiftedtimetobestgeom) > TEXFILE;
+   printf("\\\\\n") > TEXFILE;
+
    printf(tablehead3);
    printf("\n");
 
