@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.28 2010/07/14 15:24:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.29 2010/07/30 12:45:50 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2804,7 +2804,8 @@ SCIP_DECL_HEURNLPNLPIINIT(initNlpi)
    assert(conshdlr != NULL);
    
    SCIP_CALL( SCIPconsInitNlpiSOC(scip, conshdlr, nlpi, problem,
-      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap) );
+      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap,
+      consmap, conscounter, onlysubnlp, names) );
    
    return SCIP_OKAY;
 }
@@ -2820,12 +2821,17 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< SOC constraints */
-   SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_HASHMAP*         var_scip2nlp,       /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_HASHMAP*         conssmap,           /**< mapping from SCIP constraints to constraint indices in NLPI */
+   int*                  nlpconsscounter,    /**< counter of NLP constraints */
+   SCIP_Bool             onlysubnlp,         /**< whether to include only constraints that are relevant for a subNLP */
+   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real*     lhs;
    SCIP_Real*     rhs;
+   const char**   consnames;
    int*           nlininds = NULL;
    int**          lininds  = NULL;
    SCIP_Real**    linvals  = NULL;
@@ -2840,6 +2846,7 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    assert(conshdlr != NULL);
    assert(nlpi     != NULL);
    assert(conss    != NULL || nconss == 0);
+   assert(conssmap == NULL || nlpconsscounter != NULL);
 
    if( nconss == 0 )
       return SCIP_OKAY;
@@ -2869,6 +2876,12 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss) );
+   if( names )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &consnames, nconss) );
+   }
+   else
+      consnames = NULL;
 
    if( havelin )
    {
@@ -2902,6 +2915,9 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
 
       lhs[i] = -SCIPinfinity(scip);
       rhs[i] = -consdata->constant;
+      
+      if( names )
+         consnames[i] = SCIPconsGetName(conss[i]);
       
       quadnnz = consdata->nvars + 1;
 
@@ -2959,13 +2975,20 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
          rhs[i] += consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset * consdata->rhsoffset;
       }
       assert(nlininds == NULL || lincnt == nlininds[i]);
+      
+      if( conssmap != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsert(conssmap, conss[i], (void*)(size_t)*nlpconsscounter) );
+      }
+      if( nlpconsscounter != NULL )
+         ++*nlpconsscounter;
    }
 
    SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss,
       lhs, rhs,
       nlininds, lininds, linvals,
       nquadelems, quadelems,
-      NULL, NULL, NULL) );
+      NULL, NULL, consnames) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -2979,6 +3002,7 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
 
    SCIPfreeBufferArray(scip, &lhs);
    SCIPfreeBufferArray(scip, &rhs);
+   SCIPfreeBufferArrayNull(scip, &consnames);
 
    if( havelin )
    {

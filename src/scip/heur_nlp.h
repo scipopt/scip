@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.11 2010/05/11 10:11:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.h,v 1.12 2010/07/30 12:45:50 bzfviger Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic
@@ -39,7 +39,7 @@ extern "C" {
  *  - problem         : NLP solver problem
  *  - varmap          : variable mapping SCIP to NLPI
  */
-#define SCIP_DECL_HEURNLPNLPIINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_HASHMAP* varmap)
+#define SCIP_DECL_HEURNLPNLPIINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, int* conscounter, SCIP_Bool onlysubnlp, SCIP_Bool names)
 
 /** method to check whether a constraint handler has nonlinear constraints
  * 
@@ -76,6 +76,23 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    SCIP_HEUR*            heur,               /**< NLP heuristic */
    SCIP_SOL*             solcand,            /**< solution candidate */
    SCIP_Real             violation           /**< constraint violation of solution candidate */
+   );
+
+/** sets up NLP from constraints in SCIP */
+extern
+SCIP_RETCODE SCIPconstructNlpiProblemNlpHeur(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_NLPI*            nlpi,               /**< NLP solver interface for which the NLP should be setup */
+   SCIP_NLPIPROBLEM**    nlpiproblem,        /**< buffer to store pointer to new NLPI problem */
+   int*                  nnlpvars,           /**< buffer to store number of variables in NLPI problem (should be SCIPgetNVars(scip)), or NULL */
+   int*                  nnlpconss,          /**< buffer to store number of constraints in NLPI problem, or NULL */
+   SCIP_HASHMAP**        varsmap,            /**< buffer to store pointer to mapping from SCIP variables to variable indicies in NLPI_PROBLEM, or NULL if not needed */
+   SCIP_HASHMAP**        conssmap,           /**< buffer to store pointer to mapping from SCIP constraints to row indices in NLPI_PROBLEM, or NULL if not needed */
+   int*                  nexplvbdconss,      /**< buffer to store number of variable bound constraints that should be handled explicitely by the user, or NULL if all should be added to NLPI (makes only sense if onlysubnlp == TRUE) */
+   SCIP_CONS***          explvbdconss,       /**< buffer to store array of variable bound constraint that should be handled explicitely by the user, or NULL if all should be added to NLPI (makes only sense if onlysubnlp == TRUE) */
+   SCIP_Bool             onlysubnlp,         /**< whether to add only constraints that are relevant for the NLP obtained by fixing all discrete variables in the CIP */
+   SCIP_Bool             names               /**< whether to gives variable and constraint names to NLPI */
    );
 
 /** main procedure of the NLP heuristic */

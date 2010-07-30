@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.106 2010/07/29 16:37:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.107 2010/07/30 12:45:50 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -6186,10 +6186,13 @@ SCIP_DECL_HEURNLPNLPIINIT(initNlpi)
    assert(conshdlr != NULL);
    
    SCIP_CALL( SCIPconsInitNlpiQuadratic(scip, conshdlr, nlpi, problem,
-      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap) );
+      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap,
+      consmap, conscounter, onlysubnlp, names) );
    
    return SCIP_OKAY;
 }
+
+#define SCIP_DECL_HEURNLPNLPIINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, int* conscounter, SCIP_Bool onlysubnlp, SCIP_Bool names)
 
 /** NLPI initialization method of constraint handler
  * 
@@ -6202,12 +6205,17 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< quadratic constraints */
-   SCIP_HASHMAP*         scipvar2nlpvar      /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_HASHMAP*         scipvar2nlpvar,     /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_HASHMAP*         conssmap,           /**< mapping from SCIP constraints to constraint indices in NLPI */
+   int*                  nlpconsscounter,    /**< counter of NLP constraints */
+   SCIP_Bool             onlysubnlp,         /**< whether to include only constraints that are relevant for a subNLP */
+   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real*     lhs;
    SCIP_Real*     rhs;
+   const char**   consnames;
    int*           nlininds;
    int**          lininds;
    SCIP_Real**    linvals;
@@ -6226,6 +6234,7 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(nlpi != NULL);
+   assert(conssmap == NULL || nlpconsscounter != NULL);
 
    if( nconss == 0 )
       return SCIP_OKAY;
@@ -6235,6 +6244,12 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss) );
+   if( names )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &consnames, nconss) );
+   }
+   else
+      consnames = NULL;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nconss) );
@@ -6260,6 +6275,9 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
 
       lhs[i] = consdata->lhs;
       rhs[i] = consdata->rhs;
+      
+      if( names )
+         consnames[i] = SCIPconsGetName(conss[i]);
       
       /* count nonzeros in quadratic part */
       nlininds[i] = consdata->nlinvars;
@@ -6340,13 +6358,20 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
       }
       assert(k == quadnnz);
       assert(lincnt == nlininds[i]);
+      
+      if( conssmap != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsert(conssmap, conss[i], (void*)(size_t)*nlpconsscounter) );
+      }
+      if( nlpconsscounter != NULL )
+         ++*nlpconsscounter;
    }
 
    SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss,
       lhs, rhs,
       nlininds, lininds, linvals,
       nquadelems, quadelems,
-      NULL, NULL, NULL) );
+      NULL, NULL, consnames) );
 
    for( i = nconss-1; i >= 0; --i )
    {
@@ -6364,6 +6389,7 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
 
    SCIPfreeBufferArray(scip, &rhs);
    SCIPfreeBufferArray(scip, &lhs);
+   SCIPfreeBufferArrayNull(scip, &consnames);
 
    return SCIP_OKAY;
 }

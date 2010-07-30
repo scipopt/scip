@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.8 2010/07/14 15:24:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.h,v 1.9 2010/07/30 12:45:50 bzfviger Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints
@@ -92,7 +92,11 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< SOC constraints */
-   SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_HASHMAP*         var_scip2nlp,       /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_HASHMAP*         conssmap,           /**< mapping from SCIP constraints to constraint indices in NLPI */
+   int*                  nlpconsscounter,    /**< counter of NLP constraints */
+   SCIP_Bool             onlysubnlp,         /**< whether to include only constraints that are relevant for a subNLP */
+   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
 
 /** Gets the SOC constraint as a nonlinear row representation.
