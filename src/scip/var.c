@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.280 2010/07/02 12:58:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.281 2010/07/30 12:20:00 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8198,6 +8198,9 @@ int SCIPvarCompareActiveAndNegated(
       var1 = SCIPvarGetNegatedVar(var1);
    if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
       var2 = SCIPvarGetNegatedVar(var2);
+
+   assert(var1 != NULL);
+   assert(var2 != NULL);
    
    if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
       return -1;

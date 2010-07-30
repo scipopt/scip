@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.40 2010/07/27 16:39:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.41 2010/07/30 12:20:00 bzfwinkm Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -636,7 +636,6 @@ void implicsSearchVar(
       *poslower = -1;
       *posupper = -1;
       *posadd = pos;
-      
    }
    else
    {
