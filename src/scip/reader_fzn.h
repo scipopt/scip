@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.h,v 1.5 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.h,v 1.6 2010/07/30 16:24:43 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @brief  FlatZinc file reader
@@ -36,6 +36,14 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPincludeReaderFzn(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** print given solution in Flatzinc format w.r.t. the output annotation */
+extern
+SCIP_RETCODE SCIPprintSolReaderFzn(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 #ifdef __cplusplus
