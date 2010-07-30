@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.27 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.28 2010/07/30 09:57:14 bzfheinz Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -75,6 +75,14 @@ struct SCIP_EventBdChg
    SCIP_VAR*             var;                /**< variable whose bound changed */
 };
 
+/** data for domain hole events */
+struct SCIP_EventHole
+{
+   SCIP_Real             left;               /**< left bound of open interval in hole */
+   SCIP_Real             right;              /**< right bound of open interval in hole */
+   SCIP_VAR*             var;                /**< variable for which a hole was removed */
+};
+
 /** data for implication added events */
 struct SCIP_EventImplAdd
 {
@@ -86,15 +94,16 @@ struct SCIP_Event
 {
    union
    {
-      SCIP_EVENTVARADDED eventvaradded;      /**< data for variable addition events */
-      SCIP_EVENTVARDELETED eventvardeleted;  /**< data for variable deletion events */
-      SCIP_EVENTVARFIXED eventvarfixed;      /**< data for variable fixing events */
-      SCIP_EVENTVARUNLOCKED eventvarunlocked;/**< data for locks change events */
-      SCIP_EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */
-      SCIP_EVENTBDCHG    eventbdchg;         /**< data for bound change events */
-      SCIP_EVENTIMPLADD  eventimpladd;       /**< data for implication added events */
-      SCIP_NODE*         node;               /**< data for node and LP events */
-      SCIP_SOL*          sol;                /**< data for primal solution events */
+      SCIP_EVENTVARADDED eventvaradded;       /**< data for variable addition events */
+      SCIP_EVENTVARDELETED eventvardeleted;   /**< data for variable deletion events */
+      SCIP_EVENTVARFIXED eventvarfixed;       /**< data for variable fixing events */
+      SCIP_EVENTVARUNLOCKED eventvarunlocked; /**< data for locks change events */
+      SCIP_EVENTOBJCHG   eventobjchg;         /**< data for objective value change events */
+      SCIP_EVENTBDCHG    eventbdchg;          /**< data for bound change events */
+      SCIP_EVENTHOLE     eventhole;           /**< data for domain hole events */
+      SCIP_EVENTIMPLADD  eventimpladd;        /**< data for implication added events */
+      SCIP_NODE*         node;                /**< data for node and LP events */
+      SCIP_SOL*          sol;                 /**< data for primal solution events */
    } data;
    SCIP_EVENTTYPE        eventtype;          /**< type of event */
 };

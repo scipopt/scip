@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.50 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.51 2010/07/30 09:57:14 bzfheinz Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -204,6 +204,42 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
    SCIP_Real             newbound            /**< new bound after bound changed */
    );
 
+/** creates an event for an addition of a global domain hole to a variable */
+SCIP_RETCODE SCIPeventCreateGholeAdded(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in new hole */
+   SCIP_Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** creates an event for removing a global domain hole of a variable */
+SCIP_RETCODE SCIPeventCreateGholeRemoved(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in hole */
+   SCIP_Real             right               /**< right bound of open interval in hole */
+   );
+
+/** creates an event for an addition of a local domain hole to a variable */
+SCIP_RETCODE SCIPeventCreateLholeAdded(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in new hole */
+   SCIP_Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** creates an event for removing a local domain hole of a variable */
+SCIP_RETCODE SCIPeventCreateLholeRemoved(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in hole */
+   SCIP_Real             right               /**< right bound of open interval in hole */
+   );
+
 /** creates an event for an addition to the variable's implications list, clique or variable bounds information */
 extern
 SCIP_RETCODE SCIPeventCreateImplAdded(
@@ -252,9 +288,9 @@ extern
 SCIP_RETCODE SCIPeventProcess(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
+   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events, or NULL */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    );
 
@@ -335,9 +371,9 @@ SCIP_RETCODE SCIPeventqueueAdd(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
+   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events, or NULL */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    SCIP_EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    );

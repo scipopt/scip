@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_event.h,v 1.17 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_event.h,v 1.18 2010/07/30 09:57:14 bzfheinz Exp $"
 
 /**@file   pub_event.h
  * @ingroup PUBLICMETHODS
@@ -78,7 +78,8 @@ SCIP_EVENTTYPE SCIPeventGetType(
    SCIP_EVENT*           event               /**< event */
    );
 
-/** gets variable for a variable event (var added, var deleted, var fixed, objective value or domain change) */
+/** gets variable for a variable event (var added, var deleted, var fixed, 
+ *  objective value or domain change, domain hole added or removed) */
 extern
 SCIP_VAR* SCIPeventGetVar(
    SCIP_EVENT*           event               /**< event */
@@ -123,5 +124,17 @@ SCIP_SOL* SCIPeventGetSol(
 #ifdef __cplusplus
 }
 #endif
+
+/** gets the left bound of open interval in the hole */
+extern
+SCIP_Real SCIPeventGetHoleLeft(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets the right bound of open interval in the hole */
+extern
+SCIP_Real SCIPeventGetHoleRight(
+   SCIP_EVENT*           event               /**< event */
+   );
 
 #endif

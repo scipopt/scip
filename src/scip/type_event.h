@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.31 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.32 2010/07/30 09:57:14 bzfheinz Exp $"
 
 /**@file   type_event.h
  * @ingroup TYPEDEFINITIONS
@@ -52,27 +52,29 @@ extern "C" {
 #define SCIP_EVENTTYPE_LBRELAXED      0x00000100 /**< the local lower bound of a variable has been decreased */
 #define SCIP_EVENTTYPE_UBTIGHTENED    0x00000200 /**< the local upper bound of a variable has been decreased */
 #define SCIP_EVENTTYPE_UBRELAXED      0x00000400 /**< the local upper bound of a variable has been increased */
-#define SCIP_EVENTTYPE_HOLEADDED      0x00000800 /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
-#define SCIP_EVENTTYPE_HOLEREMOVED    0x00001000 /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
-#define SCIP_EVENTTYPE_IMPLADDED      0x00002000 /**< the variable's implication list, variable bound or clique information
+#define SCIP_EVENTTYPE_GHOLEADDED     0x00000800 /**< a global hole has been added to the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_GHOLEREMOVED   0x00001000 /**< a global hole has been removed from the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_LHOLEADDED     0x00002000 /**< a local hole has been added to the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_LHOLEREMOVED   0x00004000 /**< a local hole has been removed from the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_IMPLADDED      0x00008000 /**< the variable's implication list, variable bound or clique information
                                                   *   was extended */
 
 /* presolving events */
-#define SCIP_EVENTTYPE_PRESOLVEROUND  0x00004000 /**< a presolving round has been finished */
+#define SCIP_EVENTTYPE_PRESOLVEROUND  0x00010000 /**< a presolving round has been finished */
 
 /* node events */
-#define SCIP_EVENTTYPE_NODEFOCUSED    0x00008000 /**< a node has been focused and is now the focus node */
-#define SCIP_EVENTTYPE_NODEFEASIBLE   0x00010000 /**< the LP/pseudo solution of the node was feasible */
-#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00020000 /**< the focus node has been proven to be infeasible or was bounded */
-#define SCIP_EVENTTYPE_NODEBRANCHED   0x00040000 /**< the focus node has been solved by branching */
+#define SCIP_EVENTTYPE_NODEFOCUSED    0x00020000 /**< a node has been focused and is now the focus node */
+#define SCIP_EVENTTYPE_NODEFEASIBLE   0x00040000 /**< the LP/pseudo solution of the node was feasible */
+#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00080000 /**< the focus node has been proven to be infeasible or was bounded */
+#define SCIP_EVENTTYPE_NODEBRANCHED   0x00100000 /**< the focus node has been solved by branching */
 
 /* LP events */
-#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00080000 /**< the node's initial LP was solved */
-#define SCIP_EVENTTYPE_LPSOLVED       0x00100000 /**< the node's LP was completely solved with cut & price */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00200000 /**< the node's initial LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED       0x00400000 /**< the node's LP was completely solved with cut & price */
 
 /* primal solution events */
-#define SCIP_EVENTTYPE_POORSOLFOUND   0x00200000 /**< a good enough primal feasible (but not new best) solution was found */
-#define SCIP_EVENTTYPE_BESTSOLFOUND   0x00400000 /**< a new best primal feasible solution was found */
+#define SCIP_EVENTTYPE_POORSOLFOUND   0x00800000 /**< a good enough primal feasible (but not new best) solution was found */
+#define SCIP_EVENTTYPE_BESTSOLFOUND   0x01000000 /**< a new best primal feasible solution was found */
 
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
@@ -81,7 +83,9 @@ extern "C" {
 #define SCIP_EVENTTYPE_BOUNDTIGHTENED (SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBTIGHTENED)
 #define SCIP_EVENTTYPE_BOUNDRELAXED   (SCIP_EVENTTYPE_LBRELAXED | SCIP_EVENTTYPE_UBRELAXED)
 #define SCIP_EVENTTYPE_BOUNDCHANGED   (SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED)
-#define SCIP_EVENTTYPE_HOLECHANGED    (SCIP_EVENTTYPE_HOLEADDED | SCIP_EVENTTYPE_HOLEREMOVED)
+#define SCIP_EVENTTYPE_GHOLECHANGED   (SCIP_EVENTTYPE_GHOLEADDED | SCIP_EVENTTYPE_GHOLEREMOVED)
+#define SCIP_EVENTTYPE_LHOLECHANGED   (SCIP_EVENTTYPE_LHOLEADDED | SCIP_EVENTTYPE_LHOLEREMOVED)
+#define SCIP_EVENTTYPE_HOLECHANGED    (SCIP_EVENTTYPE_GHOLECHANGED | SCIP_EVENTTYPE_LHOLECHANGED)
 #define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
 #define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED \
                                        | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
@@ -111,6 +115,7 @@ typedef struct SCIP_EventVarFixed SCIP_EVENTVARFIXED; /**< data for variable fix
 typedef struct SCIP_EventVarUnlocked SCIP_EVENTVARUNLOCKED; /**< data for variable unlocked events */
 typedef struct SCIP_EventObjChg SCIP_EVENTOBJCHG; /**< data for objective value change events */
 typedef struct SCIP_EventBdChg SCIP_EVENTBDCHG;   /**< data for bound change events */
+typedef struct SCIP_EventHole SCIP_EVENTHOLE;     /**< data for domain hole events */
 typedef struct SCIP_EventImplAdd SCIP_EVENTIMPLADD; /**< data for implication added events */
 typedef struct SCIP_EventData SCIP_EVENTDATA;     /**< locally defined event specific data */
 typedef struct SCIP_EventFilter SCIP_EVENTFILTER; /**< event filter to select events to be processed by an event handler */
