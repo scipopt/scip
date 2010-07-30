@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.55 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.56 2010/07/30 16:10:14 bzfheinz Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -813,7 +813,7 @@ SCIP_RETCODE SCIPdialogExec(
    return SCIP_OKAY;
 }
 
-/** comparison method for sorting dialogs by non-decreasing index */
+/** comparison method for sorting dialogs w.r.t. to their name */
 static
 SCIP_DECL_SORTPTRCOMP(dialogComp)
 {
