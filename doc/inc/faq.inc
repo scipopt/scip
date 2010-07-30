@@ -322,7 +322,7 @@
       <a name="Q15">What is this thing with the original and the transformed problem about?</a>
     </p>
     <p class="a">
-      Before the solving process starts, the original problem is copied to a different memory area.
+      Before the solving process starts, the original problem is copied.
       This copy is called &quot;transformed problem&quot;, and all modifications during the presolving
       and solving process are only applied to the transformed problem.<br>
       This has two main advantages: first, the user can also modify the problem after partially solving it.
