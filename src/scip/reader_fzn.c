@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.44 2010/07/30 16:24:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.45 2010/07/30 17:02:10 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -61,6 +61,18 @@
  * Data structures
  */
 
+/** number types */
+enum FznNumberType {
+   FZN_BOOL, FZN_INT, FZN_FLOAT
+};
+typedef enum FznNumberType FZNNUMBERTYPE;
+
+/** Expression type in FlatZinc File */
+enum FznExpType {
+   FZN_EXP_NONE, FZN_EXP_UNSIGNED, FZN_EXP_SIGNED
+};
+typedef enum FznExpType FZNEXPTYPE;
+
 /* structures to store the dimension information */
 struct Dimensions
 {
@@ -77,6 +89,7 @@ struct VarArray
    char*                 name;          /**< name of the array variable */
    DIMENSIONS*           info;          /**< dimension information */
    int                   nvars;         /**< number iof variables */
+   FZNNUMBERTYPE         type;          /**< variable type */ 
 };
 typedef struct VarArray VARARRAY;
 
@@ -87,18 +100,6 @@ struct SCIP_ReaderData
    int                   nvararrays;    /**< number of variables */
    int                   vararrayssize; /**< size of variable array */
 };
-
-/** number types */
-enum FznNumberType {
-   FZN_BOOL, FZN_INT, FZN_FLOAT
-};
-typedef enum FznNumberType FZNNUMBERTYPE;
-
-/** Expression type in FlatZinc File */
-enum FznExpType {
-   FZN_EXP_NONE, FZN_EXP_UNSIGNED, FZN_EXP_SIGNED
-};
-typedef enum FznExpType FZNEXPTYPE;
 
 /** FlatZinc constant */
 struct FznConstant
@@ -282,14 +283,43 @@ SCIP_RETCODE ensureVararrySize(
    return SCIP_OKAY;
 }
    
-
+/** print given value in FlatZinc format to given stream */
+static
+void printValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Real             value,              /**< value to print */
+   FZNNUMBERTYPE         type                /**< FlatZinc number type */
+   )
+{
+   switch( type )
+   {
+   case FZN_BOOL:
+      if( value < 0.5 )
+         SCIPinfoMessage(scip, file, "false");
+      else         
+         SCIPinfoMessage(scip, file, "true");
+      break;
+   case FZN_INT:
+   {
+      SCIP_Longint longvalue;
+      longvalue = (SCIP_Longint)(value + 0.5);
+      SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT"", longvalue);
+      break;
+   }
+   case FZN_FLOAT:
+      SCIPinfoMessage(scip, file, "%.1g;\n", value);
+      break;
+   }
+}
 
 /** add variable to the reader data */
 static
 SCIP_RETCODE readerdataAddOutputvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READERDATA*      readerdata,         /**< reader data */
-   SCIP_VAR*             var                 /**< variable to add to the reader data */
+   SCIP_VAR*             var,                /**< variable to add to the reader data */
+   FZNNUMBERTYPE         type                /**< variable type */
    )
 {
    DIMENSIONS* info;
@@ -321,6 +351,7 @@ SCIP_RETCODE readerdataAddOutputvar(
    
    vararray->info = info;
    vararray->nvars = 1;
+   vararray->type = type;
    
    readerdata->vararrays[nvararrays] = vararray;
    readerdata->nvararrays++;
@@ -336,6 +367,7 @@ SCIP_RETCODE readerdataAddOutputvararray(
    const char*           name,               /**< name of the variable array */
    SCIP_VAR**            vars,               /**< array of variable to add to the reader data */
    int                   nvars,              /**< number of variables */  
+   FZNNUMBERTYPE         type,               /**< variable type */
    DIMENSIONS*           info                /**< dimension information for output */
    )
 {
@@ -358,6 +390,7 @@ SCIP_RETCODE readerdataAddOutputvararray(
 
    vararray->info = info;
    vararray->nvars = nvars;
+   vararray->type = type;
    
    readerdata->vararrays[nvararrays] = vararray;
    readerdata->nvararrays++;
@@ -1643,7 +1676,7 @@ SCIP_RETCODE parseVariableArray(
    
    if( info != NULL )
    {
-      SCIP_CALL( readerdataAddOutputvararray(scip, readerdata, name, vars, nvars, info) );
+      SCIP_CALL( readerdataAddOutputvararray(scip, readerdata, name, vars, nvars, type, info) );
    }
 
    SCIPfreeBufferArray(scip, &vars);
@@ -1790,7 +1823,7 @@ SCIP_RETCODE parseVariable(
    /* check if the variable should be part of the output */
    if( output )
    {
-      SCIP_CALL( readerdataAddOutputvar(scip, readerdata, var) );
+      SCIP_CALL( readerdataAddOutputvar(scip, readerdata, var, type) );
    }
    
    if( !getNextToken(fzninput) )
@@ -4083,6 +4116,7 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
    VARARRAY** vararrays;
    DIMENSIONS* info;
    VARARRAY* vararray;
+   FZNNUMBERTYPE type;
    SCIP_Real solvalue;
    int nvararrays;
    int nvars;
@@ -4107,16 +4141,17 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
       info = vararray->info;
       vars = vararray->vars;
       nvars = vararray->nvars;
+      type =  vararray->type;
 
       if( info->ndims == 0 )
       {
          solvalue = SCIPgetSolVal(scip, sol, vars[0]);
-         if( SCIPisIntegral(scip, solvalue) )
-         {
-            solvalue = (SCIP_Real)((int)(solvalue + 0.5));
-         }
 
-         SCIPinfoMessage(scip, file, "%s = %g;\n", vararray->name, solvalue);
+         SCIPinfoMessage(scip, file, "%s = ", vararray->name);
+
+         printValue(scip, file, solvalue, type);
+
+         SCIPinfoMessage(scip, file, "\n");
       }
       else
       {
@@ -4127,7 +4162,7 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
          {
             SCIPinfoMessage(scip, file, "%d..%d, ", info->lbs[v], info->ubs[v]);
          }
-            
+         
          SCIPinfoMessage(scip, file, "[");
             
          for( v = 0; v < nvars; ++v )
@@ -4136,11 +4171,7 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
                SCIPinfoMessage(scip, file, ", ");
             
             solvalue = SCIPgetSolVal(scip, sol, vars[v]);
-            if( SCIPisIntegral(scip, solvalue) )
-            {
-               solvalue = (SCIP_Real)((int)(solvalue + 0.5));
-            }
-            SCIPinfoMessage(scip, file, "%g", solvalue);
+            printValue(scip, file, solvalue, type);
          }
             
          SCIPinfoMessage(scip, file, "]);\n");
