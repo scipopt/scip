@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.70 2010/07/30 12:45:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.71 2010/07/30 15:50:05 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -2212,4 +2212,54 @@ SCIP_HASHMAP* SCIPgetVarMappingHeurNlp(
    assert(heurdata != NULL);
 
    return heurdata->var_scip2nlp;
+}
+
+/** gets nlpi initialization callbacks */
+void SCIPgetNlpiSetupDataHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_DECL_HEURNLPNLPIINIT((***nlpiinits)),/**< buffer to store pointer to array of NLPIINIT callbacks, or NULL */
+   SCIP_DECL_HEURNLPHAVECONS((***haveconss)),/**< buffer to store pointer to array of HAVECONS callbacks, or NULL */
+   int*                  nnlpiinits          /**< buffer to store number of NLPIINIT and HAVECONS callbacks, or NULL */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   if( nlpiinits != NULL )
+      *nlpiinits = heurdata->nlpiinits;
+   if( haveconss != NULL )
+      *haveconss = heurdata->haveconss;
+   if( nnlpiinits != NULL )
+      *nnlpiinits = heurdata->nnlpiinits;
+}
+
+/** gets current start candidate of heuristic, or NULL if none;
+ * if forget is TRUE and return is non-NULL, then its the obligation of the user to free the returned solution */
+SCIP_SOL* SCIPgetStartcandHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_Bool             forget              /**< should the heuristic forget this starting candidate?           */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+   SCIP_SOL*      startcand;
+
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   
+   startcand = heurdata->startcand;
+   
+   if( forget && startcand != NULL )
+   {
+      heurdata->startcand = NULL;
+   }
+   
+   return startcand;
 }

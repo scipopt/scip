@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.12 2010/07/30 12:45:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.h,v 1.13 2010/07/30 15:50:05 bzfviger Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic
@@ -142,6 +142,25 @@ extern
 SCIP_HASHMAP* SCIPgetVarMappingHeurNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   );
+
+/** gets nlpi initialization callbacks */
+extern
+void SCIPgetNlpiSetupDataHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_DECL_HEURNLPNLPIINIT((***nlpiinits)),/**< buffer to store pointer to array of NLPIINIT callbacks, or NULL */
+   SCIP_DECL_HEURNLPHAVECONS((***haveconss)),/**< buffer to store pointer to array of HAVECONS callbacks, or NULL */
+   int*                  nnlpiinits          /**< buffer to store number of NLPIINIT and HAVECONS callbacks, or NULL */
+   );
+
+/** gets current start candidate of heuristic, or NULL if none;
+ * if forget is TRUE and return is non-NULL, then its the obligation of the user to free the returned solution */
+extern
+SCIP_SOL* SCIPgetStartcandHeurNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_Bool             forget              /**< should the heuristic forget this starting candidate?           */
    );
 
 #ifdef __cplusplus
