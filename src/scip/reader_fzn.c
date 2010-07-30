@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.45 2010/07/30 17:02:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.46 2010/07/30 17:34:37 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2447,14 +2447,92 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       freeStringBufferArray(scip, elements, nelements);
       
    }
-   else if(equalTokens(ftokens[1], "bool") )   
+   else if(equalTokens(ftokens[1], "bool") && nftokens == 3 )
+   {
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_VAR* resvar;
+      int nvars;
+      char** elements;
+      int nelements;
+      int size;
+         
+      if( !equalTokens(ftokens[2], "or" ) && !equalTokens(ftokens[2], "and" ) )
+      {
+         fzninput->valid = FALSE;
+         SCIPwarningMessage("logical operation <%s> is not supported yet\n", fname);
+         return SCIP_OKAY;
+      }
+
+      size = 10;
+      nvars = 0;
+         
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &elements, 1) );
+         
+      SCIPdebugMessage("found and constraint <%s>\n", fname);
+         
+      /* parse operand variable array */
+      SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
+         
+      /* check error and for the komma between the variable array and side value */
+      if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+      {
+         if( hasError(fzninput) )            
+            syntaxError(scip, fzninput, "unexpected error in fzn input");
+         else
+            syntaxError(scip, fzninput, "expected token <,>");
+            
+         goto TERMINATE2;
+      }
+         
+      /* parse resultant variable array */
+      nelements = 0;     
+      SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 1) );
+      resvar = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[0]);
+         
+      /* check error and for the komma between the variable array and side value */
+      if( hasError(fzninput) || resvar == NULL )
+      {
+         if( hasError(fzninput) )            
+            syntaxError(scip, fzninput, "unexpected error in fzn input");
+         else
+            syntaxError(scip, fzninput, "unknown variable identifier name");
+         goto TERMINATE2;
+      }
+
+      /* create the constraint */
+      if( equalTokens(ftokens[2], "or" ) )
+      {
+         SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, resvar, nvars, vars, 
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      }
+      else
+      {      
+         assert( equalTokens(ftokens[2], "and") );  
+
+         SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, resvar, nvars, vars, 
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+      }
+         
+      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      *created = TRUE;
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   TERMINATE2:
+      /* free elements array */
+      freeStringBufferArray(scip, elements, nelements);
+      SCIPfreeBufferArray(scip, &vars); 
+   }
+   else if( equalTokens(ftokens[1], "bool") )
    {
       fzninput->valid = FALSE;
       SCIPwarningMessage("logical operation <%s> is not supported yet\n", fname);
-   }   
-   else
       return SCIP_OKAY;
-   
+   }
+
    return SCIP_OKAY;
 }
 
