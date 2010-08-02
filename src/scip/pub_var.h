@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.80 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.81 2010/08/02 14:10:46 bzfheinz Exp $"
 
 /**@file   pub_var.h
  * @ingroup PUBLICMETHODS
@@ -139,6 +139,16 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
    SCIP_VAR**            var,                /**< pointer to problem variable */
    SCIP_Real*            bound,              /**< pointer to bound value to transform */
    SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
+   );
+
+/** transforms given variable and domain hole to the corresponding active, fixed, or multi-aggregated variable
+ *  values
+ */
+extern
+SCIP_RETCODE SCIPvarGetProbvarHole(
+   SCIP_VAR**            var,                /**< pointer to problem variable */
+   SCIP_Real*            left,               /**< pointer to left bound of open interval in hole to transform */
+   SCIP_Real*            right               /**< pointer to right bound of open interval in hole to transform */
    );
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
@@ -502,6 +512,12 @@ SCIP_Real SCIPvarGetUbOriginal(
    SCIP_VAR*             var                 /**< original problem variable */
    );
 
+/** gets the original hole list of an original variable */
+extern
+SCIP_HOLELIST* SCIPvarGetHolelistOriginal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets global lower bound of variable */
 extern
 SCIP_Real SCIPvarGetLbGlobal(
@@ -514,6 +530,12 @@ SCIP_Real SCIPvarGetUbGlobal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets the global hole list of an active variable */
+extern
+SCIP_HOLELIST* SCIPvarGetHolelistGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets current lower bound of variable */
 extern
 SCIP_Real SCIPvarGetLbLocal(
@@ -523,6 +545,12 @@ SCIP_Real SCIPvarGetLbLocal(
 /** gets current upper bound of variable */
 extern
 SCIP_Real SCIPvarGetUbLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets the current hole list of an active variable */
+extern
+SCIP_HOLELIST* SCIPvarGetHolelistLocal(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -740,10 +768,15 @@ SCIP_Real SCIPvarGetLPSol(
 #define SCIPvarGetUbOriginal(var)       ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
       ? (var)->data.original.origdom.ub                                 \
       : (var)->data.negate.constant - (var)->negatedvar->data.original.origdom.lb)
+#define SCIPvarGetHolelistOriginal(var) ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
+      ? (var)->data.original.origdom.holelist                           \
+      : NULL)
 #define SCIPvarGetLbGlobal(var)         (var)->glbdom.lb
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
+#define SCIPvarGetHolelistGlobal(var)   (var)->glbdom.holelist
 #define SCIPvarGetLbLocal(var)          (var)->locdom.lb
 #define SCIPvarGetUbLocal(var)          (var)->locdom.ub
+#define SCIPvarGetHolelistLocal(var)    (var)->locdom.holelist
 #define SCIPvarGetLbLazy(var)           (var)->lazylb
 #define SCIPvarGetUbLazy(var)           (var)->lazyub
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
@@ -1096,6 +1129,24 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
    int                   pos                 /**< position of the bound change in the domain change data */
    );
 
+/** returns left bound of open interval in hole */
+extern
+SCIP_Real SCIPholelistGetLeft(
+   SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
+   );
+
+/** returns right bound of open interval in hole */
+extern
+SCIP_Real SCIPholelistGetRight(
+   SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
+   );
+
+/** returns next hole in list or NULL */
+extern
+SCIP_HOLELIST* SCIPholelistGetNext(
+   SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1132,6 +1183,9 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
 #define SCIPboundchgIsRedundant(boundchg)      ((boundchg)->redundant)
 #define SCIPdomchgGetNBoundchgs(domchg)        ((domchg) != NULL ? (domchg)->domchgbound.nboundchgs : 0)
 #define SCIPdomchgGetBoundchg(domchg, pos)     (&(domchg)->domchgbound.boundchgs[pos])
+#define SCIPholelistGetLeft(holelist)          ((holelist)->hole.left) 
+#define SCIPholelistGetRight(holelist)         ((holelist)->hole.right)
+#define SCIPholelistGetNext(holelist)          ((holelist)->next)
 
 #endif
 

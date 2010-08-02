@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.107 2010/07/01 17:44:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.108 2010/08/02 14:10:46 bzfheinz Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -203,6 +203,27 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
 
+/** adds hole with inference information to focus node, child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value;
+ *  at most one of infercons and inferprop may be non-NULL
+ */
+SCIP_RETCODE SCIPnodeAddHoleinfer(
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Real             left,               /**< left bound of open interval defining the hole (left,right) */
+   SCIP_Real             right,              /**< right bound of open interval defining the hole (left,right) */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             probingchange,      /**< is the bound change a temporary setting due to probing? */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
+   );
+
 /** adds hole change to focus node, or child of focus node */
 extern
 SCIP_RETCODE SCIPnodeAddHolechg(
@@ -211,11 +232,13 @@ SCIP_RETCODE SCIPnodeAddHolechg(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_HOLELIST**       ptr,                /**< changed list pointer */
-   SCIP_HOLELIST*        newlist,            /**< new value of list pointer */
-   SCIP_HOLELIST*        oldlist             /**< old value of list pointer */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Real             left,               /**< left bound of open interval defining the hole (left,right) */
+   SCIP_Real             right,              /**< right bound of open interval defining the hole (left,right) */
+   SCIP_Bool             probingchange,      /**< is the bound change a temporary setting due to probing? */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    );
-
 
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
 extern

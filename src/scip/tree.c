@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.239 2010/07/01 18:07:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.240 2010/08/02 14:10:46 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1624,7 +1624,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      /* adjust the new lower bound */
+      /* adjust lower bound w.r.t. to integrality */
       SCIPvarAdjustLb(var, set, &newbound);
       assert(SCIPsetIsGT(set, newbound, oldlb));
       assert(SCIPsetIsFeasLE(set, newbound, oldub));
@@ -1805,6 +1805,127 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    return SCIP_OKAY;
 }
 
+/** adds hole with inference information to focus node, child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value;
+ *  at most one of infercons and inferprop may be non-NULL
+ */
+SCIP_RETCODE SCIPnodeAddHoleinfer(
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Real             left,               /**< left bound of open interval defining the hole (left,right) */
+   SCIP_Real             right,              /**< right bound of open interval defining the hole (left,right) */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             probingchange,      /**< is the bound change a temporary setting due to probing? */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
+   )
+{
+   SCIP_VAR* infervar;
+
+   assert(node != NULL);
+   assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE
+      || node->depth == 0);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->effectiverootdepth >= 0);
+   assert(tree->root != NULL);
+   assert(var != NULL);
+   assert(node->active || (infercons == NULL && inferprop == NULL));
+   assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
+
+   /* the interval should not be empty */
+   assert(SCIPsetIsLT(set, left, right));
+
+#ifndef NDEBUG
+   {
+      SCIP_Real adjustedleft;
+      SCIP_Real adjustedright;
+
+      adjustedleft = left;
+      adjustedright = right;
+
+      SCIPvarAdjustUb(var, set, &adjustedleft);
+      SCIPvarAdjustLb(var, set, &adjustedright);
+
+      assert(SCIPsetIsEQ(set, left, adjustedleft));
+      assert(SCIPsetIsEQ(set, right, adjustedright));
+   }
+#endif
+   
+   /* the hole should lay within the lower and upper bounds */
+   assert(SCIPsetIsGE(set, left, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsLE(set, right, SCIPvarGetUbLocal(var)));
+      
+   SCIPdebugMessage("adding hole (%g,%g) at node at depth %u to variable <%s>: bounds=[%g,%g], (infer%s=<%s>, inferinfo=%d)\n",
+      left, right, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
+      infercons != NULL ? "cons" : "prop", 
+      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
+
+   /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
+   infervar = var;
+   SCIP_CALL( SCIPvarGetProbvarHole(&var, &left, &right) );
+   
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      SCIPerrorMessage("cannot change bounds of multi-aggregated variable <%s>\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   
+   SCIPdebugMessage(" -> transformed to active variable <%s>: hole (%g,%g), obj: %g\n",
+      SCIPvarGetName(var), left, right, SCIPvarGetObj(var));
+   
+   stat->nholechgs++;
+   
+   /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
+   if( tree->probingroot != NULL )
+      stat->nprobholechgs++;
+   
+   /* if the node is the root node: change local and global bound immediately */
+   if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )
+   {
+      assert(node->active || tree->focusnode == NULL );
+      assert(SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE);
+      assert(!probingchange);
+
+      SCIPdebugMessage(" -> hole added in root node: perform global domain change\n");
+      SCIP_CALL( SCIPvarAddHoleGlobal(var, blkmem, set, stat, eventqueue, left, right, added) );
+
+      if( set->stage == SCIP_STAGE_SOLVING && (*added) )
+      {
+         /* the root should be repropagated due to the bound change */
+         SCIPnodePropagateAgain(tree->root, set, stat, tree);
+         SCIPdebugMessage("marked root node to be repropagated due to global added hole <%s>: (%g,%g) found in depth %u\n",
+            SCIPvarGetName(var), left, right, node->depth);
+      }
+
+      return SCIP_OKAY;
+   }
+
+   /**@todo add adding of local domain holes */
+
+   (*added) = FALSE;
+   SCIPwarningMessage("currently domain holes can only be handled globally!\n");
+   
+   stat->nholechgs--;
+   
+   /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
+   if( tree->probingroot != NULL )
+      stat->nprobholechgs--;
+   
+   return SCIP_OKAY;
+}
+
 /** adds hole change to focus node, or child of focus node */
 SCIP_RETCODE SCIPnodeAddHolechg(
    SCIP_NODE*            node,               /**< node to add bound change to */
@@ -1812,27 +1933,26 @@ SCIP_RETCODE SCIPnodeAddHolechg(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_HOLELIST**       ptr,                /**< changed list pointer */
-   SCIP_HOLELIST*        newlist,            /**< new value of list pointer */
-   SCIP_HOLELIST*        oldlist             /**< old value of list pointer */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Real             left,               /**< left bound of open interval defining the hole (left,right) */
+   SCIP_Real             right,              /**< right bound of open interval defining the hole (left,right) */
+   SCIP_Bool             probingchange,      /**< is the bound change a temporary setting due to probing? */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    )
 {
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD);
-
-   SCIPdebugMessage("adding holechange at node at depth %u: changed pointer at %p from %p to %p\n",
-      node->depth, (void*)ptr, (void*)newlist, (void*)oldlist);
-
-   stat->nholechgs++;
-
-   /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
-   if( tree->probingroot != NULL )
-      stat->nprobholechgs++;
+   assert(blkmem != NULL);
    
-   SCIP_CALL( SCIPdomchgAddHolechg(&node->domchg, blkmem, set, ptr, newlist, oldlist) );
+   SCIPdebugMessage("adding hole (%g,%g) at node at depth %u of variable <%s>\n",
+      left, right, node->depth, SCIPvarGetName(var));
 
+   SCIP_CALL( SCIPnodeAddHoleinfer(node, blkmem, set, stat, tree, eventqueue, var, left, right,
+         NULL, NULL, 0, probingchange, added) );
+   
    /**@todo apply hole change on active nodes and issue event */
 
    return SCIP_OKAY;

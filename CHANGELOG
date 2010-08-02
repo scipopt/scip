@@ -73,6 +73,13 @@ interface:
   of a domain hole added or removed event
 - new method SCIPprintSolReaderFzn() which prints the best solution in Flatzinc format w.r.t. to the output annotations 
   in the input file of the flatzinc model
+- new methods SCIPvarGetHolelistOriginal(), SCIPvarGetHolelistGlobal(), SCIPvarGetHolelistLocal() to get 
+  the original, global, and local holes, respectively
+- new methods SCIPholelistGetLeft() and SCIPholelistGetRight()to get the left and right interval bounds of the 
+  open hole interval
+- new method SCIPholelistGetNext() to get the next hole of the hole list
+- new method SCIPvarGetProbvarHole() to tranform a given domain hole to the corresponding active, 
+  fixed, or multi-aggregated variable
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

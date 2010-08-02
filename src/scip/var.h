@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.132 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.133 2010/08/02 14:10:46 bzfheinz Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -658,6 +658,22 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
+/** changes current local bound of variable; if possible, adjusts bound to integral value; stores inference
+ *  information in variable
+ */
+extern
+SCIP_RETCODE SCIPvarChgBdLocal(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_Real             newbound,           /**< new bound for variable */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
 /** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
 extern
 SCIP_RETCODE SCIPvarChgLbLazy(
@@ -674,21 +690,6 @@ SCIP_RETCODE SCIPvarChgUbLazy(
    );
 
 
-/** changes current local bound of variable; if possible, adjusts bound to integral value; stores inference
- *  information in variable
- */
-extern
-SCIP_RETCODE SCIPvarChgBdLocal(
-   SCIP_VAR*             var,                /**< problem variable to change */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
-   SCIP_Real             newbound,           /**< new bound for variable */
-   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   );
 
 /** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
 extern
@@ -708,7 +709,7 @@ SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
-/** adds a hole to the original variable's original domain */
+/** adds a hole to the original domain of the variable*/
 extern
 SCIP_RETCODE SCIPvarAddHoleOriginal(
    SCIP_VAR*             var,                /**< problem variable */
@@ -724,8 +725,11 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             left,               /**< left bound of open interval in new hole */
-   SCIP_Real             right               /**< right bound of open interval in new hole */
+   SCIP_Real             right,              /**< right bound of open interval in new hole */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    );
 
 /** adds a hole to the variable's current local domain */
@@ -734,8 +738,11 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             left,               /**< left bound of open interval in new hole */
-   SCIP_Real             right               /**< right bound of open interval in new hole */
+   SCIP_Real             right,              /**< right bound of open interval in new hole */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    );
 
 /** resets the global and local bounds of original variable to their original values */

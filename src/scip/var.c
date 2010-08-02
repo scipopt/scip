@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.281 2010/07/30 12:20:00 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.282 2010/08/02 14:10:46 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -64,6 +64,8 @@ SCIP_RETCODE holelistCreate(
    assert(blkmem != NULL);
    assert(SCIPsetIsLT(set, left, right));
 
+   SCIPdebugMessage("create hole list element (%.15g,%.15g) in blkmem %p\n", left, right, blkmem);
+
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, holelist) );
    (*holelist)->hole.left = left;
    (*holelist)->hole.right = right;
@@ -86,10 +88,16 @@ void holelistFree(
    {
       SCIP_HOLELIST* next;
 
+      SCIPdebugMessage("free hole list element (%.15g,%.15g) in blkmem %p\n", 
+         (*holelist)->hole.left, (*holelist)->hole.right, blkmem);
+
       next = (*holelist)->next;
       BMSfreeBlockMemory(blkmem, holelist);
+      assert(*holelist == NULL);
+
       *holelist = next;
    }
+   assert(*holelist == NULL);
 }
 
 /** duplicates a list of holes */
@@ -121,89 +129,198 @@ SCIP_RETCODE domAddHole(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             left,               /**< left bound of open interval in new hole */
-   SCIP_Real             right               /**< right bound of open interval in new hole */
+   SCIP_Real             right,              /**< right bound of open interval in new hole */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added (variable didn't had that hole before), or NULL */
    )
 {
    SCIP_HOLELIST** insertpos;
-   SCIP_HOLELIST* nextholelist;
-
+   SCIP_HOLELIST* next;
+   
    assert(dom != NULL);
+   assert(added != NULL);
 
-   /* sort new hole in holelist of variable */
+   /* search for the position of the new hole */
    insertpos = &dom->holelist;
    while( *insertpos != NULL && (*insertpos)->hole.left < left )
       insertpos = &(*insertpos)->next;
 
-   nextholelist = *insertpos;
+   /* check if new hole already exists in the hole list or is a sub hole of an existing one */
+   if( *insertpos != NULL && (*insertpos)->hole.left == left && (*insertpos)->hole.right >= right )
+   {
+      SCIPdebugMessage("new hole (%.15g,%.15g) is redundant through known hole (%.15g,%.15g)\n",
+         left, right, (*insertpos)->hole.left, (*insertpos)->hole.right);
+      added = FALSE;
+      return SCIP_OKAY;
+   }
 
+   /* add hole */
+   *added = TRUE;
+   
+   next = *insertpos;
    SCIP_CALL( holelistCreate(insertpos, blkmem, set, left, right) );
-   (*insertpos)->next = nextholelist;
+   (*insertpos)->next = next;
    
    return SCIP_OKAY;
 }
 
-#if 0 /* for future use */
-/** merges overlapping holes into single holes, moves bounds respectively */
+/** merges overlapping holes into single holes, computes and moves lower and upper bound, respectively */
+/**@todo: the domMerge() method is currently called if a lower or an upper bound locally or globally changed; this could
+ *        be more efficient if perform this merge with knowledge if it was a lower or an upper bound which tricker this
+ *        merge */
 static
-SCIP_RETCODE domMerge(
+void domMerge(
    SCIP_DOM*             dom,                /**< domain to merge */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            newlb,              /**< pointer to store new lower bound */
+   SCIP_Real*            newub               /**< pointer to store new upper bound */
    )
 {
    SCIP_HOLELIST** holelistptr;
+   SCIP_HOLELIST** lastnextptr;
    SCIP_Real* lastrightptr;
 
    assert(dom != NULL);
    assert(SCIPsetIsLE(set, dom->lb, dom->ub));
 
-   lastrightptr = &dom->lb;  /* lower bound is the right bound of the hole (-infinity,lb) */
-   holelistptr = &dom->holelist;
+#ifndef NDEBUG
+   {
+      /* check if the holelist is sorted w.r.t. to the left interval bounds */
+      SCIP_Real lastleft;
+   
+      holelistptr = &dom->holelist;
+      
+      lastleft = -SCIPsetInfinity(set);
+  
+      while( *holelistptr != NULL )
+      {
+         if( (*holelistptr)->next != NULL )
+         {
+            assert( SCIPsetIsLE(set, lastleft, (*holelistptr)->hole.left) );
+            lastleft = (*holelistptr)->hole.left;
+         }
+         
+         holelistptr = &(*holelistptr)->next;
+      }   
+   }
+#endif
 
+   SCIPdebugMessage("merge hole list\n");
+
+   holelistptr = &dom->holelist;
+   lastrightptr = &dom->lb;  /* lower bound is the right bound of the hole (-infinity,lb) */
+   lastnextptr = holelistptr;
+   
    while( *holelistptr != NULL )
    {
+      SCIPdebugMessage("check hole (%.15g,%.15g) last right interval was <%.15g>\n", 
+         (*holelistptr)->hole.left, (*holelistptr)->hole.right, *lastrightptr);
+
+      /* check that the hole is not empty */
       assert(SCIPsetIsLT(set, (*holelistptr)->hole.left, (*holelistptr)->hole.right));
 
       if( SCIPsetIsGE(set, (*holelistptr)->hole.left, dom->ub) )
       {
-         /* the remaining holes start behind the upper bound: kill them */
+         /* the remaining holes start behind the upper bound: remove them */
+         SCIPdebugMessage("remove remainig hole since upper bound <%.15g> is less then the left hand side of the current hole\n", dom->ub);
          holelistFree(holelistptr, blkmem);
          assert(*holelistptr == NULL);
+
+         /* unlink this hole from the previous hole */
+         *lastnextptr = NULL;
       }
       else if( SCIPsetIsGT(set, (*holelistptr)->hole.right, dom->ub) )
       {
-         /* the hole overlaps the upper bound: decrease upper bound, kill this and all remaining holes */
+         /* the hole overlaps the upper bound: decrease upper bound, remove this hole and all remaining holes */
+         SCIPdebugMessage("upper bound <%.15g> lays in current hole; store new upper bound and remove this and all remaining holes\n", dom->ub);
+         
+         assert(SCIPsetIsLT(set, (*holelistptr)->hole.left, dom->ub));
+
+         /* adjust upper bound */
          dom->ub = (*holelistptr)->hole.left;
+
+         if(newub != NULL )
+            *newub = (*holelistptr)->hole.left;
+
+         /* remove remaining hole list */
          holelistFree(holelistptr, blkmem);
          assert(*holelistptr == NULL);
+         
+         /* unlink this hole from the previous hole */
+         *lastnextptr = NULL;
       }
       else if( SCIPsetIsGT(set, *lastrightptr, (*holelistptr)->hole.left) )
       {
-         /* the right bound of the last hole is greater than the left bound of this hole:
-          * increase the right bound of the last hole, delete this hole
-          */
-         SCIP_HOLELIST* next;
+         /* the right bound of the last hole is greater than the left bound of this hole: increase the right bound of
+          * the last hole, delete this hole */
+         SCIP_HOLELIST* nextholelist;
 
-         *lastrightptr = MAX(*lastrightptr, (*holelistptr)->hole.right);
-         next = (*holelistptr)->next;
+         if( SCIPsetIsEQ(set, *lastrightptr, dom->lb ) )
+         {
+            /* the reason for the overlap results from the lower bound hole (-infinity,lb); therefore, we can increase
+             * the lower bound */
+            SCIPdebugMessage("lower bound <%.15g> lays in current hole; store new lower bound and remove hole\n", dom->lb);
+            *lastrightptr = MAX(*lastrightptr, (*holelistptr)->hole.right);
+         
+            /* adjust lower bound */
+            dom->lb = *lastrightptr;
+            
+            if(newlb != NULL )
+               *newlb = *lastrightptr;
+         }
+         else
+         {
+            SCIPdebugMessage("current hole overlaps with the previous one (...,%.15g); merge to (...,%.15g)\n", 
+               *lastrightptr, MAX(*lastrightptr, (*holelistptr)->hole.right) );
+            *lastrightptr = MAX(*lastrightptr, (*holelistptr)->hole.right);
+         }
+         nextholelist = (*holelistptr)->next;
          (*holelistptr)->next = NULL;
          holelistFree(holelistptr, blkmem);
-         *holelistptr = next;
+         
+         /* connect the linked list after removing the hole */
+         *lastnextptr = nextholelist;
+         
+         /* get next hole */
+         *holelistptr = nextholelist;
       }
       else
       {
-         /* the holes do not overlap: update lastrightptr and holelistptr to the next hole */
+         /* the holes do not overlap: update lastholelist and lastrightptr */
          lastrightptr = &(*holelistptr)->hole.right;
+         lastnextptr = &(*holelistptr)->next;
+
+         /* get next hole */
          holelistptr = &(*holelistptr)->next;
       }
    }
 
-   return SCIP_OKAY;
-}
+#ifndef NDEBUG
+   {
+      /* check that holes are merged */
+      SCIP_Real lastright;
+      
+      lastright = dom->lb; /* lower bound is the right bound of the hole (-infinity,lb) */
+      holelistptr = &dom->holelist;
+
+      while( *holelistptr != NULL )
+      {
+         /* check the the last right interval is smaller or equal to the current left interval (none overlapping) */
+         assert( SCIPsetIsLE(set, lastright, (*holelistptr)->hole.left) );
+
+         /* check the hole property (check that the hole is not empty) */
+         assert( SCIPsetIsLT(set, (*holelistptr)->hole.left, (*holelistptr)->hole.right) );
+         lastright = (*holelistptr)->hole.right;
+
+         /* get next hole */
+         holelistptr = &(*holelistptr)->next;
+      }   
+
+      /* check the the last right interval is smaller or equal to the upper bound (none overlapping) */     
+      assert( SCIPsetIsLE(set, lastright, dom->ub) );
+   }
 #endif
-
-
-
+}
 
 /*
  * domain change methods
@@ -2175,7 +2292,6 @@ SCIP_RETCODE varFree(
    SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    )
 {
-   assert(blkmem != NULL);
    assert(var != NULL);
    assert(*var != NULL);
    assert(SCIPvarGetStatus(*var) != SCIP_VARSTATUS_COLUMN || &(*var)->data.col->var != var);
@@ -2183,11 +2299,13 @@ SCIP_RETCODE varFree(
    assert((*var)->probindex == -1);
 
    SCIPdebugMessage("free variable <%s> with status=%d\n", (*var)->name, SCIPvarGetStatus(*var));
+
    switch( SCIPvarGetStatus(*var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert((*var)->data.original.transvar == NULL); /* cannot free variable, if transformed variable is still existing */
       holelistFree(&(*var)->data.original.origdom.holelist, blkmem);
+      assert((*var)->data.original.origdom.holelist == NULL);
       break;
    case SCIP_VARSTATUS_LOOSE:
       break;
@@ -2237,7 +2355,9 @@ SCIP_RETCODE varFree(
    /* free hole lists */
    holelistFree(&(*var)->glbdom.holelist, blkmem);
    holelistFree(&(*var)->locdom.holelist, blkmem);
-
+   assert((*var)->glbdom.holelist == NULL);
+   assert((*var)->locdom.holelist == NULL);
+   
    /* free variable bounds data structures */
    SCIPvboundsFree(&(*var)->vlbs, blkmem);
    SCIPvboundsFree(&(*var)->vubs, blkmem);
@@ -2283,10 +2403,10 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's an original variable) */
    )
 {
-   assert(blkmem != NULL);
    assert(var != NULL);
    assert(*var != NULL);
    assert((*var)->nuses >= 1);
+   assert(blkmem != NULL);
 
    SCIPdebugMessage("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
    (*var)->nuses--;
@@ -2319,7 +2439,7 @@ void printBounds(
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Real             lb,                 /**< lower bound */
    SCIP_Real             ub,                 /**< upper bound */
-   const char*           name                /**< bound name */
+   const char*           name                /**< bound type name */
    )
 {
    assert(set != NULL);
@@ -2339,6 +2459,41 @@ void printBounds(
       SCIPmessageFPrintInfo(file, "%.15g]", ub);
 }
 
+/** prints hole list to file stream */
+static
+void printHolelist(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_HOLELIST*        holelist,           /**< hole list pointer to hole of interest */
+   const char*           name                /**< hole type name */
+   )
+{
+   SCIP_Real left;
+   SCIP_Real right;
+
+   if( holelist == NULL )
+      return;
+   
+   left = SCIPholelistGetLeft(holelist);
+   right = SCIPholelistGetRight(holelist);
+   
+   /* display first hole */
+   SCIPmessageFPrintInfo(file, ", %s=(%g,%g)", name, left, right);
+   holelist = SCIPholelistGetNext(holelist);
+   
+   while(holelist != NULL  )
+   {
+      left = SCIPholelistGetLeft(holelist);
+      right = SCIPholelistGetRight(holelist);
+
+      /* display hole */
+      SCIPmessageFPrintInfo(file, "(%g,%g)", left, right);
+   
+      /* get next hole */
+      holelist = SCIPholelistGetNext(holelist);
+   }
+}
+
 /** outputs variable information into file stream */
 void SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
@@ -2346,6 +2501,7 @@ void SCIPvarPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
+   SCIP_HOLELIST* holelist;
    SCIP_Real lb;
    SCIP_Real ub;
    int i;
@@ -2379,34 +2535,53 @@ void SCIPvarPrint(
    SCIPmessageFPrintInfo(file, " obj=%.15g", var->obj);
 
    /* bounds (global bounds for transformed variables, original bounds for original variables) */
-   if( SCIPvarIsTransformed(var) )
+   if( !SCIPvarIsTransformed(var) )
    {
-      lb = SCIPvarGetLbGlobal(var);
-      ub = SCIPvarGetUbGlobal(var);
+      /* output original bound */
+      lb = SCIPvarGetLbOriginal(var);
+      ub = SCIPvarGetUbOriginal(var);
+      printBounds(set, file, lb, ub, "original bounds");
+
+      /* output lazy bound */
+      lb = SCIPvarGetLbLazy(var);
+      ub = SCIPvarGetUbLazy(var);
+
+      /* only display the lazy bounds if they are different from [-infinity,infinity] */
+      if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
+         printBounds(set, file, lb, ub, "lazy bounds");
+
+      holelist = SCIPvarGetHolelistOriginal(var);
+      printHolelist(set, file, holelist, "original holes");
    }
    else
    {
-      lb = SCIPvarGetLbOriginal(var);
-      ub = SCIPvarGetUbOriginal(var);
-   }
-   printBounds(set, file, lb, ub, "global bounds");
+      /* output global bound */
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+      printBounds(set, file, lb, ub, "global bounds");
 
-   /* output local bound */
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
-   printBounds(set, file, lb, ub, "local bounds");
+      /* output local bound */
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+      printBounds(set, file, lb, ub, "local bounds");
 
-   /* output lazy bound */
-   lb = SCIPvarGetLbLazy(var);
-   ub = SCIPvarGetUbLazy(var);
+      /* output lazy bound */
+      lb = SCIPvarGetLbLazy(var);
+      ub = SCIPvarGetUbLazy(var);
    
-   /* only display the lazy bounds if they are different from [-infinity,infinity] */
-   if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
-      printBounds(set, file, lb, ub, "lazy bounds");
+      /* only display the lazy bounds if they are different from [-infinity,infinity] */
+      if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
+         printBounds(set, file, lb, ub, "lazy bounds");
 
-   /* holes */
-   /**@todo print holes */
+      /* global hole list */
+      holelist = SCIPvarGetHolelistGlobal(var);
+      printHolelist(set, file, holelist, "global holes");
 
+      /* local hole list */
+      holelist = SCIPvarGetHolelistLocal(var);
+      printHolelist(set, file, holelist, "local holes");
+   }
+    
    /* fixings and aggregations */
    switch( SCIPvarGetStatus(var) )
    {
@@ -2414,7 +2589,7 @@ void SCIPvarPrint(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       break;
-
+      
    case SCIP_VARSTATUS_FIXED:
       SCIPmessageFPrintInfo(file, ", fixed:");
       if( SCIPsetIsInfinity(set, var->glbdom.lb) )
@@ -2424,14 +2599,14 @@ void SCIPvarPrint(
       else
          SCIPmessageFPrintInfo(file, "%.15g", var->glbdom.lb);
       break;
-
+      
    case SCIP_VARSTATUS_AGGREGATED:
       SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
          SCIPmessageFPrintInfo(file, " %.15g", var->data.aggregate.constant);
       SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
       break;
-
+      
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
@@ -3682,6 +3857,11 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_MULTAGGR )
       return SCIP_OKAY;
 
+   /**@todo currently we don't perform the aggregation if the aggregation variable has a none
+    *  empty hole list; this should be changed in the future  */
+   if( SCIPvarGetHolelistGlobal(var) != NULL )
+      return SCIP_OKAY;
+
    assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
@@ -3943,6 +4123,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    assert(naggvars == 0 || scalars != NULL);
    assert(infeasible != NULL);
    assert(aggregated != NULL);
+
+
+   /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a none
+    *  empty hole list; this should be changed in the future  */
+   if( SCIPvarGetHolelistGlobal(var) != NULL )
+      return SCIP_OKAY;
 
    /* check, if we are in one of the simple cases */
    if( naggvars == 0 )
@@ -4847,6 +5033,36 @@ SCIP_RETCODE varEventGubChanged(
    return SCIP_OKAY;
 }
 
+/** appends GHOLEADDED event to the event queue */
+static
+SCIP_RETCODE varEventGholeAdded(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Real             left,               /**< left bound of open interval in new hole */
+   SCIP_Real             right               /**< right bound of open interval in new hole */
+   )
+{
+   assert(var != NULL);
+   assert(var->eventfilter != NULL);
+   assert(SCIPvarIsTransformed(var));
+   assert(SCIPsetIsLT(set, left, right));
+
+   /* check, if the variable is being tracked for bound changes */
+   if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_GHOLEADDED) != 0) )
+   {
+      SCIP_EVENT* event;
+
+      SCIPdebugMessage("issue GHOLEADDED event for variable <%s>: (%.15g,%.15g)\n", var->name, left, right);
+
+      SCIP_CALL( SCIPeventCreateGholeAdded(&event, blkmem, var, left, right) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** increases root bound change statistics after a global bound change */
 static            
 void varIncRootboundchgs(
@@ -4908,9 +5124,10 @@ SCIP_RETCODE varProcessChgLbGlobal(
    assert(SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb));
    assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(blkmem != NULL);
    assert(set != NULL);
    assert(stat != NULL);
-
+   
    SCIPdebugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
    
    if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
@@ -4924,6 +5141,9 @@ SCIP_RETCODE varProcessChgLbGlobal(
    var->glbdom.lb = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
+
+   /* merges overlapping holes into single holes, moves bounds respectively */
+   domMerge(&var->glbdom, blkmem, set, &newbound, NULL);
 
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
@@ -5059,6 +5279,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    assert(SCIPsetIsFeasLE(set, var->glbdom.lb , var->locdom.lb));
    assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
    assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(blkmem != NULL);
    assert(set != NULL);
    assert(stat != NULL);
 
@@ -5075,6 +5296,9 @@ SCIP_RETCODE varProcessChgUbGlobal(
    var->glbdom.ub = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
+
+   /* merges overlapping holes into single holes, moves bounds respectively */
+   domMerge(&var->glbdom, blkmem, set, NULL, &newbound);
 
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
@@ -5201,10 +5425,11 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    )
 {
    assert(var != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* adjust bound for integral variables */
-   SCIPvarAdjustLb(var, set, &newbound);
+   /* check that the bound was already adjust for integral variables */
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -5319,10 +5544,11 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    )
 {
    assert(var != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* adjust bound for integral variables */
-   SCIPvarAdjustUb(var, set, &newbound);
+   /* check that the bound was already adjust for integral variables */
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -5612,6 +5838,9 @@ SCIP_RETCODE varProcessChgLbLocal(
    oldbound = var->locdom.lb;
    var->locdom.lb = newbound;
 
+   /* merges overlapping holes into single holes, moves bounds respectively */
+   domMerge(&var->locdom, blkmem, set, &newbound, NULL);
+
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( var->eventfilter != NULL )
@@ -5720,6 +5949,9 @@ SCIP_RETCODE varProcessChgUbLocal(
    oldbound = var->locdom.ub;
    var->locdom.ub = newbound;
 
+   /* merges overlapping holes into single holes, moves bounds respectively */
+   domMerge(&var->locdom, blkmem, set, NULL, &newbound);
+
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( var->eventfilter != NULL )
@@ -5811,10 +6043,11 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    )
 {
    assert(var != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* adjust bound for integral variables */
-   SCIPvarAdjustLb(var, set, &newbound);
+   /* check that the bound was already adjust for integral variables */
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
    assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
@@ -5924,10 +6157,11 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    )
 {
    assert(var != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* adjust bound for integral variables */
-   SCIPvarAdjustUb(var, set, &newbound);
+   /* check that the bound was already adjust for integral variables */
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
    assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
@@ -6227,7 +6461,7 @@ SCIP_RETCODE SCIPvarChgUbDive(
    return SCIP_OKAY;
 }
 
-/** adds a hole to the original variable's original domain */
+/** adds a hole to the original domain of the variable */
 SCIP_RETCODE SCIPvarAddHoleOriginal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6236,16 +6470,40 @@ SCIP_RETCODE SCIPvarAddHoleOriginal(
    SCIP_Real             right               /**< right bound of open interval in new hole */
    )
 {
+   SCIP_Bool added;
+
    assert(var != NULL);
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
    assert(set != NULL);
    assert(set->stage == SCIP_STAGE_PROBLEM);
-
+   
    SCIPdebugMessage("adding original hole (%g,%g) to <%s>\n", left, right, var->name);
+   
+   if( SCIPsetIsEQ(set, left, right) )
+      return SCIP_OKAY;
+   
+   /* the interval should not be empty */
+   assert(SCIPsetIsLT(set, left, right));
 
-   SCIP_CALL( domAddHole(&var->data.original.origdom, blkmem, set, left, right) );
-
+   /* the the interval bound should already be adjusted */
+   assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
+   assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
+   
+   /* the the interval should lay between the lower and upper bound */
+   assert(SCIPsetIsGE(set, left, SCIPvarGetLbOriginal(var)));
+   assert(SCIPsetIsLE(set, right, SCIPvarGetUbOriginal(var)));
+   
+   /* add domain hole */
+   SCIP_CALL( domAddHole(&var->data.original.origdom, blkmem, set, left, right, &added) );
+   
+   /* merges overlapping holes into single holes, moves bounds respectively if hole was added */
+   if( added )
+   {
+      domMerge(&var->data.original.origdom, blkmem, set, NULL, NULL);
+   }
+   
    /**@todo add hole in parent and child variables (just like with bound changes);
     *       warning! original vars' holes are in original blkmem, transformed vars' holes in transformed blkmem
     */
@@ -6253,24 +6511,379 @@ SCIP_RETCODE SCIPvarAddHoleOriginal(
    return SCIP_OKAY;
 }
 
-/** adds a hole to the variable's global domain */
+/** performs the current add of domain, changes all parents accordingly */
+static
+SCIP_RETCODE varProcessAddHoleGlobal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_Real             left,               /**< left bound of open interval in new hole */
+   SCIP_Real             right,              /**< right bound of open interval in new hole */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added */
+   )
+{
+   SCIP_VAR* parentvar;
+   SCIP_Real newlb;
+   SCIP_Real newub;
+   int i;
+
+   assert(var != NULL);
+   assert(added != NULL);
+   assert(blkmem != NULL);
+
+   /* the interval should not be empty */
+   assert(SCIPsetIsLT(set, left, right));
+
+   /* the interval bound should already be adjusted */
+   assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
+   assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
+   
+   /* the interval should lay between the lower and upper bound */
+   assert(SCIPsetIsGE(set, left, SCIPvarGetLbGlobal(var)));
+   assert(SCIPsetIsLE(set, right, SCIPvarGetUbGlobal(var)));
+
+   /* add hole to hole list */
+   SCIP_CALL( domAddHole(&var->glbdom, blkmem, set, left, right, added) );
+
+   /* check if the hole is redundant */
+   if( !(*added) )
+      return SCIP_OKAY;
+   
+   /* current bounds */
+   newlb = var->glbdom.lb;
+   newub = var->glbdom.ub;
+      
+   /* merge domain holes */
+   domMerge(&var->glbdom, blkmem, set, &newlb, &newub);
+
+   /* the bound should not be changed */
+   assert(SCIPsetIsEQ(set, newlb, var->glbdom.lb));
+   assert(SCIPsetIsEQ(set, newub, var->glbdom.ub));
+      
+   /* issue bound change event */
+   assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
+   if( var->eventfilter != NULL )
+   {
+      SCIP_CALL( varEventGholeAdded(var, blkmem, set, eventqueue, left, right) );
+   }
+   
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      SCIP_Real parentnewleft;
+      SCIP_Real parentnewright;
+      SCIP_Bool localadded;
+      
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+      
+      switch( SCIPvarGetStatus(parentvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         parentnewleft = left;
+         parentnewright = right;
+         break;
+         
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_MULTAGGR:
+         SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
+         return SCIP_INVALIDDATA;
+      
+      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+         assert(parentvar->data.aggregate.var == var);
+
+         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
+         {
+            /* a > 0 -> change upper bound of x */
+            parentnewleft = parentvar->data.aggregate.scalar * left + parentvar->data.aggregate.constant;
+            parentnewright = parentvar->data.aggregate.scalar * right + parentvar->data.aggregate.constant;
+         }
+         else
+         {
+            /* a < 0 -> change lower bound of x */
+            assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+            
+            parentnewright = parentvar->data.aggregate.scalar * left + parentvar->data.aggregate.constant;
+            parentnewleft = parentvar->data.aggregate.scalar * right + parentvar->data.aggregate.constant;
+         }
+         break;
+
+      case SCIP_VARSTATUS_NEGATED: /* x = offset - x'  ->  x' = offset - x */
+         assert(parentvar->negatedvar != NULL);
+         assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+         assert(parentvar->negatedvar->negatedvar == parentvar);
+
+         parentnewright = -left + parentvar->data.negate.constant;
+         parentnewleft = -right + parentvar->data.negate.constant;
+         break;
+
+      default:
+         SCIPerrorMessage("unknown variable status\n");
+         return SCIP_INVALIDDATA;
+      }
+
+      SCIPdebugMessage("add global hole (%g,%g) to parent variable <%s>\n", parentnewleft, parentnewright, SCIPvarGetName(parentvar));
+
+      /* perform hole added for parent variable */
+      assert(blkmem != NULL);
+      assert(SCIPsetIsLT(set, parentnewleft, parentnewright));
+      SCIP_CALL( varProcessAddHoleGlobal(parentvar, blkmem, set, stat, eventqueue, 
+            parentnewleft, parentnewright, &localadded) );
+      assert(localadded);
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** adds a hole to the variable's global and local domain */
 SCIP_RETCODE SCIPvarAddHoleGlobal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             left,               /**< left bound of open interval in new hole */
-   SCIP_Real             right               /**< right bound of open interval in new hole */
+   SCIP_Real             right,              /**< right bound of open interval in new hole */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added */
    )
 {
-   assert(var != NULL);
+   SCIP_Real childnewleft;
+   SCIP_Real childnewright;
 
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(blkmem != NULL);
+   assert(added != NULL);
+   
    SCIPdebugMessage("adding global hole (%g,%g) to <%s>\n", left, right, var->name);
 
-   SCIP_CALL( domAddHole(&var->glbdom, blkmem, set, left, right) );
+   /* the interval should not be empty */
+   assert(SCIPsetIsLT(set, left, right));
 
-   /**@todo add hole in parent and child variables (just like with bound changes);
-    *       warning! original vars' holes are in original blkmem, transformed vars' holes in transformed blkmem
-    */
+   /* the the interval bound should already be adjusted */
+   assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
+   assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
+   
+   /* the the interval should lay between the lower and upper bound */
+   assert(SCIPsetIsGE(set, left, SCIPvarGetLbGlobal(var)));
+   assert(SCIPsetIsLE(set, right, SCIPvarGetUbGlobal(var)));
+
+   /* change bounds of attached variables */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar != NULL )
+      {
+         SCIP_CALL( SCIPvarAddHoleGlobal(var->data.original.transvar, blkmem, set, stat, eventqueue,
+               left, right, added) );
+      }
+      else
+      {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
+         
+         SCIP_CALL( varProcessAddHoleGlobal(var, blkmem, set, stat, eventqueue, left, right, added) );
+         if( *added )
+         {
+            SCIP_Bool localadded;
+            
+            SCIP_CALL( SCIPvarAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, &localadded) );
+         }
+      }
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      SCIP_CALL( varProcessAddHoleGlobal(var, blkmem, set, stat, eventqueue, left, right, added) );
+      if( *added )
+      {
+         SCIP_Bool localadded;
+         
+         SCIP_CALL( SCIPvarAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, &localadded) );
+      }
+      break;
+      
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot add hole of a fixed variable\n");
+      return SCIP_INVALIDDATA;
+         
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> change lower bound of y */
+         childnewleft = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewright = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         childnewright = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewleft = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      }
+      else
+      { 
+         SCIPerrorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      SCIP_CALL( SCIPvarAddHoleGlobal(var->data.aggregate.var, blkmem, set, stat, eventqueue, 
+            childnewleft, childnewright, added) );
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      /**@todo change the sides of the corresponding linear constraint */
+      SCIPerrorMessage("adding a hole of a multiple aggregated variable is not implemented yet\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+
+      childnewright = -left + var->data.negate.constant;
+      childnewleft = -right + var->data.negate.constant;
+      
+      SCIP_CALL( SCIPvarAddHoleGlobal(var->negatedvar, blkmem, set, stat, eventqueue, 
+            childnewleft, childnewright, added) );
+      break;
+      
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** performs the current add of domain, changes all parents accordingly */
+static
+SCIP_RETCODE varProcessAddHoleLocal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_Real             left,               /**< left bound of open interval in new hole */
+   SCIP_Real             right,              /**< right bound of open interval in new hole */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
+   )
+{
+   SCIP_VAR* parentvar;
+   SCIP_Real newlb;
+   SCIP_Real newub;
+   int i;
+
+   assert(var != NULL);
+   assert(added != NULL);
+   assert(blkmem != NULL);
+
+   /* the interval should not be empty */
+   assert(SCIPsetIsLT(set, left, right));
+
+   /* the the interval bound should already be adjusted */
+   assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
+   assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
+   
+   /* the the interval should lay between the lower and upper bound */
+   assert(SCIPsetIsGE(set, left, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsLE(set, right, SCIPvarGetUbLocal(var)));
+
+   /* add hole to hole list */
+   SCIP_CALL( domAddHole(&var->locdom, blkmem, set, left, right, added) );
+   
+   /* check if the hole is redundant */
+   if( !(*added) )
+      return SCIP_OKAY;
+   
+   /* current bounds */
+   newlb = var->locdom.lb;
+   newub = var->locdom.ub;
+      
+   /* merge domain holes */
+   domMerge(&var->locdom, blkmem, set, &newlb, &newub);
+
+   /* the bound should not be changed */
+   assert(SCIPsetIsEQ(set, newlb, var->locdom.lb));
+   assert(SCIPsetIsEQ(set, newub, var->locdom.ub));
+      
+#if 0
+   /* issue bound change event */
+   assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
+   if( var->eventfilter != NULL )
+   {
+      SCIP_CALL( varEventLholeAdded(var, blkmem, set, lp, branchcand, eventqueue, left, right) );
+   }
+#endif
+   
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      SCIP_Real parentnewleft;
+      SCIP_Real parentnewright;
+      SCIP_Bool localadded;
+      
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+      
+      switch( SCIPvarGetStatus(parentvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         parentnewleft = left;
+         parentnewright = right;
+         break;
+         
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_MULTAGGR:
+         SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
+         return SCIP_INVALIDDATA;
+      
+      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+         assert(parentvar->data.aggregate.var == var);
+
+         if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
+         {
+            /* a > 0 -> change upper bound of x */
+            parentnewleft = parentvar->data.aggregate.scalar * left + parentvar->data.aggregate.constant;
+            parentnewright = parentvar->data.aggregate.scalar * right + parentvar->data.aggregate.constant;
+         }
+         else
+         {
+            /* a < 0 -> change lower bound of x */
+            assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+            
+            parentnewright = parentvar->data.aggregate.scalar * left + parentvar->data.aggregate.constant;
+            parentnewleft = parentvar->data.aggregate.scalar * right + parentvar->data.aggregate.constant;
+         }
+         break;
+
+      case SCIP_VARSTATUS_NEGATED: /* x = offset - x'  ->  x' = offset - x */
+         assert(parentvar->negatedvar != NULL);
+         assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+         assert(parentvar->negatedvar->negatedvar == parentvar);
+
+         parentnewright = -left + parentvar->data.negate.constant;
+         parentnewleft = -right + parentvar->data.negate.constant;
+         break;
+
+      default:
+         SCIPerrorMessage("unknown variable status\n");
+         return SCIP_INVALIDDATA;
+      }
+
+      SCIPdebugMessage("add local hole (%g,%g) to parent variable <%s>\n", parentnewleft, parentnewright, SCIPvarGetName(parentvar));
+      
+      /* perform hole added for parent variable */
+      assert(blkmem != NULL);
+      assert(SCIPsetIsLT(set, parentnewleft, parentnewright));
+      SCIP_CALL( varProcessAddHoleLocal(parentvar, blkmem, set, stat, eventqueue, 
+            parentnewleft, parentnewright, &localadded) );
+      assert(localadded);
+   }
 
    return SCIP_OKAY;
 }
@@ -6280,20 +6893,106 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             left,               /**< left bound of open interval in new hole */
-   SCIP_Real             right               /**< right bound of open interval in new hole */
+   SCIP_Real             right,              /**< right bound of open interval in new hole */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added */
    )
 {
-   assert(var != NULL);
+   SCIP_Real childnewleft;
+   SCIP_Real childnewright;
 
    SCIPdebugMessage("adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
-   SCIP_CALL( domAddHole(&var->locdom, blkmem, set, left, right) );
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(blkmem != NULL);
+   assert(added != NULL);
 
-   /**@todo add hole in parent and child variables (just like with bound changes);
-    *       warning! original vars' holes are in original blkmem, transformed vars' holes in transformed blkmem
-    */
+   /* the interval should not be empty */
+   assert(SCIPsetIsLT(set, left, right));
 
+   /* the the interval bound should already be adjusted */
+   assert(SCIPsetIsEQ(set, left, adjustedUb(set, SCIPvarGetType(var), left)));
+   assert(SCIPsetIsEQ(set, right, adjustedLb(set, SCIPvarGetType(var), right)));
+   
+   /* the the interval should lay between the lower and upper bound */
+   assert(SCIPsetIsGE(set, left, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsLE(set, right, SCIPvarGetUbLocal(var)));
+   
+   /* change bounds of attached variables */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar != NULL )
+      {
+         SCIP_CALL( SCIPvarAddHoleLocal(var->data.original.transvar, blkmem, set, stat, eventqueue, 
+               left, right, added) );
+      }
+      else
+      {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
+         
+         stat->domchgcount++;
+         SCIP_CALL( varProcessAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, added) );
+      }
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      stat->domchgcount++;
+      SCIP_CALL( varProcessAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, added) );
+      break;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot add domain hole to a fixed variable\n");
+      return SCIP_INVALIDDATA;
+         
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+
+      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      {
+         /* a > 0 -> change lower bound of y */
+         childnewleft = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewright = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      }
+      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      {
+         childnewright = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewleft = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      }
+      else
+      {         
+         SCIPerrorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      SCIP_CALL( SCIPvarAddHoleLocal(var->data.aggregate.var, blkmem, set, stat, eventqueue, 
+            childnewleft, childnewright, added) );
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      /**@todo change the sides of the corresponding linear constraint */
+      SCIPerrorMessage("adding domain hole to a multiple aggregated variable is not implemented yet\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+
+      childnewright = -left + var->data.negate.constant;
+      childnewleft = -right + var->data.negate.constant;
+      
+      SCIP_CALL( SCIPvarAddHoleLocal(var->negatedvar, blkmem, set, stat, eventqueue, childnewleft, childnewright, added) );
+      break;
+      
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -8492,6 +9191,91 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
          *boundtype = SCIP_BOUNDTYPE_LOWER;
       *var = (*var)->negatedvar;
       SCIP_CALL( SCIPvarGetProbvarBound(var, bound, boundtype) );
+      break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** transforms given variable and domain hole to the corresponding active, fixed, or multi-aggregated variable
+ *  values
+ *
+ *  @todo Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *    SCIPvarFlattenAggregationGraph()
+ */
+SCIP_RETCODE SCIPvarGetProbvarHole(
+   SCIP_VAR**            var,                /**< pointer to problem variable */
+   SCIP_Real*            left,               /**< pointer to left bound of open interval in hole to transform */
+   SCIP_Real*            right               /**< pointer to right bound of open interval in hole to transform */
+   )
+{
+   assert(var != NULL);
+   assert(*var != NULL);
+   assert(left != NULL);
+   assert(right != NULL);
+   
+   SCIPdebugMessage("get probvar hole (%g,%g) of variable <%s>\n", *left, *right, (*var)->name);
+   
+   switch( SCIPvarGetStatus(*var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( (*var)->data.original.transvar == NULL )
+      {
+         SCIPerrorMessage("original variable has no transformed variable attached\n");
+         return SCIP_INVALIDDATA;
+      }
+      *var = (*var)->data.original.transvar;
+      SCIP_CALL( SCIPvarGetProbvarHole(var, left, right) );
+      break;
+      
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_MULTAGGR:
+      break;
+      
+   case SCIP_VARSTATUS_AGGREGATED:  /* x = a*y + c  ->  y = x/a - c/a */
+      assert((*var)->data.aggregate.var != NULL);
+      assert((*var)->data.aggregate.scalar != 0.0);
+   
+      /* scale back */
+      (*left) /= (*var)->data.aggregate.scalar;
+      (*right) /= (*var)->data.aggregate.scalar;
+
+      /* shift back */
+      (*left) -= (*var)->data.aggregate.constant/(*var)->data.aggregate.scalar;
+      (*right) -= (*var)->data.aggregate.constant/(*var)->data.aggregate.scalar;
+      
+      *var = (*var)->data.aggregate.var;
+
+      /* check if the  interval bounds have to swapped */
+      if( (*var)->data.aggregate.scalar < 0.0 )
+      {
+         SCIP_CALL( SCIPvarGetProbvarHole(var, right, left) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPvarGetProbvarHole(var, left, right) );
+      }
+      break;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert((*var)->negatedvar != NULL);
+      assert(SCIPvarGetStatus((*var)->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert((*var)->negatedvar->negatedvar == *var);
+
+      /* shift and scal back */
+      (*left) = (*var)->data.negate.constant - (*left);
+      (*right) = (*var)->data.negate.constant - (*right);
+      
+      *var = (*var)->negatedvar;
+      
+      /* through the negated variable the left and right interval bound have to swapped */
+      SCIP_CALL( SCIPvarGetProbvarHole(var, right, left) );
       break;
 
    default:
@@ -11540,6 +12324,9 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPboundchgIsRedundant
 #undef SCIPdomchgGetNBoundchgs
 #undef SCIPdomchgGetBoundchg
+#undef SCIPholelistGetLeft
+#undef SCIPholelistGetRight
+#undef SCIPholelistGetNext
 #undef SCIPvarGetName
 #undef SCIPvarGetData
 #undef SCIPvarSetData
@@ -11576,10 +12363,13 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetObj
 #undef SCIPvarGetLbOriginal
 #undef SCIPvarGetUbOriginal
+#undef SCIPvarGetHolelistOriginal
 #undef SCIPvarGetLbGlobal
 #undef SCIPvarGetUbGlobal
+#undef SCIPvarGetHolelistGlobal
 #undef SCIPvarGetLbLocal
 #undef SCIPvarGetUbLocal
+#undef SCIPvarGetHolelistLocal
 #undef SCIPvarGetLbLazy
 #undef SCIPvarGetUbLazy
 #undef SCIPvarGetBranchFactor
@@ -11693,6 +12483,36 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
    assert(0 <= pos && pos < (int)domchg->domchgbound.nboundchgs);
 
    return &domchg->domchgbound.boundchgs[pos];
+}
+
+/** returns left bound of open interval in hole */
+SCIP_Real SCIPholelistGetLeft(
+   SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
+   )
+{
+   assert(holelist != NULL);
+
+   return holelist->hole.left;
+}
+
+/** returns right bound of open interval in hole */
+SCIP_Real SCIPholelistGetRight(
+   SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
+   )
+{
+   assert(holelist != NULL);
+   
+   return holelist->hole.right;
+}
+
+/** returns next hole in list */
+SCIP_HOLELIST* SCIPholelistGetNext(
+   SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
+   )
+{
+   assert(holelist != NULL);
+   
+   return holelist->next;
 }
 
 /** get name of variable */
@@ -12102,9 +12922,23 @@ SCIP_Real SCIPvarGetUbOriginal(
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
-
+      
       return var->data.negate.constant - var->negatedvar->data.original.origdom.lb;
    }
+}
+      
+/** gets the original hole list of an original variable */
+SCIP_HOLELIST* SCIPvarGetHolelistOriginal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarIsOriginal(var));
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+      return var->data.original.origdom.holelist;
+
+   return NULL;
 }
 
 /** gets global lower bound of variable */
@@ -12127,6 +12961,16 @@ SCIP_Real SCIPvarGetUbGlobal(
    return var->glbdom.ub;
 }
 
+/** gets the global hole list of an active variable */
+SCIP_HOLELIST* SCIPvarGetHolelistGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->glbdom.holelist;
+}
+
 /** gets current lower bound of variable */
 SCIP_Real SCIPvarGetLbLocal(
    SCIP_VAR*             var                 /**< problem variable */
@@ -12145,6 +12989,16 @@ SCIP_Real SCIPvarGetUbLocal(
    assert(var != NULL);
 
    return var->locdom.ub;
+}
+
+/** gets the current hole list of an active variable */
+SCIP_HOLELIST* SCIPvarGetHolelistLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   
+   return var->locdom.holelist;
 }
 
 /** gets lazy lower bound of variable, returns -infinity if the variable has no lazy lower bound */
