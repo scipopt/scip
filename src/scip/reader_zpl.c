@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.56 2010/06/17 12:04:29 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.57 2010/08/03 12:36:45 bzfwinkm Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -39,17 +39,33 @@
 #include "scip/cons_quadratic.h"
 #include "scip/pub_misc.h"
 
+/* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
 #include "zimpl/bool.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
-#include "zimpl/xlpglue.h"
-#include "zimpl/zimpllib.h"
 
-/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
+/** ZIMPL_VERSION is defined by ZIMPL version 3.01 and higher. ZIMPL 3.01 made some changes in the interface to SCIP.
+ *  ZIMPL_VERSION should be defined in mme.h */
+#if (ZIMPL_VERSION >= 301)
+#include "zimpl/numb.h"
+#include "zimpl/bound.h"
+#endif
+
+/* @Note: The following define should be removed at the 2010 release. */
+/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made some changes in the interface to SCIP.
+ *  ZIMPL_VERSION should be defined in mme.h */
 #if (ZIMPL_VERSION >= 300)
 #include "zimpl/mono.h"
 #endif
+/** ZIMPL_VERSION is defined by ZIMPL version 3.01 and higher. ZIMPL 3.01 made some changes in the interface to SCIP.
+ *  ZIMPL_VERSION should be defined in mme.h */
+#if (ZIMPL_VERSION >= 301)
+#include "zimpl/term.h"
+#endif
+
+#include "zimpl/xlpglue.h"
+#include "zimpl/zimpllib.h"
 
 #define READER_NAME             "zplreader"
 #define READER_DESC             "file reader for ZIMPL model files"
