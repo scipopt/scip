@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.16 2010/07/29 09:33:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.17 2010/08/03 14:04:14 bzfwinkm Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -768,8 +768,7 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_MIN      :
       case SCIP_EXPR_MAX      :
       case SCIP_EXPR_SIGNPOWER:
-         if( BMSallocBlockMemoryArray(blkmem, &children, 2 ) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 2) );
          
          va_start(ap, op );
          children[0] = va_arg( ap, SCIP_EXPR* );
@@ -792,8 +791,7 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_TAN   :
       case SCIP_EXPR_ABS   :
       case SCIP_EXPR_SIGN  :
-         if( BMSallocBlockMemoryArray(blkmem, &children, 1 ) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
          
          va_start(ap, op );
          children[0] = va_arg( ap, SCIP_EXPR* );
@@ -805,8 +803,7 @@ SCIP_RETCODE SCIPexprCreate(
          break;
          
       case SCIP_EXPR_INTPOWER:
-         if( BMSallocBlockMemoryArray(blkmem, &children, 1 ) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
 
          va_start(ap, op );
          children[0] = va_arg( ap, SCIP_EXPR* );
@@ -852,8 +849,7 @@ SCIP_RETCODE SCIPexprCreateDirect(
    assert(children != NULL || nchildren == 0);
    assert(children == NULL || nchildren >  0);
    
-   if( BMSallocBlockMemory(blkmem, expr) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, expr) );
    
    (*expr)->op        = op;
    (*expr)->nchildren = nchildren;
@@ -874,16 +870,14 @@ SCIP_RETCODE SCIPexprCopyDeep(
    assert(targetexpr != NULL);
    assert(sourceexpr != NULL);
 
-   if( BMSduplicateBlockMemory(blkmem, targetexpr, sourceexpr) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSduplicateBlockMemory(blkmem, targetexpr, sourceexpr) );
    
    if( sourceexpr->nchildren )
    {
       int i;
       
       /* alloc memory for children expressions */
-      if( BMSallocBlockMemoryArray(blkmem, &(*targetexpr)->children, sourceexpr->nchildren) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*targetexpr)->children, sourceexpr->nchildren) );
 
       /* copy children expressions */
       for( i = 0; i < sourceexpr->nchildren; ++i )
@@ -1226,8 +1220,7 @@ SCIP_RETCODE SCIPexprEval(
    /* if many children, get large enough memory to store argument values */
    if( expr->nchildren > SCIP_EXPRESSION_MAXCHILDEST )
    {
-      if( BMSallocMemoryArray(&buf, expr->nchildren) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSallocMemoryArray(&buf, expr->nchildren) );
    }
    else
    {
@@ -1269,8 +1262,7 @@ SCIP_RETCODE SCIPexprEvalInt(
    /* if many children, get large enough memory to store argument values */
    if( expr->nchildren > SCIP_EXPRESSION_MAXCHILDEST )
    {
-      if( BMSallocMemoryArray(&buf, expr->nchildren) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSallocMemoryArray(&buf, expr->nchildren) );
    }
    else
    {
@@ -1503,9 +1495,8 @@ SCIP_RETCODE SCIPexprtreeCreate(
    assert(blkmem != NULL);
    assert(tree   != NULL);
 
-   if( BMSallocBlockMemory(blkmem, tree) == NULL )
-      return SCIP_NOMEMORY;
-
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, tree) );
+   
    (*tree)->blkmem    = blkmem;
    (*tree)->root      = root;
    (*tree)->nvars     = nvars;
@@ -1516,13 +1507,11 @@ SCIP_RETCODE SCIPexprtreeCreate(
    if( params != NULL )
    {
       assert(nparams > 0);
-      if( BMSduplicateBlockMemoryArray(blkmem, &(*tree)->params, params, nparams) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*tree)->params, params, nparams) );
    }
    else if( nparams > 0 )
    {
-      if( BMSallocBlockMemoryArray(blkmem, &(*tree)->params, nparams) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->params, nparams) );
       BMSclearMemoryArray((*tree)->params, nparams);
    }
    else
@@ -1546,8 +1535,7 @@ SCIP_RETCODE SCIPexprtreeCopy(
    assert(sourcetree != NULL);
 
    /* copy expression tree "header" */
-   if( BMSduplicateBlockMemory(blkmem, targettree, sourcetree) == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( BMSduplicateBlockMemory(blkmem, targettree, sourcetree) );
    
    /* we may have a new block memory; and we do not want to keep the others interpreter data */
    (*targettree)->blkmem          = blkmem;
@@ -1558,8 +1546,7 @@ SCIP_RETCODE SCIPexprtreeCopy(
    {
       assert(sourcetree->nvars > 0);
       
-      if( BMSduplicateBlockMemoryArray(blkmem, &(*targettree)->vars, sourcetree->vars, sourcetree->nvars) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*targettree)->vars, sourcetree->vars, sourcetree->nvars) );
    }
    
    /* copy parameters, if any */
@@ -1567,8 +1554,7 @@ SCIP_RETCODE SCIPexprtreeCopy(
    {
       assert(sourcetree->nparams > 0);
       
-      if( BMSduplicateBlockMemoryArray(blkmem, &(*targettree)->params, sourcetree->params, sourcetree->nparams) == NULL )
-         return SCIP_NOMEMORY;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*targettree)->params, sourcetree->params, sourcetree->nparams) );
    }
 
    /* copy expression */
