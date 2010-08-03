@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.46 2010/07/30 17:34:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.47 2010/08/03 18:23:15 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -699,6 +699,7 @@ SCIP_Bool getNextToken(
          tokenlen++;
          fzninput->bufpos++;
          fzninput->linepos++;
+         assert(fzninput->bufpos < FZN_BUFFERLEN);
       }
       while( isValueChar(buf[fzninput->bufpos], buf[fzninput->bufpos+1], FALSE, &hasdot, &exptype) );
       
