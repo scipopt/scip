@@ -80,6 +80,7 @@ interface:
 - new method SCIPholelistGetNext() to get the next hole of the hole list
 - new method SCIPvarGetProbvarHole() to tranform a given domain hole to the corresponding active, 
   fixed, or multi-aggregated variable
+- new method SCIPgetNUpgrConss() which returns the number of upgraded constraints
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

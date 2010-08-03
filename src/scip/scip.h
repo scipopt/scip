@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.397 2010/08/03 18:22:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.398 2010/08/03 19:11:25 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -1926,6 +1926,12 @@ extern
 SCIP_CONS* SCIPfindCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint to find */
+   );
+
+/** gets number of upgraded constraints */
+extern
+int SCIPgetNUpgrConss(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets total number of globally valid constraints currently in the problem */

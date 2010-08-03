@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.605 2010/07/29 14:01:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.606 2010/08/03 19:11:25 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4696,6 +4696,32 @@ SCIP_CONS* SCIPfindCons(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
       return NULL; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
+/** gets number of upgraded constraints */
+int SCIPgetNUpgrConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNUpgrConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return 0;
+
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      return scip->stat->npresolupgdconss;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
