@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.106 2010/07/11 12:56:55 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.107 2010/08/03 16:20:20 bzfwinkm Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -319,11 +319,15 @@ public:
 
    void setProbname(const char* probname)
    {
+      int len;
+
       assert(probname != NULL);
       if( m_probname != NULL )
          spx_free(m_probname);
-      spx_alloc(m_probname, (int)strlen(probname) + 1);
-      strcpy(m_probname, probname);
+      len = (int)strlen(probname);
+      spx_alloc(m_probname, len + 1);
+      strncpy(m_probname, probname, len);
+      m_probname[len] = '\0';
    }
 
    Real getObjLoLimit() const
