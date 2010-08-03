@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.3 2010/05/04 13:28:33 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.4 2010/08/03 15:44:03 bzfwinkm Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -166,6 +166,9 @@ SCIP_RETCODE depthFirstSearch(
       vbvar = vbvars[v];
       assert(vbvar != NULL);
       
+      scalar = 1.0;
+      constant = 0.0;
+
       /* transform variable bound variable to an active variable if possible */
       SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &scalar, &constant) );
       
