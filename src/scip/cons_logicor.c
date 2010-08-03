@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.140 2010/07/05 11:02:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.141 2010/08/03 17:58:37 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2418,7 +2418,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1));
 
    /* cutoff "logicor" form the constraint string */
-   token = SCIPstrtok(strcopy, "(", &saveptr ); 
+   (void) SCIPstrtok(strcopy, "(", &saveptr ); 
 
    /* cutoff ")" form the constraint string */
    token = SCIPstrtok(NULL, ")", &saveptr ); 
