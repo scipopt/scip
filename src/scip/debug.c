@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.40 2010/04/05 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.41 2010/08/03 19:13:37 bzfwinkm Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -595,6 +595,10 @@ SCIP_RETCODE SCIPdebugCheckInference(
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
       return SCIP_OKAY;
 
    /* check whether the debugging solution is contained in the local subproblem */
