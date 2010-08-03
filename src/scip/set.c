@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.8 2010/03/22 16:05:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.9 2010/08/03 21:18:15 bzfsteff Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -188,7 +188,8 @@
                                                  *   a relaxation of the original problem (instead of an approximation)? */
 #define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely valid dual bounds at the nodes
                                                  *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
-                                                 *   'p'roject and scale, 'e'xact LP) */
+                                                 *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
+                                                 *   e'x'act neumaier and shcherbina) */
 #define SCIP_DEFAULT_MISC_IGNOREPSSOL     FALSE /**< should pseudo solutions be ignored for dual bounds? */
 
 
@@ -844,8 +845,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "misc/dbmethod",
-         "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP)",
-         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpe",
+         "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina, e'x'act neumaier and shcherbina)",
+         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeix",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/ignorepssol",

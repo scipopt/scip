@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.77.2.6 2010/03/22 16:05:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.77.2.7 2010/08/03 21:18:15 bzfsteff Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -228,7 +228,8 @@ struct SCIP_Set
                                               *   a relaxation of the original problem (instead of an approximation)? */
    char                  misc_dbmethod;      /**< method for computing truely valid dual bounds at the nodes
                                               *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
-                                              *   'p'roject and scale, 'e'xact LP) */
+                                              *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
+                                              *   e'x'act neumaier and shcherbina) */
    SCIP_Bool             misc_ignorepssol;   /**< should pseudo solutions be ignored for dual bounds */
 
    /* node selection settings */

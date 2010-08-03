@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.25 2010/06/18 22:26:38 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.26 2010/08/03 21:18:15 bzfsteff Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -52,6 +52,7 @@
 #include "QSopt_ex.h" 
 #include "scip/misc.h" 
 #include "rectlu/rectlu.h"
+#include "scip/intervalarith.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "exactlp"
@@ -3428,7 +3429,7 @@ SCIP_RETCODE constructPSData(
             for(j = 0; j < pslen[i] - 1; j++)
             {
                psind[ psbeg[i] + j ] = consdata->ind[ consdata->beg[indx] + j];
-               /* If it is an LHS constraint */
+               /* if it is an LHS constraint */
                if( dvarmap[i] < nconss )
                   mpq_set( psval[ psbeg[i] + j], consdata->val[ consdata->beg[indx] + j ] );
                /* otherwise it is the RHS of the constraint */
@@ -5065,11 +5066,12 @@ SCIP_RETCODE getPSdualbound(
 {
    int i;
    int j;
-   int rval;               
+   int rval;
    int nextendedconss;
    int nconss;
    int nvars;
    int currentrow;
+   int isfeas;
    mpq_t* approxdualsol;
    mpq_t* costvect; /**< dual cost vector for expanded problem*/
    mpq_t* violation;
@@ -5223,31 +5225,44 @@ SCIP_RETCODE getPSdualbound(
 
 #endif
 
-   /* compute [z] with Dz=r (D depends on conshdlrdata->psdualcolselection) */
-   rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
-
-#ifdef PS_OUT 
-   printf("correction: \n");  
-   if(nextendedconss < 100)
+   /* if there is no violation of the constraints, then skip the projection */
+   isfeas = 1;
+   for( i = 0; i < nvars; i++ )
    {
-      for( i = 0; i < conshdlrdata->npsbasis; i++ )
+      if( mpq_sgn(violation[i]) )
       {
-         mpq_out_str(stdout, 10, correction[i]);
-         printf(" in position %d \n", conshdlrdata->psbasis[i]);
-      }   
-   }
-   else
-      printf(" Solution too long to print.\n");
+         isfeas = 0;
+         i = nvars;
+      }
+   }     
+   /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
+   if( !isfeas )
+   {
+      /* compute [z] with Dz=r (D depends on conshdlrdata->psdualcolselection) */
+      rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
+      
+#ifdef PS_OUT 
+      printf("correction: \n");  
+      if(nextendedconss < 100)
+      {
+         for( i = 0; i < conshdlrdata->npsbasis; i++ )
+         {
+            mpq_out_str(stdout, 10, correction[i]);
+            printf(" in position %d \n", conshdlrdata->psbasis[i]);
+         }   
+      }
+      else
+         printf(" Solution too long to print.\n");
 #endif
 
-   /* projection step: compute bold(y)=y^+[z 0];
-    * correct only components corresponding to D (npsbasis=#of columns in D 
-    */
-   for( i = 0; i < conshdlrdata->npsbasis; i++ )
-   {
-      mpq_add(approxdualsol[conshdlrdata->psbasis[i]], approxdualsol[conshdlrdata->psbasis[i]], correction[i]);
-   }   
-
+      /* projection step: compute bold(y)=y^+[z 0];
+       * correct only components corresponding to D (npsbasis=#of columns in D 
+       */
+      for( i = 0; i < conshdlrdata->npsbasis; i++ )
+      {
+         mpq_add(approxdualsol[conshdlrdata->psbasis[i]], approxdualsol[conshdlrdata->psbasis[i]], correction[i]);
+      }   
+   }
 #ifdef PS_OUT 
    printf("updated dual solution: \n");
    if(nextendedconss < 100)
@@ -5513,6 +5528,442 @@ SCIP_RETCODE getPSdualbound(
    mpq_clear(lambda2);
    mpq_clear(lambda1);
    mpq_clear(mpqtemp2);
+   mpq_clear(mpqtemp);
+
+   return SCIP_OKAY;
+}
+
+
+/** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;                                                   
+ *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0                                             
+ *  Calculating this value in interval arithmetics gives a proved lower LP bound for the following reason (assuming,               
+ *  we have only left hand sides):                                                                                                 
+ *           min{cx       |  b <=  Ax, lb <= x <= ub}                                                                              
+ *   >=      min{cx       | yb <= yAx, lb <= x <= ub}   (restriction in minimum is relaxed)                                        
+ *   == yb + min{cx - yb  | yb <= yAx, lb <= x <= ub}   (added yb - yb == 0)                                                       
+ *   >= yb + min{cx - yAx | yb <= yAx, lb <= x <= ub}   (because yAx >= yb inside minimum)                                         
+ *   >= yb + min{cx - yAx |            lb <= x <= ub}   (restriction in minimum is relaxed)                                        
+ *   This is a modified version of the function provedBound() from lp.c, we no longer assume the problem is a relaxation.
+ *   interval arithmetic is used for every operation.  y is taken exactly as it is given but A,c,b are all used as intervals.
+ */
+static
+SCIP_RETCODE provedBoundInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_Real*            boundval            /**< value of dual bound */
+   )
+{
+   ROUNDMODE roundmode;
+   SCIP_INTERVAL* rhsinter;
+   SCIP_INTERVAL* xinter;
+   SCIP_INTERVAL* ainter;
+   SCIP_INTERVAL* atyinter;
+   SCIP_INTERVAL* cinter;
+   SCIP_INTERVAL intertemp;
+   SCIP_INTERVAL ytb;
+   SCIP_INTERVAL minprod;
+   SCIP_ROW* row;
+   SCIP_Real* y;
+   SCIP_Real* ycol;
+   int i;
+   int j;
+
+   int usefarkas;
+   usefarkas = 0;//for now
+
+   /* process bound changes */
+   processBoundchgs(scip, conshdlrdata, consdata);
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &y, consdata->nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhsinter, consdata->nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ycol, consdata->nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ainter, consdata->nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &atyinter, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cinter, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xinter, consdata->nvars) );
+
+   /* calculate y^Tb */
+   SCIPintervalSet(&ytb, 0.0);
+   /* create y, rhs and constant vector in interval arithmetic */
+   for( j = 0; j < consdata->nconss; ++j )
+   {
+      row = consdata->rows[j];
+      assert(row != NULL);
+
+      /* create y vector in interval arithmetic, setting near zeros to zero */
+      y[j] = (usefarkas ? row->dualfarkas : row->dualsol);
+
+      if( SCIPisInfinity(scip, y[j]) )
+         y[j] = SCIPinfinity(scip);
+
+      if( SCIPisInfinity(scip, -y[j]) )
+         y[j] = -1.0 * SCIPinfinity(scip);
+
+      /* create rhs and constant vectors in interval arithmetic */
+      if( SCIPisFeasPositive(scip, y[j]) ) // TODO: also make sure that the lhs (rhs) is finite, otherwise set y[j] = 0
+      {
+         SCIPintervalSetBounds(&rhsinter[j], 
+            mpqGetRealRelax(scip, consdata->lhs[j], GMP_RNDD), mpqGetRealRelax(scip, consdata->lhs[j], GMP_RNDU));
+      }
+      else if( SCIPisFeasNegative(scip, y[j]) )
+      {
+         SCIPintervalSetBounds(&rhsinter[j], 
+            mpqGetRealRelax(scip, consdata->rhs[j], GMP_RNDD), mpqGetRealRelax(scip, consdata->rhs[j], GMP_RNDU));     
+      }
+      else
+      {
+         SCIPintervalSet(&rhsinter[j], 0.0);
+      }
+   }      
+   SCIPintervalScalarProductRealsIntervals(SCIPinfinity(scip), &ytb, consdata->nconss, rhsinter, y);
+
+#ifdef PROVEDBOUNDOUT /*?????????*/
+   for( j = 0; j < consdata->nconss; ++j )
+   {
+      row = consdata->rows[j];
+      if( SCIPisFeasPositive(scip, y[j]) || SCIPisFeasNegative(scip, y[j]) )
+         printf("j=%d: b=[%g,%g] (lhs=%g, rhs=%g, const=%g, y=%g)\n ", j, rhsinter[j].inf, rhsinter[j].sup, row->lhs, 
+            row->rhs, row->constant,y[j]);
+   }
+   printf("--> ytb=[%g,%g]\n", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb)); /*???????????????*/
+#endif
+
+#ifndef NDEBUG
+   for( j = 0; j < consdata->nconss; ++j )
+   {
+      row = consdata->rows[j];
+      assert(row != NULL);
+
+      if( !SCIPisFeasPositive(scip, y[j]) && !SCIPisFeasNegative(scip, y[j]) )
+      {
+         assert(rhsinter[j].inf == 0.0);
+         assert(rhsinter[j].sup == 0.0);
+      }
+   }
+#endif
+
+   /* calculate min{(c^T - y^TA)x} */
+
+   for( j = 0; j < consdata->nvars; j++)
+   {
+      SCIPintervalSet(&atyinter[j], 0.0);
+   }
+
+   /* compute infimums of -A^Ty */
+   roundmode = getRoundingMode();
+   setRoundingModeDownwards();
+   for( j = 0; j < consdata->nconss; ++j )
+   {
+      for( i = consdata->beg[j]; i < consdata->beg[j] + consdata->len[j]; ++i )
+      {
+         SCIPintervalSetBounds(&intertemp, 
+            mpqGetRealRelax(scip, consdata->val[i], GMP_RNDD), mpqGetRealRelax(scip, consdata->val[i], GMP_RNDU));
+         SCIPintervalMulScalarInf(SCIPinfinity(scip), &intertemp, intertemp, -1.0 * y[j]);
+         SCIPintervalAddInf(SCIPinfinity(scip), &atyinter[consdata->ind[i]], atyinter[consdata->ind[i]], intertemp); 
+      }
+
+#ifndef NDEBUG
+      //     for( i = col->nlprows; i < col->len; ++i )
+      //{
+      // assert(col->rows[i] != NULL);
+      // assert(col->rows[i]->lppos == -1);
+      // assert(col->rows[i]->dualsol == 0.0);
+      // assert(col->rows[i]->dualfarkas == 0.0);
+      // assert(col->linkpos[i] >= 0);
+      //}
+#endif
+   }
+   /* compute supremums of -A^Ty */
+   setRoundingModeUpwards();
+   for( j = 0; j < consdata->nconss; ++j )
+   {
+      for( i = consdata->beg[j]; i < consdata->beg[j] + consdata->len[j]; ++i )
+      {
+         SCIPintervalSetBounds(&intertemp, 
+            mpqGetRealRelax(scip, consdata->val[i], GMP_RNDD), mpqGetRealRelax(scip, consdata->val[i], GMP_RNDU));
+         SCIPintervalMulScalarSup(SCIPinfinity(scip), &intertemp, intertemp, -1.0 * y[j]);
+         SCIPintervalAddSup(SCIPinfinity(scip), &atyinter[consdata->ind[i]], atyinter[consdata->ind[i]], intertemp); 
+      }
+
+
+#ifndef NDEBUG
+      //for( i = col->nlprows; i < col->len; ++i )
+      //{
+      // assert(col->rows[i] != NULL);
+      // assert(col->rows[i]->lppos == -1);
+      // assert(col->rows[i]->dualsol == 0.0);
+      // assert(col->rows[i]->dualfarkas == 0.0);
+      // assert(col->linkpos[i] >= 0);
+      //}
+#endif
+   }   
+   setRoundingMode(roundmode);
+
+   /* create c vector and x vector in interval arithmetic and compute min{(c^T - y^TA)x} */
+   for( j = 0; j < consdata->nvars; ++j )
+   {
+      if( usefarkas )
+      {
+         SCIPintervalSet(&cinter[j], 0.0);
+      }
+      else
+      {
+         SCIPintervalSetBounds(&cinter[j],
+            mpqGetRealRelax(scip, consdata->obj[j], GMP_RNDD), mpqGetRealRelax(scip, consdata->obj[j], GMP_RNDU));
+      }
+
+      SCIPintervalSetBounds(&xinter[j], 
+            mpqGetRealRelax(scip, consdata->lbloc[j], GMP_RNDD), mpqGetRealRelax(scip, consdata->ubloc[j], GMP_RNDU));
+   }
+   SCIPintervalArraysAdd(SCIPinfinity(scip), atyinter, consdata->nvars, atyinter, cinter);
+   SCIPintervalScalarProduct(SCIPinfinity(scip), &minprod, consdata->nvars, atyinter, xinter);
+   
+   /* add y^Tb */
+   SCIPintervalAdd(SCIPinfinity(scip), &minprod, minprod, ytb);
+
+   /* free buffer for storing y in interval arithmetic */
+   SCIPfreeBufferArray(scip, &xinter);
+   SCIPfreeBufferArray(scip, &cinter);
+   SCIPfreeBufferArray(scip, &atyinter);
+   SCIPfreeBufferArray(scip, &ainter);
+   SCIPfreeBufferArray(scip, &ycol);
+   SCIPfreeBufferArray(scip, &rhsinter);
+   SCIPfreeBufferArray(scip, &y);
+
+   *boundval = SCIPintervalGetInf(minprod);
+
+   return SCIP_OKAY;
+
+}
+/** compute safe dual bound by Neumaier and Shcherbina Bound using exact rational arithmetic.
+ * Considering the primal of the form:
+ * min c'x
+ * lhs <= Ax <= rhs
+ *  lb <=  x <= ub
+ *
+ * and the dual of the form
+ * 
+ * max [lhs',-rhs',lb',-ub'] y
+ *     [  A',  -A',  I,  -I] y =  c
+ *                           y >= 0  
+ *
+ * we will take an approximate dual solution y~ and use exact arithmetic to compute its
+ * error r = c - [  A',  -A',  I,  -I] y~ and then use exact arithmetic to compute a valid
+ * bound by increasing the bound variables as needed to correct this error. 
+ */
+static
+SCIP_RETCODE provedBoundRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   mpq_t*                boundval            /**< value of dual bound */
+   )
+{
+   int i;
+   int j;
+   int rval;
+   int nextendedconss;
+   int nconss;
+   int nvars;
+   int currentrow;
+   mpq_t* approxdualsol;
+   mpq_t* costvect; 
+   mpq_t* violation;
+   mpq_t mpqtemp;
+   mpq_t dualbound;
+
+   mpq_init(mpqtemp);
+   mpq_init(dualbound);
+
+   nconss = consdata->nconss;
+   nvars = consdata->nvars;
+   nextendedconss = 2*nconss + 2*nvars;
+
+   /* process bound changes */
+   processBoundchgs(scip, conshdlrdata, consdata);
+
+   /*allocate memory for approximate dual solution, dual cost vector, violation and correction */
+   SCIP_CALL( SCIPallocBufferArray(scip, &approxdualsol, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(approxdualsol[i]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &costvect, nextendedconss) );
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_init(costvect[i]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &violation, nvars) );
+   for( i = 0; i < nvars; i++ )
+      mpq_init(violation[i]);
+
+   /* recover the objective coefs and approximate solution value of dual solution; 
+    * dual vars of lhs constraints and rhs constraints,
+    * dual vars of lb constraint and ub constraints  
+    */
+   for( i = 0; i < nconss; i++ )
+   {
+      mpq_set_d(mpqtemp, SCIProwGetDualsol(consdata->rows[i]));
+      
+      /* lhs constraint */
+      if( mpq_sgn(mpqtemp) > 0 )
+         mpq_set(approxdualsol[i], mpqtemp);
+      /* rhs constraint */
+      else
+         mpq_neg(approxdualsol[i+nconss], mpqtemp);
+
+      mpq_set(costvect[i], consdata->lhs[i]);
+      mpq_neg(costvect[i+nconss], consdata->rhs[i]);
+   }
+   
+   for( i = 0; i < nvars; i++ )  
+   {
+      mpq_set(costvect[i + 2*nconss], consdata->lbloc[i]);
+      mpq_neg(costvect[i + 2*nconss + nvars], consdata->ubloc[i]);
+   }
+   
+   /* make sure we set components equal to zero if they have infinite rhs/lhs cost */
+   for( i = 0; i < 2*nconss; i ++)
+   {
+      if( isNegInfinity(conshdlrdata, costvect[i]) )
+      {
+         mpq_set_si(approxdualsol[i], 0, 1);
+      }
+   }
+
+   /* first, ensure nonnegativity of dual solution */
+   for( i = 0; i < nextendedconss; i++ ) 
+   { 
+      if( mpq_sgn(approxdualsol[i]) < 0)
+         mpq_set_si(approxdualsol[i], 0, 1);
+   } 
+   
+   /* calculate violation of equality constraints r=c-A^ty */
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_set(violation[i], consdata->obj[i]);
+   }
+   
+   /* A^ty for y corresponding to primal constraints */
+   for( i = 0; i < nconss; i++ )
+   {
+      for( j = consdata->beg[i]; j < consdata->beg[i] + consdata->len[i]; j++)
+      {
+         currentrow = consdata->ind[j];
+         mpq_mul(mpqtemp, approxdualsol[i], consdata->val[j]);
+         mpq_sub(violation[currentrow], violation[currentrow], mpqtemp);
+         mpq_mul(mpqtemp, approxdualsol[i+nconss], consdata->val[j]);
+         mpq_add(violation[currentrow], violation[currentrow], mpqtemp);
+      }
+   }
+   /* A^ty for y corresponding to bound constraints */
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_sub(violation[i], violation[i], approxdualsol[i+2*nconss]);
+      mpq_add(violation[i], violation[i], approxdualsol[i+2*nconss+nvars]);
+   }
+
+
+   /* project solution */
+#ifdef PS_OUT 
+   printf("violation: \n");
+   if(nvars<100)
+   {
+      for( i = 0; i < nvars; i++ )
+      {
+         mpq_out_str(stdout, 10, violation[i]);
+         printf(" \n");
+      }     
+   }
+   else
+      printf(" Solution too long to print.\n");
+
+#endif
+
+   /* Correct the solution to be dual feasible by increasing the primal bound dual variables */
+
+   for( i = 0; i < nvars; i++ )
+   {
+      if( mpq_sgn(violation[i]) > 0 )
+      {
+         mpq_add(approxdualsol[i+2*nconss], approxdualsol[i+2*nconss], violation[i]);
+      }
+      else if( mpq_sgn(violation[i]) < 0 )
+      {
+         mpq_sub(approxdualsol[i+2*nconss+nvars], approxdualsol[i+2*nconss+nvars], violation[i]);
+      }
+   }     
+
+#ifndef NDEBUG
+   SCIPdebugMessage("Verifying feasibility of dual solution... \n");
+   /* calculate violation of equality constraints */
+   rval = 0;
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_set(violation[i], consdata->obj[i]);
+      /* SUBTRACT Ax to get violation b-Ax */
+      /* subtract A(approxdualsol) */
+   }
+   for( i = 0; i < nconss; i++ )
+   {
+      for( j = consdata->beg[i]; j < consdata->beg[i] + consdata->len[i]; j++ )
+      {
+         currentrow = consdata->ind[j];
+         mpq_mul(mpqtemp, approxdualsol[i], consdata->val[j]);
+         mpq_sub(violation[currentrow], violation[currentrow], mpqtemp);
+         mpq_mul(mpqtemp, approxdualsol[i+nconss], consdata->val[j]);
+         mpq_add(violation[currentrow], violation[currentrow], mpqtemp);
+      }
+   }
+   for( i = 0; i < nvars; i++ )
+   {
+      mpq_sub(violation[i], violation[i], approxdualsol[i+2*nconss]);
+      mpq_add(violation[i], violation[i], approxdualsol[i+2*nconss+nvars]);
+   }
+   for( i = 0; i < nvars; i++ )
+   {
+      if( mpq_sgn(violation[i]) )
+      {
+         SCIPdebugMessage("Dual solution incorrect, violates equalties\n");
+         i = nvars;
+         rval = 1;
+      }
+   }
+   for( i = 0; i < nextendedconss; i++ )            
+   {                                                                                     
+      if( mpq_sgn(approxdualsol[i])<0 )
+      {
+         SCIPdebugMessage("Dual solution incorrect, negative components\n");
+         i = nextendedconss;
+         rval = 1;
+      }
+   }            
+   if( !rval )
+      SCIPdebugMessage("Dual solution verified\n");
+   assert(!rval);
+#endif 
+
+   /* compute dual bound for constructed exact dual solution */
+   mpq_set_ui(dualbound, 0, 1);
+   for( i = 0; i < nextendedconss; i++ )
+   {
+      mpq_mul(mpqtemp, approxdualsol[i], costvect[i]);
+      mpq_add(dualbound, dualbound, mpqtemp);
+   }
+   mpq_set(*boundval, dualbound);
+
+   /* free memory */
+   for( i = 0; i < nvars; i++ )
+      mpq_clear(violation[i]);
+   SCIPfreeBufferArray(scip, &violation);
+
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_clear(costvect[i]);
+   SCIPfreeBufferArray(scip, &costvect);
+
+   for( i = 0; i < nextendedconss; i++ )
+      mpq_clear(approxdualsol[i]);
+   SCIPfreeBufferArray(scip, &approxdualsol);
+
+   mpq_clear(dualbound);
    mpq_clear(mpqtemp);
 
    return SCIP_OKAY;
@@ -6810,6 +7261,55 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          /*return SCIP_ERROR;*/
          break;
       }
+   case 'i':
+      {
+         SCIP_Real dualobjval;                                     
+
+         SCIP_CALL( provedBoundInterval(scip, conshdlrdata, consdata, &dualobjval) );
+
+#ifdef DETAILED_DEBUG /*????????? */          
+         oldlb = SCIPgetLocalLowerbound(scip);                                                                     
+#endif 
+         SCIP_CALL( SCIPupdateLocalLowerbound(scip, dualobjval) ); 
+
+#ifdef DETAILED_DEBUG /*????????? */  
+         if( oldlb < SCIPgetLocalLowerbound(scip) )              
+         { 
+            SCIPdebugMessage("by db method (neumshch interval): lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+         }
+         else
+         {
+            SCIPdebugMessage("by db method (neumshch interval): lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+         }
+#endif                                                        
+         break;
+      }
+   case 'x':
+      {
+         mpq_t dualobjval;                                     
+
+         mpq_init(dualobjval);
+         SCIP_CALL( provedBoundRational(scip, conshdlrdata, consdata, &dualobjval) );
+
+#ifdef DETAILED_DEBUG /*????????? */          
+         oldlb = SCIPgetLocalLowerbound(scip);                                                                     
+#endif 
+         SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); 
+
+#ifdef DETAILED_DEBUG /*????????? */  
+         if( oldlb < SCIPgetLocalLowerbound(scip) )              
+         { 
+            SCIPdebugMessage("by db method (neumshch exact): lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+         }
+         else
+         {
+            SCIPdebugMessage("by db method (neumshch exact): lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+         }
+#endif                                                                                                                
+         mpq_clear(dualobjval);
+         break;
+      }
+
    default:
       SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", SCIPdualBoundMethod(scip));
       return SCIP_PARAMETERWRONGVAL;
