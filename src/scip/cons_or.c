@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.81 2010/07/05 19:15:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.82 2010/08/03 17:59:46 bzfwinkm Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -1929,7 +1929,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    else
    {
       /* cutoff "or" form the constraint string */
-      token = SCIPstrtok(NULL, "(", &saveptr ); 
+      (void) SCIPstrtok(NULL, "(", &saveptr ); 
 
       /* cutoff ")" form the constraint string */
       token = SCIPstrtok(NULL, ")", &saveptr ); 
