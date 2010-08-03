@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.57 2010/08/03 12:36:45 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.58 2010/08/03 15:03:00 bzfwinkm Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -193,6 +193,7 @@ Bool xlp_addcon_term(
       break;
    }
 
+   cons = NULL;
    initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
    separate = TRUE;
    enforce = TRUE;
@@ -227,6 +228,7 @@ Bool xlp_addcon_term(
                rhsIndCons = TRUE;
                break;
             case CON_FREE:
+               /*lint -fallthrough*/
             default:
                SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
                readerror_ = TRUE;
@@ -377,7 +379,10 @@ Bool xlp_addcon_term(
       return TRUE;
    }
 
-   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
+   if( cons != NULL )
+   {
+      SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
+   }
    
    return FALSE;
 }
@@ -683,6 +688,7 @@ Bool xlp_addsos_term(
       SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
       break;
    case SOS_ERR:
+      /*lint -fallthrough*/
    default:
       SCIPwarningMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos_term()\n", type);
       readerror_ = TRUE;
@@ -749,6 +755,7 @@ Sos* xlp_addsos(
       SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
       break;
    case SOS_ERR:
+      /*lint -fallthrough*/
    default:
       SCIPwarningMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos()\n", type);
       readerror_ = TRUE;
