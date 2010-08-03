@@ -167,6 +167,7 @@ features:
 - implemented the data structure and events for global and local domain holes added and removed 
 - the Flatzinc reader can now handle the output annotations of the Flatzinc format; the method SCIPprintSolReaderFzn() 
   outputs the given solution in Flatzinc format w.r.t. the output annotations
+- can now read and write indicator constraints in the (extended) MPS format
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
