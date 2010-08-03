@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.282 2010/08/02 14:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.283 2010/08/03 18:23:51 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -7290,7 +7290,7 @@ SCIP_RETCODE varAddImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* check, whether implied variable is binary */
-   if( SCIPvarIsBinary(implvar) )
+   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       SCIP_Bool inverseadded;
 
@@ -7480,7 +7480,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* add transitive closure */
-   if( SCIPvarIsBinary(implvar) )
+   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       SCIP_Bool implvarfixing;
 
