@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.396 2010/08/03 18:21:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.397 2010/08/03 18:22:16 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2287,28 +2287,6 @@ SCIP_RETCODE SCIPparseVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< stirng to parse */
    SCIP_VAR**            vars,               /**< array to store the parsed variable */
-   int*                  nvars,              /**< pointer to store number of parsed variables */
-   int                   varssize,           /**< size of the variable array */
-   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
-   );
-
-/** method parse the given string as a linear sum of variables and coefficients (c1 <x1> + c2 <x2> + ... # cn <xn>) (see
- *  SCIPwriteVarsLinearsum() ); if it was successful, the pointer success is set to TRUE; 
- *
- * @note the pointer success is only set to FALSE in the case that a variable with a parsed variable name does not exist
- *
- *  if the number of variables (parsed) is greater than the available slots in the variable/coefficient array, nothing
- *  happens except that the required size is stored in the corresponding integer; the reason for this approach is that
- *  we cannot reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP
- *  memory functions).
- */
-extern
-SCIP_RETCODE SCIPparseVarsLinearsum(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< stirng to parse */
-   SCIP_VAR**            vars,               /**< array to store the parsed variable */
-   SCIP_Real*            coefs,              /**< array to store the coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
