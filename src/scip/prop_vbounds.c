@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.4 2010/08/03 15:44:03 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.5 2010/08/03 18:22:52 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -79,6 +79,81 @@ struct SCIP_PropData
 };
 
 
+/** inference information */
+struct InferInfo
+{
+   union
+   {
+      struct
+      {
+         unsigned int    pos:31;             /**< position of the variable which forced that propagation */
+         unsigned int    boundtype:1;        /**< bound type which was the reason (0: lower, 1: upper) */
+      } asbits;
+      int                asint;              /**< inference information as a single int value */
+   } val;
+};
+typedef struct InferInfo INFERINFO;
+
+/** converts an integer into an inference information */
+static
+INFERINFO intToInferInfo(
+   int                   i                   /**< integer to convert */
+   )
+{
+   INFERINFO inferinfo;
+
+   inferinfo.val.asint = i;
+
+   return inferinfo;
+}
+
+/** converts an inference information into an int */
+static
+int inferInfoToInt(
+   INFERINFO             inferinfo           /**< inference information to convert */
+   )
+{
+   return inferinfo.val.asint;
+}
+
+/** returns the propagation rule stored in the inference information */
+static
+SCIP_BOUNDTYPE inferInfoGetBoundtype(
+   INFERINFO             inferinfo           /**< inference information to convert */
+   )
+{
+   assert((SCIP_BOUNDTYPE)inferinfo.val.asbits.boundtype == SCIP_BOUNDTYPE_LOWER 
+      || (SCIP_BOUNDTYPE)inferinfo.val.asbits.boundtype == SCIP_BOUNDTYPE_UPPER);
+   return (SCIP_BOUNDTYPE)inferinfo.val.asbits.boundtype;
+}
+
+/** returns the position stored in the inference information */
+static
+int inferInfoGetPos(
+   INFERINFO             inferinfo           /**< inference information to convert */
+   )
+{
+   return inferinfo.val.asbits.pos;
+}
+
+/** constructs an inference information out of a propagation rule and a position number */
+static
+INFERINFO getInferInfo(
+   int                   pos,                /**< position of the variable which forced that propagation */
+   SCIP_BOUNDTYPE        boundtype           /**< propagation rule that deduced the value */
+   )
+{
+   INFERINFO inferinfo;
+
+   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
+   assert((int)boundtype >= 0 && (int)boundtype <= 1); /*lint !e685 !e568q*/
+   
+   inferinfo.val.asbits.pos = pos; /*lint !e732*/
+   inferinfo.val.asbits.boundtype = boundtype; /*lint !e641*/
+   
+   return inferinfo;
+}
+
 /*
  * Hash map callback methods
  */
@@ -106,7 +181,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
    assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
    return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
-
 
 /*
  * Local methods
@@ -260,6 +334,52 @@ SCIP_RETCODE dropEvents(
    return SCIP_OKAY;
 }
 
+/** resolves a propagation by adding the variable which implied that bound change */
+static
+SCIP_RETCODE resolvePropagation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   INFERINFO             inferinfo,          /**< inference information */
+   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_BOUNDTYPE boundtype;
+   int pos;
+
+   assert(propdata != NULL);
+   
+   boundtype = inferInfoGetBoundtype(inferinfo);
+   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
+   
+   pos = inferInfoGetPos(inferinfo);
+   assert(pos >= 0);
+   assert(pos < propdata->nvars);
+   
+   var = propdata->vars[pos];
+   
+   SCIPdebugMessage(" -> add %s bound of variable <%s> as reason\n", 
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(var));
+   
+   switch( boundtype )
+   {
+   case SCIP_BOUNDTYPE_LOWER:
+   {
+      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx ) );
+      break;
+   }
+   case SCIP_BOUNDTYPE_UPPER:
+      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx ) );
+      break;
+   default:
+      SCIPerrorMessage("invalid bound type <%d>\n", boundtype);
+      SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** performs propagation of variables lower and upper bounds */
 static
 SCIP_RETCODE propagateVbounds(
@@ -278,7 +398,7 @@ SCIP_RETCODE propagateVbounds(
    SCIP_Real coef;
    SCIP_Real constant;
    SCIP_Real newbound;
-   int inferinfo;
+   INFERINFO inferinfo;
    int nvars;
    int nvbvars;
    int n;
@@ -320,7 +440,10 @@ SCIP_RETCODE propagateVbounds(
          
          /* get current lower bound as initialization of new lower bound */
          newbound = SCIPvarGetLbLocal(var);
-         inferinfo = 0;
+         inferinfo = getInferInfo(v, SCIP_BOUNDTYPE_UPPER);
+
+         SCIPdebugMessage("try to improve lower bound of variable <%s> (current loc=[%.15g,%.15g])\n",
+            SCIPvarGetName(var), newbound, SCIPvarGetUbLocal(var));
          
          /* get the variable lower bound informations for the current variable */
          vbvars = SCIPvarGetVlbVars(var);
@@ -349,8 +472,13 @@ SCIP_RETCODE propagateVbounds(
                   assert(SCIPvarGetProbindex(vbvar) > -1);
                   newbound = coef*SCIPvarGetLbLocal(vbvar) + constant;
                
+                  SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
+                     newbound, SCIPvarGetName(vbvar), n);
+                  SCIPdebugMessage("         newlb >= %.15g * [%.15g,%.15g] + %.15g\n", 
+                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
+
                   assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  inferinfo = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar) + 1;
+                  inferinfo = getInferInfo((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar), SCIP_BOUNDTYPE_LOWER);
                }
             }
             else
@@ -361,22 +489,41 @@ SCIP_RETCODE propagateVbounds(
                   assert(SCIPvarGetProbindex(vbvar) > -1);
                   newbound = coef*SCIPvarGetUbLocal(vbvar) + constant;
 
+                  SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to upper bound of variable <%s> (n=%d)\n",
+                     newbound, SCIPvarGetName(vbvar), n);
+                  SCIPdebugMessage("         newlb >= %.15g * [%.15g,%.15g] + %.15g\n", 
+                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
+                  
                   assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  inferinfo = -((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar) + 1);
+                  inferinfo = getInferInfo((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar), SCIP_BOUNDTYPE_UPPER);
                }
             }
          }
          
-         if(inferinfo != 0)
-         {
-            SCIPdebugMessage(" -> variable <%s> => lower bound candidate is <%.15g>\n", SCIPvarGetName(SCIPgetVars(scip)[ABS(inferinfo)-1]), newbound);
-         }
-         
-         SCIP_CALL( SCIPinferVarLbProp(scip, var, newbound, prop, inferinfo, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarLbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), FALSE, &infeasible, &tightened) );
          
          if( infeasible )
          {
+            /* the infeasible results from the fact that the new lower bound lies above the current upper bound */
+            assert(SCIPisGT(scip, newbound, SCIPvarGetUbLocal(var)));
+               
+            SCIPdebugMessage(" -> variable <%s> => variable <%s> lower bound candidate is <%.15g>\n", 
+               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]), SCIPvarGetName(var), newbound);
+            
             SCIPdebugMessage(" -> lower bound tightening lead to infeasiility\n");
+            
+            /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            /* add upper bound of the variable for which we tried to change the lower bound */
+            SCIP_CALL( SCIPaddConflictUb(scip, var, NULL) );
+            
+            /* add (correct) bound of the variable which let to the new lower bound */
+            SCIP_CALL( resolvePropagation(scip, propdata, inferinfo, NULL) );
+            
+            /* analyze the conflict */
+            SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
+      
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;      
          } 
@@ -384,13 +531,9 @@ SCIP_RETCODE propagateVbounds(
          if( tightened )
          {
             SCIPdebugMessage(" -> tightened lower bound to <%g> due the %s bound of variable <%s>\n", 
-               newbound, inferinfo > 0 ? "lower" : "upper", SCIPvarGetName(SCIPgetVars(scip)[ABS(inferinfo)-1]));
-            assert(inferinfo != 0);
+               newbound, inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
+               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]));
             nchgbds++;
-         }
-         else if( inferinfo != 0 )
-         {
-            SCIPdebugMessage(" -> new bound was not good enough\n");
          }
       }
    }
@@ -414,8 +557,11 @@ SCIP_RETCODE propagateVbounds(
       
          /* get current upper bound and initialize new upper bound */
          newbound = SCIPvarGetUbLocal(var);
-         inferinfo = 0;
-      
+         inferinfo = getInferInfo(v, SCIP_BOUNDTYPE_UPPER);
+
+         SCIPdebugMessage("try to improve upper bound of variable <%s> (current loc=[%.15g,%.15g])\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), newbound);
+         
          /* loop over successor variables to find a better upper bound */
          vbvars = SCIPvarGetVubVars(var);
          coefs = SCIPvarGetVubCoefs(var);
@@ -443,8 +589,13 @@ SCIP_RETCODE propagateVbounds(
                   assert(SCIPvarGetProbindex(vbvar) > -1);
                   newbound = coef*SCIPvarGetUbLocal(vbvar) + constant;
 
+                  SCIPdebugMessage(" -> new upper bound candidate <%.15g> due to upper bound of variable <%s> (n=%d)\n",
+                     newbound, SCIPvarGetName(vbvar), n);
+                  SCIPdebugMessage("         newub <= %.15g * [%.15g,%.15g] + %.15g\n", 
+                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
+
                   assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  inferinfo = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar) + 1;
+                  inferinfo = getInferInfo((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar), SCIP_BOUNDTYPE_UPPER);
                }
             }
             else
@@ -455,23 +606,42 @@ SCIP_RETCODE propagateVbounds(
                   assert(SCIPvarGetProbindex(vbvar) > -1);
                   newbound = coef*SCIPvarGetLbLocal(vbvar) + constant;
 
+                  SCIPdebugMessage(" -> new upper bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
+                     newbound, SCIPvarGetName(vbvar), n);
+                  SCIPdebugMessage("         newub <= %.15g * [%.15g,%.15g] + %.15g\n", 
+                     coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
+
                   assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
-                  inferinfo = -((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar) + 1);
+                  inferinfo = getInferInfo((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar), SCIP_BOUNDTYPE_LOWER);
                }
             }
          }
       
-         if(inferinfo != 0)
-         {
-            SCIPdebugMessage(" -> variable <%s> => upper bound candidate is <%.15g>\n", SCIPvarGetName(SCIPgetVars(scip)[ABS(inferinfo)-1]), newbound);
-         }
-
          /* try new upper bound */
-         SCIP_CALL( SCIPinferVarUbProp(scip, var, newbound, prop, inferinfo, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarUbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), FALSE, &infeasible, &tightened) );
       
          if( infeasible )
          {
+            /* the infeasible results from the fact that the new upper bound lies belowe the current lower bound */
+            assert(SCIPisLT(scip, newbound, SCIPvarGetLbLocal(var)));
+
+            SCIPdebugMessage(" -> variable <%s> => variable <%s> upper bound candidate is <%.15g>\n", 
+               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]), SCIPvarGetName(var), newbound);
+
             SCIPdebugMessage(" -> upper bound tightening lead to infeasiility\n");
+            
+            /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            /* add lower bound of the variable for which we tried to change the upper bound */
+            SCIP_CALL( SCIPaddConflictLb(scip, var, NULL) );
+            
+            /* add (correct) bound of the variable which let to the new upper  bound */
+            SCIP_CALL( resolvePropagation(scip, propdata, inferinfo, NULL) );
+
+            /* analyze the conflict */
+            SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
+
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;      
          } 
@@ -479,13 +649,9 @@ SCIP_RETCODE propagateVbounds(
          if( tightened )
          {
             SCIPdebugMessage(" -> tightened upper bound to <%g> due the %s bound of variable <%s>\n", 
-               newbound, inferinfo < 0 ? "lower" : "upper", SCIPvarGetName(SCIPgetVars(scip)[ABS(inferinfo)-1]));
-            assert(inferinfo != 0);
+               newbound, inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
+               SCIPvarGetName(propdata->vars[inferInfoGetPos(inferinfo)]));
             nchgbds++;
-         }
-         else if( inferinfo != 0 )
-         {
-            SCIPdebugMessage(" -> new bound was not good enough\n");
          }
       }
    }   
@@ -668,47 +834,14 @@ static
 SCIP_DECL_PROPRESPROP(propRespropVbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
-   SCIP_VAR* var;
-   int idx;
 
-   assert(inferinfo != 0);
-   assert(ABS(inferinfo) - 1 < SCIPgetNVars(scip));
-   
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    
-   idx = ABS(inferinfo) - 1;
-   assert(idx >= 0);
-   assert(idx < propdata->nvars);
+   SCIPdebugMessage("explain %s bound change of variable <%s>\n", 
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
    
-   var = propdata->vars[idx];
-
-   switch( boundtype )
-   {
-   case SCIP_BOUNDTYPE_LOWER:
-      if( inferinfo > 0 )
-      {
-         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx ) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx ) );
-      }
-      break;
-   case SCIP_BOUNDTYPE_UPPER:
-      if( inferinfo < 0 )
-      {
-         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx ) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx ) );
-      }
-      break;
-   default:
-      SCIPerrorMessage("invalid bound type <%d>\n", boundtype);
-      SCIPABORT();
-   }
+   SCIP_CALL( resolvePropagation(scip, propdata, intToInferInfo(inferinfo), bdchgidx) );
 
    (*result) = SCIP_SUCCESS;
 
