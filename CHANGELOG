@@ -282,6 +282,10 @@ parameters:
 design:
 - removed to two different block memories for the original and transformed problem
 
+Makefile
+- added target "lintfiles" which allows to call flexelint with a list of file, for example, 
+  make lintfiles FILES="src/scip/prop_vbounds.c"
+
 SCIP version 1.2.0
 ===============
 

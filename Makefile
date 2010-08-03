@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.354 2010/07/23 13:55:17 bzfheinz Exp $
+# $Id: Makefile,v 1.355 2010/08/03 18:02:35 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -661,6 +661,16 @@ all: checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIB
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
+			do \
+			echo $$i; \
+			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
+			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			done'
+
+.PHONY: lintfiles
+lintfiles:		
+		-rm -f lint.out
+		$(SHELL) -ec  'for i in $(FILES); \
 			do \
 			echo $$i; \
 			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
