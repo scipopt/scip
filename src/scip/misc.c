@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.116 2010/07/01 16:14:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.117 2010/08/03 16:58:19 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1253,6 +1253,9 @@ SCIP_RETCODE SCIPrealarrayExtend(
          for( i = 0; i < realarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0.0;
 
+         /* check for possible overflow or negative value */
+         assert(realarray->maxusedidx - realarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &realarray->vals[realarray->minusedidx - realarray->firstidx],
             realarray->maxusedidx - realarray->minusedidx + 1);
@@ -1618,6 +1621,10 @@ SCIP_RETCODE SCIPintarrayExtend(
       {
          for( i = 0; i < intarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0;
+
+         /* check for possible overflow or negative value */
+         assert(intarray->maxusedidx - intarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
             intarray->maxusedidx - intarray->minusedidx + 1);
@@ -1979,6 +1986,10 @@ SCIP_RETCODE SCIPboolarrayExtend(
       {
          for( i = 0; i < boolarray->minusedidx - newfirstidx; ++i )
             newvals[i] = FALSE;
+
+         /* check for possible overflow or negative value */
+         assert(boolarray->maxusedidx - boolarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
             boolarray->maxusedidx - boolarray->minusedidx + 1);
@@ -2328,6 +2339,10 @@ SCIP_RETCODE SCIPptrarrayExtend(
       {
          for( i = 0; i < ptrarray->minusedidx - newfirstidx; ++i )
             newvals[i] = NULL;
+
+         /* check for possible overflow or negative value */
+         assert(ptrarray->maxusedidx - ptrarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
             &ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx],
             ptrarray->maxusedidx - ptrarray->minusedidx + 1);
