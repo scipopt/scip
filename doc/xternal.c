@@ -893,6 +893,15 @@
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
+ * @subsection CONSHDLRCOPY
+ *
+ * The CONSHDLRCOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * constraint handler for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
+ *
  * @subsection CONSINIT
  *
  * The CONSINIT callback is executed after the problem was transformed.
@@ -1607,6 +1616,15 @@
  * The difference between the original and the transformed problem is explained in 
  * "What is this thing with the original and the transformed problem about?" on \ref FAQ. 
  *
+ * @subsection PRESOLCOPY
+ *
+ * The PRESOLCOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * presolver for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
+ *
  * @subsection PRESOLEXIT
  *
  * The PRESOLEXIT callback is executed before the transformed problem is freed.
@@ -1844,6 +1862,15 @@
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
+ * @subsection SEPACOPY
+ *
+ * The SEPACOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * separator for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
+ *
  * @subsection SEPAINIT
  *
  * The SEPAINIT callback is executed after the problem was transformed.
@@ -2052,6 +2079,15 @@
  *
  * The PROPINIT callback is executed after the problem was transformed.  The propagator may, e.g., use this call to
  * initialize its propagator data.
+ *
+ * @subsection PROPCOPY
+ *
+ * The PROPCOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * propagator for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
  *
  * @subsection PROPEXIT
  *
@@ -2353,6 +2389,15 @@
  * The BRANCHINIT callback is executed after the problem was transformed.
  * The branching rule may, e.g., use this call to initialize his branching rule data.
  *
+ * @subsection BRANCHCOPY
+ *
+ * The BRANCHCOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * branching rule for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
+ *
  * @subsection BRANCHEXIT
  *
  * The BRANCHEXIT callback is executed before the transformed problem is freed.
@@ -2568,6 +2613,15 @@
  * The NODESELINIT callback is executed after the problem was transformed.
  * The node selector may, e.g., use this call to initialize his node selector data.
  *
+ * @subsection NODESELCOPY
+ *
+ * The NODESELCOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * node selector for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
+ * 
  * @subsection NODESELEXIT
  *
  * The NODESELEXIT callback is executed before the transformed problem is freed.
@@ -2824,10 +2878,14 @@
  * The HEURINIT callback is executed after the problem was transformed.
  * The primal heuristic may, e.g., use this call to initialize his primal heuristic data.
  *
- *@subsection HEURCOPY
+ * @subsection HEURCOPY
  *
- * The HEURCOPY callback is executed every time SCIP solves a sub-MIP. It is used
- * to make heuristic data such as user defined parameters accessible to the sub-MIP solving process.
+ * The HEURCOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * heuristic for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
  *
  * @subsection HEUREXIT
  *
@@ -3033,6 +3091,15 @@
  *
  * The RELAXINIT callback is executed after the problem was transformed.
  * The relaxation handler may, e.g., use this call to initialize his relaxation handler data.
+ *
+ * @subsection RELAXCOPY
+ *
+ * The RELAXCOPY callback is executed when a SCIP instance is copied, e.g. to 
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified 
+ * relaxator for all copied SCIP instances. This may deteriorate the performance 
+ * of primal heuristics using sub-SCIPs.
  *
  * @subsection RELAXEXIT
  *
