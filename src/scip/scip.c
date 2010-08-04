@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.606 2010/08/03 19:11:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.607 2010/08/04 17:19:21 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1124,6 +1124,7 @@ SCIP_RETCODE SCIPcopyConss(
    int i;
 #ifndef NDEBUG
    int nskipped;
+   int nlocal;
 #endif
   
    assert(sourcescip != NULL);
@@ -1136,6 +1137,7 @@ SCIP_RETCODE SCIPcopyConss(
    
 #ifndef NDEBUG
    nskipped = 0;
+   nlocal = 0;
 #endif
    nconshdlrs = SCIPgetNConshdlrs(sourcescip);
    conshdlrs = SCIPgetConshdlrs(sourcescip);
@@ -1166,6 +1168,14 @@ SCIP_RETCODE SCIPcopyConss(
       for( c = 0; c < nconss; ++c )
       {
          assert(conss[c] != NULL);
+
+         if ( SCIPconsIsDeleted(conss[c]) )
+            continue;
+
+#ifndef NDEBUG
+         if ( SCIPconsIsLocal(conss[c]) )
+            ++nlocal;
+#endif
 
          if( !SCIPconsIsEnabled(conss[c]) )
          {
@@ -1208,8 +1218,7 @@ SCIP_RETCODE SCIPcopyConss(
          }
       }
    }
-
-   assert(!(*success) || SCIPgetNConss(sourcescip) == SCIPgetNConss(targetscip) + nskipped );
+   assert(!(*success) || SCIPgetNConss(sourcescip) + nlocal == SCIPgetNConss(targetscip) + nskipped );
   
    return SCIP_OKAY;
 }
