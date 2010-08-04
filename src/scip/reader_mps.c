@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.123 2010/08/03 19:21:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.124 2010/08/04 18:40:44 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -3297,7 +3297,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    nConsSOS1 = 0;
    nConsSOS2 = 0;
    nConsQuadratic = 0;
-   nConsSOC  = 0;
+   nConsSOC = 0;
+   nConsIndicator = 0;
 
    /* check if the constraint names are too long and build the constraint names */
    SCIP_CALL( checkConsnames(scip, conss, nconss, &relconss, &nrelconss, transformed, &maxnamelen, &consnames, &error) );
