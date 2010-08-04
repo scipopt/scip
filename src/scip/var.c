@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.283 2010/08/03 18:23:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.284 2010/08/04 15:09:55 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -7775,7 +7775,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          minvlb = xlb;
 
          /* improve variable bound for binary z by moving the variable's global bound to the vlb constant */
-         if( SCIPvarIsBinary(vlbvar) )
+         if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
          {
             /* b > 0: x >= (maxvlb - minvlb) * z + minvlb
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
@@ -7804,7 +7804,7 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* if one of the variables is binary, add the corresponding implication to the variable's implication
              * list, thereby also adding the variable bound (or implication) to the other variable
              */
-            if( SCIPvarIsBinary(vlbvar) )
+            if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
             {
                /* add corresponding implication:
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
@@ -7813,7 +7813,7 @@ SCIP_RETCODE SCIPvarAddVlb(
                SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
             }
-            else if( SCIPvarIsBinary(var) )
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
                /* add corresponding implication:
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
