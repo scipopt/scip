@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.48 2010/07/06 17:29:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.49 2010/08/05 19:20:08 bzfpfets Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1041,8 +1041,8 @@ void SCIPintervalScalarProductReals(
 }
 
 /** computes the scalar product of a vector of intervals and a vector of numbers and stores result in resultant
- * assumes that numbers are not at +/- infinity */
-extern
+ * assumes that numbers are not at +/- infinity 
+ */
 void SCIPintervalScalarProductRealsIntervals(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1552,8 +1552,7 @@ void SCIPintervalPowerScalar(
 /** stores operand1 to the signed power of the scalar positive operand2 in resultant 
  * 
  * the signed power of x w.r.t. an exponent n >= 0 is given as sign(x) * abs(x)^n
- * */
-extern
+ */
 void SCIPintervalSignPowerScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1722,8 +1721,8 @@ void SCIPintervalSignPowerScalar(
 
 /** computes the reciprocal of an interval
  *
- * if operand is 0.0, gives empty interval */
-extern
+ * if operand is 0.0, gives empty interval 
+ */
 void SCIPintervalReciprocal(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */

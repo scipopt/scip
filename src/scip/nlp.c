@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.8 2010/07/29 15:55:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.9 2010/08/05 19:20:08 bzfpfets Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -60,7 +60,6 @@
 #define ADDNAMESTONLPI   1                   /**< whether to give variable and row names to NLPI */
 
 /* avoid inclusion of scip.h */
-extern
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -5106,7 +5105,6 @@ SCIP_RETCODE SCIPnlpStartDive(
 }
 
 /** resets the bound and objective changes made during diving and disables diving mode */
-extern
 SCIP_RETCODE SCIPnlpEndDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */

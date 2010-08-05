@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.34 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.35 2010/08/05 19:20:08 bzfpfets Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -364,7 +364,6 @@ void SCIPhistoryIncNBranchings(
 }
 
 /** increases the number of inferences counter by a certain value */
-extern
 void SCIPhistoryIncInferenceSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
