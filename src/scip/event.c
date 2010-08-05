@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.65 2010/07/30 09:57:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.66 2010/08/05 19:13:29 bzfpfets Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -910,7 +910,7 @@ SCIP_Real SCIPeventGetHoleLeft(
    if( (event->eventtype & SCIP_EVENTTYPE_HOLECHANGED) == 0 )
    {
       SCIPerrorMessage("event is not a hole added or removed event\n");
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALID;
    }
 
    return event->data.eventhole.left;
@@ -926,7 +926,7 @@ SCIP_Real SCIPeventGetHoleRight(
    if( (event->eventtype & SCIP_EVENTTYPE_HOLECHANGED) == 0 )
    {
       SCIPerrorMessage("event is not a hole added or removed event\n");
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALID;
    }
 
    return event->data.eventhole.right;
