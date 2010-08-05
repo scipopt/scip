@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.607 2010/08/04 17:19:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.608 2010/08/05 22:24:44 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3516,7 +3516,9 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
+   {
       SCIP_CALL( retcode );
+   }
 
    return SCIP_OKAY;
 }
@@ -3543,8 +3545,9 @@ SCIP_RETCODE SCIPwriteTransProblem(
    if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
+   {
       SCIP_CALL( retcode );
-
+   }
 
    return SCIP_OKAY;
 }
@@ -17505,8 +17508,10 @@ SCIP_RETCODE SCIPprintOrigProblem(
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
+   {
       SCIP_CALL( retcode );
-   
+   }
+
    return SCIP_OKAY;
 }
 
@@ -17531,7 +17536,9 @@ SCIP_RETCODE SCIPprintTransProblem(
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
+   {
       SCIP_CALL( retcode );
+   }
 
    return SCIP_OKAY;
 }
