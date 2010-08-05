@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.107 2010/07/30 12:45:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.108 2010/08/05 22:35:50 bzfwinkm Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3414,7 +3414,7 @@ SCIP_RETCODE presolveUpgrade(
             SCIPdebugMessage(" -> upgraded to %d constraints:\n", *nupgdconss);
             for( j = 0; j < *nupgdconss; ++j )
             {
-               printf("\t");
+               SCIPdebugPrintf("\t");
                SCIP_CALL( SCIPprintCons(scip, (*upgdconss)[j], NULL) );
             }
 #endif
