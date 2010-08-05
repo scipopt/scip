@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.18 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.19 2010/08/05 21:28:52 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -430,7 +430,7 @@ SCIP_DECL_READERREAD(readerReadCip)
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
-      return SCIP_READERROR;
+      return SCIP_NOFILE;
    }
 
    cipinput.len = 100000;
