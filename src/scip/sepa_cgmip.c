@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.19 2010/07/21 08:41:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.20 2010/08/05 18:03:00 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -40,6 +40,12 @@
  *   the solution of the MIP, but is recomputed, and some care (but not as much as in the first
  *   version) has been taken to create a valid cut.
  *
+ * The computation time of the separation MIP is limited as follows:
+ * - There is a node limit (parameter @a nodelimit).
+ * - If paramter @a earlyterm is true, the separation is run until the first cut that is violated is
+ *   found. (Note that these cuts are not necessarily added to the LP, because here also the norm of
+ *   the cuts are taken into account - which cannot easily be included into the separation subscip.) 
+ *   Then the solution is continued for a certain number of nodes.
  *
  * @todo Check whether one can weaken the conditions on the continuous variables.
  *
@@ -65,7 +71,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             0 /**< maximal number of separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT         5 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        50 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_TIMELIMIT          1e20 /**< time limit for sub-MIP */
 #define DEFAULT_MEMORYLIMIT        1e20 /**< memory limit for sub-MIP */
@@ -79,6 +85,8 @@
 #define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts? */
 #define DEFAULT_PRIMALSEPARATION   TRUE /**< only separate cuts that are tight for the best feasible solution? */
 #define DEFAULT_ONLYRANKONE       FALSE /**< whether only rank 1 inequalities should be separated */
+#define DEFAULT_EARLYTERM          TRUE /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
+#define DEFAULT_ADDVIOLATIONCONS   TRUE /**< add constraint to subscip that only allows violated cuts? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -86,6 +94,8 @@
 #define EPSILONVALUE              1e-03 /**< epsilon value needed to model strict-inequalities */
 #define BETAEPSILONVALUE          1e-02 /**< epsilon value for fracbeta - is larger than EPSILONVALUE for numerical stability */
 #define CUTCOEFBND               1000.0 /**< bounds on the values of the coefficients in the CG-cut */
+#define STALLNODELIMIT           1000LL /**< number of stalling nodes if earlyterm is true */
+#define MINEFFICACY                0.05 /**< minimum efficicy of a cut - compare set.c */
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
 #define BOUNDSWITCH              0.9999
@@ -121,6 +131,8 @@ struct SCIP_SepaData
    SCIP_Bool             useCutpool;         /**< use cutpool to store CG-cuts? */
    SCIP_Bool             primalSeparation;   /**< only separate cuts that are tight for the best feasible solution? */
    SCIP_Bool             onlyrankone;        /**< whether only rank 1 inequalities should be separated */
+   SCIP_Bool             earlyterm;          /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
+   SCIP_Bool             addViolationCons;   /**< add constraint to subscip that only allows violated cuts? */
 };
 
 
@@ -158,6 +170,8 @@ struct CGMIP_MIPData
    SCIP_VAR**            z;                  /**< auxiliary variables for upper bounds (NULL if not present) */
 };
 typedef struct CGMIP_MIPData CGMIP_MIPDATA;
+
+
 
 
 
@@ -1112,6 +1126,32 @@ SCIP_RETCODE createSubscip(
       }
    }
 
+   /* add constraint to force violated cuts if required */
+   if ( sepadata->addViolationCons )
+   {
+      nconsvars = 0;
+      for (j = 0; j < ncols; ++j)
+      {
+         if ( mipdata->alpha[j] != NULL )
+         {
+            consvars[nconsvars] = mipdata->alpha[j];
+            consvals[nconsvars] = primsol[j];
+            ++nconsvars;
+            assert( nconsvars <= (int) mipdata->n );
+         }
+      }
+      consvars[nconsvars] = mipdata->beta;
+      consvals[nconsvars] = -1.0;
+      ++nconsvars;
+
+      /* add linear constraint - allow slight deviation from equality */
+      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, "violationConstraint", nconsvars, consvars, consvals, MINEFFICACY, SCIPinfinity(subscip),
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(subscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+      ++mipdata->m;
+   }
+
    SCIPdebugMessage("subscip has %u variables and %u constraints (%u shifted, %u complemented, %u at lb, %u at ub).\n",
       mipdata->n, mipdata->m, nshifted, ncomplemented, nlbounds, nubounds);
 
@@ -1125,9 +1165,9 @@ SCIP_RETCODE createSubscip(
    SCIPfreeBufferArray(scip, &rhs);
    SCIPfreeBufferArray(scip, &lhs);
 
-#ifdef SCIP_DEBUG
+#ifdef SCIP_OUTPUT
    /* SCIPdebug( SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, NULL, FALSE) ) ); */
-   /* SCIP_CALL( SCIPwriteOrigProblem(subscip, "debug.lp", "lp", FALSE) ); */
+   SCIP_CALL( SCIPwriteOrigProblem(subscip, "debug.lp", "lp", FALSE) );
 #endif
 
    return SCIP_OKAY;
@@ -1144,8 +1184,6 @@ SCIP_RETCODE subscipSetParams(
    )
 {
    SCIP* subscip;
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
 
    assert( scip != NULL );
    assert( sepadata != NULL );
@@ -1157,41 +1195,6 @@ SCIP_RETCODE subscipSetParams(
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
-   /* determine timelimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if ( sepadata->timelimit < timelimit )
-      timelimit = sepadata->timelimit;
-   if ( ! SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   if ( timelimit > 0.0 )
-   {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   }
-   else
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* determine memorylimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if ( sepadata->memorylimit < memorylimit )
-      memorylimit = sepadata->memorylimit;
-   if ( ! SCIPisInfinity(scip, memorylimit) )
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if ( memorylimit > 0.0 )
-   {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   }
-   else
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* determine nodelimit */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", sepadata->nodelimit) );
-
    /* set other limits of subscip */
    /* SCIP_CALL( SCIPsetObjlimit(subscip, mipdata->objectivelimit) ); */
    /* SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", sepadata->sollimit) ); */
@@ -1200,7 +1203,7 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
    /* determine output to console */
-#ifdef SCIP_DEBUG
+#ifdef SCIP_OUTPUT
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 4) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1000) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/nsols/active", 2) );
@@ -1252,6 +1255,143 @@ SCIP_RETCODE subscipSetParams(
 
    return SCIP_OKAY;
 }
+
+
+
+/** solve subscip */
+static
+SCIP_RETCODE solveSubscip(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
+   SCIP_Bool*            success             /**< if setting was successful -> stop solution otherwise */
+   )
+{
+   SCIP* subscip;
+   SCIP_STATUS status;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+
+   assert( scip != NULL );
+   assert( sepadata != NULL );
+   assert( mipdata != NULL );
+   assert( success != NULL );
+
+   *success = TRUE;
+
+   subscip = mipdata->subscip;
+
+   /* determine timelimit */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if ( sepadata->timelimit < timelimit )
+      timelimit = sepadata->timelimit;
+   if ( ! SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   if ( timelimit > 0.0 )
+   {
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   }
+   else
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* determine memorylimit */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if ( sepadata->memorylimit < memorylimit )
+      memorylimit = sepadata->memorylimit;
+   if ( ! SCIPisInfinity(scip, memorylimit) )
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+   if ( memorylimit > 0.0 )
+   {
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+   }
+   else
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* set nodelimit */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", sepadata->nodelimit) );
+
+   /* check whether we want a complete solve */
+   if ( ! sepadata->earlyterm )
+   {
+      SCIP_CALL( SCIPsolve(subscip) );
+      status = SCIPgetStatus(subscip);
+
+      /* if the solution process was terminated */
+      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* all other statuses except optimal are invalid */
+      if ( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_NODELIMIT )
+      {
+         SCIPerrorMessage("Solution of subscip for CG-separation returned with invalid status %d.\n", status);
+         return SCIP_ERROR;
+      }
+   }
+   else
+   {
+      /* otherwise we want a heuristic solve */
+
+      /* -> solve until first solution is found */
+      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
+      SCIP_CALL( SCIPsolve(subscip) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
+
+      status = SCIPgetStatus(subscip);
+
+      /* if the solution process was terminated */
+      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* all other statuses except optimal or bestsollimit are invalid */
+      if ( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_BESTSOLLIMIT )
+      {
+         SCIPerrorMessage("Solution of subscip for CG-separation returned with invalid status %d.\n", status);
+         return SCIP_ERROR;
+      }
+
+      /* solve some more, if a feasible solution was found */
+      if ( status == SCIP_STATUS_BESTSOLLIMIT )
+      {
+         SCIPdebugMessage("Continue solving separation problem ...\n");
+
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
+         SCIP_CALL( SCIPsolve(subscip) );
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1) );
+
+         status = SCIPgetStatus(subscip);
+         assert( status != SCIP_STATUS_BESTSOLLIMIT );
+
+         /* if the solution process was terminated */
+         if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT )
+         {
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+
+         /* all other statuses except optimal or bestsollimit are invalid */
+         if ( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_STALLNODELIMIT && status != SCIP_STATUS_NODELIMIT )
+         {
+            SCIPerrorMessage("Solution of subscip for CG-separation returned with invalid status %d.\n", status);
+            return SCIP_ERROR;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 /** Computes cut from the given multipliers 
@@ -2347,20 +2487,26 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_CALL( subscipSetParams(scip, sepadata, mipdata, &success) );
 
    if ( success && !SCIPisStopped(scip) )
-   {
+   {      
       /* solve subscip */
-      SCIP_CALL( SCIPsolve(mipdata->subscip) );
+      SCIP_CALL( solveSubscip(scip, sepadata, mipdata, &success) );
 
-      /* print statistics in debug mode */
-      SCIPdebug( SCIP_CALL( SCIPprintStatistics(mipdata->subscip, NULL) ) );
+#ifdef SCIP_OUPUT
+      /* print statistics */
+      SCIP_CALL( SCIPprintStatistics(mipdata->subscip, NULL) );
+#endif
 
-      if ( sepadata->usecmir )
+      /* preceed if solution was successfull */
+      if ( success && !SCIPisStopped(scip) )
       {
-         SCIP_CALL( createCGCutsCMIR(scip, sepadata, mipdata, &ngen) );
-      }
-      else
-      {
-         SCIP_CALL( createCGCutsDirect(scip, sepadata, mipdata, &ngen) );
+         if ( sepadata->usecmir )
+         {
+            SCIP_CALL( createCGCutsCMIR(scip, sepadata, mipdata, &ngen) );
+         }
+         else
+         {
+            SCIP_CALL( createCGCutsDirect(scip, sepadata, mipdata, &ngen) );
+         }
       }
    }
 
@@ -2468,6 +2614,14 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/onlyrankone",
          "whether only rank 1 inequalities should be separated",
          &sepadata->onlyrankone, FALSE, DEFAULT_ONLYRANKONE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/earlyterm",
+         "terminate separation if a violated (but possibly sub-optimal) cut has been found?",
+         &sepadata->earlyterm, FALSE, DEFAULT_EARLYTERM, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/addViolationCons",
+         "add constraint to subscip that only allows violated cuts?",
+         &sepadata->addViolationCons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
