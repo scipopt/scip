@@ -139,7 +139,7 @@
  *   installed separately from SCIP. The options are the following:
  *      - <code>clp</code>: COIN Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
- *      - <code>grb</code>: Gurobi LP-solver
+ *      - <code>grb</code>: Gurobi LP-solver (interface is in beta stage)
  *      - <code>msk</code>: Mosek LP-solver
  *      - <code>qso</code>: QSopt LP-solver
  *      - <code>spx</code>: SoPlex LP-solver (default)

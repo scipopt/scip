@@ -52,7 +52,7 @@
     <ul>
       <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
       <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a></li>
+    <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage)</li>
       <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
       <li><a href="http://www.mosek.com/">Mosek</a></li>
       <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a></li>
