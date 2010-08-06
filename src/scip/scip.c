@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.613 2010/08/06 17:58:52 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.614 2010/08/06 18:41:16 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9081,11 +9081,25 @@ SCIP_RETCODE SCIPaddClique(
          val0 = values[0];
          val1 = values[1];
       }
-
+      
       /* add the implications instead of the clique */
-      SCIP_CALL( SCIPvarAddImplic(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-            scip->branchcand, scip->eventqueue, val0, vars[1], val1 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-            val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+      if( SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY )
+      {
+         /* this function call adds the implication form vars[0] to vars[1] as well as the implication from vars[1] to
+          * vars[0] if vars[1] in of binary type */
+         SCIP_CALL( SCIPvarAddImplic(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, val0, vars[1], val1 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+               val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+      }
+      else if( SCIPvarGetType(vars[1]) == SCIP_VARTYPE_BINARY )
+      {
+         /* this function call adds the implication form vars[1] to vars[0] */
+         SCIP_CALL( SCIPvarAddImplic(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, val1, vars[0], val0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+               val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+      }
+
+      /**@todo in case one or both variables are not of binary type we can the implication as variable bounds */
    }
    else if( nvars >= 3 )
    {
