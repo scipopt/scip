@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.47 2010/08/03 18:23:15 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.48 2010/08/06 13:02:41 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -308,7 +308,17 @@ void printValue(
       break;
    }
    case FZN_FLOAT:
-      SCIPinfoMessage(scip, file, "%.1g;\n", value);
+      if( SCIPisIntegral(scip, value) )
+      {
+         printValue(scip, file, value, FZN_INT);
+
+         /* add a ".0" to be type save */
+         SCIPinfoMessage(scip, file, ".0");
+      }
+      else
+      {
+         SCIPinfoMessage(scip, file, "%.1f", value);
+      }
       break;
    }
 }
@@ -586,6 +596,9 @@ SCIP_Bool getNextLine(
       
    if( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' )
    {
+      /* overwrite the character to search the last blank from this position backwards */
+      fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
+      
       /* buffer is full; erase last token since it might be incomplete */
       fzninput->endline = FALSE;
       last = strrchr(fzninput->linebuf, ' ');
@@ -599,9 +612,9 @@ SCIP_Bool getNextLine(
       }
       else
       {
-         SCIPfseek(fzninput->file, -(long) strlen(last), SEEK_CUR);
+         SCIPfseek(fzninput->file, -(long) strlen(last) - 1, SEEK_CUR);
+	 SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
          *last = '\0';
-         SCIPdebugMessage("correct buffer\n");
       }
    }
    else 
@@ -808,7 +821,7 @@ SCIP_RETCODE createQuadraticCons(
    SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, 
          quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) ); 
 
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -833,7 +846,7 @@ SCIP_RETCODE createLinearCons(
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, lhs, rhs, 
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
 
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1592,8 +1605,8 @@ SCIP_RETCODE createVariable(
    SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, TRUE, TRUE, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, varcopy) );
 
-   SCIPdebugMessage("created variable ");
-   SCIPdebug(SCIPprintVar(scip, varcopy, NULL) );
+   SCIPdebugMessage("created variable\n");
+   SCIPdebug( SCIP_CALL( SCIPprintVar(scip, varcopy, NULL) ) );
    
    /* variable name should not exist before */
    assert(SCIPhashtableRetrieve(fzninput->varHashtable, varcopy) == NULL);
@@ -2435,7 +2448,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             goto TERMINATE;
          }
          
-         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -2516,7 +2529,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
       }
          
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       *created = TRUE;
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
