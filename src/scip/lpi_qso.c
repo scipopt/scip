@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.10 2010/06/17 12:04:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.11 2010/08/06 17:24:02 bzfpfets Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -580,7 +580,7 @@ SCIP_RETCODE SCIPlpiDelCols(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
-   assert(0 <= firstcol && len > 0 && lastcol < QSget_colcount (lpi->prob));
+   assert(0 <= firstcol && len > 0 && lastcol < QSget_colcount(lpi->prob));
 
    SCIPdebugMessage("deleting %d columns from QSopt\n", len);
 
@@ -669,6 +669,125 @@ SCIP_RETCODE SCIPlpiAddRows(
    /* now we add the rows */
    rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
    QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
+
+   return SCIP_OKAY;
+}
+
+/** gets column names */
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   char** cnames;
+   char* s;
+   int ncols;
+   int rval;
+   int j;
+   int sizeleft;
+
+   assert( lpi != NULL );
+   assert( lpi->prob != NULL );
+   assert( colnames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
+   assert( 0 <= firstcol && firstcol <= lastcol && lastcol < QSget_colcount(lpi->prob) );
+
+   SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
+
+   ncols = QSget_colcount(lpi->prob);
+   SCIP_ALLOC( BMSallocMemoryArray(&cnames, ncols) );
+
+   rval = QSget_colnames(lpi->prob, cnames);
+   QS_ERROR(rval, "failed getting column names");
+
+   /* copy column names */
+   s = namestorage;
+   sizeleft = namestoragesize;
+   for (j = firstcol; j <= lastcol; ++j)
+   {
+      const char* t;
+      t = cnames[j];
+      if ( colnames != NULL )
+         colnames[j-firstcol] = s;
+      while ( *t != '\0' )
+      {
+         if ( sizeleft > 0 )
+            *(s++) = *(t++);
+         --sizeleft;
+      }
+      *(s++) = '\0';
+   }
+   *storageleft = sizeleft;
+
+   /* free space */
+   for (j = 0; j < ncols; ++j)
+      free(cnames[j]);
+
+   return SCIP_OKAY;
+}
+
+/** gets row names */
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   char** rnames;
+   char* s;
+   int nrows;
+   int rval;
+   int i;
+   int sizeleft;
+
+   assert( lpi != NULL );
+   assert( lpi->prob != NULL );
+   assert( rownames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
+   assert( 0 <= firstrow && firstrow <= lastrow && lastrow < QSget_rowcount(lpi->prob) );
+
+   SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
+
+   nrows = QSget_rowcount(lpi->prob);
+   SCIP_ALLOC( BMSallocMemoryArray(&rnames, nrows) );
+
+   rval = QSget_rownames(lpi->prob, rnames);
+   QS_ERROR(rval, "failed getting row names");
+
+   s = namestorage;
+   sizeleft = namestoragesize;
+   for (i = firstrow; i <= lastrow; ++i)
+   {
+      const char* t;
+      t = rnames[i];
+      if ( rownames != NULL )
+         rownames[i-firstrow] = s;
+      while ( *t != '\0' )
+      {
+         if ( sizeleft > 0 )
+            *(s++) = *(t++);
+         --sizeleft;
+      }
+      *(s++) = '\0';
+   }
+   *storageleft = sizeleft;
+
+   /* free space */
+   for (i = 0; i < nrows; ++i)
+      free(rnames[i]);
 
    return SCIP_OKAY;
 }
