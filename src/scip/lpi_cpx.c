@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.133 2010/07/26 10:50:19 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.134 2010/08/06 16:30:30 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -1770,7 +1770,6 @@ SCIP_RETCODE SCIPlpiGetColNames(
 }
 
 /** gets row names */
-extern
 SCIP_RETCODE SCIPlpiGetRowNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
@@ -3570,13 +3569,20 @@ SCIP_RETCODE SCIPlpiReadLP(
    const char*           fname               /**< file name */
    )
 {
+   int restat;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
-   CHECK_ZERO( CPXreadcopyprob(cpxenv, lpi->cpxlp, fname, NULL) );
+   restat = CPXreadcopyprob(cpxenv, lpi->cpxlp, fname, NULL);
+   if ( restat != 0 )
+   {
+      SCIPerrorMessage("LP Error: CPLEX returned %d\n", restat);
+      return SCIP_READERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -3587,13 +3593,20 @@ SCIP_RETCODE SCIPlpiWriteLP(
    const char*           fname               /**< file name */
    )
 {
+   int restat;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   CHECK_ZERO( CPXwriteprob(cpxenv, lpi->cpxlp, fname, NULL) );
+   restat = CPXwriteprob(cpxenv, lpi->cpxlp, fname, NULL);
+   if ( restat != 0 )
+   {
+      SCIPerrorMessage("LP Error: CPLEX returned %d\n", restat);
+      return SCIP_READERROR;
+   }
 
    return SCIP_OKAY;
 }
