@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.608 2010/08/05 22:24:44 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.609 2010/08/06 09:43:26 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3428,16 +3428,19 @@ SCIP_RETCODE writeProblem(
    char* fileextension;
    char* compression;
    FILE* file;
-
+   
    assert(scip != NULL );
 
    fileextension = NULL;
    compression = NULL;
    file = NULL;
    tmpfilename = NULL;
+   retcode = SCIP_OKAY;
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
+      int success;
+
       file = fopen(filename, "w");
       if( file == NULL )
       {
@@ -3446,8 +3449,14 @@ SCIP_RETCODE writeProblem(
          return SCIP_FILECREATEERROR;
       }
 
-      /* get extension from filename */
-      SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
+      /* get extension from filename,
+       * if an error occured, close the file before returning */
+      if( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) == NULL )
+      {
+         (void) fclose(file);
+         SCIP_CALL( SCIP_NOMEMORY );
+      }
+
       SCIPsplitFilename(tmpfilename, NULL, NULL, &fileextension, &compression);
       
       if( compression != NULL )
@@ -3462,25 +3471,28 @@ SCIP_RETCODE writeProblem(
       {
          SCIPwarningMessage("filename <%s> has no file extension, select default <cip> format for writing\n", filename);
       }
-   }
    
-   if( transformed )
-      retcode = SCIPprintTransProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
-   else
-      retcode =  SCIPprintOrigProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
-
-   if( filename != NULL &&  filename[0] != '\0' )
-   {
-      int success;
-      assert(file != NULL);
+      if( transformed )
+         retcode = SCIPprintTransProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
+      else
+         retcode = SCIPprintOrigProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
+      
       BMSfreeMemoryArray(&tmpfilename);
-
+      
       success = fclose(file);
       if( success != 0 )
       {
          SCIPerrorMessage("An error occured while closing file <%s>\n", filename);
          return SCIP_FILECREATEERROR;
       }         
+   }
+   else
+   {
+      /* print to stdout */      
+      if( transformed )
+         retcode = SCIPprintTransProblem(scip, NULL, extension, genericnames);
+      else
+         retcode = SCIPprintOrigProblem(scip, NULL, extension, genericnames);
    }
 
    /* check for write errors */
@@ -3516,9 +3528,7 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
-   {
       SCIP_CALL( retcode );
-   }
 
    return SCIP_OKAY;
 }
@@ -3545,9 +3555,8 @@ SCIP_RETCODE SCIPwriteTransProblem(
    if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
-   {
       SCIP_CALL( retcode );
-   }
+
 
    return SCIP_OKAY;
 }
@@ -17508,10 +17517,8 @@ SCIP_RETCODE SCIPprintOrigProblem(
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
-   {
       SCIP_CALL( retcode );
-   }
-
+   
    return SCIP_OKAY;
 }
 
@@ -17536,9 +17543,7 @@ SCIP_RETCODE SCIPprintTransProblem(
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
-   {
       SCIP_CALL( retcode );
-   }
 
    return SCIP_OKAY;
 }

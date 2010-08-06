@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.15 2010/01/04 20:35:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.16 2010/08/06 09:43:26 bzfberth Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -605,11 +605,35 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }    
 
-   /* set data structures for tclique */
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) );
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) );
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) );
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) );
+   /* set data structures for tclique,
+    * if an error occured, close the file before returning */
+   if( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) == NULL )
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
+
+   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )   
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
+
+   if( BMSallocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) == NULL )
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
+
+   if( BMSallocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) == NULL )
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
 
    /* set weights of all nodes (scaled!) */
    for( i = 0; i < (*tcliquegraph)->nnodes; i++ )
