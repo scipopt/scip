@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.398 2010/08/03 19:11:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.399 2010/08/06 10:42:19 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -6952,6 +6952,12 @@ extern
 SCIP_RETCODE SCIPchgBarrierconvtol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+   );
+
+/** marks that some limit parameter was changed */
+extern
+void SCIPmarkLimitChanged(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifndef NDEBUG

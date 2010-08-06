@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.117 2010/07/21 08:41:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.118 2010/08/06 10:42:19 bzfberth Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -782,6 +782,12 @@ extern
 SCIP_RETCODE SCIPsetSetBarrierconvtol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+   );
+
+/** marks that some limit parameter was changed */
+extern
+void SCIPsetSetLimitChanged(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns the maximal number of variables priced into the LP per round */

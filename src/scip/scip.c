@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.609 2010/08/06 09:43:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.610 2010/08/06 10:42:18 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -18731,6 +18731,17 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
    SCIP_CALL( SCIPsetSetBarrierconvtol(scip->set, barrierconvtol) );
 
    return SCIP_OKAY;
+}
+
+/** marks that some limit parameter was changed */
+void SCIPmarkLimitChanged(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkLimitChanged", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   /* change the settings */
+   SCIPsetSetLimitChanged(scip->set);
 }
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

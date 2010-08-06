@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.97 2010/07/26 10:50:20 bzfgamra Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.98 2010/08/06 10:42:19 bzfberth Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -122,6 +122,7 @@ struct SCIP_Set
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
+   SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */

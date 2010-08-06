@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.304 2010/07/28 13:44:48 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.305 2010/08/06 10:42:19 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -77,12 +77,11 @@ SCIP_Bool SCIPsolveIsStopped(
    if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
       return FALSE;
 
-   /* if the current the problem is not solved yet, the status can either be unknown or some limit.
-    For the case that some limit changed in the meantime, we reset the status */
-   if( set->stage < SCIP_STAGE_SOLVED )
+   /* if some limit has been changed since the last call, we reset the status */
+   if( set->limitchanged )
    {
-      assert(stat->status < SCIP_STATUS_OPTIMAL);
       stat->status = SCIP_STATUS_UNKNOWN;
+      set->limitchanged = FALSE;
    }
 
    if( SCIPinterrupted() || stat->userinterrupt )

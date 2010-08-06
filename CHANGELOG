@@ -239,6 +239,8 @@ fixed bugs:
 - fixed bug with debugging a solution: during restarts erroneously it was claimed that the primal solution is cut off
 - fixed bug in copy procedure of AND constraint handler, negated variables have been copied to their originals
 - fixed bug while trying to write a MIP where SCIP needs to flush the lp changes first
+- fixed potential resource leak when running out of memory while writing files
+- fixed bug that SCIP could not be continued after it has been stopped due to a limit 
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
@@ -282,7 +284,7 @@ parameters:
 - changed parameter <lp/fastmip> from boolean to integer, possible values are 0 (off), 1 (medium, default), 2 (full, must not be used with branch-and-price).
 
 design:
-- removed to two different block memories for the original and transformed problem
+- removed two different block memories for the original and transformed problem
 
 Makefile
 - added target "lintfiles" which allows to call flexelint with a list of file, for example, 

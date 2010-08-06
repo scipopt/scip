@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.231 2010/07/29 10:05:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.232 2010/08/06 10:42:19 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -357,6 +357,15 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
    return SCIP_OKAY;
 }
 
+/** parameter change information method that node limit was changed */
+static
+SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
+{  /*lint --e{715}*/
+
+   SCIPmarkLimitChanged(scip);
+   return SCIP_OKAY;
+}
+
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, success will return FALSE. Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPsetCopyPlugins(
@@ -630,6 +639,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nnlpis = 0;
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
+   (*set)->limitchanged = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
@@ -837,52 +847,52 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/time",
          "maximal time in seconds to run",
          &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
          &(*set)->limit_nodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, blkmem,
          "limits/stallnodes",
          "solving stops, if the given number of nodes was processed since the last improvement of the primal solution value (-1: no limit)",
          &(*set)->limit_stallnodes, FALSE, SCIP_DEFAULT_LIMIT_STALLNODES, -1LL, SCIP_LONGINT_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
          &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_REAL_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/gap",
          "solving stops, if the relative gap = |(primalbound - dualbound)/dualbound| is below the given value",
          &(*set)->limit_gap, FALSE, SCIP_DEFAULT_LIMIT_GAP, 0.0, SCIP_REAL_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/absgap",
          "solving stops, if the absolute gap = |primalbound - dualbound| is below the given value",
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/solutions",
          "solving stops, if the given number of solutions were found (-1: no limit)",
          &(*set)->limit_solutions, FALSE, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/bestsol",
          "solving stops, if the given number of solution improvements were found (-1: no limit)",
          &(*set)->limit_bestsol, FALSE, SCIP_DEFAULT_LIMIT_BESTSOL, -1, INT_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/maxsol",
          "maximal number of solutions to store in the solution storage",
          &(*set)->limit_maxsol, FALSE, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/restarts",
          "solving stops, if the given number of restarts was triggered (-1: no limit)",
          &(*set)->limit_restarts, FALSE, SCIP_DEFAULT_LIMIT_RESTARTS, -1, INT_MAX,
-         NULL, NULL) );
+         SCIPparamChgdLimit, NULL) );
 
    /* LP parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
@@ -3379,6 +3389,14 @@ SCIP_RETCODE SCIPsetSetBarrierconvtol(
    set->num_barrierconvtol = barrierconvtol;
 
    return SCIP_OKAY;
+}
+
+/** marks that some limit parameter was changed */
+void SCIPsetSetLimitChanged(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   set->limitchanged = TRUE;
 }
 
 /** returns the maximal number of variables priced into the LP per round */
