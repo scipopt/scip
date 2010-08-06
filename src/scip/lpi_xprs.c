@@ -1623,6 +1623,36 @@ SCIP_RETCODE SCIPlpiGetRows(
    return SCIP_OKAY;
 }
 
+/** gets column names */
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
+/** gets row names */
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
 /** gets objective coefficients from LP problem object */
 SCIP_RETCODE SCIPlpiGetObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
