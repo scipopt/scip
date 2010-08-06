@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.17 2010/05/20 15:28:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.18 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   reader_sos.c
  * @ingroup FILEREADERS 
@@ -473,14 +473,14 @@ SCIP_RETCODE readSOS(
 	 {
 	    SCIPerrorMessage("next section unkown <%s>.\n", SOSinputField0(sosi));
 	    SOSinputSyntaxerror(sosi);
-	    return SCIP_PARSEERROR;
+	    return SCIP_READERROR;
 	 }
       }
       if ( SOSinputField1(sosi) == NULL && SOSinputField2(sosi) == NULL )
       {
 	 SCIPerrorMessage("empty data in a non-comment line.\n");
 	 SOSinputSyntaxerror(sosi);
-	 return SCIP_PARSEERROR;
+	 return SCIP_READERROR;
       }
 
       /* check for new SOS set */
@@ -532,7 +532,7 @@ SCIP_RETCODE readSOS(
 	 {
 	    SCIPerrorMessage("missing SOS type specification.\n");
 	    SOSinputSyntaxerror(sosi);
-	    return SCIP_PARSEERROR;
+	    return SCIP_READERROR;
 	 }
 
 	 /* get variable */
@@ -541,7 +541,7 @@ SCIP_RETCODE readSOS(
 	 {
 	    SCIPerrorMessage("variable <%s> unkown - is correct problem loaded?\n", SOSinputField1(sosi));
 	    SOSinputSyntaxerror(sosi);
-	    return SCIP_PARSEERROR;
+	    return SCIP_READERROR;
 	 }
 
 	 /* get weight */
@@ -550,7 +550,7 @@ SCIP_RETCODE readSOS(
 	 {
 	    SCIPerrorMessage("weight for variable <%s> not specified.\n", SOSinputField1(sosi));
 	    SOSinputSyntaxerror(sosi);
-	    return SCIP_PARSEERROR;
+	    return SCIP_READERROR;
 	 }
 
 	 /* add variable and weight */
@@ -619,7 +619,7 @@ SCIP_RETCODE readSOSFile(
    SOSinputFree(scip, &sosi);
 
    if( error )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    else
       return SCIP_OKAY;
 }

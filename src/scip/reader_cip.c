@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.19 2010/08/05 21:28:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.20 2010/08/06 16:29:07 bzfpfets Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -499,7 +499,7 @@ SCIP_DECL_READERREAD(readerReadCip)
    SCIPfreeBufferArray(scip, &cipinput.strbuf);
    
    if( cipinput.haserror )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    
    /* successfully parse cip format */
    *result = SCIP_SUCCESS;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.15 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.16 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   reader_fix.c
  * @ingroup FILEREADERS 
@@ -154,7 +154,7 @@ SCIP_RETCODE readSol(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "fixed %d variables from solution file <%s>\n", nfixed, filename);
 
    if( error )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    else
       return SCIP_OKAY;
 }

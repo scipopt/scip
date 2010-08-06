@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.58 2010/08/03 15:03:00 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.59 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -1002,7 +1002,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
-         return SCIP_PARSEERROR;
+         return SCIP_READERROR;
       }
       if( path != NULL )
       {
@@ -1022,7 +1022,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       if( getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
-         return SCIP_PARSEERROR;
+         return SCIP_READERROR;
       }
       /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
        *  correctly */
@@ -1187,7 +1187,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    *result = SCIP_SUCCESS;
 
    if( readerror_ )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    else
       return SCIP_OKAY;
 }

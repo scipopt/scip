@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.51 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.52 2010/08/06 16:29:07 bzfpfets Exp $"
 
 /**@file   reader_cnf.c
  * @ingroup FILEREADERS 
@@ -92,7 +92,7 @@ SCIP_RETCODE readCnfLine(
             char s[SCIP_MAXSTRLEN];
             (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "line too long (exceeds %d characters)", size-2);
             readError(*linecount, s);
-            return SCIP_PARSEERROR;
+            return SCIP_READERROR;
          }
       }
       else
@@ -160,30 +160,30 @@ SCIP_RETCODE readCnf(
    if( *line != 'p' )
    {
       readError(linecount, "problem declaration line expected");
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    if( sscanf(line, "p %8s %d %d", format, &nvars, &nclauses) != 3 )
    {
       readError(linecount, "invalid problem declaration (must be 'p cnf <nvars> <nclauses>')");
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    if( strcmp(format, "cnf") != 0 )
    {
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid format tag <%s> (must be 'cnf')", format);
       readError(linecount, s);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    if( nvars <= 0 )
    {
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid number of variables <%d> (must be positive)", nvars);
       readError(linecount, s);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    if( nclauses <= 0 )
    {
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid number of clauses <%d> (must be positive)", nclauses);
       readError(linecount, s);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
 
    /* get parameter values */
@@ -225,7 +225,7 @@ SCIP_RETCODE readCnf(
             {
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid literal <%s>", tok);
                readError(linecount, s);
-               retcode = SCIP_PARSEERROR;
+               retcode = SCIP_READERROR;
                goto TERMINATE;
             }
 
@@ -279,7 +279,7 @@ SCIP_RETCODE readCnf(
                if( clauselen >= nvars )
                {
                   readError(linecount, "too many literals in clause");
-                  retcode = SCIP_PARSEERROR;
+                  retcode = SCIP_READERROR;
                   goto TERMINATE;
                }
          
@@ -301,7 +301,7 @@ SCIP_RETCODE readCnf(
             {
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid variable number <%d>", ABS(v));
                readError(linecount, s);
-               retcode = SCIP_PARSEERROR;
+               retcode = SCIP_READERROR;
                goto TERMINATE;
             }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.112 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.113 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1138,7 +1138,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
          do
          {
             retcode = SCIPreadProb(scip, tmpfilename, extension);
-            if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+            if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE )
             {
                if( extension == NULL )
                   SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", tmpfilename);

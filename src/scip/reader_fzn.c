@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.48 2010/08/06 13:02:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.49 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -4102,7 +4102,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
 
    /* evaluate the result */
    if( fzninput.haserror )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
 
    *result = SCIP_SUCCESS;
 

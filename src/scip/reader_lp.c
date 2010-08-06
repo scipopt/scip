@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.90 2010/04/21 10:30:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.91 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2538,7 +2538,7 @@ SCIP_RETCODE SCIPreadLp(
 
    /* evaluate the result */
    if( lpinput.haserror )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    else
    {
       /* set objective sense */

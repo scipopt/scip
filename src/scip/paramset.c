@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.74 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.75 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1345,7 +1345,7 @@ SCIP_RETCODE paramParseBool(
    else
    {
       SCIPerrorMessage("invalid parameter value <%s> for SCIP_Bool parameter <%s>\n", valuestr, param->name);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    
    return SCIP_OKAY;
@@ -1373,7 +1373,7 @@ SCIP_RETCODE paramParseInt(
    else
    {
       SCIPerrorMessage("invalid parameter value <%s> for int parameter <%s>\n", valuestr, param->name);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    
    return SCIP_OKAY;
@@ -1401,7 +1401,7 @@ SCIP_RETCODE paramParseLongint(
    else
    {
       SCIPerrorMessage("invalid parameter value <%s> for SCIP_Longint parameter <%s>\n", valuestr, param->name);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    
    return SCIP_OKAY;
@@ -1429,7 +1429,7 @@ SCIP_RETCODE paramParseReal(
    else
    {
       SCIPerrorMessage("invalid parameter value <%s> for SCIP_Real parameter <%s>\n", valuestr, param->name);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    
    return SCIP_OKAY;
@@ -1457,7 +1457,7 @@ SCIP_RETCODE paramParseChar(
    else
    {
       SCIPerrorMessage("invalid parameter value <%s> for char parameter <%s>\n", valuestr, param->name);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    
    return SCIP_OKAY;
@@ -1484,7 +1484,7 @@ SCIP_RETCODE paramParseString(
    {
       SCIPerrorMessage("invalid parameter value <%s> for string parameter <%s> (string has to be in double quotes)\n",
          valuestr, param->name);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
 
    /* remove the quotes */
@@ -2191,7 +2191,7 @@ SCIP_RETCODE paramsetParse(
       if( *line != '=' )
       {
          SCIPerrorMessage("character '=' was expected after the parameter name\n");
-         return SCIP_PARSEERROR;
+         return SCIP_READERROR;
       }
       line++;
    }
@@ -2202,7 +2202,7 @@ SCIP_RETCODE paramsetParse(
    if( *line == '\0' || *line == '\n' || *line == '#' )
    {
       SCIPerrorMessage("parameter value is missing\n");
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    paramvaluestr = line;
 
@@ -2229,7 +2229,7 @@ SCIP_RETCODE paramsetParse(
       if( *line != '\0' && *line != '\n' && *line != '#' )
       {
          SCIPerrorMessage("additional characters after parameter value\n");
-         return SCIP_PARSEERROR;
+         return SCIP_READERROR;
       }
    }
 
@@ -2306,7 +2306,7 @@ SCIP_RETCODE SCIPparamsetRead(
    /* close input file */
    fclose(file);
 
-   if( retcode == SCIP_PARSEERROR )
+   if( retcode == SCIP_READERROR )
    {
       SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
    }

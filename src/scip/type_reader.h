@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.24 2010/08/05 21:28:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.25 2010/08/06 16:29:07 bzfpfets Exp $"
 
 /**@file   type_reader.h
  * @ingroup TYPEDEFINITIONS
@@ -67,7 +67,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error in the input file, it should return with RETCODE SCIP_PARSEERROR or SCIP_NOFILE.
+ *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERROR or SCIP_NOFILE.
  */
 #define SCIP_DECL_READERREAD(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, const char* filename, SCIP_RESULT* result)
 
@@ -106,7 +106,8 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - SCIP_SUCCESS    : the reader wrote the file correctly
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error in the input file, it should return with RETCODE SCIP_WRITEERROR */
+ *  If the reader detected an error while writing the output file, it should return with RETCODE SCIP_WRITEERROR 
+ */
 #define SCIP_DECL_READERWRITE(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, FILE* file, \
       const char* name, SCIP_PROBDATA* probdata, SCIP_Bool transformed, \
       SCIP_OBJSENSE objsense, SCIP_Real objscale, SCIP_Real objoffset,  \

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.c,v 1.28 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: retcode.c,v 1.29 2010/08/06 16:29:07 bzfpfets Exp $"
 
 /**@file   retcode.c
  * @brief  methods for return codes for SCIP methods
@@ -45,10 +45,10 @@ void SCIPretcodePrint(
       SCIPmessageFPrintInfo(file, "insufficient memory error");
       break;
    case SCIP_READERROR:
-      SCIPmessageFPrintInfo(file, "file read error");
+      SCIPmessageFPrintInfo(file, "read error");
       break;
    case SCIP_WRITEERROR:
-      SCIPmessageFPrintInfo(file, "file write error");
+      SCIPmessageFPrintInfo(file, "write error");
       break;
    case SCIP_NOFILE:
       SCIPmessageFPrintInfo(file, "file not found error");
@@ -85,9 +85,6 @@ void SCIPretcodePrint(
       break;
    case SCIP_KEYALREADYEXISTING:
       SCIPmessageFPrintInfo(file, "the given key is already existing in table");
-      break;
-   case SCIP_PARSEERROR:
-      SCIPmessageFPrintInfo(file, "invalid input given to the parser");
       break;
    case SCIP_MAXDEPTHLEVEL:
       SCIPmessageFPrintInfo(file, "maximal branching depth level exceeded");

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.610 2010/08/06 10:42:18 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.611 2010/08/06 16:29:07 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3378,11 +3378,11 @@ SCIP_RETCODE SCIPreadProb(
          extension != NULL ? extension : fileextension, &result);
 
       /* check for reader errors */
-      if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+      if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
          goto TERMINATE;
       SCIP_CALL( retcode );
    }
-   
+
    switch( result )
    {
    case SCIP_DIDNOTRUN:

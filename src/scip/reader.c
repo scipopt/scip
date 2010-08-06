@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.54 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.55 2010/08/06 16:29:07 bzfpfets Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -155,7 +155,7 @@ SCIP_RETCODE SCIPreaderRead(
    }
 
    /* check for reader errors */
-   if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+   if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
       return retcode;
 
    /* check if the result code is valid in case no reader error occurred */

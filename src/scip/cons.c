@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.201 2010/07/05 11:02:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.202 2010/08/06 16:29:08 bzfpfets Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4597,7 +4597,7 @@ SCIP_RETCODE SCIPconsParse(
    if( token == NULL )
    {
       SCIPerrorMessage("error parsing constraint handler name from the following line:\n%s\n", str);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    (void) SCIPsnprintf(conshdlrname, (int) strlen(token)+1, "%s", token);
    
@@ -4606,7 +4606,7 @@ SCIP_RETCODE SCIPconsParse(
    if( token == NULL )
    {
       SCIPerrorMessage("error parsing constraint name from the following line:\n%s\n", str);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    (void) SCIPsnprintf(consname, (int) strlen(token) + 1, "%s", token);
 
@@ -4614,7 +4614,7 @@ SCIP_RETCODE SCIPconsParse(
    if( token == NULL )
    {
       SCIPerrorMessage("error parsing constraint from the following line:\n%s\n", str);
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    
    /* check if a constraint handler with parsed name exists */
