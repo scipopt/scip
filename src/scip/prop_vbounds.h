@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.h,v 1.1 2010/02/04 16:54:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.h,v 1.2 2010/08/06 17:57:51 bzfheinz Exp $"
 
 /**@file   prop_vbounds.h
  * @brief  variable upper and lower bound propagator
@@ -65,7 +65,9 @@ SCIP_Bool SCIPisPropagatedVbounds(
 /** performs propagation of variables lower and upper bounds */
 extern
 SCIP_RETCODE SCIPexecPropVbounds(
-   SCIP*                 scip                 /**< SCIP data structure */
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Bool             focre,               /**< should domain changes be forced */
+   SCIP_RESULT*          result               /**< pointer to store result */
    );
 
 #ifdef __cplusplus

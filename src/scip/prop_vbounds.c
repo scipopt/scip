@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.5 2010/08/03 18:22:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.6 2010/08/06 17:57:51 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -385,6 +385,7 @@ static
 SCIP_RETCODE propagateVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< vbounds propagator */
+   SCIP_Bool             force,              /**< should domain changes be forced */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
 {
@@ -500,7 +501,7 @@ SCIP_RETCODE propagateVbounds(
             }
          }
          
-         SCIP_CALL( SCIPinferVarLbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarLbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
          
          if( infeasible )
          {
@@ -618,7 +619,7 @@ SCIP_RETCODE propagateVbounds(
          }
       
          /* try new upper bound */
-         SCIP_CALL( SCIPinferVarUbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferVarUbProp(scip, var, newbound, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
       
          if( infeasible )
          {
@@ -817,13 +818,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
 static
 SCIP_DECL_PROPEXEC(propExecVbounds)
 {  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
-   
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
    
    /* perform variable lower and upper bound propagation */
-   SCIP_CALL( propagateVbounds(scip, prop, result) );
+   SCIP_CALL( propagateVbounds(scip, prop, FALSE, result) );
    
    return SCIP_OKAY;
 }
@@ -1051,17 +1048,18 @@ SCIP_Bool SCIPisPropagatedVbounds(
 
 /** performs propagation of variables lower and upper bounds */
 SCIP_RETCODE SCIPexecPropVbounds(
-   SCIP*                 scip                 /**< SCIP data structure */
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Bool             force,               /**< should domain changes be forced */
+   SCIP_RESULT*          result               /**< pointer to store result */
    )
 {
    SCIP_PROP* prop;
-   SCIP_RESULT result;
    
    prop = SCIPfindProp(scip, PROP_NAME);
    assert(prop != NULL);
 
    /* perform variable lower and upper bound propagation */
-   SCIP_CALL( propagateVbounds(scip, prop, &result) );
+   SCIP_CALL( propagateVbounds(scip, prop, force, result) );
 
    return SCIP_OKAY;
 }
