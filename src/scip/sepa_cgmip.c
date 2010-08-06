@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.20 2010/08/05 18:03:00 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.21 2010/08/06 19:59:04 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -1322,8 +1322,8 @@ SCIP_RETCODE solveSubscip(
       SCIP_CALL( SCIPsolve(subscip) );
       status = SCIPgetStatus(subscip);
 
-      /* if the solution process was terminated */
-      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT )
+      /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
+      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD )
       {
          *success = FALSE;
          return SCIP_OKAY;
@@ -1347,14 +1347,15 @@ SCIP_RETCODE solveSubscip(
 
       status = SCIPgetStatus(subscip);
 
-      /* if the solution process was terminated */
-      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT )
+      /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
+      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT || 
+           status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD)
       {
          *success = FALSE;
          return SCIP_OKAY;
       }
 
-      /* all other statuses except optimal or bestsollimit are invalid */
+      /* all other statuses except optimal or bestsollimit are invalid - (problem cannot be infeasible) */
       if ( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_BESTSOLLIMIT )
       {
          SCIPerrorMessage("Solution of subscip for CG-separation returned with invalid status %d.\n", status);
