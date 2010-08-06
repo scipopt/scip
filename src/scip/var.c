@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.286 2010/08/06 17:58:52 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.287 2010/08/06 18:13:13 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -7561,8 +7561,21 @@ SCIP_RETCODE varAddTransitiveImplic(
             /* we have x == varfixing -> y <= b and y >= c*z + d:
              *   c > 0: add implication x == varfixing -> z <= (b-d)/c to the implications list of x
              *   c < 0: add implication x == varfixing -> z >= (b-d)/c to the implications list of x
+             *
+             * @note during an aggregation the aggregated variable "aggrvar" (the one which will have the status
+             *       SCIP_VARSTATUS_AGGREGATED afterwards) copies its variable lower and uppers bounds to the
+             *       aggregation variable (the one which will stay active); 
+             *
+             *       W.l.o.g. we consider the variable upper bounds for now. Let "vubvar" be a variable upper bound of
+             *       the aggregated variable "aggvar"; During that copying of that variable upper bound variable
+             *       "vubvar" the variable lower and upper bounds of this variable "vubvar" are also considered; note
+             *       that the "aggvar" can be a variable lower bound variable of the variable "vubvar"; Due to that
+             *       situation it can happen that we reach that code place where "vlbvars[i] == aggvar". In particular
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
+             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
+             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
              */
-            if( SCIPvarIsActive(vlbvars[i]) )
+            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -7613,8 +7626,21 @@ SCIP_RETCODE varAddTransitiveImplic(
             /* we have x == varfixing -> y >= b and y <= c*z + d:
              *   c > 0: add implication x == varfixing -> z >= (b-d)/c to the implications list of x
              *   c < 0: add implication x == varfixing -> z <= (b-d)/c to the implications list of x
+             *
+             * @note during an aggregation the aggregated variable "aggrvar" (the one which will have the status
+             *       SCIP_VARSTATUS_AGGREGATED afterwards) copies its variable lower and uppers bounds to the
+             *       aggregation variable (the one which will stay active); 
+             *
+             *       W.l.o.g. we consider the variable lower bounds for now. Let "vlbvar" be a variable lower bound of
+             *       the aggregated variable "aggvar"; During that copying of that variable lower bound variable
+             *       "vlbvar" the variable lower and upper bounds of this variable "vlbvar" are also considered; note
+             *       that the "aggvar" can be a variable upper bound variable of the variable "vlbvar"; Due to that
+             *       situation it can happen that we reach that code place where "vubvars[i] == aggvar". In particular
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
+             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
+             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
              */
-            if( SCIPvarIsActive(vubvars[i]) )
+            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -8203,7 +8229,7 @@ SCIP_RETCODE SCIPvarAddImplic(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarIsBinary(var)); 
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
