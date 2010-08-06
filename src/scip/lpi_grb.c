@@ -12,12 +12,25 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_grb.c,v 1.7 2010/08/06 17:17:36 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_grb.c,v 1.8 2010/08/06 17:31:17 bzfpfets Exp $"
 
 /**@file   lpi_grb.c
  * @ingroup LPIS
  * @brief  LP interface for Gurobi
  * @author Marc Pfetsch
+ *
+ * This LPI is beta!
+ *
+ * Several things are missing in the Gurobi interface that make this LPI relatively useless:
+ *
+ * - Gurobi currently does not allow to access the basis inverse.
+ * - Strong branching is supported, but not documented.
+ * - The support of ranged rows is complicated for the user: one has to keep track of the additional
+ *   variables, which are added to generate a ranged row. Hence, one would need to adapt the count
+ *   of variables and retrieve the information of ranged rows to get the correct answers.
+ *
+ * While the first two issues only influence the performance, the third is critical for some
+ * problems, which contain ranged rows.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1048,6 +1061,8 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (*lpi)->pricing) );
+
+   SCIPwarningMessage("The Gurobi LPI is a beta version only - use with care.\n\n");
 
    return SCIP_OKAY;
 }
