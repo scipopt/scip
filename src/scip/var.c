@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.284 2010/08/04 15:09:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.285 2010/08/06 15:52:46 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -7202,14 +7202,14 @@ SCIP_RETCODE varAddImplic(
    assert(var != NULL);
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarIsBinary(var));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED);
    assert(infeasible != NULL);
    assert(added != NULL);
 
    /* check implication on debugging solution */
    SCIP_CALL( SCIPdebugCheckImplic(set, var, varfixing, implvar, impltype, implbound) ); /*lint !e506 !e774*/
-
+   
    *infeasible = FALSE;
    *added = FALSE;
 
@@ -7465,7 +7465,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    SCIP_Bool added;
 
    assert(var != NULL);
-   assert(SCIPvarIsBinary(var) );
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarIsActive(var));
    assert(implvar != NULL);
    assert(SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED);
@@ -8070,7 +8070,7 @@ SCIP_RETCODE SCIPvarAddVub(
             /* if one of the variables is binary, add the corresponding implication to the variable's implication
              * list, thereby also adding the variable bound (or implication) to the other variable
              */
-            if( SCIPvarIsBinary(vubvar) )
+            if( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY )
             {
                /* add corresponding implication:
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
@@ -8079,7 +8079,7 @@ SCIP_RETCODE SCIPvarAddVub(
                SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
             }
-            else if( SCIPvarIsBinary(var) )
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
                /* add corresponding implication:
                 *   b > 0, x <= b*z + d  <->  x == 1 -> z >= (1-d)/b
