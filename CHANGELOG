@@ -241,6 +241,7 @@ fixed bugs:
 - fixed bug while trying to write a MIP where SCIP needs to flush the lp changes first
 - fixed potential resource leak when running out of memory while writing files
 - fixed bug that SCIP could not be continued after it has been stopped due to a limit 
+- fixed bug in message handler w.r.t. to messages which are longer then SCIP_MAXSTRLEN
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

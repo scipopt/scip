@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.41 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.42 2010/08/06 13:01:09 bzfheinz Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -206,7 +206,7 @@ void messagePrintInfo(
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messageinfo != NULL )
    {
-      if( file == NULL || file == stdout )
+      if( (file == NULL || file == stdout) && (msg == NULL || strlen(msg) < SCIP_MAXSTRLEN) )
       {
          char outmsg[SCIP_MAXSTRLEN];
 
@@ -216,9 +216,9 @@ void messagePrintInfo(
       }
       else
       {
-         /* file output cannot be buffered because the output file may change */
+         /* file output cannot be buffered because the output file may change or the message is to long */
          if( *msg != '\0' )
-            curmessagehdlr->messageinfo(curmessagehdlr, file, msg);
+            curmessagehdlr->messageinfo(curmessagehdlr, file == NULL ? stdout : file, msg);
       }
    }
 }
