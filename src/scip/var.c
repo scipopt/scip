@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.285 2010/08/06 15:52:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.286 2010/08/06 17:58:52 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4888,6 +4888,11 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    assert(set != NULL);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsLE(set, newbound, var->data.original.origdom.ub));
+
    SCIPdebugMessage("changing original lower bound of <%s> from %g to %g\n", 
       var->name, var->data.original.origdom.lb, newbound);
 
@@ -4935,6 +4940,11 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
    assert(set != NULL);
    assert(set->stage == SCIP_STAGE_PROBLEM);
+
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsGE(set, newbound, var->data.original.origdom.lb));
 
    SCIPdebugMessage("changing original upper bound of <%s> from %g to %g\n", 
       var->name, var->data.original.origdom.ub, newbound);
@@ -5119,14 +5129,19 @@ SCIP_RETCODE varProcessChgLbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
    /* local domains can violate global bounds but not more than feasibility epsilon */
    assert(SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb));
    assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    assert(blkmem != NULL);
    assert(set != NULL);
    assert(stat != NULL);
+
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    
    SCIPdebugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
    
@@ -5274,14 +5289,19 @@ SCIP_RETCODE varProcessChgUbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
    /* local domains can violate global bounds but not more than feasibility epsilon */
    assert(SCIPsetIsFeasLE(set, var->glbdom.lb , var->locdom.lb));
    assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    assert(blkmem != NULL);
    assert(set != NULL);
    assert(stat != NULL);
+
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
    SCIPdebugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
    
@@ -5428,8 +5448,10 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* check that the bound was already adjust for integral variables */
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -5547,8 +5569,10 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* check that the bound was already adjust for integral variables */
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -5824,9 +5848,13 @@ SCIP_RETCODE varProcessChgLbLocal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
    
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
@@ -5935,9 +5963,13 @@ SCIP_RETCODE varProcessChgUbLocal(
    int i;
    
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
-   
+
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
@@ -6046,8 +6078,9 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* check that the bound was already adjust for integral variables */
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
    assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
@@ -6160,8 +6193,9 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    assert(blkmem != NULL);
    assert(set != NULL);
 
-   /* check that the bound was already adjust for integral variables */
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
+   /* adjust bound to integral value if variable is of integral type */
+   newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
+   /* check that the bound is feasible */
    assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);

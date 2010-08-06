@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.612 2010/08/06 17:54:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.613 2010/08/06 17:58:52 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7912,6 +7912,8 @@ SCIP_RETCODE SCIPchgVarLb(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarLb", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -7951,6 +7953,8 @@ SCIP_RETCODE SCIPchgVarUb(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarUb", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarAdjustUb(var, scip->set, &newbound);
 
    switch( scip->set->stage )
    {
