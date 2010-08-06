@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.94 2010/08/05 22:46:47 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.95 2010/08/06 13:25:55 bzfheinz Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1013,6 +1013,7 @@ SCIP_RETCODE SCIPsolCheck(
 
          var = prob->vars[v];
          solval = SCIPsolGetVal(sol, set, stat, var);
+
          if( solval != SCIP_UNKNOWN ) /*lint !e777*/
          {
             SCIP_Real lb;
@@ -1022,9 +1023,11 @@ SCIP_RETCODE SCIPsolCheck(
             ub = SCIPvarGetUbGlobal(var);
             *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
             
-            if( printreason && SCIPsetIsFeasLT(set, solval, lb) && SCIPsetIsFeasGT(set, solval, ub) )
+            if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
+            {
                SCIPwarningMessage("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                   SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+            }
          }
 
 #ifdef SCIP_DEBUG
