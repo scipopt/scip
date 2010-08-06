@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.611 2010/08/06 16:29:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.612 2010/08/06 17:54:23 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11906,7 +11906,8 @@ SCIP_RETCODE SCIPreadSol(
       /* there are some lines which may preceed the solution information */
       if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
          strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
-         strncasecmp(buffer, "All other variables", 19) == 0 || strncasecmp(buffer, "\n", 1) == 0)
+         strncasecmp(buffer, "All other variables", 19) == 0 || strncasecmp(buffer, "\n", 1) == 0 || 
+         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 )    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
          continue;
 
       /* parse the line */
