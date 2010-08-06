@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.67 2010/06/17 12:04:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.68 2010/08/06 12:59:38 bzfheinz Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -2853,7 +2853,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
    return (lpistate != NULL);
 }
 
-/** reads LP state (like basis information from a file */
+/** reads LP state (like basis information) from a file */
 SCIP_RETCODE SCIPlpiReadState(
    SCIP_LPI*             lpi,            /**< LP interface structure */
    const char*           fname           /**< file name */
