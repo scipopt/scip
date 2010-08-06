@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.49 2010/04/27 10:25:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.50 2010/08/06 13:05:54 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -409,9 +409,11 @@ SCIP_Bool getNextLine(
       /* buffer is full; erase last token since it might be incomplete */
       opbinput->endline = FALSE;
       last = strrchr(opbinput->linebuf, ' ');
+
       if( last == NULL )
       {
-	 SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", OPB_MAX_LINELEN - 2);
+	 SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", 
+            OPB_MAX_LINELEN - 2);
 	 opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
 	 SCIPdebugMessage("the buffer might be corrupted\n");
       }
