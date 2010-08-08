@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.614 2010/08/06 18:41:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.615 2010/08/08 10:00:40 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9098,8 +9098,38 @@ SCIP_RETCODE SCIPaddClique(
                scip->branchcand, scip->eventqueue, val1, vars[0], val0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
                val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
       }
+      /** in case one both variables are not of binary type we have to add the implication as variable bounds */
+      else
+      {
+         /* both variables are not of binary type but are implicit binary; in that case we can only add the this
+          * implication as variable bounds */
+         assert(SCIPvarGetType(vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(vars[0]));
+         assert(SCIPvarGetType(vars[1]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(vars[1]));
 
-      /**@todo in case one or both variables are not of binary type we can the implication as variable bounds */
+         /* add variable upper or rather variable lower bound on vars[0] */
+         if( val0 )
+         {
+            SCIP_CALL( SCIPvarAddVub(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+                  scip->branchcand, scip->eventqueue, vars[1], val1 ? -1.0 : 1.0, val1 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarAddVlb(vars[0], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+                  scip->branchcand, scip->eventqueue, vars[1], val1 ? 1.0 : -1.0, val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+         }
+         
+         /* add variable upper or rather variable lower bound on vars[1] */
+         if( val1 )
+         {
+            SCIP_CALL( SCIPvarAddVub(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+                  scip->branchcand, scip->eventqueue, vars[0], val0 ? -1.0 : 1.0, val0 ? 1.0 : 0.0, TRUE, infeasible, nbdchgs) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarAddVlb(vars[1], scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+                  scip->branchcand, scip->eventqueue, vars[0], val0 ? 1.0 : -1.0, val0 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
+         }
+      }
    }
    else if( nvars >= 3 )
    {
