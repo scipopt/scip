@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.49 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.50 2010/08/09 10:53:04 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -54,7 +54,7 @@
 #define READER_EXTENSION        "fzn"
 
 
-#define FZN_BUFFERLEN         65536     /**< size of the line buffer for reading or writing */
+#define FZN_BUFFERLEN         1048576     /**< size of the line buffer for reading or writing */
 #define FZN_MAX_PUSHEDTOKENS  1
 
 /*
@@ -605,7 +605,7 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!\n", 
+         SCIPwarningMessage("we read %d characters from the file; these might indicates an corrupted input file!\n", 
             FZN_BUFFERLEN - 2);
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
          SCIPdebugMessage("the buffer might be currented\n");
@@ -769,7 +769,7 @@ void pushToken(
 
 /** checks whether the current token is a semicolon which closes a statement */
 static
-SCIP_Bool isEndStatment(
+SCIP_Bool isEndStatement(
    FZNINPUT*              fzninput             /**< FZN reading data */
    )
 {
@@ -936,7 +936,7 @@ void parseArrayIndex(
    assert( isChar(fzninput->token, '[') );
 
    /* parse array index expresion */
-   if( !getNextToken(fzninput) || isEndStatment(fzninput) )
+   if( !getNextToken(fzninput) || isEndStatement(fzninput) )
    {
       syntaxError(scip, fzninput, "expecting array index expression");
       return;
@@ -979,7 +979,7 @@ void flattenAssignment(
 
    SCIPdebugMessage("parse assignment expression\n");
 
-   if( !getNextToken(fzninput) || isEndStatment(fzninput) )
+   if( !getNextToken(fzninput) || isEndStatement(fzninput) )
    {
       syntaxError(scip, fzninput, "expecting more tokens");
       return;
@@ -1278,7 +1278,7 @@ SCIP_RETCODE parseName(
          SCIP_CALL( parseOutputDimensioninfo(scip, fzninput, info) );
       }
          
-      if( isEndStatment(fzninput) )
+      if( isEndStatement(fzninput) )
          break;
    }
    while( !isChar(fzninput->token, '=') );
@@ -1299,7 +1299,7 @@ void parseType(
    SCIP_Real*            ub                  /**< pointer to store the lower bound */
    )
 {
-   if( !getNextToken(fzninput) || isEndStatment(fzninput) )
+   if( !getNextToken(fzninput) || isEndStatement(fzninput) )
    {
       syntaxError(scip, fzninput, "missing token");
       return;
@@ -1684,7 +1684,7 @@ SCIP_RETCODE parseVariableArray(
    else
    {
       /* push back the ';' */
-      assert( isEndStatment(fzninput) );
+      assert( isEndStatement(fzninput) );
       pushToken(fzninput);
    }
    
@@ -1860,7 +1860,7 @@ SCIP_RETCODE parseVariable(
    return SCIP_OKAY;
 }
 
-/** parse constraint expression */
+/** parse constant expression */
 static
 SCIP_RETCODE parseConstant(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1873,7 +1873,7 @@ SCIP_RETCODE parseConstant(
 
    assert(scip != NULL);
    assert(fzninput != NULL);
-   assert(type == FZN_INT || type == FZN_INT || type == FZN_BOOL);
+   assert(type == FZN_INT || type == FZN_FLOAT || type == FZN_BOOL);
 
    SCIPdebugMessage("parse constant expression\n");
    
@@ -3065,7 +3065,7 @@ SCIP_RETCODE readFZNFile(
    /* parse through statements one-by-one */
    while( !SCIPfeof( fzninput->file ) && !hasError(fzninput) )
    {
-      /* read the first token (keyword) of  a new statment */
+      /* read the first token (keyword) of a new statement */
       if( getNextToken(fzninput) )
       {  
          if( equalTokens(fzninput->token, "array") )
@@ -3113,7 +3113,7 @@ SCIP_RETCODE readFZNFile(
          else if( equalTokens(fzninput->token, "output") )
          {
             /* the output section is the last section in the flatzinc model and can be skipped */
-            SCIPdebugMessage("skip ouput section\n");
+            SCIPdebugMessage("skip output section\n");
             break;
          }
          else 
@@ -3135,7 +3135,8 @@ SCIP_RETCODE readFZNFile(
 
             if( hasError(fzninput) )
             {
-               SCIPwarningMessage("unknown keyword <%s> skip statment\n", fzninput->token);
+               SCIPwarningMessage("unknown keyword <%s> skip statement\n", fzninput->token);
+               SCIPABORT();
                return SCIP_OKAY;
             }
          }        
@@ -3156,10 +3157,10 @@ SCIP_RETCODE readFZNFile(
                if( !getNextToken(fzninput) )
                   syntaxError(scip, fzninput, "expected more tokens");
             }
-            while( !isEndStatment(fzninput) );
+            while( !isEndStatement(fzninput) );
          }
             
-         if( !isEndStatment(fzninput) ) 
+         if( !isEndStatement(fzninput) ) 
             syntaxError(scip, fzninput, "expected semicolon");
       }
    }
