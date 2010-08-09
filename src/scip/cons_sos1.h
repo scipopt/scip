@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.h,v 1.11 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.h,v 1.12 2010/08/09 18:29:25 bzfpfets Exp $"
 
 /**@file   cons_sos1.h
  * @brief  constraint handler for SOS type 1 constraints
@@ -22,30 +22,6 @@
  * variable is nonzero. The special case of two variables arises, for instance, from equilibrium or
  * complementary conditions like \f$x \cdot y = 0\f$. Note that it is in principle allowed that a
  * variables appears twice, but it then can be fixed to 0.
- *
- * This implementation of this constraint handler is based on classical ideas, see e.g.@n
- *  "Special Facilities in General Mathematical Programming System for
- *  Non-Convex Problems Using Ordered Sets of Variables"@n
- *  E. Beale and J. Tomlin, Proc. 5th IFORS Conference, 447-454 (1970)
- *
- *
- * The order of the variables is determined as follows:
- *
- * - If the constraint is created with SCIPcreateConsSOS1() and weights are given, the weights
- *   determine the order (decreasing weights). Additional variables can be added with
- *   SCIPaddVarSOS1(), which adds a variable with given weight.
- *
- * - If an empty constraint is created and then variables are added with SCIPaddVarSOS1(), weights
- *   are needed and stored.
- *
- * - All other calls ignore the weights, i.e., if an nonempty constraint is created or variables are
- *   added with SCIPappendVarSOS1().
- *
- * The validity of the constraint is enforced by the classical SOS branching. Depending on the
- * parameters there are two ways to choose the branching constraint. Either the constraint with the
- * most number of nonzeros is chosen or the constraint with the largest nonzero-variable
- * weight. The later version allows the user to specify an order for the branching importance of the
- * constraints. Constraint branching can also be turned off.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
