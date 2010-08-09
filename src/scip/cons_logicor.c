@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.141 2010/08/03 17:58:37 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.142 2010/08/09 12:21:14 bzfpfets Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2412,7 +2412,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    int varssize;
    int nvars;
    
-   SCIPdebugMessage("pasre <%s> as logicor constraint\n", str);
+   SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
    /* copy string for truncating it */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1));
@@ -2429,7 +2429,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    /* allocate buffer array for variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
-   /* pasre string */
+   /* parse string */
    SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
    
    if( *success )
