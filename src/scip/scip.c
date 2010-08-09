@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.615 2010/08/08 10:00:40 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.616 2010/08/09 12:22:15 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6621,8 +6621,8 @@ SCIP_RETCODE SCIPcreateVar(
 /** outputs the variable name to the file stream */
 SCIP_RETCODE SCIPwriteVarName(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
-   SCIP_VAR*             var                 /**< variable array to outpout */
+   FILE*                 file,               /**< output file, or NULL for stdout */
+   SCIP_VAR*             var                 /**< variable array to output */
    )
 {
    assert(scip != NULL);
@@ -6652,12 +6652,12 @@ SCIP_RETCODE SCIPwriteVarName(
    return SCIP_OKAY;
 }
 
-/** methods print the given list of variables to output stream separated by a comma; the variables x1, x2, ..., xn are
+/** print the given list of variables to output stream separated by a comma; the variables x1, x2, ..., xn are
  *  written as: \<x1\>, \<x2\>, ..., \<xn\>; the method SCIPparseVarsList() can parse such a string
  */
 SCIP_RETCODE SCIPwriteVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
+   FILE*                 file,               /**< output file, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to outpout */
    int                   nvars               /**< number of variables */
    )
@@ -6680,10 +6680,10 @@ SCIP_RETCODE SCIPwriteVarsList(
    return SCIP_OKAY;
 }
 
-/** methods print the given variables and coefficients as linear sum in the following form 
+/** print the given variables and coefficients as linear sum in the following form 
  *  c1 \<x1\> + c2 \<x2\>   ... + cn \<xn\>
  *  
- *  this string can be pasresed by the method SCIPwriteVarsLinearsum():
+ *  This string can be parsed by the method SCIPwriteVarsLinearsum().
  */
 SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6718,7 +6718,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
 SCIP_RETCODE SCIPparseVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to store the problem variable */
-   const char*           str,                /**< stirng to parse */
+   const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
@@ -6756,12 +6756,12 @@ SCIP_RETCODE SCIPparseVar(
 }
 
 /** parses the given string for a variable name and stores the variable in the corresponding pointer if such a variable
- *  exits;
+ *  exits
  */
 SCIP_RETCODE SCIPparseVarName(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< stirng to parse */
-   SCIP_VAR**            var                 /**< pointer to store the problem variable, or NULL if it not exits */
+   const char*           str,                /**< string to parse */
+   SCIP_VAR**            var                 /**< pointer to store the problem variable, or NULL if it does not exit */
    )
 {
    SCIP_Bool negated;
@@ -6811,10 +6811,12 @@ SCIP_RETCODE SCIPparseVarName(
    return SCIP_OKAY;
 }
 
-/** method to parse the given string as variable list (\<x1\>, \<x2\>, ..., \<xn\>) (see SCIPwriteVarsList() ); if it was
- *  successful, the pointer success is set to TRUE;
+/** parse the given string as variable list (\<x1\>, \<x2\>, ..., \<xn\>) (see SCIPwriteVarsList() ); if it was
+ *  successful, the pointer success is set to TRUE
  *
- *  If the number of variables (parsed) is greater than the available slots in the variable array, nothing happens
+ *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
+ *
+ *  If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
  *  except that the required size is stored in the corresponding integer; the reason for this approach is that we cannot
  *  reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP memory
  *  functions).
@@ -6858,7 +6860,7 @@ SCIP_RETCODE SCIPparseVarsList(
 
       if( var == NULL )
       {
-         SCIPdebugMessage("variable with name <%s> does not exits\n", varname);
+         SCIPdebugMessage("variable with name <%s> does not exist\n", varname);
          (*success) = FALSE;
          break;
       }
