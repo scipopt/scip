@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.49 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.50 2010/08/10 13:22:36 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -78,7 +78,7 @@ struct SCIP_HeurData
 
    int                   nusedsols;         /**< number of solutions that will be taken into account               */
    SCIP_Longint          nwaitingnodes;     /**< number of nodes without incumbent change heuristic should wait    */
-   int                   nfailures;         /**< number of failures since last successful call                     */
+   unsigned int          nfailures;         /**< number of failures since last successful call                     */
    SCIP_Longint          nextnodenumber;    /**< number of BnB nodes at which crossover should be called next      */  
    SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed     */
    SCIP_Real             minimprove;        /**< factor by which Crossover should at least improve the incumbent   */
@@ -540,8 +540,6 @@ void updateFailureStatistic(
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data                               */
    )
 {
-   assert(heurdata->nfailures >= 0);
-
    /* increase number of failures, calculate next node at which crossover should be called and update actual solutions */
    heurdata->nfailures++;
    heurdata->nextnodenumber = (heurdata->nfailures <= 25

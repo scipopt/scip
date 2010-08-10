@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.14 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.15 2010/08/10 13:22:36 bzfberth Exp $"
 
 
 /**@file   heur_trivial.c
@@ -98,9 +98,10 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    SCIP_CALL( SCIPcreateSol(scip, &ubsol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &zerosol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &locksol, heur) );
-
-   infinity = MIN(100000.0, SCIPinfinity(scip));
-
+   
+   infinity = SCIPinfinity(scip);
+   infinity = MIN(100000.0, infinity);
+   
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
 
    /* if the problem is binary, we do not have to check the zero solution, since it is equal to the lower bound

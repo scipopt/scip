@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.616 2010/08/09 12:22:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.617 2010/08/10 13:22:37 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3454,7 +3454,8 @@ SCIP_RETCODE writeProblem(
       if( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) == NULL )
       {
          (void) fclose(file);
-         SCIP_CALL( SCIP_NOMEMORY );
+         SCIPerrorMessage("Error <%d> in function call\n", SCIP_NOMEMORY);
+         return SCIP_NOMEMORY;
       }
 
       SCIPsplitFilename(tmpfilename, NULL, NULL, &fileextension, &compression);

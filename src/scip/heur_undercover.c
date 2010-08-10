@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.65 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.66 2010/08/10 13:22:36 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -173,8 +173,6 @@ SCIP_RETCODE processNlRow(
    SCIP_Bool             local,              /**< shall locally fixed variables be treated as constants               */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity?        */
    SCIP_NLROW*           nlrow,              /**< nonlinear row representation of a nonlinear constraint              */
-   SCIP_Bool             isconvex,           /**< indicates whether the function of the row is convex                 */
-   SCIP_Bool             isconcave,          /**< indicates whether the function of the row is concave                */
    SCIP_Bool*            success             /**< a buffer where to store if row was successfully processed           */
    )
 {
@@ -336,9 +334,9 @@ SCIP_RETCODE createPpcProblem(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
 
    /* allocate and initialize to zero arrays for weighted objectives */
-   SCIPallocBufferArray(scip, &consmarker, nvars);
-   SCIPallocBufferArray(scip, &conscounter, nvars);
-   SCIPallocBufferArray(scip, &termcounter, nvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &consmarker, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &conscounter, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termcounter, nvars) );
    BMSclearMemoryArray(conscounter, nvars);
    BMSclearMemoryArray(termcounter, nvars);
 
@@ -482,8 +480,7 @@ SCIP_RETCODE createPpcProblem(
             SCIP_CALL( SCIPcheckCurvatureQuadratic(scip, quadcons) );
          }
 
-         SCIP_CALL( processNlRow(scip, ppcscip, ppcvars, termcounter, consmarker, conscounter, local, onlyconvexify, nlrow,
-            SCIPisConvexQuadratic(scip, quadcons), SCIPisConcaveQuadratic(scip, quadcons), &processsuccess) );
+         SCIP_CALL( processNlRow(scip, ppcscip, ppcvars, termcounter, consmarker, conscounter, local, onlyconvexify, nlrow, &processsuccess) );
 
          if( processsuccess == FALSE )
             goto TERMINATE;
@@ -889,15 +886,21 @@ SCIP_RETCODE createPpcProblem(
       break;
    case 'm':
       /* min(up locks, down locks) */
-      for( i = 0; i < nvars - ncontvars; ++i )
+   {
+      int ndiscvars;
+      ndiscvars = nvars - ncontvars;
+
+      for( i = 0; i < nvars; ++i )
       {
-         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*(MIN(SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i])) + 1.0)) );
-      }
-      for( ; i < nvars; ++i )
-      {
-         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*(MIN(SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i])) + 1.0)) );
+         int nlocksdown;
+         int nlocksup;
+
+         nlocksdown = SCIPvarGetNLocksDown(vars[i]);
+         nlocksup = SCIPvarGetNLocksUp(vars[i]);
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], (i < ndiscvars ? intobjfac : conobjfac) * (MIN(nlocksdown, nlocksup) + 1.0)) );
       }
       break;
+   }
    case 't':
       /* number of influenced nonlinear terms */
       for( i = 0; i < nvars - ncontvars; ++i )
@@ -1614,7 +1617,7 @@ SCIP_RETCODE createSubProblem(
    /* free memory from ppc problem */      
    SCIPfreeBufferArray(scip, &ppcsolvals);
    SCIPfreeBufferArray(scip, &ppcvars);
-   SCIPfree(&ppcscip);
+   SCIP_CALL( SCIPfree(&ppcscip) );
 
    /* free variable hashmap */
    SCIPhashmapFree(&varmap);
@@ -1650,7 +1653,7 @@ SCIP_RETCODE solveSubProblem(
 
    /* stop the solution process of the subscip if the last improvement of the primal solution value was over 100 nodes
     * ago */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", (SCIP_Longint) 100) );
 #else
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
 #endif
@@ -1742,8 +1745,7 @@ SCIP_RETCODE copySol(
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   SCIP_SOL**            newsol,             /**< solution to the original problem                    */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
+   SCIP_SOL**            newsol              /**< solution to the original problem                    */
    )
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
@@ -1849,15 +1851,17 @@ SCIP_RETCODE SCIPapplyUndercover(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real cutoff;
+      SCIP_Real upperbound;
 
       assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
+      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
       if( SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
          cutoff = (SCIPgetUpperbound(scip) >= 0 ? 1.0 - minimprove : 1.0 + minimprove)*SCIPgetUpperbound(scip);
       else
          cutoff = (1.0 - minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
 
-      cutoff = MIN(SCIPgetUpperbound(scip) - SCIPsumepsilon(scip), cutoff);
+      cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
    }
       
@@ -1887,7 +1891,7 @@ SCIP_RETCODE SCIPapplyUndercover(
       for( i = 0; i < nsubsols && !success; ++i )
       {
          /* try to add new solution to scip */
-         SCIP_CALL( copySol(scip, subscip, subvars, subsols[i], &newsol, &success) );
+         SCIP_CALL( copySol(scip, subscip, subvars, subsols[i], &newsol) );
          SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, &success) );
       }
 
@@ -1913,7 +1917,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                {
                   SCIPdebugMessage("undercover heuristic calling NLP heuristic for post optimization\n");
 
-                  SCIP_CALL( SCIPapplyNlpHeur(scip, nlpheur, &nlpresult, newsol, INT_MAX, timelimit, NULL) );
+                  SCIP_CALL( SCIPapplyNlpHeur(scip, nlpheur, &nlpresult, newsol, (SCIP_Longint) INT_MAX, timelimit, NULL) );
 
                   SCIPdebugMessage("NLP heuristic called by undercover %ssuccessfully\n", nlpresult == SCIP_FOUNDSOL ? "" : "un");
                }

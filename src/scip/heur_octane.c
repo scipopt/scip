@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.32 2010/07/26 10:04:47 bzfgamra Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.33 2010/08/10 13:22:36 bzfberth Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -98,6 +98,8 @@ void tryToInsert(
    /* inserting new facet into list, new facet is facet at position i flipped in coordinate j, new distance lam */
    facets[k] = lastfacet;
    lambda[k] = lam;
+
+   /*lint --e{866}*/     
    BMScopyMemoryArray(facets[k], facets[i], nsubspacevars);
    facets[k][j] = !facets[k][j];
    (*nfacets)++;
@@ -212,8 +214,10 @@ SCIP_RETCODE generateAverageRay(
    SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows, nsubspacevars) );
    for( j = nsubspacevars - 1; j >= 0; --j )
    {
+      /*lint --e{866}*/     
       SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows[j], nrows) );
    }
+
    SCIP_CALL( SCIPallocBufferArray(scip, &rownorm, nrows) );
    for( i = nrows - 1; i >= 0; --i )
       rownorm[i] = 0;
@@ -680,8 +684,8 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    assert( heurdata != NULL );
 
    /* don't call heuristic, if it was not successful enough in the past */
-   if( SCIPgetNNodes(scip) % (SCIPheurGetNCalls(heur) / 
-			      (100 * SCIPheurGetNBestSolsFound(heur) + 10*heurdata->nsuccess + 1) + 1) != 0 )
+   /*lint --e{647}*/   
+   if( SCIPgetNNodes(scip) % (SCIPheurGetNCalls(heur) / (100 * SCIPheurGetNBestSolsFound(heur) + 10*heurdata->nsuccess + 1) + 1) != 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL) );
@@ -719,20 +723,25 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          fracspace[i] = i;
    }
 
-   assert(0 <= nsubspacevars && nsubspacevars <= nvars);
+   /* nothin to do for empty search space */
+   if( nsubspacevars == 0 )
+      return SCIP_OKAY;
+   
+   assert(0 < nsubspacevars && nsubspacevars <= nvars);
 #ifndef NDEBUG
    for( i = 0; i < nsubspacevars; i++)
       assert(fracspace[SCIPvarGetProbindex(subspacevars[i])] == i);
 #endif
 
-   /* get sure, that you do not try to hit more facets than possible */
+   /* at most 2^(n-1) facets can be hit */    
    if( nsubspacevars < 30 )
    {
-      /* at most 2^(n-1) facets can be hit */
+      /*lint --e{701}*/      
+      assert(f_max > 0);
       f_max = MIN(f_max, 1 << (nsubspacevars - 1) );
-      f_max = MAX(1, f_max); 
-      f_first = MIN(f_first, f_max); 
    }
+
+   f_first = MIN(f_first, f_max); 
 
    /* memory allociation */
    SCIP_CALL( SCIPallocBufferArray(scip, &rayorigin, nsubspacevars) ); 
@@ -744,6 +753,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
    for( i = f_max; i >= 0; --i )
    {  
+      /*lint --e{866}*/     
       SCIP_CALL( SCIPallocBufferArray(scip, &facets[i], nsubspacevars) );
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &first_sols, f_first) ); 
@@ -797,6 +807,9 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, FALSE) );
          }
          break;
+      default:
+         SCIPerrorMessage("invalid ray rule identifier\n");
+         SCIPABORT();         
       }
 
       /* there must be a feasible direction for the shooting ray */
@@ -847,7 +860,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       /* finished initialization */
 
       /* find the first facet of the octahedron hit by a ray shot from rayorigin into direction raydirection */
-      for(i = 0; i < nsubspacevars && negquotient[i] * q > p; ++i )
+      for( i = 0; i < nsubspacevars && negquotient[i] * q > p; ++i )
       {
          facets[0][i] = FALSE;
          p += 2 * rayorigin[i];
@@ -855,9 +868,12 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          assert(SCIPisPositive(scip, p));
          assert(SCIPisPositive(scip, q));
       }
+
+      /* assert necessary for flexelint */
+      assert(q > 0);
       lambda[0] = p / q;
       nfacets = 1;
-
+      
       /* find the first facets hit by the ray */
       for( i = 0; i < nfacets && i < f_first; ++i)
 	 generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
