@@ -168,6 +168,7 @@ features:
 - the Flatzinc reader can now handle the output annotations of the Flatzinc format; the method SCIPprintSolReaderFzn() 
   outputs the given solution in Flatzinc format w.r.t. the output annotations
 - can now read and write indicator constraints in the (extended) MPS format
+- the SoPlex interface can now double check each SoPlex result against CPLEX (lpi_spx.cpp)
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
@@ -254,7 +255,6 @@ plugins:
 - added Chvatal-Gomory cuts separated with a sub-MIP (sepa_cgmip.{c|h})
 - added reader for "Weigted Boolean Optimization" - problems (reader_wbo.{c,h}), this reader needs the reader_opb files
 - added interface to CppAD (nlpi/exprinterpret_cppad.cpp)
-- added new LP interface for SoPlex which can double check each SoPlex result against CPLEX (lpi_spxcheck.cpp)
 
 parameters: 
 - added parameter <misc/usesmalltables> which results in using smaller tables for names, cliques and cuts and improves the
@@ -285,6 +285,7 @@ parameters:
 - added parameter <lp/threads> to change the number of threads used to solve the LP relaxation (default is 0: automatic)
 - added parameter <vbc/dispsols> to propose if the nodes where solutions are found should be visualized in the branch and bound tree
 - changed parameter <lp/fastmip> from boolean to integer, possible values are 0 (off), 1 (medium, default), 2 (full, must not be used with branch-and-price).
+- added parameter <misc/lexdualstalling> that turns on the lex dual algorithm if the separation process is stalling
 
 design:
 - removed two different block memories for the original and transformed problem
