@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.233 2010/08/11 02:24:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.234 2010/08/11 18:27:10 bzfpfets Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -168,6 +168,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALROOTONLY    TRUE /**< should the lexicographic dual algorithm be applied only at the root node */
 #define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
+#define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
 #define SCIP_DEFAULT_LP_ROWREPSWITCH      1e+20 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
@@ -995,6 +996,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/lexdualbasic",
          "choose fractional basic variables in lexicographic dual algorithm?",
          &(*set)->lp_lexdualbasic, TRUE, SCIP_DEFAULT_LP_LEXDUALBASIC,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/lexdualstalling",
+         "turn on the lex dual algorithm only when stalling?",
+         &(*set)->lp_lexdualstalling, TRUE, SCIP_DEFAULT_LP_LEXDUALSTALLING,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "lp/rowrepswitch",
