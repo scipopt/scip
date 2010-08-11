@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.345 2010/07/29 17:00:25 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.346 2010/08/11 00:58:05 bzfgleix Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6186,15 +6186,15 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
    (*lp)->lpibarrierconvtol = SCIPsetBarrierconvtol(set);
    (*lp)->lpifromscratch = FALSE;
-   (*lp)->lpifastmip = 1;
-   (*lp)->lpiscaling = TRUE;
-   (*lp)->lpipresolving = TRUE;
-   (*lp)->lpilpinfo = FALSE;
-   (*lp)->lpisimplexrowrep = FALSE;
+   (*lp)->lpifastmip = set->lp_fastmip;
+   (*lp)->lpiscaling = set->lp_scaling;
+   (*lp)->lpipresolving = set->lp_presolving;
+   (*lp)->lpilpinfo = set->disp_lpinfo;
+   (*lp)->lpisimplexrowrep = set->lp_simplexrowrep;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
-   (*lp)->lpithreads = 0;
+   (*lp)->lpithreads = set->lp_threads;
 
    /* set default parameters in LP solver */
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
