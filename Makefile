@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.356 2010/08/05 14:25:29 bzfheinz Exp $
+# $Id: Makefile,v 1.357 2010/08/11 00:34:18 bzfgleix Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -371,7 +371,7 @@ DIRECTORIES	+=	$(LIBDIR)/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(SHAREDLIBEXT)
-LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIMPL \"src\" directory, e.g., \"../../zimpl/src\".\n"
+LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIMPL \"src\" directory, e.g., \"../../../zimpl/src\".\n"
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a\""
 endif
 
@@ -1007,9 +1007,9 @@ ifeq ($(MAKESOFTLINKS), true)
 				fi ; \
 				echo "> Enter soft-link target file or directory for \"$@\" (return if not needed): " ; \
 				echo -n "> " ; \
-				cd $(LIBDIR) ; \
+				cd $$DIRNAME ; \
 				eval $(READ) TARGET ; \
-				cd .. ; \
+				cd $(SCIPDIR) ; \
 				if test "$$TARGET" != "" ; \
 				then \
 					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
