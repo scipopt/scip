@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.347 2010/08/11 02:24:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.348 2010/08/11 18:36:27 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6176,6 +6176,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->solisbasic = FALSE;
    (*lp)->rootlpisrelax = TRUE;
    (*lp)->isrelax = TRUE;
+   (*lp)->installing = FALSE;
    (*lp)->probing = FALSE;
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
@@ -10522,7 +10523,7 @@ SCIP_RETCODE lpAlgorithm(
 
    case SCIP_LPALGO_DUALSIMPLEX:
       /* run dual lexicographic simplex if required */
-      if ( set->lp_lexdualalgo && (!set->lp_lexdualrootonly || stat->maxdepth == 0) )
+      if ( set->lp_lexdualalgo && (!set->lp_lexdualrootonly || stat->maxdepth == 0) && (!set->lp_lexdualstalling || lp->installing) )
       {
 	 SCIP_CALL( lpLexDualSimplex(lp, set, stat, resolve, keepsol, lperror) );
       }
