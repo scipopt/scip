@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.305 2010/08/06 10:42:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.306 2010/08/11 18:29:41 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1497,6 +1497,7 @@ SCIP_RETCODE priceAndCutLoop(
    nsepastallrounds = 0;
    stalllpobjval = SCIP_REAL_MIN;
    stallnfracs = INT_MAX;
+   lp->installing = FALSE;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
    {
       SCIPdebugMessage("-------- node solving loop --------\n");
@@ -1746,9 +1747,13 @@ SCIP_RETCODE priceAndCutLoop(
                         nsepastallrounds = 0;
                         stalllpobjval = lpobjval;
                         stallnfracs = nfracs;
+                        lp->installing = FALSE;
                      }
                      else
                         nsepastallrounds++;
+                     /* tell LP that we are (close to) stalling */
+                     if ( nsepastallrounds >= maxnsepastallrounds-2 )
+                        lp->installing = TRUE;
                      SCIPdebugMessage(" -> nsepastallrounds=%d/%d\n", nsepastallrounds, maxnsepastallrounds);
                   }
                }
@@ -1801,6 +1806,7 @@ SCIP_RETCODE priceAndCutLoop(
          *unbounded = TRUE;
       }
    }
+   lp->installing = FALSE;
 
    SCIPdebugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
