@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.59 2010/08/11 02:24:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.60 2010/08/11 18:25:51 bzfpfets Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -255,6 +255,7 @@ struct SCIP_Lp
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP solution a relaxation of the problem and its value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is current LP solution a relaxation of the current problem and its value a valid local lower bound? */
+   SCIP_Bool             installing;         /**< whether the solution process is in stalling */
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
