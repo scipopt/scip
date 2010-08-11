@@ -264,9 +264,9 @@ lp/lexdualmaxrounds = 2
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 lp/lexdualbasic = FALSE
 
-# should simplex algorithm use row representation of the basis?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-lp/simplexrowrep = FALSE
+# simplex algorithm shall use row representation of the basis if number of rows divided by number of columns exceeds this value
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+lp/rowrepswitch = 1e+20
 
 # fraction of maximal memory usage resulting in switch to memory saving mode
 # [type: real, range: [0,1], default: 0.8]

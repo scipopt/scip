@@ -264,7 +264,8 @@ parameters:
   the hashtables can be turned off for subMIPs to improve the performance, default value TRUE
 - removed parameter constraints/knapsack/maxnumcardlift and adapted setting files
 - added parameter <reading/zplreader/usestartsol> which allows to switch ZIMPL start solutions off, default value TRUE
-- added parameter <lp/simplexrowrep> telling simplex solver to use row representation of the basis (if possible), default value FALSE
+- added parameter <lp/rowrepswitch> telling simplex solver to switch to row representation of the basis (if possible), if
+  number of rows divided by number of columns exceeds this value (default value infinity, i.e. never switch)
 - added parameter <heuristics/crossover/dontwaitatroot> that allows to call crossover at root node independently from nwaitingnodes
 - added parameter <heuristics/rens/uselprows> that allows to switch between LP row and SCIP constraints as basis for the subSCIP, 
   default is TRUE (uses LP rows)

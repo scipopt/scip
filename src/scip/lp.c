@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.346 2010/08/11 00:58:05 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.347 2010/08/11 02:24:24 bzfgleix Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2091,24 +2091,24 @@ SCIP_RETCODE lpSetPresolving(
    return SCIP_OKAY;
 }
 
-/** sets the SIMPLEXROWREP setting of the LP solver */
+/** sets the ROWREPSWITCH setting of the LP solver */
 static
-SCIP_RETCODE lpSetSimplexRowRep(
+SCIP_RETCODE lpSetRowrepswitch(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Bool             simplexrowrep,      /**< new SIMPLEXROWREP setting */
+   SCIP_Real             rowrepswitch,       /**< new ROWREPSWITCH value */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
    assert(success != NULL);
 
-   SCIP_CALL( lpCheckBoolpar(lp, SCIP_LPPAR_SIMPLEXROWREP, lp->lpisimplexrowrep) );
+   SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_ROWREPSWITCH, lp->lpirowrepswitch) );
 
-   if( simplexrowrep != lp->lpisimplexrowrep )
+   if( rowrepswitch != lp->lpirowrepswitch )
    {
-      SCIP_CALL( lpSetBoolpar(lp, SCIP_LPPAR_SIMPLEXROWREP, simplexrowrep, success) );
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_ROWREPSWITCH, rowrepswitch, success) );
       if( *success )
-         lp->lpisimplexrowrep = simplexrowrep;
+         lp->lpirowrepswitch = rowrepswitch;
    }
    else
       *success = FALSE;
@@ -6190,7 +6190,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpipresolving = set->lp_presolving;
    (*lp)->lpilpinfo = set->disp_lpinfo;
-   (*lp)->lpisimplexrowrep = set->lp_simplexrowrep;
+   (*lp)->lpirowrepswitch = set->lp_rowrepswitch;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
@@ -6274,12 +6274,12 @@ SCIP_RETCODE SCIPlpCreate(
          "LP Solver <%s>: lpinfo setting not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
-   SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_SIMPLEXROWREP, (*lp)->lpisimplexrowrep, &success) );
-   (*lp)->lpihassimplexrowrep = success;
+   SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_ROWREPSWITCH, (*lp)->lpirowrepswitch, &success) );
+   (*lp)->lpihasrowrep = success;
    if( !success )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver <%s>: simplexrowrep setting not available -- SCIP parameter has no effect\n",
+         "LP Solver <%s>: row representation of the basis not available -- SCIP parameter lp/rowrepswitch has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_THREADS, (*lp)->lpithreads, &success) );
@@ -10608,7 +10608,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetFastmip(lp, fastmip, &success) );
    SCIP_CALL( lpSetScaling(lp, set->lp_scaling, &success) );
    SCIP_CALL( lpSetPresolving(lp, set->lp_presolving, &success) );
-   SCIP_CALL( lpSetSimplexRowRep(lp, set->lp_simplexrowrep, &success) );
+   SCIP_CALL( lpSetRowrepswitch(lp, set->lp_rowrepswitch, &success) );
    SCIP_CALL( lpSetPricingChar(lp, set->lp_pricing) );
    SCIP_CALL( lpSetThreads(lp, set->lp_threads, &success) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
@@ -11596,7 +11596,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    if( lp->lpifromscratch )
    {
       SCIP_Bool success;
-      lpSetFromscratch(lp, FALSE, &success);
+      (void) lpSetFromscratch(lp, FALSE, &success);
       SCIPdebugMessage("resetting parameter SCIP_LPPARAM_FROMSCRATCH to FALSE %s\n", success ? "" : "failed");
    }
 

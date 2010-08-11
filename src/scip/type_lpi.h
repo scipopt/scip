@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.28 2010/07/01 22:26:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.29 2010/08/11 02:24:24 bzfgleix Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -53,7 +53,8 @@ enum SCIP_LPParam
    SCIP_LPPAR_LPITLIM        = 11,      /**< LP iteration limit */
    SCIP_LPPAR_LPTILIM        = 12,      /**< LP time limit */
    SCIP_LPPAR_MARKOWITZ      = 13,      /**< Markowitz tolerance */
-   SCIP_LPPAR_SIMPLEXROWREP  = 14,      /**< should simplex algorithm use row representation of the basis? */
+   SCIP_LPPAR_ROWREPSWITCH   = 14,      /**< simplex algorithm shall use row representation of the basis
+                                         *   if number of rows divided by number of columns exceeds this value */
    SCIP_LPPAR_THREADS        = 15       /**< number of threads used to solve the LP */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;

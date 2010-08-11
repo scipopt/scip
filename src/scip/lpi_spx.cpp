@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.107 2010/08/03 16:20:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.108 2010/08/11 02:24:24 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -155,7 +155,6 @@ class SPxSCIP : public SPxSolver
    bool             m_lpinfo;           /**< storing whether output is turned on */
    bool             m_autopricing;      /**< is automatic pricing selected? */
    int              m_autophase1iters;  /**< number of iterations spend in phase one of auto pricing */
-   bool             m_rowrep;           /**< is row representation selected? */
    bool             m_strongbranching;  /**< was last lp solve a strong branching call? */
    SPxSolver::VarStatus* m_rowstat;     /**< basis status of rows before starting strong branching (if m_strongbranching == true, NULL otherwise) */
    SPxSolver::VarStatus* m_colstat;     /**< basis status of columns before starting strong branching (if m_strongbranching == true, NULL otherwise) */
@@ -179,7 +178,6 @@ public:
           m_lpinfo(false),
           m_autopricing(true),
           m_autophase1iters(0),
-          m_rowrep(false),
           m_strongbranching(false),
           m_rowstat(NULL),
           m_colstat(NULL),
@@ -277,16 +275,6 @@ public:
       m_lpinfo = li;
    }
 
-   bool getRowRep() const
-   {
-      return m_rowrep;
-   }
-
-   void setRowRep(bool rr)
-   {
-      m_rowrep = rr;
-   }
-
    SPxLP::SPxSense getSense() const
    {
       assert(m_sense == sense());
@@ -358,6 +346,16 @@ public:
          SPxSolver::setTerminationValue(limit);
       }
       m_objUpLimit = limit;
+   }
+
+   void setRep(SPxSolver::Representation p_rep)
+   {
+      if( p_rep != rep() )
+      {
+         /*SCIPdebugMessage("switching to %s representation of the basis\n", p_rep == SPxSolver::ROW ? "row" : "column");*/
+         printf("switching to %s representation of the basis\n", p_rep == SPxSolver::ROW ? "row" : "column");
+         SPxSolver::setRep(p_rep);
+      }
    }
 
 #ifdef WITH_LPSCHECK
@@ -873,6 +871,7 @@ struct SCIP_LPi
    SCIP_PRICING             pricing;            /**< current pricing strategy */
    SCIP_Bool                solved;             /**< was the current LP solved? */
    SLUFactor*               factorization;      /**< factorization possibly needed for basis inverse */
+   SCIP_Real                rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
 };
 
 /** LPi state stores basis information */
@@ -1156,6 +1155,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->factorization = 0;
+   (*lpi)->rowrepswitch = SCIPlpiInfinity(*lpi);
    invalidateSolution(*lpi);
 
    /* set objective sense */
@@ -2221,6 +2221,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
 static
 SCIP_RETCODE spxSolve(
    SCIP_LPI*             lpi,                /**< LP interface structure */
+   SPxSolver::Representation rep,            /**< basis representation */
    SPxSolver::Type       type                /**< algorithm type */
    )
 {
@@ -2228,6 +2229,7 @@ SCIP_RETCODE spxSolve(
 
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
+   assert( rep == SPxSolver::ROW || rep == SPxSolver::COLUMN );
    assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
 
    invalidateSolution(lpi);
@@ -2237,7 +2239,8 @@ SCIP_RETCODE spxSolve(
    if( !STRONGBRANCH_RESTOREBASIS )
       lpi->spx->restorePreStrongbranchingBasis(true);
 
-   /* set the algorithm type */
+   /* set basis representation and algorithm type */
+   lpi->spx->setRep(rep);
    lpi->spx->setType(type);
 
 #ifdef WITH_LPSCHECK
@@ -2272,6 +2275,20 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 {
    SCIPdebugMessage("calling SCIPlpiSolvePrimal()\n");
 
+   SCIP_RETCODE retcode;
+   SCIP_Bool rowrep;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
+      factor 1.1 for switching back to column representation */
+   rowrep = lpi->spx->rep() == SPxSolver::ROW;
+   if( !rowrep )
+      rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+   else
+      rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
     * If the representation is COLUMN:
@@ -2280,12 +2297,13 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
     *
     * If the representation is ROW:
     * - ENTER = DUAL 
-    * - LEAVE = PRIAML
+    * - LEAVE = PRIMAL
     */
-   if ( lpi->spx->getRowRep() )
-      return spxSolve(lpi, SPxSolver::LEAVE);
-   else
-      return spxSolve(lpi, SPxSolver::ENTER);
+   retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::LEAVE) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::ENTER);
+   assert(!rowrep || lpi->spx->rep() == SPxSolver::ROW);
+   assert(rowrep || lpi->spx->rep() == SPxSolver::COLUMN);
+
+   return retcode;
 }
 
 /** calls dual simplex to solve the LP */
@@ -2294,7 +2312,21 @@ SCIP_RETCODE SCIPlpiSolveDual(
    )
 {
    SCIPdebugMessage("calling SCIPlpiSolveDual()\n");
-   
+
+   SCIP_RETCODE retcode;
+   SCIP_Bool rowrep;
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
+      factor 1.1 for switching back to column representation */
+   rowrep = lpi->spx->rep() == SPxSolver::ROW;
+   if( !rowrep )
+      rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+   else
+      rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
     * If the representation is COLUMN:
@@ -2303,12 +2335,13 @@ SCIP_RETCODE SCIPlpiSolveDual(
     *
     * If the representation is ROW:
     * - ENTER = DUAL 
-    * - LEAVE = PRIAML
+    * - LEAVE = PRIMAL
     */
-   if ( lpi->spx->getRowRep() )
-      return spxSolve(lpi, SPxSolver::ENTER);
-   else
-      return spxSolve(lpi, SPxSolver::LEAVE);
+   retcode = rowrep ? spxSolve(lpi, SPxSolver::ROW, SPxSolver::ENTER) : spxSolve(lpi, SPxSolver::COLUMN, SPxSolver::LEAVE);
+   assert(!rowrep || lpi->spx->rep() == SPxSolver::ROW);
+   assert(rowrep || lpi->spx->rep() == SPxSolver::COLUMN);
+
+   return retcode;
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
@@ -2319,19 +2352,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
    
-   /* SoPlex doesn't distinct between the primal and dual simplex; however
-    * we can force SoPlex to start with the desired method:
-    * If the representation is COLUMN:
-    * - ENTER = PRIMAL 
-    * - LEAVE = DUAL
-    *
-    * If the representation is ROW:
-    * - ENTER = DUAL 
-    * - LEAVE = PRIAML
-    *
-    * since SoPlex does not support barrier we switch to DUAL
-    */
-   return spxSolve(lpi, SPxSolver::LEAVE);
+   /* Since SoPlex does not support barrier we switch to DUAL */
+   return SCIPlpiSolveDual(lpi);
 }
 
 /** performs strong branching iterations on all candidates */
@@ -2396,10 +2418,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-   if( lpi->spx->getRowRep() )
-      lpi->spx->setType(SPxSolver::ENTER);
-   else
-      lpi->spx->setType(SPxSolver::LEAVE);
+   lpi->spx->setType( lpi->spx->rep() == SPxSolver::ROW ? SPxSolver::ENTER : SPxSolver::LEAVE);
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, 1e-06);
@@ -3007,7 +3026,7 @@ SCIP_RETCODE getRedCostEst(SPxSCIP* spx, int col, SCIP_Real* val)
 
    assert( 0 <= col && col < spx->nCols() );
 
-   if( !(spx->getRowRep()) )
+   if( spx->rep() == SPxSolver::COLUMN )
    {
       /* in column case the reduced costs are available: */
       if (spx->getSense() == SPxLP::MINIMIZE)
@@ -3228,7 +3247,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    /* This function expects that the basis is a column basis. If SoPlex uses row representation, we
     * have to transform the basis and possibly compute a new factorization in the function
     * SCIPlpiGetBInvRow(), etc. */
-   if ( !(lpi->spx->getRowRep()) ) 
+   if( lpi->spx->rep() == SPxSolver::COLUMN )
    {
       /* for column representation, return the basis */
       SPxSolver* spx = lpi->spx;
@@ -3774,9 +3793,6 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing;
       break;
-   case SCIP_LPPAR_SIMPLEXROWREP:
-      *ival = (int)(lpi->spx->getRowRep());
-      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3836,19 +3852,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          return SCIP_LPERROR;
       }
       break;
-   case SCIP_LPPAR_SIMPLEXROWREP:
-      assert(ival == TRUE || ival == FALSE);
-      if( ival && !(lpi->spx->getRowRep()) )
-      {
-         lpi->spx->setRep(SPxSolver::ROW);
-         lpi->spx->setRowRep(true);
-      }
-      else if( !ival && lpi->spx->getRowRep() )
-      {
-         lpi->spx->setRep(SPxSolver::COLUMN);
-         lpi->spx->setRowRep(false);
-      }
-      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3883,6 +3886,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->spx->terminationTime();
       break;
+   case SCIP_LPPAR_ROWREPSWITCH:
+      *dval = lpi->rowrepswitch;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3915,6 +3921,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->spx->setTerminationTime(dval);
+      break;
+   case SCIP_LPPAR_ROWREPSWITCH:
+      assert(dval >= 0.0);
+      lpi->rowrepswitch = dval;
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
