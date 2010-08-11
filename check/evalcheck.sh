@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.16 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: evalcheck.sh,v 1.17 2010/08/11 18:41:50 bzfpfets Exp $
 
 export LANG=C
 
@@ -28,6 +28,8 @@ do
 	FILES="$FILES $i"
     fi
 done
+
+export LC_NUMERIC=C
 
 for i in $FILES
 do
