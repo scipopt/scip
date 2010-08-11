@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.108 2010/08/11 02:24:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.109 2010/08/11 02:34:10 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -352,8 +352,7 @@ public:
    {
       if( p_rep != rep() )
       {
-         /*SCIPdebugMessage("switching to %s representation of the basis\n", p_rep == SPxSolver::ROW ? "row" : "column");*/
-         printf("switching to %s representation of the basis\n", p_rep == SPxSolver::ROW ? "row" : "column");
+         SCIPdebugMessage("switching to %s representation of the basis\n", p_rep == SPxSolver::ROW ? "row" : "column");
          SPxSolver::setRep(p_rep);
       }
    }
