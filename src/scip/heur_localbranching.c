@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.45 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.46 2010/08/11 18:38:59 bzfpfets Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -620,7 +620,10 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
          SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
       }
       if( success )
+      {
+         SCIPdebugMessage("-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
          *result = SCIP_FOUNDSOL;
+      }
    }
 
    /* check the status of the sub-MIP */
@@ -628,7 +631,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    {
    case SCIP_STATUS_OPTIMAL:
    case SCIP_STATUS_BESTSOLLIMIT:
-      heurdata->callstatus = WAITFORNEWSOL; /* new solution will immediately installed at next call */
+      heurdata->callstatus = WAITFORNEWSOL; /* new solution will immediately be installed at next call */
       SCIPdebugMessage(" -> found new solution\n");
       break;
 
