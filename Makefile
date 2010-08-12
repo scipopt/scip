@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.357 2010/08/11 00:34:18 bzfgleix Exp $
+# $Id: Makefile,v 1.358 2010/08/12 21:23:27 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -129,7 +129,7 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique nlpi
+LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique nlpi xml
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -572,7 +572,8 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_zerohalf.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
-			tclique/tclique_graph.o
+			tclique/tclique_graph.o \
+			xml/xmlparse.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
