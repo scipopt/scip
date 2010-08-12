@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.125 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.126 2010/08/12 21:18:34 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -381,7 +381,7 @@ void mpsinputEntryIgnored(
       "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n", mpsi->lineno, what, what_name, entity, entity_name);
 }
 
-/* fill the line from \p pos up to column 80 with blanks. */
+/** fill the line from \p pos up to column 80 with blanks. */
 static
 void clearFrom(
    char*                 buf,
@@ -395,7 +395,7 @@ void clearFrom(
    buf[80] = '\0';
 }
 
-/* change all blanks inside a field to #PATCH_CHAR. */
+/** change all blanks inside a field to #PATCH_CHAR. */
 static
 void patchField(
    char*                 buf,
@@ -416,7 +416,7 @@ void patchField(
          buf[i] = PATCH_CHAR;
 }
 
-/* read a mps format data line and parse the fields. */
+/** read a mps format data line and parse the fields. */
 static
 SCIP_Bool mpsinputReadLine(
    MPSINPUT*             mpsi
@@ -616,7 +616,7 @@ void mpsinputInsertName(
    }
 }
 
-/* Process NAME section. */
+/** Process NAME section. */
 static
 SCIP_RETCODE readName(
    MPSINPUT*             mpsi
@@ -662,7 +662,7 @@ SCIP_RETCODE readName(
    return SCIP_OKAY;
 }
 
-/* Process OBJSEN section. This Section is an ILOG extension. */
+/** Process OBJSEN section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjsen(
    MPSINPUT*             mpsi
@@ -713,7 +713,7 @@ SCIP_RETCODE readObjsen(
    return SCIP_OKAY;
 }
 
-/* Process OBJNAME section. This Section is an ILOG extension. */
+/** Process OBJNAME section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjname(
    MPSINPUT*             mpsi
@@ -750,7 +750,7 @@ SCIP_RETCODE readObjname(
    return SCIP_OKAY;
 }
 
-/* Process ROWS, USERCUTS, or LAZYCONS section. */
+/** Process ROWS, USERCUTS, or LAZYCONS section. */
 static
 SCIP_RETCODE readRows(
    MPSINPUT*             mpsi,
@@ -843,7 +843,7 @@ SCIP_RETCODE readRows(
    return SCIP_OKAY;
 }
 
-/* Process COLUMNS section. */
+/** Process COLUMNS section. */
 static
 SCIP_RETCODE readCols(
    MPSINPUT*             mpsi,
@@ -954,7 +954,7 @@ SCIP_RETCODE readCols(
    return SCIP_OKAY;
 }
 
-/* Process RHS section. */
+/** Process RHS section. */
 static
 SCIP_RETCODE readRhs(
    MPSINPUT*             mpsi,
@@ -1079,7 +1079,7 @@ SCIP_RETCODE readRhs(
    return SCIP_OKAY;
 }
 
-/* Process RANGES section */
+/** Process RANGES section */
 static
 SCIP_RETCODE readRanges(
    MPSINPUT*             mpsi,
@@ -1108,6 +1108,8 @@ SCIP_RETCODE readRanges(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
@@ -1213,7 +1215,7 @@ SCIP_RETCODE readRanges(
    return SCIP_OKAY;
 }
 
-/* Process BOUNDS section. */
+/** Process BOUNDS section. */
 static
 SCIP_RETCODE readBounds(
    MPSINPUT*             mpsi,
@@ -1326,7 +1328,7 @@ SCIP_RETCODE readBounds(
              */
             if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
-               if( (mpsinputField1(mpsi)[1] == 'I') /* ILOG extension (Integer Bound) */
+               if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
                   || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisEQ(scip, val, 0.0))
                      && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisEQ(scip, val, 1.0))) )
                {
@@ -1340,14 +1342,14 @@ SCIP_RETCODE readBounds(
             switch( mpsinputField1(mpsi)[0] )
             {
             case 'L':
-               if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
+               if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
                {
                   SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
                SCIP_CALL( SCIPchgVarLb(scip, var, val) );
                break;
             case 'U':
-               if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
+               if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
                {
                   SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
@@ -1371,7 +1373,7 @@ SCIP_RETCODE readBounds(
             case 'P':
                SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
                break;
-            case 'B' : /* Ilog extension (Binary) */
+            case 'B' : /* CPLEX extension (Binary) */
                SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
                SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
@@ -1401,11 +1403,11 @@ SCIP_RETCODE readBounds(
 }
 
 
-/* Process SOS section.
+/** Process SOS section.
  *
- * We read the SOS section, which is a nonstandard section introduced by CPLEX.
+ *  We read the SOS section, which is a nonstandard section introduced by CPLEX.
  *
- * @note Currently do not support the standard way of specifying SOS constraints via markers.
+ *  @note Currently we do not support the standard way of specifying SOS constraints via markers.
  */
 static
 SCIP_RETCODE readSOS(
@@ -1449,6 +1451,8 @@ SCIP_RETCODE readSOS(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          break;
       }
       if( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
@@ -1569,12 +1573,15 @@ SCIP_RETCODE readSOS(
 }
 
 
-/* Process QMATRIX or QUADOBJ section.
+/** Process QMATRIX or QUADOBJ section.
  *
- * We read the QMATRIX or QUADOBJ section, which is a nonstandard section introduced by CPLEX.
- * We create a quadratic constraint for this matrix and add a variable to the objective to represent the value of the QMATRIX.
- * For a QMATRIX, we expect that both lower and upper diagonal elements are given and every coefficient has to be divided by 2.0.
- * For a QUADOBJ, we expect that only the upper diagonal elements are given and thus only coefficients on the diagonal have to be divided by 2.0.
+ *  - We read the QMATRIX or QUADOBJ section, which is a nonstandard section introduced by CPLEX.
+ *  - We create a quadratic constraint for this matrix and add a variable to the objective to
+ *    represent the value of the QMATRIX.
+ *  - For a QMATRIX, we expect that both lower and upper diagonal elements are given and every
+ *    coefficient has to be divided by 2.0.
+ *  - For a QUADOBJ, we expect that only the upper diagonal elements are given and thus only
+ *    coefficients on the diagonal have to be divided by 2.0.
  */
 static
 SCIP_RETCODE readQMatrix(
@@ -1609,6 +1616,8 @@ SCIP_RETCODE readQMatrix(
       {
          if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
@@ -1746,10 +1755,12 @@ SCIP_RETCODE readQMatrix(
 }
 
 
-/* Process QCMATRIX section.
+/** Process QCMATRIX section.
  *
- * We read the QCMATRIX section, which is a nonstandard section introduced by CPLEX.
- * We replace the corresponding linear constraint by a quadratic constraint which contains the original linear constraint plus the quadratic part specified in the QCMATRIX.
+ *  We read the QCMATRIX section, which is a nonstandard section introduced by CPLEX.
+ *
+ *  We replace the corresponding linear constraint by a quadratic constraint which contains the
+ *  original linear constraint plus the quadratic part specified in the QCMATRIX.
  */
 static
 SCIP_RETCODE readQCMatrix(
@@ -1803,6 +1814,8 @@ SCIP_RETCODE readQCMatrix(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
@@ -1922,9 +1935,11 @@ SCIP_RETCODE readQCMatrix(
 }
 
 
-/* Process INDICATORS section.
+/** Process INDICATORS section.
  *
- * We read the INDICATORS section, which is a nonstandard section introduced by CPLEX.
+ *  We read the INDICATORS section, which is a nonstandard section introduced by CPLEX.
+ *
+ *  The section has to come after the QMATRIX* sections.
  */
 static
 SCIP_RETCODE readIndicators(
@@ -1945,9 +1960,9 @@ SCIP_RETCODE readIndicators(
 
    SCIPdebugMessage("read INDICATORS constraints\n");
    
-   /* standard settings for SOS constraints: */
+   /* standard settings for indicator constraints: */
    initial = TRUE;
-   separate = FALSE;
+   separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
@@ -1978,14 +1993,6 @@ SCIP_RETCODE readIndicators(
       {
          if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
-         else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
-            mpsinputSetSection(mpsi, MPS_QMATRIX);
-         else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
-            mpsinputSetSection(mpsi, MPS_QUADOBJ);
-         else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
-            mpsinputSetSection(mpsi, MPS_QCMATRIX);
-         else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
-            mpsinputSetSection(mpsi, MPS_QCMATRIX);
          break;
       }
       if ( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
@@ -2147,7 +2154,7 @@ SCIP_RETCODE readIndicators(
  *
  *  and in the
  *
- *  ILOG CPLEX Reference Manual
+ *  CPLEX Reference Manual
  *
  *  This routine should read all valid MPS format files.
  *  What it will not do, is to find all cases where a file is ill formed.
