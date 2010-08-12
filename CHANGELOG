@@ -169,6 +169,8 @@ features:
   outputs the given solution in Flatzinc format w.r.t. the output annotations
 - can now read and write indicator constraints in the (extended) MPS format
 - the SoPlex interface can now double check each SoPlex result against CPLEX (lpi_spx.cpp)
+- a XML-parser is available in the src/xml subdirectory
+- can now read XML-solution files as used by CPLEX
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
