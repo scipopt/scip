@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.78 2010/07/22 16:57:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.79 2010/08/12 21:17:21 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3465,7 +3465,8 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       }
 
       assert( consdata->slackvar != NULL );
-      assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
+      /* if printreason is true it can happen that non-integral solutions are checked */
+      assert( checkintegrality || SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
 
       if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) &&
 	   ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) )
@@ -3544,7 +3545,8 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 	    consdata = SCIPconsGetData(conss[c]);
 	    assert( consdata != NULL );
 
-	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
+            /* if printreason is true it can happen that non-integral solutions are checked */
+	    assert( checkintegrality || SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
 	    if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) )
 	       S[c] = TRUE;
 	    else
