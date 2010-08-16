@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.80 2010/08/16 18:10:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.81 2010/08/16 18:25:55 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -4302,9 +4302,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    slackvartype = SCIP_VARTYPE_IMPLINT;
    for (i = 0; i < nvars; ++i)
    {
-      /* temorarily mark variables to not be multi-aggregated ?????????????????? */
-      /* SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, vars[i]) ); */
-
       if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]) )
       {
          slackvartype = SCIP_VARTYPE_CONTINUOUS;
@@ -4489,6 +4486,7 @@ SCIP_RETCODE SCIPaddVarIndicator(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VARTYPE vartype;
 
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
@@ -4498,8 +4496,12 @@ SCIP_RETCODE SCIPaddVarIndicator(
 
    SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, var, val) );
 
-   /* temorarily mark variables to not be multi-aggregated ?????????????????? */
-   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
+   /* possibly adapt variable type */
+   vartype = SCIPvarGetType(var);
+   if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_CONTINUOUS && (! SCIPvarIsIntegral(var) || ! SCIPisIntegral(scip, val) ) )
+   {
+      SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_CONTINUOUS) );
+   }
 
    return SCIP_OKAY;
 }
