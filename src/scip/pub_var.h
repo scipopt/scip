@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.81 2010/08/02 14:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.82 2010/08/16 16:56:07 bzfgamra Exp $"
 
 /**@file   pub_var.h
  * @ingroup PUBLICMETHODS
@@ -398,12 +398,6 @@ SCIP_Bool SCIPvarIsActive(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether variable is not allowed to be multi-aggregated */
-extern
-SCIP_Bool SCIPvarDoNotMultaggr(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** gets unique index of variable */
 extern
 int SCIPvarGetIndex(
@@ -744,7 +738,6 @@ SCIP_Real SCIPvarGetLPSol(
 #define SCIPvarIsRemovable(var)         (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
-#define SCIPvarDoNotMultaggr(var)       (var)->donotmultaggr
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar

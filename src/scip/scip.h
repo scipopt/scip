@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.400 2010/08/09 12:22:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.401 2010/08/16 16:56:07 bzfgamra Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -3151,6 +3151,13 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP_Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
+/** returns whether variable is not allowed to be multi-aggregated */
+extern
+SCIP_Bool SCIPdoNotMultaggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable x to aggregate */
    );
 
 /** marks the variable to not to be multi-aggregated */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.234 2010/08/11 18:27:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.235 2010/08/16 16:56:07 bzfgamra Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -216,7 +216,7 @@
                                                  *   solving process triggering a restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.10 /**< minimal fraction of integer variables removed after restart to allow
                                                  *   for an additional restart */
-
+#define SCIP_DEFAULT_PRESOL_DONOTMULTAGGR FALSE /**< should multi-aggregation of variables be forbidden? */
 
 /* Pricing */
 
@@ -1184,6 +1184,12 @@ SCIP_RETCODE SCIPsetCreate(
          "minimal fraction of integer variables removed after restart to allow for an additional restart",
          &(*set)->presol_restartminred, TRUE, SCIP_DEFAULT_PRESOL_RESTARTMINRED, 0.0, 1.0,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "presolving/donotmultaggr",
+         "should multi-aggregation of variables be forbidden?",
+         &(*set)->presol_donotmultaggr, TRUE, SCIP_DEFAULT_PRESOL_DONOTMULTAGGR,
+         NULL, NULL) );
+
 
    /* pricing parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,

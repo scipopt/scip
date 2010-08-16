@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.100 2010/08/11 18:27:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.101 2010/08/16 16:56:08 bzfgamra Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -276,6 +276,7 @@ struct SCIP_Set
                                                *   solving process triggering a restart with preprocessing */
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for
                                                *   an additional restart */
+   SCIP_Bool             presol_donotmultaggr;/**< should multi-aggregation of variables be forbidden? */
 
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */

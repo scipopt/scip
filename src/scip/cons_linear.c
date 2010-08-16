@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.367 2010/07/28 13:12:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.368 2010/08/16 16:56:07 bzfgamra Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5608,7 +5608,7 @@ SCIP_RETCODE convertLongEquality(
 
       /* check, if variable can be used as a slack variable */
       if( (iscont || (coefsintegral && varsintegral && SCIPisEQ(scip, absval, 1.0))) &&
-          !SCIPvarDoNotMultaggr(var) )
+         !SCIPdoNotMultaggrVar(scip, var) )
       {
          SCIP_Bool better;
          SCIP_Bool equal;
@@ -6037,7 +6037,7 @@ SCIP_RETCODE dualPresolve(
       if( SCIPvarIsBinary(var) && consdata->nvars > 2 )
          continue;
 
-      if ( SCIPvarDoNotMultaggr(var) )
+      if ( SCIPdoNotMultaggrVar(scip, var) )
 	 continue;
 
       val = consdata->vals[i];

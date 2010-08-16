@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.618 2010/08/16 16:06:34 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.619 2010/08/16 16:56:07 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10082,12 +10082,27 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    return SCIP_OKAY;
 }
 
+/** returns whether variable is not allowed to be multi-aggregated */
+SCIP_Bool SCIPdoNotMultaggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable x to aggregate */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
+}
+
 /** marks the variable to not to be multi-aggregated */
 SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to delete */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPmarkDoNotMultiaggrVar", TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarMarkDoNotMultaggr(var);

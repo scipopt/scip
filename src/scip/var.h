@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.133 2010/08/02 14:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.134 2010/08/16 16:56:08 bzfgamra Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -431,6 +431,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
+
+/** returns whether variable is not allowed to be multi-aggregated */
+extern
+SCIP_Bool SCIPvarDoNotMultaggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 
 /** gets negated variable x' = offset - x of problem variable x; the negated variable is created if not yet existing;
  *  the negation offset of binary variables is always 1, the offset of other variables is fixed to lb + ub when the

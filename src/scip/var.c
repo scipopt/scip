@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.287 2010/08/06 18:13:13 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.288 2010/08/16 16:56:08 bzfgamra Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4373,6 +4373,16 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    }
    
    return SCIP_OKAY;
+}
+
+/** returns whether variable is not allowed to be multi-aggregated */
+SCIP_Bool SCIPvarDoNotMultaggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->donotmultaggr;
 }
 
 /** gets negated variable x' = offset - x of problem variable x; the negated variable is created if not yet existing;
@@ -12404,7 +12414,6 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsRemovable
 #undef SCIPvarIsDeleted
 #undef SCIPvarIsActive
-#undef SCIPvarDoNotMultaggr
 #undef SCIPvarGetIndex
 #undef SCIPvarGetProbindex
 #undef SCIPvarGetTransVar
@@ -12760,16 +12769,6 @@ SCIP_Bool SCIPvarIsActive(
    assert(var != NULL);
 
    return (var->probindex >= 0);
-}
-
-/** returns whether variable is not allowed to be multi-aggregated */
-SCIP_Bool SCIPvarDoNotMultaggr(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->donotmultaggr;
 }
 
 /** gets unique index of variable */

@@ -615,7 +615,7 @@ features:
   these are used to fix the domain reduction counts in sepa.c, cons.c, branch.c, and prop.c; 
   this means, that now the domain reduction counts are reduced by those domain reduceds which are preformed during probing
 - The SoPlex LPI can now write basis files.
-- added capabilities to avoid multi-aggregation by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
+- added capabilities to avoid multi-aggregation of a single variable by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
 - added capabilities to flatten the (multi)-aggregation graph of variables
 - the ZPL reader is now able to pass a starting solution to SCIP
 - revised lpi_clp.cpp (many small changes, in particular writing and reading of bases)
@@ -673,6 +673,7 @@ parameters:
 - adjusted all predefined settings files, e.g., settings/cuts/fast.set, such that they are consistent wrt 
   removed, added, and changed parameter values of scip.
 - added predefined settings file presolving/aggressive.set
+- new parameter "presol/donotmultaggr" which disables multiaggregation for all variables of the problem
 
 performance improvements:
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
