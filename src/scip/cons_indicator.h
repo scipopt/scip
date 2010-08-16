@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.18 2010/06/26 18:34:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.19 2010/08/16 18:11:33 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -31,7 +31,7 @@
  * \f$z\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
  * separate more inequalities.
  *
- * The name indicator apparently comes from ILOG CPLEX.
+ * The name indicator apparently comes from CPLEX.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
