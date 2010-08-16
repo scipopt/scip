@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.617 2010/08/10 13:22:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.618 2010/08/16 16:06:34 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3351,13 +3351,25 @@ SCIP_RETCODE SCIPreadProb(
 {
    SCIP_RETCODE retcode;
    SCIP_RESULT result;
+   SCIP_Bool usevartable;
+   SCIP_Bool useconstable;
    int i;
    char* tmpfilename;
    char* fileextension;
-   
+
+   assert(scip != NULL);  
    assert(filename != NULL);
    
    SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/useconstable", &useconstable) );
+
+   if( !usevartable || !useconstable )
+   {
+      SCIPerrorMessage("Cannot read problem if vartable or constable is disabled. Make sure parameters 'misc/usevartable' and 'misc/useconstable' are set to TRUE.\n");
+      return SCIP_READERROR;
+   }
 
    /* try all readers until one could read the file */
    result = SCIP_DIDNOTRUN;
@@ -11916,12 +11928,21 @@ SCIP_RETCODE SCIPreadSol(
    SCIP_Bool error;
    SCIP_Bool unknownvariablemessage;
    SCIP_Bool stored;
+   SCIP_Bool usevartable;
    int lineno;
 
    SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(scip != NULL);
    assert(fname != NULL);
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+
+   if( !usevartable )
+   {
+      SCIPerrorMessage("Cannot read solution file if vartable is disabled. Make sure parameter 'misc/usevartable' is set to TRUE.\n");
+      return SCIP_READERROR;
+   }
 
    /* open input file */
    file = SCIPfopen(fname, "r");

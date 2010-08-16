@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.20 2010/08/06 16:29:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.21 2010/08/16 16:06:34 bzfgamra Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -370,7 +370,7 @@ SCIP_RETCODE getConstraints(
    local = FALSE;
    modifiable = FALSE;
    
-   /* parse the variable */
+   /* parse the constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, cipinput->strbuf,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success) );
    
@@ -425,7 +425,6 @@ SCIP_DECL_READERREAD(readerReadCip)
    SCIP_Bool initialcons;
    SCIP_Bool removablecons;
    
-
    if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
