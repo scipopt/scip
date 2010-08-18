@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.40 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.41 2010/08/18 20:27:48 bzfviger Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -115,22 +115,22 @@ SCIP_RETCODE createSubproblem(
 
       if( SCIPisFeasIntegral(scip, lpsolval) )
       {
-	 /* fix variables to current LP solution if it is integral */
-	 lb = lpsolval;
-	 ub = lpsolval;
-	 fixingcounter++;
+         /* fix variables to current LP solution if it is integral */
+         lb = lpsolval;
+         ub = lpsolval;
+         fixingcounter++;
       }
       else if( binarybounds )
       {
-	 /* if the sub problem should be a binary problem, change the bounds to nearest integers */
-	 lb = SCIPfeasFloor(scip,lpsolval);
-	 ub = SCIPfeasCeil(scip,lpsolval);
+         /* if the sub problem should be a binary problem, change the bounds to nearest integers */
+         lb = SCIPfeasFloor(scip,lpsolval);
+         ub = SCIPfeasCeil(scip,lpsolval);
       }
       else 
       {
-	 /* otherwise just copy bounds */
-	 lb =  SCIPvarGetLbGlobal(vars[i]);
-	 ub =  SCIPvarGetUbGlobal(vars[i]);
+         /* otherwise just copy bounds */
+         lb =  SCIPvarGetLbGlobal(vars[i]);
+         ub =  SCIPvarGetUbGlobal(vars[i]);
       }
 
       /* perform the bound change */
