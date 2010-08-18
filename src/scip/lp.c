@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.348 2010/08/11 18:36:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.349 2010/08/18 17:57:15 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2052,7 +2052,7 @@ SCIP_RETCODE lpSetThreads(
    assert(lp != NULL);
    assert(success != NULL);
 
-   SCIP_CALL( lpCheckBoolpar(lp, SCIP_LPPAR_THREADS, lp->lpithreads) );
+   SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_THREADS, lp->lpithreads) );
 
    if( threads != lp->lpithreads )
    {
