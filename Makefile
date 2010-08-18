@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.358 2010/08/12 21:23:27 bzfpfets Exp $
+# $Id: Makefile,v 1.359 2010/08/18 20:58:20 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -309,8 +309,13 @@ NLPILIBSHORTNAME=	nlpi
 NLPILIBNAME	=	$(NLPILIBSHORTNAME)-$(VERSION)
 NLPILIBCOBJ	= 	nlpi/nlpi.o \
 			nlpi/nlpioracle.o \
-			nlpi/expression.o
-NLPILIBCXXOBJ	=
+			nlpi/expression.o \
+			blockmemshell/memory.o \
+			scip/misc.o \
+			scip/intervalarith.o \
+			scip/interrupt.o \
+			scip/message.o
+NLPILIBCXXOBJ	= nlpi/intervalarith.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ += nlpi/exprinterpret_none.o
