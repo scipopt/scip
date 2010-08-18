@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.81 2010/08/16 18:25:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.82 2010/08/18 18:05:32 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -4486,7 +4486,6 @@ SCIP_RETCODE SCIPaddVarIndicator(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VARTYPE vartype;
 
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
@@ -4497,7 +4496,6 @@ SCIP_RETCODE SCIPaddVarIndicator(
    SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, var, val) );
 
    /* possibly adapt variable type */
-   vartype = SCIPvarGetType(var);
    if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_CONTINUOUS && (! SCIPvarIsIntegral(var) || ! SCIPisIntegral(scip, val) ) )
    {
       SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_CONTINUOUS) );
