@@ -246,6 +246,7 @@ fixed bugs:
 - fixed bug that SCIP could not be continued after it has been stopped due to a limit 
 - fixed bug in message handler w.r.t. to messages which are longer then SCIP_MAXSTRLEN
 - fixed bugs in reader_fzn.c w.r.t. parsing and solution output in Flatzinc format
+- fixed bug in var.c: SCIPvarChgLbOriginal() and SCIPvarChgUbOriginal() cannot access original bounds if the variable is negated
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
