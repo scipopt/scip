@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.288 2010/08/16 16:56:08 bzfgamra Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.289 2010/08/18 11:44:31 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4901,20 +4901,20 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->data.original.origdom.ub));
-
-   SCIPdebugMessage("changing original lower bound of <%s> from %g to %g\n", 
-      var->name, var->data.original.origdom.lb, newbound);
+   assert(SCIPsetIsLE(set, newbound, SCIPvarGetUbOriginal(var)));
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
 
-   if( SCIPsetIsEQ(set, var->data.original.origdom.lb, newbound) )
-      return SCIP_OKAY;
-
    /* original domains are only stored for ORIGINAL variables, not for NEGATED */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {
+      SCIPdebugMessage("changing original lower bound of <%s> from %g to %g\n", 
+         var->name, var->data.original.origdom.lb, newbound);
+
+      if( SCIPsetIsEQ(set, var->data.original.origdom.lb, newbound) )
+         return SCIP_OKAY;
+
       /* change the bound */
       var->data.original.origdom.lb = newbound;
    }
@@ -4954,20 +4954,20 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->data.original.origdom.lb));
-
-   SCIPdebugMessage("changing original upper bound of <%s> from %g to %g\n", 
-      var->name, var->data.original.origdom.ub, newbound);
+   assert(SCIPsetIsGE(set, newbound, SCIPvarGetLbOriginal(var)));
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
 
-   if( SCIPsetIsEQ(set, var->data.original.origdom.ub, newbound) )
-      return SCIP_OKAY;
-
    /* original domains are only stored for ORIGINAL variables, not for NEGATED */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {
+      SCIPdebugMessage("changing original upper bound of <%s> from %g to %g\n", 
+         var->name, var->data.original.origdom.ub, newbound);
+
+      if( SCIPsetIsEQ(set, var->data.original.origdom.ub, newbound) )
+         return SCIP_OKAY;
+
       /* change the bound */
       var->data.original.origdom.ub = newbound;
    }
