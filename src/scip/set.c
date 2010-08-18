@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.235 2010/08/16 16:56:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.236 2010/08/18 18:18:39 bzfpfets Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2855,10 +2855,10 @@ SCIP_RETCODE SCIPsetIncludeExternalCode(
    }
    assert(set->nextcodes < set->extcodessize);
 
-   BMSduplicateMemoryArray(&set->extcodenames[set->nextcodes], name, strlen(name)+1);
+   BMSduplicateMemoryArray(&(set->extcodenames[set->nextcodes]), name, (int) strlen(name)+1);
    if( description != NULL )
    {
-      BMSduplicateMemoryArray(&set->extcodedescs[set->nextcodes], description, strlen(description)+1);
+      BMSduplicateMemoryArray(&(set->extcodedescs[set->nextcodes]), description, (int) strlen(description)+1);
    }
    else
    {
