@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.91 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.92 2010/08/18 18:16:13 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2513,7 +2513,7 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.tokenbuf[0] = '\0';
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.pushedtokens[i], LP_MAX_LINELEN) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );
    }
 
    lpinput.npushedtokens = 0;
