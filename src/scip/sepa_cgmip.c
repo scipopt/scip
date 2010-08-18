@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.22 2010/08/18 11:41:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.23 2010/08/18 18:18:23 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -82,11 +82,13 @@
 #define DEFAULT_ALLOWLOCAL        FALSE /**< allow to generate local cuts */
 #define DEFAULT_ONLYINTVARS       FALSE /**< generate cuts for problems with only integer variables? */
 #define DEFAULT_ONLYACTIVEROWS     TRUE /**< use only active rows to generate cuts? */
-#define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts? */
+#define DEFAULT_USECUTPOOL         TRUE /**< use cutpool to store CG-cuts even if the are not efficient? */
 #define DEFAULT_PRIMALSEPARATION   TRUE /**< only separate cuts that are tight for the best feasible solution? */
 #define DEFAULT_ONLYRANKONE       FALSE /**< whether only rank 1 inequalities should be separated */
 #define DEFAULT_EARLYTERM          TRUE /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
 #define DEFAULT_ADDVIOLATIONCONS   TRUE /**< add constraint to subscip that only allows violated cuts? */
+#define DEFAULT_CONSHDLRUSENORM    TRUE /**< should the artificial constraint handler use the norm of a cut to check for feasibility? */
+#define DEFAULT_OBJLONE           FALSE /**< should the objective of the sub-MIP minimize the l1-norm of the multipliers? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -105,8 +107,6 @@
 #define FIXINTEGRALRHS            FALSE
 #define MAKECONTINTEGRAL          FALSE
 #define MAXWEIGHTRANGE            1e+05 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
-#define MAKECUTINTEGRAL                 /* try to scale all cuts to integral coefficients */
-#define FORCECUTINTEGRAL                /* discard cut if conversion to integral coefficients failed */
 
 #if 0
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
@@ -128,11 +128,13 @@ struct SCIP_SepaData
    SCIP_Bool             allowlocal;         /**< allow local cuts */
    SCIP_Bool             onlyintvars;        /**< generate cuts for problems with only integer variables? */
    SCIP_Bool             onlyActiveRows;     /**< use only active rows to generate cuts? */
-   SCIP_Bool             useCutpool;         /**< use cutpool to store CG-cuts? */
+   SCIP_Bool             useCutpool;         /**< use cutpool to store CG-cuts even if the are not efficient? */
    SCIP_Bool             primalSeparation;   /**< only separate cuts that are tight for the best feasible solution? */
    SCIP_Bool             onlyrankone;        /**< whether only rank 1 inequalities should be separated */
    SCIP_Bool             earlyterm;          /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
    SCIP_Bool             addViolationCons;   /**< add constraint to subscip that only allows violated cuts? */
+   SCIP_Bool             conshdlrusenorm;    /**< should the artificial constraint handler use the norm of a cut to check for feasibility? */
+   SCIP_Bool             objlone;            /**< should the objective of the sub-MIP minimize the l1-norm of the multipliers? */
 };
 
 
@@ -827,9 +829,16 @@ SCIP_RETCODE createSubscip(
 
       if ( mipdata->colType[j] == colPresent )
       {
+         SCIP_Real obj;
+
+         if ( sepadata->objlone )
+            obj = 0.0;
+         else
+            obj = primsol[j];
+
 	 /* create alpha variables */
 	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
-	 SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->alpha[j]), name, -CUTCOEFBND, CUTCOEFBND, primsol[j],
+	 SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->alpha[j]), name, -CUTCOEFBND, CUTCOEFBND, obj,
 	       SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
 	 SCIP_CALL( SCIPaddVar(subscip, mipdata->alpha[j]) );
 	 ++cnt;
@@ -866,8 +875,16 @@ SCIP_RETCODE createSubscip(
    assert( (int) ucnt <= ncols );
 
    /* create variable for the rhs of the cut */
-   SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -CUTCOEFBND, CUTCOEFBND, -1.0,
-	 SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   if ( sepadata->objlone )
+   {
+      SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -CUTCOEFBND, CUTCOEFBND, 0.0,
+            SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -CUTCOEFBND, CUTCOEFBND, -1.0,
+            SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   }
    SCIP_CALL( SCIPaddVar(subscip, mipdata->beta) );
 
    /* create fractional variable for the rhs */
@@ -1369,7 +1386,7 @@ SCIP_RETCODE solveSubscip(
 
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
          SCIP_CALL( SCIPsolve(subscip) );
-         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1) );
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1LL) );
 
          status = SCIPgetStatus(subscip);
          assert( status != SCIP_STATUS_BESTSOLLIMIT );
@@ -1950,43 +1967,48 @@ SCIP_RETCODE createCGCutsDirect(
 
 	 SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
 
-	 if ( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
-	 {
-	    SCIP_ROW* cut;
+         /* if norm is 0, the cut is trivial */
+	 if ( SCIPisPositive(scip, cutnorm) )
+         {
+            SCIP_Bool violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
 
-	    /* create the cut */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
-	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-	    /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
-
-	    SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-	       name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-	       SCIPgetCutEfficacy(scip, NULL, cut),
-	       SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-	       SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-	    /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
-	    SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-	    if ( !cutislocal )
+            if ( violated || (sepadata->useCutpool && ! cutislocal ) )
             {
-               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-	    }
-            ++(*ngen);
+               SCIP_ROW* cut;
 
-	    /* release the row */
-	    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-	 }
-	 else if ( sepadata->useCutpool && ! cutislocal )
-	 {
-	    SCIP_ROW* cut;
+               /* create the cut */
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+               SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
+               SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
+               /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
 
-	    /* create the cut for the pool */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
-	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-	    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-	    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-	 }
+               /* add cut if it is violated */
+               if ( violated )
+               {
+                  SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                     name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                     SCIPgetCutEfficacy(scip, NULL, cut),
+                     SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+                  
+#ifdef SCIP_OUTPUT
+                  SCIPdebug(SCIPprintRow(scip, cut, NULL));
+#endif
+                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                  ++(*ngen);
+               }
+
+               /* add cut to pool */
+               if ( ! cutislocal )
+               {
+                  assert( violated || sepadata->useCutpool );
+                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+               }
+
+               /* release the row */
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+            }
+         }
       }
    }
 
@@ -2209,61 +2231,68 @@ SCIP_RETCODE createCGCutsCMIR(
 	 SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
 	       cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-	 if ( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
+         /* only proceed if norm is positive - otherwise the cut is trivial */
+	 if ( SCIPisPositive(scip, cutnorm) )
 	 {
-	    SCIP_ROW* cut;
+            SCIP_Bool violated;
 
-	    /* create the cut */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
-	    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-            /* SCIPdebug(SCIPprintRow(scip, cut, NULL)); */
+            violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
 
-	    assert(success);
-#ifdef MAKECUTINTEGRAL
-	    /* try to scale the cut to integral values */
-	    SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-		  maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+            /* only if the cut if violated - if it is not violated we might store non-local cuts in the pool */
+            if ( violated || ( sepadata->useCutpool && ! cutislocal) )
+            {
+               SCIP_ROW* cut;
+
+               /* create the cut */
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+               SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
+               SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
+               assert( success );
+
+               /* try to scale the cut to integral values */
+               SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+                     maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+
+               /* if the cut could be made integral */
+               if ( success )
+               {
+                  if ( !SCIPisCutEfficacious(scip, NULL, cut) )
+                  {
+                     SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                        name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                        SCIPgetCutEfficacy(scip, NULL, cut));
+                     success = FALSE;
+                  }
+                  else
+                  {
+                     SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                        name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                        SCIPgetCutEfficacy(scip, NULL, cut),
+                        SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                        SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+#ifdef SCIP_OUTPUT
+                     SCIPdebug(SCIPprintRow(scip, cut, NULL));
 #endif
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+                     ++(*ngen);
+                  }
 
-#ifndef FORCECUTINTEGRAL
-	    success = TRUE;
-#endif
-
-	    if ( success )
-	    {
-	       if ( !SCIPisCutEfficacious(scip, NULL, cut) )
-	       {
-		  SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-		     name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-		     SCIPgetCutEfficacy(scip, NULL, cut));
-		  /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
-		  success = FALSE;
-	       }
-	       else
-	       {
-		  SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-		     name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-		     SCIPgetCutEfficacy(scip, NULL, cut),
-		     SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-		     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-		  /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
-		  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-		  if ( !cutislocal )
-		  {
+                  /* add cut to pool */
+                  if ( !cutislocal )
+                  {
+                     assert( violated || sepadata->useCutpool );
                      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-		  }
-                  ++(*ngen);
-	       }
-	    }
-	    else
-	    {
-	       SCIPdebugMessage(" -> CG-cut <%s> could not be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
-		  name, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
-	    }
+                  }
+               }
+               else
+               {
+                  SCIPdebugMessage(" -> CG-cut <%s> could not be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                     name, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
+               }
 
-	    /* release the row */
-	    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               /* release the row */
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+            }
 	 }
       }
    }
@@ -2605,7 +2634,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->onlyActiveRows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/usecutpool",
-         "use cutpool to store CG-cuts?",
+         "use cutpool to store CG-cuts even if the are not efficient?",
          &sepadata->useCutpool, FALSE, DEFAULT_USECUTPOOL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/primalSeparation",
@@ -2623,6 +2652,14 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/addViolationCons",
          "add constraint to subscip that only allows violated cuts?",
          &sepadata->addViolationCons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/conshdlrusenorm",
+         "should the artificial constraint handler use the norm of a cut to check for feasibility?",
+         &sepadata->conshdlrusenorm, FALSE, DEFAULT_CONSHDLRUSENORM, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/objlone",
+         "should the objective of the sub-MIP minimize the l1-norm of the multipliers?",
+         &sepadata->objlone, FALSE, DEFAULT_OBJLONE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
