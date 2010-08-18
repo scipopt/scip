@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.17 2010/08/12 21:21:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.18 2010/08/18 18:15:57 bzfpfets Exp $"
 
 /**@file   reader_sol.c
  * @ingroup FILEREADERS 
@@ -81,6 +81,7 @@ SCIP_RETCODE readXMLSol(
    }
 
    /* loop through all variables */
+   unknownvariablemessage = FALSE;
    for (varnode = xml_first_child(varsnode); varnode != NULL; varnode = xml_next_sibl(varnode))
    {
       const char* varname;

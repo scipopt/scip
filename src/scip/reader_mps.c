@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.126 2010/08/12 21:18:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.127 2010/08/18 18:15:57 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1594,7 +1594,7 @@ SCIP_RETCODE readQMatrix(
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
    int cnt  = 0; /* number of qmatrix elements processed so far */
-   int size = 0; /* size of quad* arrays */
+   int size;     /* size of quad* arrays */
 
    SCIPdebugMessage("read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
    
@@ -1773,7 +1773,7 @@ SCIP_RETCODE readQCMatrix(
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
    int cnt  = 0; /* number of qcmatrix elements processed so far */
-   int size = 0; /* size of quad* arrays */
+   int size;     /* size of quad* arrays */
 
    if( mpsinputField1(mpsi) == NULL )
    {
@@ -1892,20 +1892,7 @@ SCIP_RETCODE readQCMatrix(
    /* replace linear constraint by quadratic constraint */
    if (cnt)
    {
-      SCIP_Bool  initial, separate, enforce, check, propagate;
-      SCIP_Bool  local, modifiable, dynamic, removable;
       SCIP_CONS* cons = NULL;
-
-      /* standard settings for quadratic constraints: */
-      initial    = TRUE;
-      separate   = TRUE;
-      enforce    = TRUE;
-      check      = TRUE;
-      propagate  = TRUE;
-      local      = FALSE;
-      modifiable = FALSE;
-      dynamic    = FALSE;
-      removable  = FALSE;
                   
       SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(lincons), 
          SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
@@ -4073,8 +4060,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	 else
 	    (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 1.0);
 
-         (void) printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
-	 (void) printRecord(scip, file, SCIPvarGetName(binvar), valuestr, maxnamelen);
+         printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
+	 printRecord(scip, file, SCIPvarGetName(binvar), valuestr, maxnamelen);
 	 SCIPinfoMessage(scip, file, "\n");
       }
    }
