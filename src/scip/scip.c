@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.619 2010/08/16 16:56:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.620 2010/08/18 17:12:50 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7086,15 +7086,7 @@ SCIP_RETCODE SCIPgetNegatedVar(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNegatedVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( !SCIPvarIsTransformed(var) )
-   {
-      SCIP_CALL( SCIPvarNegate(var, scip->mem->probmem, scip->set, scip->stat, negvar) );
-   }
-   else
-   {
-      assert(scip->set->stage != SCIP_STAGE_PROBLEM);
-      SCIP_CALL( SCIPvarNegate(var, scip->mem->probmem, scip->set, scip->stat, negvar) );
-   }
+   SCIP_CALL( SCIPvarNegate(var, scip->mem->probmem, scip->set, scip->stat, negvar) );
 
    return SCIP_OKAY;
 }
