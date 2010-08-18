@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.620 2010/08/18 17:12:50 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.621 2010/08/18 18:16:32 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6784,7 +6784,7 @@ SCIP_RETCODE SCIPparseVarName(
 
    SCIP_CALL( checkStage(scip, "SCIPparseVarName", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    /* copy input string such that it can be truncated */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int) strlen(str)+1) );
 
    /* start truncation of thr string */
    varname = SCIPstrtok(strcopy, ">", &saveptr);
@@ -6855,7 +6855,7 @@ SCIP_RETCODE SCIPparseVarsList(
    SCIP_CALL( checkStage(scip, "SCIPparseVarsList", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    /* copy input string such that it can be truncated */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &line, str, strlen(str)+1) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &line, str, (int) strlen(str)+1) );
 
    /* allocate buffer memory for temporary storing the parsed variables */
    SCIP_CALL (SCIPallocBufferArray(scip, &tmpvars, varssize) );
