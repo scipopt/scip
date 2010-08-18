@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.21 2010/08/06 19:59:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.22 2010/08/18 11:41:20 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -139,10 +139,10 @@ struct SCIP_SepaData
 /** what happens for columns in the LP */
 enum CGMIP_ColType
 {
-   colPresent          = 0,    /**< column is present in the separating MIP */
-   colContinuous       = 1,    /**< column corresponds to a continuous variable */
-   colAtUb             = 2,    /**< variable corresponding to column was at it's upper bound and was complemented */
-   colAtLb             = 3     /**< variable corresponding to column was at it's lower bound (possibly complemented) */
+   colPresent    = 0,    /**< column is present in the separating MIP */
+   colContinuous = 1,    /**< column corresponds to a continuous variable */
+   colAtUb       = 2,    /**< variable corresponding to column was at it's upper bound and was complemented */
+   colAtLb       = 3     /**< variable corresponding to column was at it's lower bound (possibly complemented) */
 };
 typedef enum CGMIP_ColType CGMIP_COLTYPE;
 
@@ -1426,15 +1426,15 @@ SCIP_RETCODE solveSubscip(
  */
 static
 SCIP_RETCODE computeCut(
-   SCIP*           scip,                /**< original scip */
-   CGMIP_MIPDATA*  mipdata,             /**< data for sub-MIP */
-   SCIP_SEPADATA*  sepadata,            /**< separator data */
-   SCIP_SOL*       sol,                 /**< current solution for sub-MIP */
-   SCIP_Real*      cutcoefs,            /**< coefficients of the cut */
-   SCIP_Real*      cutrhs,              /**< rhs of the cut */
-   SCIP_Bool*      localrowsused,       /**< pointer to store whether local rows were used in summation */
-   SCIP_Bool*      localboundsused,     /**< pointer to store whether local bounds were used in summation */
-   SCIP_Bool*      success              /**< whether we produced a valid cut */
+   SCIP*                 scip,               /**< original scip */
+   CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< current solution for sub-MIP */
+   SCIP_Real*            cutcoefs,           /**< coefficients of the cut */
+   SCIP_Real*            cutrhs,             /**< rhs of the cut */
+   SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
+   SCIP_Bool*            localboundsused,    /**< pointer to store whether local bounds were used in summation */
+   SCIP_Bool*            success             /**< whether we produced a valid cut */
    )
 {
    SCIP* subscip;
