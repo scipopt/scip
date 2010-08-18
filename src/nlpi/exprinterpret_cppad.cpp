@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.8 2010/06/17 12:04:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.9 2010/08/18 23:16:13 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -979,20 +979,6 @@ SCIP_RETCODE SCIPexprintHessianDense(
    int nn = n*n;
    for (int i = 0; i < nn; ++i)
       hessian[i] = hess[i];
-
-   //	int k = 0, l = 0;
-   //	for (int i = 0; i < n; ++i)
-   //	{ // row
-   //		for (int j = 0; j <= i; ++j, ++k, ++l)
-   //		{ // col
-   //			assert(l < n*n);
-   //			assert(k < n*(n+1)/2);
-   //			hessian[k] = hess[l];
-   //		}
-   //		l += (n-i)-1;
-   //	}
-   //	assert(l == n*n);
-   //	assert(k == n*(n+1)/2);
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("HessianDense for "); SCIPexprtreePrint(tree, NULL); printf("\n");

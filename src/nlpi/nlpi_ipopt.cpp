@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.11 2010/06/17 12:04:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.12 2010/08/18 23:16:13 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -21,8 +21,6 @@
  *
  * @todo warm starts
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
- * @todo using SCIPinterrupted() in ScipNLP::intermediate_callback creates a dependency to the scip library, which we probably want to avoid if using the nlpi standalone
- *       also do we really want to stop if *some* SCIP instance was interrupted? sometimes we really want to, since NLPs solver can "run crazy" 
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
