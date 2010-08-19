@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.134 2010/08/06 16:30:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.135 2010/08/19 13:07:30 bzfgamra Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -125,6 +125,11 @@ struct SCIP_LPi
 #if (CPX_VERSION <= 1100)
    SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug 
                                               *   in the scaling algo for ranged rows in CPLEX up to version 11.0 */
+#endif
+#if (CPX_VERSION == 1100 || CPX_VERSION == 1220)
+   int                   pseudonthreads;     /**< number of threads that SCIP set for the LP solver, but due to CPLEX bug,
+                                              *   we set the thread count to 1. In order to fulfill assert in lp.c,
+                                              *   we have to return the value set by SCIP and not the real thread count */
 #endif
 };
 
@@ -933,8 +938,8 @@ SCIP_RETCODE SCIPlpiCreate(
       cpxenv = CPXopenCPLEX(&restat);
       CHECK_ZERO( restat );
 
-#if CPX_VERSION == 1100
-      /* manually set number of threads to 1 to avoid huge system load due to CPLEX bug */
+#if (CPX_VERSION == 1100 || CPX_VERSION == 1220)
+      /* manually set number of threads to 1 to avoid huge system load due to CPLEX bug (version 1100) or segmentation fault (version 1220) */
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_THREADS, 1) );
 #endif
 
@@ -3334,7 +3339,14 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          *ival = INT_MAX;
       break;
    case SCIP_LPPAR_THREADS:
+#if (CPX_VERSION == 1100 || CPX_VERSION == 1220)
+      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *   return the value set by SCIP and not the real thread count */
+      *ival = lpi->pseudonthreads;
+      assert(getIntParam(lpi, CPX_PARAM_THREADS) == 1);
+#else
       *ival = getIntParam(lpi, CPX_PARAM_THREADS);
+#endif
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -3425,7 +3437,14 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       setIntParam(lpi, CPX_PARAM_ITLIM, ival);
       break;
    case SCIP_LPPAR_THREADS:
+#if (CPX_VERSION == 1100 || CPX_VERSION == 1220)
+      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *   store the value set by SCIP and return it later instead of the real thread count */
+      lpi->pseudonthreads = ival;
+      ival = 1;
+#else
       ival = MIN(ival, CPX_INT_MAX);
+#endif
       setIntParam(lpi, CPX_PARAM_THREADS, ival);
       break;
    default:
