@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.368 2010/08/16 16:56:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.369 2010/08/19 13:56:05 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -7046,7 +7046,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
    SCIP* scip;
    SCIP_CONSDATA* consdata;
-   SCIP_Real maxabsrealval;;
+   SCIP_Real maxabsrealval;
    unsigned int hashval;
    int minidx;
    int mididx;

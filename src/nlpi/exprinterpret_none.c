@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.4 2010/06/17 12:04:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.5 2010/08/19 13:56:05 bzfwinkm Exp $"
 
 /**@file   exprinterpret_none.c
  * @brief  function definitions for nonexisting expression interpreter to resolve linking references 
@@ -28,13 +28,17 @@ struct SCIP_ExprInt
 };
 
 /** gets name and version of expression interpreter */
-const char* SCIPexprintGetName(void)
+const char* SCIPexprintGetName(
+   void
+   )
 {
-	return "NONE";
+   return "NONE";
 }
 
 /** gets descriptive text of expression interpreter */
-const char* SCIPexprintGetDesc(void)
+const char* SCIPexprintGetDesc(
+   void
+   )
 {
    return "dummy expression interpreter which solely purpose it is to resolve linking symbols";
 }
@@ -43,42 +47,41 @@ const char* SCIPexprintGetDesc(void)
 SCIP_RETCODE SCIPexprintCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
-)
+   )
 {
-	SCIPdebugMessage("SCIPexprintCreate()\n");
-	SCIPdebugMessage("Note that there is no expression interpreter linked to the binary.\n");
-	
-   if( BMSallocMemory(exprint) == NULL )
-      return SCIP_NOMEMORY;
+   SCIPdebugMessage("SCIPexprintCreate()\n");
+   SCIPdebugMessage("Note that there is no expression interpreter linked to the binary.\n");
    
-	return SCIP_OKAY;
+   SCIP_ALLOC( BMSallocMemory(exprint) );
+   
+   return SCIP_OKAY;
 }
 
 /** frees an expression interpreter object */
 SCIP_RETCODE SCIPexprintFree(
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
-)
+   )
 {
    BMSfreeMemory(exprint);
    
-	return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** compiles an expression tree and stores compiled data in expression tree */
 SCIP_RETCODE SCIPexprintCompile(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
 
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(
    SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
 
 /** notify expression interpreter that a new parameterization is used
@@ -87,9 +90,9 @@ SCIP_RETCODE SCIPexprintFreeData(
 SCIP_RETCODE SCIPexprintNewParametrization(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
 
 /** evaluates an expression tree */
@@ -98,9 +101,9 @@ SCIP_RETCODE SCIPexprintEval(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Real*            val                 /**< buffer to store value */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
 
 /** evaluates an expression tree on intervals */
@@ -110,7 +113,7 @@ SCIP_RETCODE SCIPexprintEvalInt(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        varvals,            /**< interval values of variables */
    SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
-)
+   )
 {
    return SCIP_PLUGINNOTFOUND;
 }
@@ -120,9 +123,9 @@ SCIP_RETCODE SCIPexprintGetNGradPattern(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int*                  nnz                 /**< buffer to store number of nonzeros */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
 
 /** gets sparsity pattern of expression trees gradient */
@@ -130,9 +133,9 @@ SCIP_RETCODE SCIPexprintGetGradPattern(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int*                  gradidx             /**< buffer to store gradient indices */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
 
 /** computes value and gradient of an expression tree */
@@ -143,9 +146,9 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store value */
    SCIP_Real*            gradvals            /**< buffer to store gradient values */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
 
 /** computes value and dense gradient of an expression tree */
@@ -156,7 +159,7 @@ SCIP_RETCODE SCIPexprintGradDense(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store value */
    SCIP_Real*            gradient            /**< buffer to store gradient */
-)
+   )
 {
    return SCIP_PLUGINNOTFOUND;
 }
@@ -170,7 +173,7 @@ SCIP_RETCODE SCIPexprintGradDenseInt(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an interval evaluation routine? */
    SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
    SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient */
-)
+   )
 {
    return SCIP_PLUGINNOTFOUND;
 }
@@ -184,7 +187,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
-)
+   )
 {
    return SCIP_PLUGINNOTFOUND;
 }
@@ -199,7 +202,7 @@ SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
    SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
-)
+   )
 {
-	return SCIP_PLUGINNOTFOUND;
+   return SCIP_PLUGINNOTFOUND;
 }
