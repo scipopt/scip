@@ -81,6 +81,7 @@ interface:
 - new method SCIPvarGetProbvarHole() to tranform a given domain hole to the corresponding active, 
   fixed, or multi-aggregated variable
 - new method SCIPgetNUpgrConss() which returns the number of upgraded constraints
+- new method SCIPlpRecalculateObjSqrNorm() which is used when the old calculated square norm was unreliable
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -247,6 +248,7 @@ fixed bugs:
 - fixed bug in message handler w.r.t. to messages which are longer then SCIP_MAXSTRLEN
 - fixed bugs in reader_fzn.c w.r.t. parsing and solution output in Flatzinc format
 - fixed bug in var.c: SCIPvarChgLbOriginal() and SCIPvarChgUbOriginal() cannot access original bounds if the variable is negated
+- fixed bug in lp.c SCIProwGetObjParallelism due to a wrong parallelism value which arised from cancellations during calculation of squared euclidean norm of objective function vector of column variables
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

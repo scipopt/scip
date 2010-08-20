@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.349 2010/08/18 17:57:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.350 2010/08/20 10:55:40 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5086,6 +5086,12 @@ SCIP_Real SCIProwGetObjParallelism(
    assert(row != NULL);
    assert(lp != NULL);
 
+   if( lp->objsqrnormunreliable )
+      SCIPlpRecalculateObjSqrNorm(set, lp);
+
+   assert(!lp->objsqrnormunreliable);
+   assert(lp->objsqrnorm >= 0.0);
+   
    prod = row->sqrnorm * lp->objsqrnorm;
 
    parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / SQRT(prod) : 0.0;
@@ -6165,6 +6171,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->nremovablerows = 0;
    (*lp)->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
    (*lp)->validfarkaslp = -1;
+   (*lp)->objsqrnormunreliable = FALSE;
    (*lp)->flushdeletedcols = FALSE;
    (*lp)->flushaddedcols = FALSE;
    (*lp)->flushdeletedrows = FALSE;
@@ -11820,6 +11827,28 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       return pseudoobjval;
 }
 
+/** Is the new value reliable or may we have cancellation?  
+ *
+ *  @Note: Here we only consider cancellations which can occur during decreasing the oldvalue to newvalue; not the
+ *  cancellations which can occur during increasing the oldvalue to the newvalue
+ */
+static
+SCIP_Bool isNewValueUnreliable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newvalue,           /**< new value */
+   SCIP_Real             oldvalue            /**< old reliable value */
+   )
+{
+   SCIP_Real quotient;
+
+   assert(set != NULL);
+   assert(oldvalue < SCIP_INVALID);
+
+   quotient = (REALABS(newvalue)+1.0) / (REALABS(oldvalue) + 1.0);
+   
+   return SCIPsetIsZero(set, quotient);
+}
+
 /** updates current pseudo and loose objective values for a change in a variable's objective value or bounds */
 static
 SCIP_RETCODE lpUpdateVar(
@@ -11903,11 +11932,32 @@ SCIP_RETCODE lpUpdateVar(
    assert(lp->pseudoobjvalinf >= 0);
    assert(lp->looseobjvalinf >= 0);
 
-   /* update squared euclidean norm and sum norm of objective function vector */
-   lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
-   lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
-   lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
-   lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
+   if( REALABS(newobj) != REALABS(oldobj) )
+   {
+      if( !lp->objsqrnormunreliable )
+      {
+         SCIP_Real oldvalue;
+         
+         oldvalue = lp->objsqrnorm;
+         lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
+         
+         /* due to numerical cancellations, we recalculate lp->objsqrnorm using all variables */
+         if( SCIPsetIsLT(set, lp->objsqrnorm, 0.0) || isNewValueUnreliable(set, lp->objsqrnorm, oldvalue) )
+            lp->objsqrnormunreliable = TRUE;
+         else
+         {
+            assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
+            
+            /* due to numerical troubles it still can appear that lp->objsqrnorm is a little bit smaller than 0 */
+            lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
+            
+            assert(lp->objsqrnorm >= 0.0);
+         }
+      }
+
+      lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
+      lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
+   }
 
    return SCIP_OKAY;
 }
@@ -14622,12 +14672,44 @@ int SCIPlpGetNNewrows(
    return lp->nrows - lp->firstnewrow;
 }
 
-/** gets euclidean norm of objective function vector of column variables */
+/** recalculates euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
+void SCIPlpRecalculateObjSqrNorm(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   if( lp->objsqrnormunreliable )
+   {
+      SCIP_COL** cols;
+      int c;
+            
+      cols = lp->cols;
+      assert(cols != NULL || lp->ncols == 0);
+            
+      lp->objsqrnorm = 0.0;
+      
+      for( c = lp->ncols - 1; c >= 0; --c )
+      {
+         lp->objsqrnorm += SQR(cols[c]->obj);
+      }
+      assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
+
+      /* due to numerical troubles it still can appear that lp->objsqrnorm is a little bit smaller than 0 */
+      lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
+
+      lp->objsqrnormunreliable = FALSE;
+   }
+   return;
+}
+/** gets euclidean norm of objective function vector of column variables, only use this method if
+ *  lp->objsqrnormunreliable == FALSE, so probably you have to call SCIPlpRecalculateObjSqrNorm before */
 SCIP_Real SCIPlpGetObjNorm(
    SCIP_LP*              lp                  /**< LP data */
    )
 {
    assert(lp != NULL);
+   assert(!lp->objsqrnormunreliable);
+   assert(lp->objsqrnorm >= 0.0);
 
    return SQRT(lp->objsqrnorm);
 }

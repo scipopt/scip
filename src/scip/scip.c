@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.621 2010/08/18 18:16:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.622 2010/08/20 10:55:41 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3988,6 +3988,10 @@ SCIP_Real SCIPgetObjNorm(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetObjNorm", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( scip->lp->objsqrnormunreliable )                                                          
+      SCIPlpRecalculateObjSqrNorm(scip->set, scip->lp);                                          
+   assert(!scip->lp->objsqrnormunreliable); 
 
    return SCIPlpGetObjNorm(scip->lp);
 }

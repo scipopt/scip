@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.139 2010/01/04 20:35:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.140 2010/08/20 10:55:41 bzfwinkm Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1173,6 +1173,13 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Real             objoffset           /**< objective offset, eg. caused by variable fixings in presolving */
 );
 
+/** recalculates euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
+extern
+void SCIPlpRecalculateObjSqrNorm(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -1227,7 +1234,8 @@ int SCIPlpGetNNewrows(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** gets euclidean norm of objective function vector of column variables */
+/** gets euclidean norm of objective function vector of column variables, only use this method if
+ *  lp->objsqrnormunreliable == FALSE, so probably you have to call SCIPlpRecalculateObjSqrNorm before */
 extern
 SCIP_Real SCIPlpGetObjNorm(
    SCIP_LP*              lp                  /**< LP data */

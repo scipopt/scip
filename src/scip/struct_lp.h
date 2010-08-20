@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.60 2010/08/11 18:25:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.61 2010/08/20 10:55:41 bzfwinkm Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -244,6 +244,8 @@ struct SCIP_Lp
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
+   SCIP_Bool             objsqrnormunreliable;/**< is squared euclidean norm of objective function vector of problem
+                                               *   variables unreliable and need recalculation? */
    SCIP_Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */
    SCIP_Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
    SCIP_Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */
