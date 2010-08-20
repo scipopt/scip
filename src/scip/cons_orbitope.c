@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.10 2010/07/04 18:32:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.11 2010/08/20 10:12:24 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -205,7 +205,7 @@ SCIP_RETCODE consdataCreate(
 
 
 #ifdef PRINT_MATRIX
-/* debug method, prints variable matrix */
+/** debug method, prints variable matrix */
 static
 void printMatrix(
    SCIP_CONSDATA*        consdata            /**< the constraint data     */
@@ -366,14 +366,14 @@ void copyValues(
 
 /** compute the dynamic programming table for SC
  *
- * Build up dynamic programming table in order to find SCs with minimum weight.
+ *  Build up dynamic programming table in order to find SCs with minimum weight.
  *
- * The method here works for the general case in which the variables in the
- * top right triangle are not necessarily fixed.
+ *  The method here works for the general case in which the variables in the
+ *  top right triangle are not necessarily fixed.
  *
- * The values of the minimal SCIs are stored in @a weights.
- * The array @a cases[i][j] stores which of the cases were applied to get @a weights[i][j].
- * Here, 3 means that we have reached the upper limit.
+ *  The values of the minimal SCIs are stored in @a weights.
+ *  The array @a cases[i][j] stores which of the cases were applied to get @a weights[i][j].
+ *  Here, 3 means that we have reached the upper limit.
  */
 static
 void computeSCTable(
@@ -451,9 +451,8 @@ void computeSCTable(
 }
 
 
-/**
- * This is a variant of computeSCTable, where we assume that the upper right triangle
- * is fixed to 0. Hence we can perform the computation a bit more efficient.
+/** This is a variant of computeSCTable, where we assume that the upper right triangle
+ *  is fixed to 0. Hence we can perform the computation a bit more efficient.
  */
 static
 void computeSCTableFixTriangle(
@@ -683,7 +682,7 @@ SCIP_RETCODE separateSCIs(
 }
 
 
-/* propagation method for a single orbitope constraint */
+/** propagation method for a single orbitope constraint */
 static
 SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -922,24 +921,24 @@ SCIP_RETCODE propagateCons(
 }
 
 
-/**< Propagation conflict resolving method of propagator
+/** Propagation conflict resolving method of propagator
  *
- * In this function we use that the propagation method above implicitly propagates SCIs, i.e., every
- * fixing can also be gotten via an SCI-fixing.
+ *  In this function we use that the propagation method above implicitly propagates SCIs, i.e., every
+ *  fixing can also be gotten via an SCI-fixing.
  *
- * Since the storage of an integer is not enough to store the complete information about the fixing
- * nor a complete shifted column, we have to use the lineartime algorithm for SCIs.
+ *  Since the storage of an integer is not enough to store the complete information about the fixing
+ *  nor a complete shifted column, we have to use the lineartime algorithm for SCIs.
  *
- * The inferinfo integer is set by as follows:
+ *  The inferinfo integer is set as follows:
  *
- * - If a shifted column is fixed to 0 and the corresponding bar does not necessarily have value 1
- *   then we fix these entries to 0 and inferinfo is i * nblocks + j, where (i,j) is the leader of the
- *   bar. The SCI depends on whether i is in Gamma or not (see Lemma 1 in the paper and the comments
- *   above.)
+ *  - If a shifted column is fixed to 0 and the corresponding bar does not necessarily has value 1
+ *    then we fix these entries to 0 and inferinfo is i * nblocks + j, where (i,j) is the leader of the
+ *    bar. The SCI depends on whether i is in Gamma or not (see Lemma 1 in the paper and the comments
+ *    above.)
  *
- * - If a bar has value 1 and the shifted column has one entry that is not fixed, it can be fixed to
- *   1 and inferinfo is (nspcons*nblocks) + i * nblocks + j, where (i,j) is the leader of the bar; see
- *   Proposition 1 (2c).
+ *  - If a bar has value 1 and the shifted column has one entry that is not fixed, it can be fixed to
+ *    1 and inferinfo is (nspcons*nblocks) + i * nblocks + j, where (i,j) is the leader of the bar; see
+ *    Proposition 1 (2c).
  */
 static
 SCIP_RETCODE resolvePropagation(
