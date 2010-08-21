@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.12 2010/08/18 23:16:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.13 2010/08/21 16:25:30 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -804,6 +804,7 @@ SCIP_DECL_NLPICHGNONLINCOEF(nlpiChgNonlinCoefIpopt)
    assert(data != NULL);
    assert(data->oracle != NULL);
 */ 
+   /* TODO implement */
    SCIPerrorMessage("ChgNonlinCoef method of Ipopt nonlinear solver is not implemented\n");
 
    SCIPnlpiIpoptInvalidateSolution(problem);
@@ -1847,7 +1848,7 @@ Index ScipNLP::get_number_of_nonlinear_variables()
 
    count = 0;
    for( int i = 0; i < n; ++i )
-      if (SCIPnlpiOracleGetVarDegree(nlpiproblem->oracle, i) <= 1)
+      if (SCIPnlpiOracleGetVarDegree(nlpiproblem->oracle, i) > 1)
          ++count;
 
    return count;
@@ -1869,7 +1870,7 @@ bool ScipNLP::get_list_of_nonlinear_variables(
 
    count = 0;
    for( int i = 0; i < n; ++i )
-      if (SCIPnlpiOracleGetVarDegree(nlpiproblem->oracle, i) <= 1)
+      if (SCIPnlpiOracleGetVarDegree(nlpiproblem->oracle, i) > 1)
       {
          assert(count < num_nonlin_vars);
          pos_nonlin_vars[count++] = i;
@@ -1893,7 +1894,7 @@ bool ScipNLP::eval_f(
    
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
 
-   return (SCIPnlpiOracleEvalObjectiveValue(nlpiproblem->oracle, x, &obj_value) == SCIP_OKAY ? true : false);
+   return SCIPnlpiOracleEvalObjectiveValue(nlpiproblem->oracle, x, &obj_value) == SCIP_OKAY;
 }
 
 /** Method to return the gradient of the objective */
@@ -1911,7 +1912,7 @@ bool ScipNLP::eval_grad_f(
    
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
 
-   return (SCIPnlpiOracleEvalObjectiveGradient(nlpiproblem->oracle, x, TRUE, &dummy, grad_f) == SCIP_OKAY ? true : false);
+   return SCIPnlpiOracleEvalObjectiveGradient(nlpiproblem->oracle, x, TRUE, &dummy, grad_f) == SCIP_OKAY;
 }
 
 /** Method to return the constraint residuals */
@@ -1928,7 +1929,7 @@ bool ScipNLP::eval_g(
    
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
 
-   return (SCIPnlpiOracleEvalConstraintValues(nlpiproblem->oracle, x, g) == SCIP_OKAY ? true : false);
+   return SCIPnlpiOracleEvalConstraintValues(nlpiproblem->oracle, x, g) == SCIP_OKAY;
 }
 
 /** Method to return:
