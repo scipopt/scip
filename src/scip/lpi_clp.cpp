@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.69 2010/08/06 17:17:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.70 2010/08/23 18:30:58 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -83,6 +83,8 @@
 static int fileNr = 0;
 #endif
 
+/* bound for accepting primal or dual sum of infeasibilities */
+#define SUMINFEASBOUND   1.0e-3
 
 /** LP interface for Clp */
 struct SCIP_LPi
@@ -1985,8 +1987,30 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    assert(primalfeasible != 0);
    assert(dualfeasible != 0);
 
-   *primalfeasible = lpi->clp->primalFeasible();
-   *dualfeasible   = lpi->clp->dualFeasible();
+   if ( lpi->clp->primalFeasible() )
+      *primalfeasible = TRUE;
+   else
+      *primalfeasible = FALSE;
+
+   if ( lpi->clp->dualFeasible() )
+      *dualfeasible = TRUE;
+   else
+      *dualfeasible = FALSE;
+
+   // say feasible if deviation is small
+   if (lpi->clp->status()==0 && ( ! (*primalfeasible) || ! (*dualfeasible)) ) 
+   {
+      if ( !(*primalfeasible) && lpi->clp->sumPrimalInfeasibilities() < SUMINFEASBOUND ) 
+      {
+         lpi->clp->setNumberPrimalInfeasibilities(0);
+         *primalfeasible = TRUE;
+      }
+      if ( !(*dualfeasible) && lpi->clp->sumDualInfeasibilities() < SUMINFEASBOUND)
+      {
+         lpi->clp->setNumberDualInfeasibilities(0);
+         *dualfeasible = TRUE;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2006,7 +2030,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
-   return ( lpi->clp->status() == 2 );
+   return ( lpi->clp->status() == 2 && lpi->clp->unboundedRay() );
 }
 
 
@@ -2024,7 +2048,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
-   return ( lpi->clp->status() == 2 );
+   return ( lpi->clp->status() == 2 && lpi->clp->unboundedRay() );
 }
 
 
@@ -2107,7 +2131,7 @@ SCIP_Bool SCIPlpiHasDualRay(
 
    /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" (see above), (but is
     * not necessarily dual feasible), see ClpModel::infeasibilityRay */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->infeasibilityRay() );
 }
 
 
