@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.5 2010/08/19 13:56:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.6 2010/08/23 19:33:13 bzfviger Exp $"
 
 /**@file   exprinterpret_none.c
  * @brief  function definitions for nonexisting expression interpreter to resolve linking references 
@@ -41,6 +41,14 @@ const char* SCIPexprintGetDesc(
    )
 {
    return "dummy expression interpreter which solely purpose it is to resolve linking symbols";
+}
+
+/** gets capabilities of expression interpreter (using bitflags) */.
+SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
+   void
+   )
+{
+   return SCIP_EXPRINTCAPABILITY_NONE;
 }
 
 /** creates an expression interpreter object */

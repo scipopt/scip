@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret.h,v 1.4 2010/06/17 12:04:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret.h,v 1.5 2010/08/23 19:33:13 bzfviger Exp $"
 
 /**@file   exprinterpret.h
  * @brief  methods to interpret (evaluate) an expression tree "fast"
@@ -50,6 +50,10 @@ const char* SCIPexprintGetName(void);
 /** gets descriptive text of expression interpreter */
 extern
 const char* SCIPexprintGetDesc(void);
+
+/** gets capabilities of expression interpreter (using bitflags) */
+extern
+SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(void);
 
 /** creates an expression interpreter object */
 extern

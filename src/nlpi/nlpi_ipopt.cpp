@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.13 2010/08/21 16:25:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.14 2010/08/23 19:33:13 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -28,6 +28,7 @@
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
+#include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/pub_misc.h"
 
@@ -101,11 +102,13 @@ private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
 
 public:
+   bool                  approxhessian;      /**< do we tell Ipopt to approximate the hessian? (may also be false if user set to approx. hessian via option file) */
+   
    /** constructor */
    ScipNLP(
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL /**< NLPI problem data */
    )
-   : nlpiproblem(nlpiproblem_)
+   : nlpiproblem(nlpiproblem_), approxhessian(false)
    { }
 
    /** destructor */
@@ -395,6 +398,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 
    SCIP_CALL( SCIPnlpiOracleCreate(data->blkmem, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
+   SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
    
    try
    {
@@ -438,7 +442,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  data->infinity, false);
    (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", data->infinity, false);
    /* (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
-   /* (*problem)->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory"); */
+   /* if the expression interpreter does not give hessians, tell Ipopt to approximate hessian */
 #ifdef SCIP_DEBUG
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
@@ -448,8 +452,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       SCIPerrorMessage("Error during initialization of Ipopt using optionfile \"%s\"\n", (*problem)->optfile.c_str());
       return SCIP_ERROR;
    }
-
-   /* TODO store the problem name somewhere and use in print */
    
    return SCIP_OKAY;
 }
@@ -787,8 +789,8 @@ SCIP_DECL_NLPICHGEXPRTREE(nlpiChgExprtreeIpopt)
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - considx index of constraint or -1 for objective
- *  - paramidx index of parameter
+ *  - idxcons index of constraint or -1 for objective
+ *  - idxparam index of parameter
  *  - value new value for nonlinear parameter
  * 
  * return: Error if parameter does not exist
@@ -799,17 +801,11 @@ SCIP_DECL_NLPICHGNONLINCOEF(nlpiChgNonlinCoefIpopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-/*    
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
-   assert(data != NULL);
-   assert(data->oracle != NULL);
-*/ 
-   /* TODO implement */
-   SCIPerrorMessage("ChgNonlinCoef method of Ipopt nonlinear solver is not implemented\n");
-
+    
+   SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
    SCIPnlpiIpoptInvalidateSolution(problem);
 
-   return SCIP_ERROR;
+   return SCIP_OKAY;
 }
 
 /** sets initial guess for primal variables
@@ -878,7 +874,18 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       SmartPtr<SolveStatistics> stats;
 
       if( problem->firstrun )
+      {
+         /* enable hessian approximation if we are nonquadratic and the expression interpreter does not support hessians */
+         if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_HESSIAN) && SCIPnlpiOracleGetMaxDegree(problem->oracle) > 2 )
+         {
+            problem->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory");
+            problem->nlp->approxhessian = true;
+         }
+         else
+            problem->nlp->approxhessian = false;
+         
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
+      }
       else
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
       
@@ -1706,11 +1713,18 @@ bool ScipNLP::get_nlp_info(
    assert(offset != NULL);
    nnz_jac_g = offset[m];
 
-   retcode = SCIPnlpiOracleGetHessianLagSparsity(nlpiproblem->oracle, &offset, NULL);
-   if( retcode != SCIP_OKAY )
-      return false;
-   assert(offset != NULL);
-   nnz_h_lag = offset[n];
+   if( !approxhessian )
+   {
+      retcode = SCIPnlpiOracleGetHessianLagSparsity(nlpiproblem->oracle, &offset, NULL);
+      if( retcode != SCIP_OKAY )
+         return false;
+      assert(offset != NULL);
+      nnz_h_lag = offset[n];
+   }
+   else
+   {
+      nnz_h_lag = 0;
+   }
    
    index_style = TNLP::C_STYLE;
    

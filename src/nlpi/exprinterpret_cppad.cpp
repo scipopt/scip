@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.9 2010/08/18 23:16:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.10 2010/08/23 19:33:13 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -540,6 +540,16 @@ const char* SCIPexprintGetName(void)
 const char* SCIPexprintGetDesc(void)
 {
    return "Algorithmic Differentiation of C++ algorithms developed by B. Bell (www.coin-or.org/CppAD)";
+}
+
+/** gets capabilities of expression interpreter (using bitflags) */
+SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
+   void
+   )
+{
+   return SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_INTFUNCVALUE |
+      SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_INTGRADIENT |
+      SCIP_EXPRINTCAPABILITY_HESSIAN;
 }
 
 /** creates an expression interpreter object */

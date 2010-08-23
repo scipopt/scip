@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.h,v 1.3 2010/06/04 17:57:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.h,v 1.4 2010/08/23 19:33:13 bzfviger Exp $"
 
 /**@file   nlpioracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -57,6 +57,19 @@ SCIP_RETCODE SCIPnlpiOracleSetInfinity(
 extern
 SCIP_Real SCIPnlpiOracleGetInfinity(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
+/** sets the problem name (used for printing) */
+extern
+SCIP_RETCODE SCIPnlpiOracleSetProblemName(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   const char*           name                /**< name of problem */
+   );
+
+/** gets the problem name, or NULL if none set */
+extern
+const char* SCIPnlpiOracleGetProblemName(
+   SCIP_NLPIORACLE*     oracle               /**< pointer to NLPIORACLE data structure */
    );
 
 /** adds variables */
@@ -247,6 +260,16 @@ extern
 int SCIPnlpiOracleGetConstraintDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx             /**< index of constraint for which the degree is requested */
+   );
+
+/** Gives maximum degree over all constraints and the objective (or over all variables, resp.).
+ * Thus, if this function returns 0, then the objective and all constraints are constant.
+ * If it returns 1, then the problem in linear.
+ * If it returns 2, then its a QP, QCP, or QCQP.
+ * And if it returns > 2, then it is an NLP. */
+extern
+int SCIPnlpiOracleGetMaxDegree(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** evaluates the objective function in a given point */
