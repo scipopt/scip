@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.73 2010/06/30 20:26:26 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.74 2010/08/23 21:09:13 bzfwinkm Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -352,6 +352,16 @@ void SCIPsortPtrInt(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   len                 /**< length of arrays */
    );
+
+/** sort of two joint arrays of pointers/Bools, sorted by first array in non-decreasing order */
+extern
+void SCIPsortPtrBool(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 
 /** sort of three joint arrays of pointers/ints/ints, sorted by first array in non-decreasing order */
 extern
@@ -697,6 +707,15 @@ void SCIPsortDownPtrInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of two joint arrays of pointers/Bools, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownPtrBool(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownPtrIntInt(
@@ -1033,6 +1052,17 @@ void SCIPsortedvecInsertPtrInt(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
+/** insert a new element into two joint arrays of pointers/Bools, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertPtrBool(
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   SCIP_Bool             field1val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
@@ -1476,6 +1506,17 @@ void SCIPsortedvecInsertDownPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into two joint arrays of pointers/Bools, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownPtrBool(
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   SCIP_Bool             field1val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecInsertDownPtrIntInt(
@@ -1902,6 +1943,16 @@ void SCIPsortedvecDelPosPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from two joint arrays of pointers/Bools, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosPtrBool(
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of pointers/ints/ints, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecDelPosPtrIntInt(
@@ -2272,6 +2323,16 @@ void SCIPsortedvecDelPosDownPtrInt(
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from two joint arrays of pointers/Bools, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownPtrBool(
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
 /** delete the element at the given position from three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order */
