@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.202 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.203 2010/08/24 14:18:20 bzfwinkm Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4798,6 +4798,9 @@ SCIP_RETCODE SCIPconsDelete(
    {
       SCIP_CALL( SCIPconsDeactivate(cons, set, stat) );
    }
+   else
+      cons->updateactivate = FALSE;
+   
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
 

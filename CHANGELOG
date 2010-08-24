@@ -251,6 +251,7 @@ fixed bugs:
 - fixed bug in var.c: SCIPvarChgLbOriginal() and SCIPvarChgUbOriginal() cannot access original bounds if the variable is negated
 - fixed bug in lp.c SCIProwGetObjParallelism due to a wrong parallelism value which arised from cancellations during calculation of squared euclidean norm of objective function vector of column variables
 - fixed bug when aborting pricing with Ctrl-C
+- fixed bug when deleting a constraint where the update was delayed and not processed yet (in cons.c)
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
