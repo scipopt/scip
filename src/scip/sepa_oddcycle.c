@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.1 2010/08/24 09:10:24 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.2 2010/08/24 09:12:59 bzfwanie Exp $"
 
 /**@file   sepa_oddcycle.c
  * @brief  oddcycle separator
@@ -3940,7 +3940,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
          &sepadata->calcliftcoefperstep, TRUE, DEFAULT_CALC_LIFTCOEF_PER_STEP, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "separating/oddcycle/sortswitch", 
          "use sorted variable array (unsorted(0),maxlp(1),minlp(2),maxfrac(3),minfrac(4))",
-         (int*) &sepadata->sortswitch, TRUE, DEFAULT_SORTSWITCH, 0, 4, NULL, NULL) ); /* DEBUG? ??????? */
+         (int*) &sepadata->sortswitch, TRUE, DEFAULT_SORTSWITCH, 0, 4, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/sort_root_neighbors", 
          "sort level of the root neighbors by fractionality (maxfrac)",
          &sepadata->sortrootneighbors, TRUE, DEFAULT_SORT_ROOT_NEIGHBORS, NULL, NULL) );
