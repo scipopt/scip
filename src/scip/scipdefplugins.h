@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.45 2010/06/24 10:53:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.46 2010/08/24 09:10:24 bzfwanie Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -125,6 +125,7 @@
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_mcf.h"
+#include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_redcost.h"
 #include "scip/sepa_strongcg.h"
