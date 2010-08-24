@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.306 2010/08/11 18:29:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.307 2010/08/24 14:05:20 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1525,7 +1525,7 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->flushed);
          assert(lp->solved || *lperror);
 
-         /* update lower bound w.r.t. the the LP solution */
+         /* update lower bound w.r.t. the LP solution */
          if( !(*lperror) && !(*pricingaborted))
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );

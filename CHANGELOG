@@ -250,6 +250,7 @@ fixed bugs:
 - fixed bugs in reader_fzn.c w.r.t. parsing and solution output in Flatzinc format
 - fixed bug in var.c: SCIPvarChgLbOriginal() and SCIPvarChgUbOriginal() cannot access original bounds if the variable is negated
 - fixed bug in lp.c SCIProwGetObjParallelism due to a wrong parallelism value which arised from cancellations during calculation of squared euclidean norm of objective function vector of column variables
+- fixed bug when aborting pricing with Ctrl-C
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

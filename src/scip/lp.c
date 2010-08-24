@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.350 2010/08/20 10:55:40 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.351 2010/08/24 14:05:20 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5351,7 +5351,7 @@ SCIP_RETCODE lpFlushAddCols(
    }
 
    /* call LP interface */
-   SCIPdebugMessage("flushing col additions: enlarge LP from %d to %d colums\n", lp->nlpicols, lp->ncols);
+   SCIPdebugMessage("flushing col additions: enlarge LP from %d to %d columns\n", lp->nlpicols, lp->ncols);
    SCIP_CALL( SCIPlpiAddCols(lp->lpi, naddcols, obj, lb, ub, name, nnonz, beg, ind, val) );
    lp->nlpicols = lp->ncols;
    lp->lpifirstchgcol = lp->nlpicols;

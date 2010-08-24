@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.241 2010/08/04 18:45:54 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.242 2010/08/24 14:05:20 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -3697,11 +3697,11 @@ SCIP_RETCODE SCIPnodeFocus(
     * thereby checking, if the new node can be cut off
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
-   SCIPdebugMessage("focus node: focusnodedepth=%u, forkdepth=%u, lpforkdepth=%u, lpstateforkdepth=%u, subrootdepth=%u, cutoff=%u\n",
+   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
       *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1,
       lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1,
       subroot != NULL ? subroot->depth : -1, *cutoff);
-
+   
    /* free the new node, if it is located in a cut off subtree */
    if( *cutoff )
    {
@@ -3788,7 +3788,7 @@ SCIP_RETCODE SCIPnodeFocus(
       /* check whether the next focus node is a child of the old focus node */
       selectedchild = (*node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
 
-      if( tree->focusnodehaslp )
+      if( tree->focusnodehaslp && lp->isrelax )
       {
          assert(tree->focuslpconstructed);
 
