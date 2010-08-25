@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.70 2010/08/23 18:30:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.71 2010/08/25 18:31:53 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -2111,9 +2111,9 @@ SCIP_Bool SCIPlpiExistsDualRay(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" (see above), (but is
-    * not necessarily dual feasible), see ClpModel::infeasibilityRay */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
+    * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
+   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0 );
 }
 
 
@@ -2129,9 +2129,21 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" (see above), (but is
-    * not necessarily dual feasible), see ClpModel::infeasibilityRay */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->infeasibilityRay() );
+   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
+    * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
+   if ( lpi->clp->infeasibilityRayExists() )
+   {
+      if ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0)
+         return TRUE;
+      else 
+      {
+         if ( lpi->clp->status() != 2 || lpi->clp->algorithm() <= 0 ) 
+            lpi->clp->deleteRay();
+         return FALSE;
+      }
+   } 
+   else
+      return FALSE;
 }
 
 
