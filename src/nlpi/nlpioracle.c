@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.11 2010/08/23 19:33:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.12 2010/08/26 14:18:22 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1014,7 +1014,7 @@ SCIP_RETCODE printFunction(
    
    for( i = 0; i < nlin; ++i )
    {
-      SCIPmessageFPrintInfo(file, "%+g*", linvals[i]);
+      SCIPmessageFPrintInfo(file, "%+.20g*", linvals[i]);
       if( oracle->varnames != NULL && oracle->varnames[lininds[i]] != NULL )
          SCIPmessageFPrintInfo(file, oracle->varnames[lininds[i]]);
       else
@@ -1026,7 +1026,7 @@ SCIP_RETCODE printFunction(
       j = 0;
       for( i = 0; i < quadlen; ++i )
       {
-         SCIPmessageFPrintInfo(file, "%+g*", quadelems[j].coef);
+         SCIPmessageFPrintInfo(file, "%+.20g*", quadelems[j].coef);
          if( oracle->varnames != NULL && oracle->varnames[quadelems[i].idx1] != NULL )
             SCIPmessageFPrintInfo(file, oracle->varnames[quadelems[i].idx1]);
          else
@@ -2936,7 +2936,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
       oracle->objquadlen, oracle->objquadelems,
       oracle->objexprtree, oracle->objexprvaridxs) );
    if( oracle->objconstant != 0.0 )
-      SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
+      SCIPmessageFPrintInfo(file, "%+.20g", oracle->objconstant);
    SCIPmessageFPrintInfo(file, "\n");
    
    for( i = 0; i < oracle->nconss; ++i )
@@ -2948,7 +2948,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
       
       SCIPmessageFPrintInfo(file, ": ");
       if( oracle->conslhss[i] > -oracle->infinity && oracle->consrhss[i] < oracle->infinity && oracle->conslhss[i] != oracle->consrhss[i] )
-         SCIPmessageFPrintInfo(file, "%g <= ", oracle->conslhss[i]);
+         SCIPmessageFPrintInfo(file, "%.20g <= ", oracle->conslhss[i]);
       
       SCIP_CALL( printFunction(oracle, file,
          (oracle->conslinlens   != NULL ? oracle->conslinlens  [i] : 0),
@@ -2960,11 +2960,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
          (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
       
       if( oracle->conslhss[i] == oracle->consrhss[i] )
-         SCIPmessageFPrintInfo(file, " = %g", oracle->consrhss[i]);
+         SCIPmessageFPrintInfo(file, " = %.20g", oracle->consrhss[i]);
       else if( oracle->consrhss[i] <  oracle->infinity )
-         SCIPmessageFPrintInfo(file, " <= %g", oracle->consrhss[i]);
+         SCIPmessageFPrintInfo(file, " <= %.20g", oracle->consrhss[i]);
       else if( oracle->conslhss[i] > -oracle->infinity )
-         SCIPmessageFPrintInfo(file, " >= %g", oracle->conslhss[i]);
+         SCIPmessageFPrintInfo(file, " >= %.20g", oracle->conslhss[i]);
       
       SCIPmessageFPrintInfo(file, "\n");
    }
@@ -3010,7 +3010,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
             SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
          else
             SCIPmessageFPrintInfo(file, "x%d", i);
-         SCIPmessageFPrintInfo(file, ".fx = %g;\t", oracle->varlbs[i]);
+         SCIPmessageFPrintInfo(file, ".fx = %.20g;\t", oracle->varlbs[i]);
       }
       else
       {
@@ -3020,7 +3020,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
                SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
             else
                SCIPmessageFPrintInfo(file, "x%d", i);
-            SCIPmessageFPrintInfo(file, ".lo = %g;\t", oracle->varlbs[i]);
+            SCIPmessageFPrintInfo(file, ".lo = %.20g;\t", oracle->varlbs[i]);
          }
          if( oracle->varubs[i] <  oracle->infinity )
          {
@@ -3028,7 +3028,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
                SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
             else
                SCIPmessageFPrintInfo(file, "x%d", i);
-            SCIPmessageFPrintInfo(file, ".up = %g;\t", oracle->varubs[i]);
+            SCIPmessageFPrintInfo(file, ".up = %.20g;\t", oracle->varubs[i]);
          }
       }
       if( initval != NULL )
@@ -3037,7 +3037,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
             SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
          else
             SCIPmessageFPrintInfo(file, "x%d", i);
-         SCIPmessageFPrintInfo(file, ".l = %g;\t", initval[i]);
+         SCIPmessageFPrintInfo(file, ".l = %.20g;\t", initval[i]);
       }
       SCIPmessageFPrintInfo(file, "\n");
    }
@@ -3067,7 +3067,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       oracle->objquadlen, oracle->objquadelems,
       oracle->objexprtree, oracle->objexprvaridxs) );
    if( oracle->objconstant != 0.0 )
-      SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
+      SCIPmessageFPrintInfo(file, "%+.20g", oracle->objconstant);
    SCIPmessageFPrintInfo(file, ";\n");
    
    for( i = 0; i < oracle->nconss; ++i )
@@ -3088,11 +3088,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
 
       if( oracle->conslhss[i] == oracle->consrhss[i] )
-         SCIPmessageFPrintInfo(file, " =E= %g", oracle->consrhss[i]);
+         SCIPmessageFPrintInfo(file, " =E= %.20g", oracle->consrhss[i]);
       else if( oracle->consrhss[i] <  oracle->infinity )
-         SCIPmessageFPrintInfo(file, " =L= %g", oracle->consrhss[i]);
+         SCIPmessageFPrintInfo(file, " =L= %.20g", oracle->consrhss[i]);
       else if( oracle->conslhss[i] > -oracle->infinity )
-         SCIPmessageFPrintInfo(file, " =G= %g", oracle->conslhss[i]);
+         SCIPmessageFPrintInfo(file, " =G= %.20g", oracle->conslhss[i]);
       else
          SCIPmessageFPrintInfo(file, " =N= 0");
       SCIPmessageFPrintInfo(file, ";\n");
@@ -3114,7 +3114,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
             (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL),
             (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
          
-         SCIPmessageFPrintInfo(file, " =G= %g;\n", oracle->conslhss[i]);
+         SCIPmessageFPrintInfo(file, " =G= %.20g;\n", oracle->conslhss[i]);
       }
       
       if( nllevel <= 0 && oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
