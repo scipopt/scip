@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.622 2010/08/20 10:55:41 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.623 2010/08/26 16:48:24 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13148,6 +13148,20 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
          name, 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an NLP row from a linear row */
+SCIP_RETCODE SCIPcreateNlRowFromRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   SCIP_ROW*             row                 /**< the linear row to copy */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateNlRowFromRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowCreateFromRow(nlrow, scip->mem->probmem, scip->set, row) );
 
    return SCIP_OKAY;
 }

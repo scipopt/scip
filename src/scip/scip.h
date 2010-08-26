@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.401 2010/08/16 16:56:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.402 2010/08/26 16:48:24 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4733,6 +4733,14 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
    const char*           name,               /**< name of nonlinear row */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs                 /**< right hand side */
+   );
+
+/** creates and captures an NLP row from a linear row */
+extern
+SCIP_RETCODE SCIPcreateNlRowFromRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   SCIP_ROW*             row                 /**< the linear row to copy */
    );
 
 /** increases usage counter of NLP nonlinear row */

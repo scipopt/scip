@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.6 2010/06/01 19:22:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.7 2010/08/26 16:48:24 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -78,6 +78,17 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLROW*           sourcenlrow         /**< nonlinear row to copy */
+   );
+
+/** create a new nonlinear row from a linear row
+ * the new row is already captured
+ */
+extern
+SCIP_RETCODE SCIPnlrowCreateFromRow(
+   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< the linear row to copy */
    );
 
 /** frees a nonlinear row */

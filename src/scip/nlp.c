@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.9 2010/08/05 19:20:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.10 2010/08/26 16:48:24 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -45,6 +45,7 @@
 #include "scip/prob.h"
 #include "scip/sol.h"
 #include "scip/event.h"
+#include "scip/pub_lp.h"
 #include "nlpi/nlpi.h"
 #include "scip/expression.h"
 #include "scip/struct_nlp.h"
@@ -1705,6 +1706,74 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    (*nlrow)->validactivitybdsdomchg = sourcenlrow->validactivitybdsdomchg;
 
    return SCIP_OKAY;
+}
+
+/** create a new nonlinear row from a linear row
+ * the new row is already captured
+ */
+extern
+SCIP_RETCODE SCIPnlrowCreateFromRow(
+   SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< the linear row to copy */
+   )
+{
+   int rownz;
+   
+   assert(nlrow  != NULL);
+   assert(blkmem != NULL);
+   assert(set    != NULL);
+   assert(row    != NULL);
+   
+   rownz = SCIProwGetNNonz(row);
+   
+   if( rownz > 1 )
+   {
+      SCIP_VAR** rowvars;
+      int i;
+      
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &rowvars, rownz) );
+      
+      for( i = 0; i < rownz; ++i )
+      {
+         rowvars[i] = SCIPcolGetVar(SCIProwGetCols(row)[i]);
+         assert(rowvars[i] != NULL);
+      }
+   
+      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
+         SCIProwGetConstant(row),
+         rownz, rowvars, SCIProwGetVals(row),
+         0, NULL, 0, NULL,
+         NULL,
+         SCIProwGetLhs(row), SCIProwGetRhs(row)) );
+      
+      SCIPsetFreeBufferArray(set, &rowvars);
+   }
+   else if( rownz == 1 )
+   {
+      SCIP_VAR* rowvar;
+      
+      rowvar = SCIPcolGetVar(SCIProwGetCols(row)[0]);
+      
+      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
+         SCIProwGetConstant(row),
+         1, &rowvar, SCIProwGetVals(row),
+         0, NULL, 0, NULL,
+         NULL,
+         SCIProwGetLhs(row), SCIProwGetRhs(row)) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
+         SCIProwGetConstant(row),
+         0, NULL, NULL,
+         0, NULL, 0, NULL,
+         NULL,
+         SCIProwGetLhs(row), SCIProwGetRhs(row)) );      
+   }
+
+   return SCIP_OKAY;   
 }
 
 /** frees a nonlinear row */
