@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.51 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.52 2010/08/26 14:49:01 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -122,7 +122,7 @@ enum OpbSense {
 };
 typedef enum OpbSense OPBSENSE;
 
-/* struct for reading an opb files, used to find fast whether an and-constraint is new or still existing */
+/* struct for reading an opb files, used to find fast whether an and-constraint is new or already existing */
 struct ConsAndData
 {
    SCIP_VAR**           vars;
