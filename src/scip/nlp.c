@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.10 2010/08/26 16:48:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.11 2010/08/27 21:09:56 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -2343,7 +2343,7 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    {
       assert(nlrow->linvars[i] != NULL);
 
-      val1 = SCIPnlpGetVarSolVal(nlp, nlrow->linvars[i]);
+      SCIP_CALL( SCIPnlpGetVarSolVal(nlp, nlrow->linvars[i], &val1) );
       assert(val1 < SCIP_INVALID);
 
       nlrow->activity += nlrow->lincoefs[i] * val1;
@@ -2356,13 +2356,13 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
       if( previdx1 != nlrow->quadelems[i].idx1 )
       {
          previdx1 = nlrow->quadelems[i].idx1;
-         val1 = SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[previdx1]);
+         SCIP_CALL( SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[previdx1], &val1) );
          assert(val1 < SCIP_INVALID);
          if( val1 == 0.0 )
             continue;
       }
 
-      val2 = SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[nlrow->quadelems[i].idx2]);
+      SCIP_CALL( SCIPnlpGetVarSolVal(nlp, nlrow->quadvars[nlrow->quadelems[i].idx2], &val2) );
       assert(val2 < SCIP_INVALID);
 
       nlrow->activity += nlrow->quadelems[i].coef * val1 * val2;
@@ -2378,7 +2378,9 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
       SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&varvals, n * sizeof(SCIP_Real)) );
 
       for( i = 0; i < n; ++i )
-         varvals[i] = SCIPnlpGetVarSolVal(nlp, SCIPexprtreeGetVars(nlrow->exprtree)[i]);
+      {
+         SCIP_CALL( SCIPnlpGetVarSolVal(nlp, SCIPexprtreeGetVars(nlrow->exprtree)[i], &varvals[i]) );
+      }
 
       SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, varvals, &val1) );
       nlrow->activity += val1;
@@ -4523,6 +4525,9 @@ SCIP_RETCODE SCIPnlpReset(
    {
       SCIP_CALL( SCIPnlpEndDive(nlp, blkmem, set) );
    }
+   
+   nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+   nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
 
    BMSfreeBlockMemoryArrayNull(blkmem, &nlp->initialguess, nlp->nvars);
    nlp->haveinitguess = FALSE;
@@ -5076,6 +5081,7 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
    {
       nlp->haveinitguess = FALSE;
       SCIP_CALL( SCIPnlpiSetInitialGuess(nlp->solver, nlp->problem, NULL) );
+      return SCIP_OKAY;
    }
 
    if( nlp->initialguess != NULL )
@@ -5542,26 +5548,62 @@ SCIP_Real* SCIPnlpGetSolVals(
    return nlp->primalsolution;
 }
 
-/** gets value of variable in current NLP solution
- * returns SCIP_INVALID if no solution available */
-SCIP_Real SCIPnlpGetVarSolVal(
+/** gets primal value of a single variable in current NLP solution */
+SCIP_RETCODE SCIPnlpGetVarSolVal(
    SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_VAR*             var                 /**< variable to get solution value for */
+   SCIP_VAR*             var,                /**< variable to get solution value for */
+   SCIP_Real*            val                 /**< buffer to store value of variable in solution, or SCIP_INVALID if no solution available */
    )
 {
    int varpos;
+   SCIP_Real scalar;
 
    assert(nlp != NULL);
    assert(var != NULL);
+   assert(val != NULL);
    assert(nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE || nlp->primalsolution != NULL);
+   assert(SCIPvarIsTransformed(var));
 
    if( nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE || nlp->primalsolution == NULL )
-      return SCIP_INVALID;
+   {
+      *val = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
 
+   /* get corresponding active variable */
+   scalar = 1.0;
+   *val   = 0.0;
+   SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, val) );
+   
+   if( var == NULL || scalar == 0.0 )
+      return SCIP_OKAY;
+   
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      int i;
+      SCIP_Real val2;
+      
+      *val += scalar * SCIPvarGetMultaggrConstant(var);
+      for( i = 0; i < SCIPvarGetMultaggrNVars(var); ++i )
+      {
+         SCIP_CALL( SCIPnlpGetVarSolVal(nlp, SCIPvarGetMultaggrVars(var)[i], &val2) );
+         if( val2 == SCIP_INVALID )
+         {
+            *val = SCIP_INVALID;
+            return SCIP_OKAY;
+         }
+         *val += scalar * SCIPvarGetMultaggrScalars(var)[i] * val2;
+      }
+      
+      return SCIP_OKAY;
+   }
+   assert(SCIPvarIsActive(var));
+   
    assert(SCIPhashmapExists(nlp->varhash, var));
    varpos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
-
-   return nlp->primalsolution[varpos];
+   *val += scalar * nlp->primalsolution[varpos];
+   
+   return SCIP_OKAY;
 }
 
 /** gets integer parameter of NLP */
