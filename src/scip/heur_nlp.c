@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.74 2010/08/27 13:41:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.75 2010/08/27 21:15:06 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1264,11 +1264,6 @@ SCIP_RETCODE destroyNLP(
       SCIPfreeMemoryArray(scip, &heurdata->varbndconss);
       heurdata->nvarbndconss = 0;
    }
-   
-   if( heurdata->startcand )
-   {
-      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
-   }
 
    return SCIP_OKAY;
 }
@@ -1755,6 +1750,7 @@ SCIP_DECL_HEUREXIT(heurExitNlp)
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   assert(heurdata->startcand == NULL);
    
    heurdata->conshdlrindicator = NULL;
 
@@ -1809,7 +1805,12 @@ SCIP_DECL_HEUREXITSOL(heurExitsolNlp)
    {
       SCIP_CALL( destroyNLP(scip, heurdata) );
    }
-   
+
+   if( heurdata->startcand != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
+   }
+
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
    
    heurdata->triedsetupnlp = FALSE;
@@ -2102,9 +2103,9 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    assert(heur != NULL);
    assert(solcand != NULL);
    assert(SCIPisPositive(scip, violation));
-   
-   /* game is over already; no more interest in starting points */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
+
+   /* too early or the game is over already: no more interest in starting points */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
    
    heurdata = SCIPheurGetData(heur);
