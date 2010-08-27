@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.73 2010/08/27 13:35:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.74 2010/08/27 13:41:54 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -688,14 +688,13 @@ SCIP_RETCODE collectVarBoundConstraints(
       {
          ++nconsslocal;
       }
-      else if( SCIPvarGetType(SCIPgetVbdvarVarbound(scip, conss[i])) > SCIP_VARTYPE_INTEGER )
+      else if( explvbndconss == NULL || SCIPvarGetType(SCIPgetVbdvarVarbound(scip, conss[i])) > SCIP_VARTYPE_INTEGER )
       {  /* will add constraint to NLP soon */
-         nconss4nlp++;
+         ++nconss4nlp;
       }
-      else if( explvbndconss != NULL )
+      else
       {  /* will handle constraint explicitely before solving NLP */
          ++*nexplvbndconss;
-         //SCIP_CALL( SCIPcaptureCons(scip, conss[i]) );
       }
    }
 
