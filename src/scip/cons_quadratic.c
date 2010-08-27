@@ -1,4 +1,3 @@
-//#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -13,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.108 2010/08/05 22:35:50 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.109 2010/08/27 21:08:19 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -131,12 +130,12 @@ struct SCIP_ConshdlrData
    SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
-   SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
+   SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENS heuristic */
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
 
    SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
-   SCIP_HEUR*            rensnlheur;                /**< a pointer to the RENSNL heuristic, if available */
+   SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;                /**< a pointer to the TRYSOL heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
    int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if catched */
@@ -2124,6 +2123,12 @@ SCIP_RETCODE addBilinearTerm(
    }
    bilinterm->coef = coef;
    
+   if( bilinterm->var1 == bilinterm->var2 )
+   {
+      SCIPerrorMessage("tried to add bilinear term where both variables are the same, but appear at different positions in quadvarterms array\n");
+      return SCIP_INVALIDDATA;
+   }
+   
    SCIP_CALL( consdataEnsureAdjBilinSize(scip, &consdata->quadvarterms[var1pos], consdata->quadvarterms[var1pos].nadjbilin + 1) );
    SCIP_CALL( consdataEnsureAdjBilinSize(scip, &consdata->quadvarterms[var2pos], consdata->quadvarterms[var2pos].nadjbilin + 1) );
    
@@ -2611,7 +2616,7 @@ SCIP_RETCODE removeFixedVariables(
       offset = 0.0;
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &offset) );
 
-      SCIPdebugMessage("  quadratic variable <%s> is replaced by %g * <%s> + %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), coef, SCIPvarGetName(var), offset);
+      SCIPdebugMessage("  quadratic variable <%s> with status %d is replaced by %g * <%s> + %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), SCIPvarGetStatus(consdata->quadvarterms[i].var), coef, SCIPvarGetName(var), offset);
 
       /* handle fixed variable */
       if( coef == 0.0 )
@@ -2654,8 +2659,7 @@ SCIP_RETCODE removeFixedVariables(
       
       assert(var != NULL);
       
-      /* if GetProbvar gave an active variable, replace the quad var term so that it uses the new variable
-       *  */
+      /* if GetProbvar gave an active variable, replace the quad var term so that it uses the new variable */
       if( SCIPvarIsActive(var) )
       {
          /* replace x by coef*y+offset */
@@ -2726,6 +2730,7 @@ SCIP_RETCODE removeFixedVariables(
             for( j = 0; j < naggrs; ++j )
                for( k = 0; k < j; ++k )
                {
+                  assert(aggrvars[j] != aggrvars[k]);
                   SCIP_CALL( addBilinearTerm(scip, cons, nquadtermsold + j, nquadtermsold + k, 
                      2.0 * aggrscalars[j] * aggrscalars[k] * coef * coef * scoef) );
                }
@@ -2748,13 +2753,20 @@ SCIP_RETCODE removeFixedVariables(
             
             for( j = 0; j < naggrs; ++j )
             {
-               SCIP_CALL( addBilinearTerm(scip, cons, nquadtermsold + j, var2pos,
-                  bilinterm->coef * coef * aggrscalars[j]) );
+               if( aggrvars[j] == var2 )
+               { /* x_i == y, so we have a square term here */
+                  consdata->quadvarterms[var2pos].sqrcoef += bilinterm->coef * coef * aggrscalars[j];
+               }
+               else
+               { /* x_i != y, so we need to add a bilinear term here */
+                  SCIP_CALL( addBilinearTerm(scip, cons, nquadtermsold + j, var2pos,
+                     bilinterm->coef * coef * aggrscalars[j]) );
+               }
             }
             
             consdata->quadvarterms[var2pos].lincoef += bilinterm->coef * (aggrconstant * coef + offset);
          }
-         
+
          /* remove bilinear terms */
          SCIP_CALL( removeBilinearTermsPos(scip, cons, consdata->quadvarterms[i].nadjbilin, consdata->quadvarterms[i].adjbilin) );
          
@@ -2787,6 +2799,14 @@ SCIP_RETCODE removeFixedVariables(
    SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
    SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
    SCIP_CALL( mergeAndCleanLinearVars(scip, cons) );
+   
+#ifndef NDEBUG
+   for( i = 0; i < consdata->nbilinterms; ++i )
+   {
+      assert(consdata->bilinterms[i].var1 != consdata->bilinterms[i].var2);
+      assert(consdata->bilinterms[i].coef != 0.0);
+   }
+#endif
    
    return SCIP_OKAY;
 }
@@ -2832,7 +2852,7 @@ SCIP_RETCODE createNlRow(
    {
       if( consdata->quadvarterms[i].sqrcoef != 0.0 )
          ++nquadelems;
-      if( consdata->quadvarterms[i].lincoef != 0.0 )
+      if( !SCIPisZero(scip, consdata->quadvarterms[i].lincoef) )
          ++nquadlinterms;
    }
 
@@ -2856,13 +2876,15 @@ SCIP_RETCODE createNlRow(
          ++elcnt;
       }
 
-      if( consdata->quadvarterms[i].lincoef != 0.0 )
+      if( !SCIPisZero(scip, consdata->quadvarterms[i].lincoef) )
       {
          assert(lincnt < nquadlinterms);
          quadlinvars [lincnt] = consdata->quadvarterms[i].var;
          quadlincoefs[lincnt] = consdata->quadvarterms[i].lincoef;
+         ++lincnt;
       }
    }
+   assert(lincnt == nquadlinterms);
 
    /* bilinear terms are sorted first by first variable, then by second variable
     * thus, it makes sense to remember the index of the previous first variable for the case a series of bilinear terms with the same first var appears */
@@ -2890,12 +2912,15 @@ SCIP_RETCODE createNlRow(
       quadelems[elcnt].coef = consdata->bilinterms[i].coef;
       ++elcnt;
    }
+   assert(elcnt == nquadelems);
 
    SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
       consdata->nlinvars, consdata->linvars, consdata->lincoefs,
       nquadvars, quadvars, nquadelems, quadelems,
       NULL, consdata->lhs, consdata->rhs) );
 
+   SCIP_CALL( SCIPaddLinearCoefsToNlRow(scip, consdata->nlrow, nquadlinterms, quadlinvars, quadlincoefs) );
+   
    SCIPfreeBufferArray(scip, &quadvars);
    SCIPfreeBufferArray(scip, &quadelems);
    SCIPfreeBufferArray(scip, &quadlinvars);
@@ -4783,10 +4808,10 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
 
-   /* we are only interested in solution coming from the NLP or RENSNL heuristic (is that good?) */
+   /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
    if( SCIPsolGetHeur(sol) == NULL )
       return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensnlheur)
+   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -6462,8 +6487,15 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock3) );
 #endif
    
-   /** tell NLP heuristic which method to use for adding quadratic constraints to NLP */ 
-   SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
+   conshdlrdata->nlpheur    = SCIPfindHeur(scip, "nlp");
+   conshdlrdata->rensheur   = SCIPfindHeur(scip, "rens");
+   conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
+
+   if( conshdlrdata->nlpheur != NULL )
+   {
+      /** tell NLP heuristic which method to use for adding quadratic constraints to NLP */ 
+      SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
+   }
    
    /* catch variable events */
    for( c = 0; c < nconss; ++c )
@@ -6500,6 +6532,11 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
    SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->clock2) );
    SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->clock3) );
 #endif
+   
+   conshdlrdata->nlpheur    = NULL;
+   conshdlrdata->rensheur   = NULL;
+   conshdlrdata->trysolheur = NULL;
+
    return SCIP_OKAY;
 }
 
@@ -6657,14 +6694,21 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          SCIPdebugMessage("may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->linvars[consdata->linvar_maydecrease]));
       }
 #endif
+
+      /* add nlrow respresentation to NLP, if NLP had been constructed */
+      if( SCIPisNLPConstructed(scip) )
+      {
+         if( consdata->nlrow == NULL )
+         {
+            SCIP_CALL( createNlRow(scip, conss[c]) );
+            assert(consdata->nlrow != NULL);
+         }
+         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+      }
    }
 
-   conshdlrdata->nlpheur    = SCIPfindHeur(scip, "nlp");
-   conshdlrdata->rensnlheur = SCIPfindHeur(scip, "rensnl");
-   conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
-   
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL) && conshdlrdata->linearizenlpsol )
+   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL) && conshdlrdata->linearizenlpsol )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -6697,7 +6741,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIP_EVENTHDLR* eventhdlr;
 
       /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL);
+      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL);
       assert(conshdlrdata->linearizenlpsol);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
@@ -6706,10 +6750,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, conshdlrdata->newsoleventfilterpos) );
       conshdlrdata->newsoleventfilterpos = -1;
    }
-
-   conshdlrdata->nlpheur    = NULL;
-   conshdlrdata->rensnlheur = NULL;
-   conshdlrdata->trysolheur = NULL;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -7185,8 +7225,9 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
       { /* all variables fixed or removed, constraint function is 0.0 now */
          SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) ); /* well, there shouldn't be any variables left anyway */
-         if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) && !SCIPisFeasLE(scip, consdata->lhs, consdata->rhs) )
-         { /* left and right hand side are contradicting */
+         if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasPositive(scip, consdata->lhs)) ||
+             (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasNegative(scip, consdata->rhs)) )
+         { /* left hand side positive or right hand side negative */
             SCIPdebugMessage("constraint <%s> is constant and infeasible\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
             *result = SCIP_CUTOFF;
@@ -7569,8 +7610,15 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
          *result = SCIP_INFEASIBLE;
          if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "quadratic constraint %s violated by %g+%g\n\t", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
-            SCIP_CALL( consPrintQuadratic(scip, conshdlr, conss[c], NULL) );
+            SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            if( SCIPisFeasPositive(scip, consdata->lhsviol) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
+            }
+            if( SCIPisFeasPositive(scip, consdata->rhsviol) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
+            }
          }
          if( conshdlrdata->nlpheur == NULL && !maypropfeasible )
             return SCIP_OKAY;
@@ -7695,6 +7743,8 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
             assert(consdata->bilinterms[k].var2 != NULL);
             if( consdata->bilinterms[k].var1 == consdata->quadvarterms[i].var )
             {
+               if( consdata->bilinterms[k].var2 == consdata->quadvarterms[i].var )
+                  printf("%g %s %s in <%s>\n", consdata->bilinterms[k].coef, SCIPvarGetName(consdata->bilinterms[k].var1), SCIPvarGetName(consdata->bilinterms[k].var2), SCIPconsGetName(sourcecons));
                assert(consdata->bilinterms[k].var2 != consdata->quadvarterms[i].var);
                bilinterms[k].var1 = quadvarterms[i].var;
             }
@@ -8115,7 +8165,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->cutmaxrange, FALSE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol",
-         "whether convex quadratic constraints should be linearized in a solution found by the NLP or RENSNL heuristic",
+         "whether convex quadratic constraints should be linearized in a solution found by the NLP or RENS heuristic",
          &conshdlrdata->linearizenlpsol, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkcurvature",
