@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.307 2010/08/24 14:05:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.308 2010/08/27 14:38:32 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2218,6 +2218,8 @@ SCIP_RETCODE enforceConstraints(
          *infeasible = TRUE;
          *propagateagain = TRUE; /* the propagation for new constraints should be called */
          *solvelpagain = TRUE;   /* the separation for new constraints should be called */
+         *solverelaxagain = TRUE; 
+         markRelaxsUnsolved(set, relaxation);
          resolved = TRUE;
          break;
 
@@ -2543,8 +2545,10 @@ SCIP_RETCODE solveNode(
       if( propagate && !(*cutoff) )
       {
          SCIP_Bool lpwasflushed;
+         SCIP_Longint oldnboundchgs;
 
          lpwasflushed = lp->flushed;
+         oldnboundchgs = stat->nboundchgs;
 
          SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, fullpropagation, cutoff) );
          fullpropagation = FALSE;
@@ -2554,6 +2558,9 @@ SCIP_RETCODE solveNode(
 
          /* if the LP was flushed and is now no longer flushed, a bound change occurred, and the LP has to be resolved */
          solvelp = solvelp || (lpwasflushed && !lp->flushed);
+
+         /* the number of bound changes was increased by the propagation call, thus the relaxation should be solved again */
+         solverelax = solverelax || (stat->nboundchgs > oldnboundchgs);
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
@@ -2718,6 +2725,7 @@ SCIP_RETCODE solveNode(
          propagateagain = TRUE;
          solvelpagain = TRUE;
          solverelaxagain = TRUE;
+         markRelaxsUnsolved(set, relaxation);
       }
     
       /* enforce constraints */
@@ -2845,6 +2853,8 @@ SCIP_RETCODE solveNode(
             }
             propagateagain = TRUE;
             solvelpagain = TRUE;
+            solverelaxagain = TRUE;
+            markRelaxsUnsolved(set, relaxation);
             break;
          case SCIP_REDUCEDDOM:
             assert(tree->nchildren == 0);
