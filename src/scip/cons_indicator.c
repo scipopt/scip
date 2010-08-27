@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.82 2010/08/18 18:05:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.83 2010/08/27 20:59:54 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2524,7 +2524,6 @@ SCIP_DECL_CONSINIT(consInitIndicator)
    if ( conshdlrdata->trySolutions && conshdlrdata->heurTrySol == NULL )
    {
       conshdlrdata->heurTrySol = SCIPfindHeur(scip, "trysol");
-      assert( conshdlrdata->heurTrySol != NULL );
    }
 
    return SCIP_OKAY;
@@ -3420,9 +3419,8 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    assert( conshdlrdata != NULL );
 
    /* copy solution if it makes sense */
-   if ( SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trySolutions )
+   if ( SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trySolutions && conshdlrdata->heurTrySol != NULL )
    {
-      assert( conshdlrdata->heurTrySol != NULL );
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
       assert( trysol != NULL );
       SCIP_CALL( SCIPunlinkSol(scip, trysol) );
@@ -3567,7 +3565,10 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    {
       /* tell heur_trysol about solution - it will pass it to SCIP */
       if ( trysol != NULL && changedSol )
+      {
+         assert(conshdlrdata->heurTrySol != NULL);
          SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurTrySol, trysol) );
+      }
    }
 
    if ( trysol != NULL )
