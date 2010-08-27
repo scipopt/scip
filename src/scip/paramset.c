@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.76 2010/08/18 17:57:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.77 2010/08/27 21:11:51 bzfviger Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2376,7 +2376,7 @@ SCIP_RETCODE SCIPparamsetWrite(
 }
 
 /** installs default values for all parameters */
-SCIP_RETCODE SCIPparamsetSetToDefault(
+SCIP_RETCODE SCIPparamsetSetToDefaults(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    )
@@ -2387,6 +2387,26 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
    for( i = 0; i < paramset->nparams; ++i )
    {
       SCIP_CALL( SCIPparamSetToDefault(paramset->params[i], scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** installs default value for a single parameter */
+extern
+SCIP_RETCODE SCIPparamsetSetToDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   const char*           paramname           /**< name of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   
+   if( param != NULL )
+   {
+      SCIP_CALL( SCIPparamSetToDefault(param, scip) );
    }
 
    return SCIP_OKAY;
@@ -2605,13 +2625,13 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingFast(
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
 
-   /* turn pairwise comparison of each constraint handler */
+   /* turn off pairwise comparison for each constraint handler */
    for( i = 0; i < nconshdlrs; ++i )
    {
       const char* conshdlrname;
       conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
 
-      /* get separating frequency parameter of constraint handler */
+      /* get presolpairwise parameter of constraint handler */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presolpairwise", conshdlrname);
       SCIP_CALL( paramSetBool(scip, paramset, paramname, FALSE, quiet) );
    }      

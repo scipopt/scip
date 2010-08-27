@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.35 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.36 2010/08/27 21:11:51 bzfviger Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -261,9 +261,17 @@ SCIP_RETCODE SCIPparamsetWrite(
 
 /** installs default values for all parameters */
 extern
-SCIP_RETCODE SCIPparamsetSetToDefault(
+SCIP_RETCODE SCIPparamsetSetToDefaults(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   );
+
+/** installs default value for a single parameter */
+extern
+SCIP_RETCODE SCIPparamsetSetToDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   const char*           paramname           /**< name of the parameter */
    );
 
 /** sets parameter to detect feasibility fast */

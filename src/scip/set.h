@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.118 2010/08/06 10:42:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.119 2010/08/27 21:11:51 bzfviger Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -305,6 +305,13 @@ SCIP_RETCODE SCIPsetWriteParams(
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   );
+
+/** resets a single parameters to its default value */
+extern
+SCIP_RETCODE SCIPsetResetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the parameter */
    );
 
 /** resets all parameters to their default values */

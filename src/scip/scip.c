@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.623 2010/08/26 16:48:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.624 2010/08/27 21:11:51 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1599,6 +1599,19 @@ SCIP_RETCODE SCIPwriteParams(
    SCIP_CALL( checkStage(scip, "SCIPwriteParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetWriteParams(scip->set, filename, comments, onlychanged) );
+
+   return SCIP_OKAY;
+}
+
+/** resets a single parameter to its default value */
+SCIP_RETCODE SCIPresetParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPresetParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetResetParam(scip->set, name) );
 
    return SCIP_OKAY;
 }
