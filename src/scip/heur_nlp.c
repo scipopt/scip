@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.72 2010/08/27 13:06:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.73 2010/08/27 13:35:42 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -680,7 +680,8 @@ SCIP_RETCODE collectVarBoundConstraints(
    /* count for how many global constraint the Vbdvar is only implicit integer, so we need to add constraint to NLP */
    nconss4nlp = 0;
    nconsslocal = 0;
-   *nexplvbndconss = 0;
+   if( nexplvbndconss != NULL )
+      *nexplvbndconss = 0;
    for( i = 0; i < nconss; ++i )
    {
       if( SCIPconsIsLocal(conss[i]) )
