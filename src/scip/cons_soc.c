@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.29 2010/07/30 12:45:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.30 2010/08/27 21:01:43 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -93,7 +93,7 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_HEUR*            nlpheur;        /**< a pointer to the NLP heuristic */
-   SCIP_HEUR*            rensnlheur;     /**< a pointer to the RENSNL heuristic */
+   SCIP_HEUR*            rensheur;       /**< a pointer to the RENS heuristic */
    SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
    int                   newsoleventfilterpos;  /**< filter position of new solution event handler, if catched */
    SCIP_Longint          nextbranchnode; /**< (lower bound on) index of node where to branch next time if adding weak cuts fails */ 
@@ -103,7 +103,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             projectpoint;   /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
    int                   branchfreq;     /**< frequency of branching on a node instead of adding weak cuts */
-   SCIP_Bool             linearizenlpsol;/**< whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
+   SCIP_Bool             linearizenlpsol;/**< whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic */
    SCIP_Real             minefficacy;    /**< minimal efficacy of a cut to be added to LP in separation loop */
    SCIP_Bool             sparsify;       /**< whether to sparsify cuts */
    SCIP_Real             sparsifymaxloss;/**< maximal loss in cut efficacy by sparsification */
@@ -967,10 +967,10 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
 
-   /* we are only interested in solution coming from the NLP or RENSNL heuristic (is that good?) */
+   /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
    if( SCIPsolGetHeur(sol) == NULL )
       return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensnlheur)
+   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -3060,10 +3060,22 @@ SCIP_DECL_CONSFREE(consFreeSOC)
 static
 SCIP_DECL_CONSINIT(consInitSOC)
 {  /*lint --e{715}*/
-   assert(scip != NULL);
+   SCIP_CONSHDLRDATA* conshdlrdata;
    
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   conshdlrdata->nlpheur  = SCIPfindHeur(scip, "nlp");
+   conshdlrdata->rensheur = SCIPfindHeur(scip, "rens");
+
    /** tell NLP heuristic which method to use for adding SOC constraints to NLP */
-   SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
+   if( conshdlrdata->nlpheur != NULL )
+   {
+      SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3073,12 +3085,20 @@ SCIP_DECL_CONSINIT(consInitSOC)
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSEXIT(consExitSOC)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   conshdlrdata->nlpheur  = NULL;
+   conshdlrdata->rensheur = NULL;
 
    return SCIP_OKAY;
 }
@@ -3140,15 +3160,23 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
       assert(consdata != NULL);
       
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+
+      /* add nlrow respresentation to NLP, if NLP had been constructed */
+      if( SCIPisNLPConstructed(scip) )
+      {
+         if( consdata->nlrow == NULL )
+         {
+            SCIP_CALL( createNlRow(scip, conss[c]) );
+            assert(consdata->nlrow != NULL);
+         }
+         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+      }
    }
    
    conshdlrdata->nextbranchnode = conshdlrdata->branchfreq;
    
-   conshdlrdata->nlpheur        = SCIPfindHeur(scip, "nlp");
-   conshdlrdata->rensnlheur     = SCIPfindHeur(scip, "rensnl");
-   
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL) )
+   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL) )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -3194,7 +3222,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
       SCIP_EVENTHDLR* eventhdlr;
 
       /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL);
+      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
@@ -3202,9 +3230,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
       SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, conshdlrdata->newsoleventfilterpos) );
       conshdlrdata->newsoleventfilterpos = -1;
    }
-
-   conshdlrdata->nlpheur    = NULL;
-   conshdlrdata->rensnlheur = NULL;
    
    return SCIP_OKAY;
 }
@@ -3578,7 +3603,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       }
    }
    
-   if( conshdlrdata->nlpheur && sol != NULL && *result == SCIP_INFEASIBLE )
+   if( conshdlrdata->nlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
       SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
 
    return SCIP_OKAY;
@@ -3966,7 +3991,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-   conshdlrdata->nlpheur   = NULL;
+   conshdlrdata->nlpheur = NULL;
+   conshdlrdata->rensheur = NULL;
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a second order cone constraint",
          NULL,
@@ -4007,7 +4033,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/nauxvars",     "number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off", &conshdlrdata->nauxvars,         FALSE, 0, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/branchfreq",   "frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off",               &conshdlrdata->branchfreq,       TRUE,  0, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",      "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",                          &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic",            &conshdlrdata->linearizenlpsol,  FALSE, TRUE,          NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic",            &conshdlrdata->linearizenlpsol,  FALSE, TRUE,          NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",  "minimal efficacy of a cut to be added to LP in separation",                                                     &conshdlrdata->minefficacy,      FALSE, 0.0001, 0, SCIPinfinity(scip), NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",     "whether to sparsify cuts",                                                                                      &conshdlrdata->sparsify,         FALSE, FALSE,         NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifymaxloss", "maximal loss in cut efficacy by sparsification",                                                             &conshdlrdata->sparsifymaxloss,  FALSE, 0.2, 0.0, 1.0, NULL, NULL) );
