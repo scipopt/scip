@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.4 2010/05/31 17:55:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.5 2010/08/27 21:10:16 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -249,12 +249,12 @@ SCIP_Real* SCIPnlpGetSolVals(
    SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
-/** gets primal value of a single variable in current NLP solution
- * returns SCIP_INVALID if no solution available */
+/** gets primal value of a single variable in current NLP solution */
 extern
-SCIP_Real SCIPnlpGetVarSolVal(
+SCIP_RETCODE SCIPnlpGetVarSolVal(
    SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_VAR*             var                 /**< variable to get solution value for */
+   SCIP_VAR*             var,                /**< variable to get solution value for */
+   SCIP_Real*            val                 /**< buffer to store value of variable in solution, or SCIP_INVALID if no solution available */
    );
 
 /** gets integer parameter of NLP */
