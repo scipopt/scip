@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.109 2010/08/11 02:34:10 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.110 2010/08/28 16:47:40 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -24,7 +24,7 @@
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define AUTOPRICING_ITERSWITCH          1000 /**< start with devex and switch to steepest edge after this many iterations */
+#define AUTOPRICING_ITERSWITCH          100  /**< start with devex and switch to steepest edge after this many iterations */
 #define STRONGBRANCH_RESTOREBASIS       true /**< if true then in SCIPlpiStrongbranch() we restore the basis after the
                                               *   down branch and after the up branch; if false only after the end of a
                                               *   strong branching phase, which however seems to mostly increase strong
@@ -478,7 +478,7 @@ public:
 	 Param::setVerbose(0);
 
       /* in auto pricing, do the first 10000 iterations with devex, then switch to steepest edge */
-      if( m_autopricing && terminationIter() >= 100*AUTOPRICING_ITERSWITCH && SPxBasis::status() < SPxBasis::REGULAR )
+      if( m_autopricing )
       {
 	 int olditlim = terminationIter();
 	 

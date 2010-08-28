@@ -254,6 +254,7 @@ fixed bugs:
 - fixed bug when aborting pricing with Ctrl-C
 - fixed bug when deleting a constraint where the update was delayed and not processed yet (in cons.c)
 - fixed bug in solve.c where relaxation branching candidates were cleared, but the relaxation was still marked solved and not called again, furthermore, adjusted criterions for solving a relaxation again
+- fixed bug in SoPlex autopricing due to which autopricing had behaved like steepest edge pricing so far
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
