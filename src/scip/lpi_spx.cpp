@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.110 2010/08/28 16:47:40 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.111 2010/08/28 16:49:47 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -3828,7 +3828,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->pricing = (SCIP_PRICING)ival;
       switch( lpi->pricing )
       {
-      case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_AUTO:
          lpi->spx->setAutoPricer(false);
          break;
@@ -3844,6 +3843,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_STEEPQSTART:
          lpi->spx->setSteepQStartPricer();
 	 break;
+      case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_DEVEX:
          lpi->spx->setDevexPricer();
 	 break;
