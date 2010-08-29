@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.23 2010/08/18 18:18:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.24 2010/08/29 13:03:26 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -133,7 +133,7 @@ struct SCIP_SepaData
    SCIP_Bool             onlyrankone;        /**< whether only rank 1 inequalities should be separated */
    SCIP_Bool             earlyterm;          /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
    SCIP_Bool             addViolationCons;   /**< add constraint to subscip that only allows violated cuts? */
-   SCIP_Bool             conshdlrusenorm;    /**< should the artificial constraint handler use the norm of a cut to check for feasibility? */
+   SCIP_Bool             conshdlrusenorm;    /**< should the violation constraint handler use the cut-norm to check for feasibility? */
    SCIP_Bool             objlone;            /**< should the objective of the sub-MIP minimize the l1-norm of the multipliers? */
 };
 
@@ -170,8 +170,216 @@ struct CGMIP_MIPData
    SCIP_VAR**            yrhs;               /**< auxiliary row variables for rhs (NULL if not present) */
 
    SCIP_VAR**            z;                  /**< auxiliary variables for upper bounds (NULL if not present) */
+
+   SCIP_Bool             conshdlrusenorm;    /**< copy from sepadata */
 };
 typedef struct CGMIP_MIPData CGMIP_MIPDATA;
+
+
+
+/*
+ * constraint handler to filter out violated cuts
+ */
+
+/* constraint handler properties */
+#define CONSHDLR_NAME          "violatedCuts"
+#define CONSHDLR_DESC          "only allow solutions corresponding to violated cuts"
+
+/** constraint handler data */
+struct SCIP_ConshdlrData
+{
+   CGMIP_MIPDATA*        mipdata;            /**< data of separting sub-MIP */
+};
+
+
+/** check whether cut corresponding to solution is violated */
+static
+SCIP_Bool solCutIsViolated(
+   CGMIP_MIPDATA*        mipdata,            /**< data of separting sub-MIP */
+   SCIP_SOL*             sol                 /**< solution to be checked */
+   )
+{
+   SCIP* subscip;
+   SCIP_Real act;
+   SCIP_Real norm;
+   SCIP_Real val;
+   SCIP_VAR* var;
+   SCIP_Real rhs;
+   unsigned int j;
+
+   assert( mipdata != NULL );
+   subscip = mipdata->subscip;
+   assert( subscip != NULL );
+
+   /* init activity and norm */
+   act = 0.0;
+   norm = 1.0;
+
+   /* compute activity and norm  */
+   if ( mipdata->conshdlrusenorm )
+   {
+      SCIP_Real cutsqrnorm = 0.0;
+      for (j = 0; j < mipdata->ncols; ++j)
+      {
+         var = mipdata->alpha[j];
+         if ( var == NULL )
+            continue;
+
+         val = SCIPgetSolVal(subscip, sol, var);
+         if ( !SCIPisZero(subscip, val) )
+         {
+            act += SCIPvarGetObj(var) * val;
+            cutsqrnorm += SQR(val);
+         }
+      }
+      norm = SQRT(cutsqrnorm);
+
+      /* if norm is 0, the cut is trivial */
+      if ( SCIPisZero(subscip, norm) )
+         return FALSE;
+   }
+   else
+   {
+      for (j = 0; j < mipdata->ncols; ++j)
+      {
+         var = mipdata->alpha[j];
+         if ( var == NULL )
+            continue;
+
+         val = SCIPgetSolVal(subscip, sol, var);
+         if ( !SCIPisZero(subscip, val) )
+            act += SCIPvarGetObj(var) * val;
+      }
+   }
+
+   /* get rhs */
+   rhs = SCIPgetSolVal(subscip, sol, mipdata->beta);
+
+#ifdef SCIP_DEBUG
+   if ( SCIPisEfficacious(subscip, (act - rhs)/norm) )
+   {
+      SCIPdebugMessage("Violated cut from solution - act: %f, rhs: %f, norm: %f, eff.: %f\n", act, rhs, norm, (act-rhs)/norm);
+   }
+#endif
+
+   return SCIPisEfficacious(subscip, (act - rhs)/norm);   
+}
+
+
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+static
+SCIP_DECL_CONSFREE(consFreeViolatedCuts)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   SCIPfreeMemory(scip, &conshdlrdata);
+
+   return SCIP_OKAY;
+}
+
+/** constraint enforcing method of constraint handler for LP solutions */
+static
+SCIP_DECL_CONSENFOLP(consEnfolpViolatedCuts)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool violated;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( result != NULL );
+
+   assert( SCIPgetNLPBranchCands(scip) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   violated = solCutIsViolated(conshdlrdata->mipdata, NULL);
+
+   if ( violated )
+      *result = SCIP_FEASIBLE;
+   else
+      *result = SCIP_CUTOFF;  /* cutoff, since all integer variables are integer, but the solution is not feasible */
+
+   return SCIP_OKAY;
+}
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+static
+SCIP_DECL_CONSENFOPS(consEnfopsViolatedCuts)
+{  /*lint --e{715}*/
+   assert( result != NULL );
+
+   /* this function should better not be called, since we need an LP solution for the sub-MIP to
+      make sense, because of the multiplier variables. We therefore return SCIP_FEASIBLE. */
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+/** feasibility check method of constraint handler for integral solutions */
+static
+SCIP_DECL_CONSCHECK(consCheckViolatedCuts)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool violated;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( sol != NULL );
+   assert( result != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   violated = solCutIsViolated(conshdlrdata->mipdata, sol);
+
+   if ( violated )
+      *result = SCIP_FEASIBLE;
+   else
+      *result = SCIP_INFEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+/** variable rounding lock method of constraint handler */
+static
+SCIP_DECL_CONSLOCK(consLockViolatedCuts)
+{  /*lint --e{715}*/
+   /* do not lock variables */
+   return SCIP_OKAY;
+}
+
+
+/** creates the violated CG-cut constraint handler and includes it in SCIP */
+static
+SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CGMIP_MIPDATA*        mipdata             /**< data of separting sub-MIP */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   conshdlrdata->mipdata = mipdata;
+
+   /* include constraint handler */
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+         -1000000, -1000000, -1000000, -1, -1, 100, 0, FALSE, FALSE, FALSE, FALSE,
+         NULL, consFreeViolatedCuts, NULL, NULL,
+         NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL, NULL,
+         consEnfolpViolatedCuts, consEnfopsViolatedCuts, consCheckViolatedCuts, 
+         NULL, NULL, NULL, consLockViolatedCuts,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         conshdlrdata) );
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -580,6 +788,9 @@ SCIP_RETCODE createSubscip(
    mipdata->n = 0;
    mipdata->nrows = (unsigned int) nrows;
    mipdata->ncols = (unsigned int) ncols;
+
+   /* copy value */
+   mipdata->conshdlrusenorm = sepadata->conshdlrusenorm;
 
    /* create subscip */
    SCIP_CALL( SCIPcreate( &(mipdata->subscip) ) );
@@ -1168,6 +1379,11 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
       ++mipdata->m;
    }
+   else
+   {
+      /* otherwise add violation constraint handler */
+      SCIP_CALL( SCIPincludeConshdlrViolatedCut(subscip, mipdata) );
+   }
 
    SCIPdebugMessage("subscip has %u variables and %u constraints (%u shifted, %u complemented, %u at lb, %u at ub).\n",
       mipdata->n, mipdata->m, nshifted, ncomplemented, nlbounds, nubounds);
@@ -1339,6 +1555,10 @@ SCIP_RETCODE solveSubscip(
       SCIP_CALL( SCIPsolve(subscip) );
       status = SCIPgetStatus(subscip);
 
+#ifdef SCIP_OUTPUT
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
+
       /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
       if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD )
       {
@@ -1390,6 +1610,10 @@ SCIP_RETCODE solveSubscip(
 
          status = SCIPgetStatus(subscip);
          assert( status != SCIP_STATUS_BESTSOLLIMIT );
+
+#ifdef SCIP_OUTPUT
+         SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
 
          /* if the solution process was terminated */
          if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT )
@@ -2654,7 +2878,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          &sepadata->addViolationCons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/conshdlrusenorm",
-         "should the artificial constraint handler use the norm of a cut to check for feasibility?",
+         "should the violation constraint handler use the norm of a cut to check for feasibility?",
          &sepadata->conshdlrusenorm, FALSE, DEFAULT_CONSHDLRUSENORM, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/objlone",
