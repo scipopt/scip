@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.7 2010/08/23 20:42:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.8 2010/08/29 16:25:01 bzfviger Exp $"
 
 /**@file   exprinterpret_none.c
  * @brief  function definitions for nonexisting expression interpreter to resolve linking references 
@@ -126,62 +126,29 @@ SCIP_RETCODE SCIPexprintEvalInt(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** gets number of nonzeros in gradient of expression tree */
-SCIP_RETCODE SCIPexprintGetNGradPattern(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int*                  nnz                 /**< buffer to store number of nonzeros */
-   )
-{
-   return SCIP_PLUGINNOTFOUND;
-}
-
-/** gets sparsity pattern of expression trees gradient */
-SCIP_RETCODE SCIPexprintGetGradPattern(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int*                  gradidx             /**< buffer to store gradient indices */
-   )
-{
-   return SCIP_PLUGINNOTFOUND;
-}
-
 /** computes value and gradient of an expression tree */
 SCIP_RETCODE SCIPexprintGrad(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
-   SCIP_Real*            val,                /**< buffer to store value */
-   SCIP_Real*            gradvals            /**< buffer to store gradient values */
+   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
+   SCIP_Real*            val,                /**< buffer to store expression value */
+   SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
    )
 {
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** computes value and dense gradient of an expression tree */
-SCIP_RETCODE SCIPexprintGradDense(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
-   SCIP_Real*            val,                /**< buffer to store value */
-   SCIP_Real*            gradient            /**< buffer to store gradient */
-   )
-{
-   return SCIP_PLUGINNOTFOUND;
-}
-
-/** computes interval value and dense interval gradient of an expression tree */
-SCIP_RETCODE SCIPexprintGradDenseInt(
+/** computes interval value and interval gradient of an expression tree */
+SCIP_RETCODE SCIPexprintGradInt(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        varvals,            /**< interval values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an interval evaluation routine? */
+   SCIP_Bool             new_varvals,        /**< have variable interval values changed since last call to an interval evaluation routine? */
    SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
-   SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient */
-   )
+   SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
+)
 {
    return SCIP_PLUGINNOTFOUND;
 }
