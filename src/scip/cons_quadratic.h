@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.21 2010/07/30 12:45:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.22 2010/08/29 17:37:17 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -71,8 +71,13 @@ typedef struct SCIP_BilinTerm SCIP_BILINTERM;
 /** upgrading method for quadratic constraints into more specific constraints
  * 
  * the method might upgrade a quadratic constraint into a set of quadratic constraints
- * it is assumed that the callback allocates the memory for *upgdconss using block memory
- * if an upgrade is not possible, set *nupgdconss == 0 and *upgdconss == NULL
+ * the caller provided an array upgdconss to store upgrade constraints
+ * the length of upgdconss is given by upgdconsssize
+ * if an upgrade is not possible, set *nupgdconss to zero
+ * if more than upgdconsssize many constraints shall replace cons, the function
+ * should return the required number as negated value in *nupgdconss
+ * i.e., if cons should be replaced by 3 constraints, the function should set
+ * *nupgdconss to -3 and return with SCIP_OKAY
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -87,11 +92,12 @@ typedef struct SCIP_BilinTerm SCIP_BILINTERM;
  *  - ncontquad       : number of continuous variables in quadratic part
  *  - integral        : TRUE iff constraints activity value is always integral
  *  - nupgdconss      : pointer to store number of constraints that replace this constraint
- *  - upgdconss       : pointer to store array of constraints that replace this constraint
+ *  - upgdconss       : array to store constraints that replace this constraint
+ *  - upgdconsssize   : length of the provided upgdconss array
  */
 #define SCIP_DECL_QUADCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
    int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
-   SCIP_Bool integral, int* nupgdconss, SCIP_CONS*** upgdconss)
+   SCIP_Bool integral, int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
 /** creates the handler for quadratic constraints and includes it in SCIP */
 extern

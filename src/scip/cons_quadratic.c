@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.109 2010/08/27 21:08:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.110 2010/08/29 17:37:17 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3297,6 +3297,7 @@ SCIP_RETCODE presolveUpgrade(
    int ncontquad;
    SCIP_Bool integral;
    int i;
+   int upgdconsssize;
 
    assert(nupgdconss != NULL);
    assert( upgdconss != NULL);
@@ -3321,6 +3322,9 @@ SCIP_RETCODE presolveUpgrade(
    /* if there are no upgrade methods, we can also stop */
    if( conshdlrdata->nquadconsupgrades == 0 )
       return SCIP_OKAY;
+
+   upgdconsssize = 2;
+   SCIP_CALL( SCIPallocBufferArray(scip, upgdconss, upgdconsssize) );
 
    /* calculate some statistics on quadratic constraint */
    nbinlin   = 0;
@@ -3428,7 +3432,21 @@ SCIP_RETCODE presolveUpgrade(
       {
          SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
             nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
-            nupgdconss, upgdconss) );
+            nupgdconss, *upgdconss, upgdconsssize) );
+
+         while( *nupgdconss < 0 )
+         {
+            /* upgrade function requires more memory: resize upgdconss and call again */
+            assert(-*nupgdconss > upgdconsssize);
+            upgdconsssize = -*nupgdconss;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -*nupgdconss) );
+
+            SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
+               nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
+               nupgdconss, *upgdconss, upgdconsssize) );
+
+            assert(*nupgdconss != 0);
+         }
 
          if( *nupgdconss > 0 )
          { /* got upgrade */
@@ -3446,6 +3464,12 @@ SCIP_RETCODE presolveUpgrade(
             break;
          }
       }
+   }
+
+   assert(*nupgdconss >= 0);
+   if( *nupgdconss == 0 )
+   {
+      SCIPfreeBufferArray(scip, upgdconss);
    }
 
    return SCIP_OKAY;
@@ -7169,7 +7193,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             SCIP_CALL( SCIPaddCons(scip, myupgdconss[i]) );
             SCIP_CALL( SCIPreleaseCons(scip, &myupgdconss[i]) );
          }
-         SCIPfreeBlockMemoryArray(scip, &myupgdconss, mynupgdconss);
 
          (*nupgdconss)++;
          *result = SCIP_SUCCESS;
@@ -7178,6 +7201,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          SCIPdebugMessage("delete constraint <%s> after upgrade\n", SCIPconsGetName(conss[c]));
          SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+
+         SCIPfreeBufferArray(scip, &myupgdconss);
          continue;
       }
       
