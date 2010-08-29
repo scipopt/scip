@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.24 2010/08/29 13:03:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.25 2010/08/29 13:17:20 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -87,7 +87,8 @@
 #define DEFAULT_ONLYRANKONE       FALSE /**< whether only rank 1 inequalities should be separated */
 #define DEFAULT_EARLYTERM          TRUE /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
 #define DEFAULT_ADDVIOLATIONCONS   TRUE /**< add constraint to subscip that only allows violated cuts? */
-#define DEFAULT_CONSHDLRUSENORM    TRUE /**< should the artificial constraint handler use the norm of a cut to check for feasibility? */
+#define DEFAULT_ADDVIOLCONSHDLR   FALSE /**< add constraint handler to filter out violated cuts? */
+#define DEFAULT_CONSHDLRUSENORM    TRUE /**< should the violation constraint handler use the norm of a cut to check for feasibility? */
 #define DEFAULT_OBJLONE           FALSE /**< should the objective of the sub-MIP minimize the l1-norm of the multipliers? */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
@@ -133,6 +134,7 @@ struct SCIP_SepaData
    SCIP_Bool             onlyrankone;        /**< whether only rank 1 inequalities should be separated */
    SCIP_Bool             earlyterm;          /**< terminate separation if a violated (but possibly sub-optimal) cut has been found? */
    SCIP_Bool             addViolationCons;   /**< add constraint to subscip that only allows violated cuts? */
+   SCIP_Bool             addViolConshdlr;    /**< add constraint handler to filter out violated cuts? */
    SCIP_Bool             conshdlrusenorm;    /**< should the violation constraint handler use the cut-norm to check for feasibility? */
    SCIP_Bool             objlone;            /**< should the objective of the sub-MIP minimize the l1-norm of the multipliers? */
 };
@@ -803,6 +805,12 @@ SCIP_RETCODE createSubscip(
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
 #endif
 
+   /* add violation constraint handler if requested */
+   if ( sepadata->addViolConshdlr )
+   {
+      SCIP_CALL( SCIPincludeConshdlrViolatedCut(subscip, mipdata) );
+   }
+
    SCIP_CALL( SCIPcreateProb(subscip, "sepa_cgmip separating MIP", NULL , NULL , NULL , NULL , NULL , NULL) );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
@@ -1378,11 +1386,6 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPaddCons(subscip, cons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
       ++mipdata->m;
-   }
-   else
-   {
-      /* otherwise add violation constraint handler */
-      SCIP_CALL( SCIPincludeConshdlrViolatedCut(subscip, mipdata) );
    }
 
    SCIPdebugMessage("subscip has %u variables and %u constraints (%u shifted, %u complemented, %u at lb, %u at ub).\n",
@@ -2876,6 +2879,10 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/cgmip/addViolationCons",
          "add constraint to subscip that only allows violated cuts?",
          &sepadata->addViolationCons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/cgmip/addViolConshdlr",
+         "add constraint handler to filter out violated cuts?",
+         &sepadata->addViolConshdlr, FALSE, DEFAULT_ADDVIOLCONSHDLR, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cgmip/conshdlrusenorm",
          "should the violation constraint handler use the norm of a cut to check for feasibility?",
