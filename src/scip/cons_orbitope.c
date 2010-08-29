@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.11 2010/08/20 10:12:24 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.12 2010/08/29 10:41:07 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -37,7 +37,7 @@
  * Proc. IPCO 2007
  *
  * In this paper a linear time propagation algorithm is described, a variant of which is implemented
- * here.
+ * here. The implemented variant does not run in linear time, but is very fast in practice.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -465,6 +465,7 @@ void computeSCTableFixTriangle(
    )
 {
    SCIP_Real minvalue;
+   int diagsize;
    int i;
    int j;
 
@@ -492,7 +493,12 @@ void computeSCTableFixTriangle(
    weights[0][0] = minvalue;
    cases[0][0] = 3;
 
-   for (j = 1; j < nblocks; ++j)
+   /* get last row of triangle */
+   diagsize = nblocks;
+   if ( nspcons < nblocks )
+      diagsize = nspcons;
+
+   for (j = 1; j < diagsize; ++j)
    {
       /* use LT to move entry as far to the left as possible */
       if ( SCIPisLT(scip, vals[j][j], minvalue) )
@@ -729,8 +735,17 @@ SCIP_RETCODE propagateCons(
    /* fix upper right triangle if still necessary */
    if ( ! consdata->isTriangleFixed )
    {
+      int diagsize;
+
       assert( *nfixedvars == 0 ); /* to make sure count below is correct */
-      for (i = 0; i < nblocks; ++i)
+
+      /* get last row of triangle */
+      diagsize = nblocks;
+      if ( nspcons < nblocks )
+         diagsize = nspcons;
+
+      /* fix triangle to 0 */
+      for (i = 0; i < diagsize; ++i)
       {
 	 for (j = i+1; j < nblocks; ++j)
 	 {
@@ -812,6 +827,7 @@ SCIP_RETCODE propagateCons(
       }
 
       /* store lastoneinrow */
+      assert( 0 <= lastoneinrow && lastoneinrow <= lastcolumn );
       lastones[i] = lastoneinrow;
 
       /* check whether we are infeasible (only for partitioning case) */
@@ -857,58 +873,63 @@ SCIP_RETCODE propagateCons(
       lastoneprevrow = lastoneinrow;
    }
 
-   /* loop through rows in frontiersteps (a.k.a. gamma) */
-   for (j = 0; j < nsteps; ++j)
+   /* for partitioning orbitopes, we check whether fixing any entry to 0 results in a contradiction */
+   if ( ispart )
    {
-      int s;
-      int lastoneinrow;
-
-      s = frontiersteps[j];
-      lastoneinrow = lastones[s];
-
-      /* if entry is not fixed to 1 */
-      if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 )
+      /* loop through rows in frontiersteps (a.k.a. gamma) */
+      for (j = 0; j < nsteps; ++j)
       {
-	 int betaprev;
-	 betaprev = lastoneinrow - 1;
-
-	 /* loop through rows below s */
-	 for (i = s+1; i < nspcons; ++i)
-	 {
-	    int beta;
-            beta = -2;
-
-	    if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
-	       beta = betaprev;
-	    else
-	       beta = betaprev + 1;
-	    assert( -1 <= beta && beta < nblocks );  /* beta == -1 possible???? */
-
-	    if ( firstnonzeros[i] > beta )
-	    {
-               SCIP_Bool tightened;
-               int inferInfo;
-
-	       /* can fix (s,alpha) to 1
-                * (do not need to fix other entries to 0 in partitioning case , since they will be
-                * automatically fixed by SCIPtightenVarLb.)
-                */
-	       assert( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 );
-	       SCIPdebugMessage(" -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
-
-	       tightened = FALSE;
-
-               /* store position (i,firstnonzeros[i]) ??? Allgemeingueltig? */
-	       inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
-	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[s][lastoneinrow], TRUE, cons, inferInfo, infeasible, &tightened) );
-
-	       assert( !(*infeasible) );
-	       if ( tightened )
-		  ++(*nfixedvars);
-	       break;
-	    }
-	    betaprev = beta;
-	 }
+         int s;
+         int lastoneinrow;
+         
+         s = frontiersteps[j];
+         lastoneinrow = lastones[s];
+         assert( 0 <= lastoneinrow && lastoneinrow < nblocks );
+         
+         /* if entry is not fixed to 1 */
+         if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 )
+         {
+            int betaprev;
+            betaprev = lastoneinrow - 1;
+            
+            /* loop through rows below s */
+            for (i = s+1; i < nspcons; ++i)
+            {
+               int beta;
+               beta = -2;
+               
+               if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
+                  beta = betaprev;
+               else
+                  beta = betaprev + 1;
+               assert( -1 <= beta && beta < nblocks );
+               
+               if ( firstnonzeros[i] > beta )
+               {
+                  SCIP_Bool tightened;
+                  int inferInfo;
+                  
+                  /* can fix (s,lastoneinrow) (a.k.a (s,alpha)) to 1
+                   * (do not need to fix other entries to 0 in partitioning case, since they will be
+                   * automatically fixed by SCIPtightenVarLb.)
+                   */
+                  assert( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 );
+                  SCIPdebugMessage(" -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
+                  
+                  tightened = FALSE;
+                  
+                  /* store position (i,firstnonzeros[i]) */
+                  inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
+                  SCIP_CALL( SCIPinferBinvarCons(scip, vars[s][lastoneinrow], TRUE, cons, inferInfo, infeasible, &tightened) );
+                  
+                  assert( !(*infeasible) );
+                  if ( tightened )
+                     ++(*nfixedvars);
+                  break;
+               }
+               betaprev = beta;
+            }
+         }
       }
    }
 
@@ -927,14 +948,14 @@ SCIP_RETCODE propagateCons(
  *  fixing can also be gotten via an SCI-fixing.
  *
  *  Since the storage of an integer is not enough to store the complete information about the fixing
- *  nor a complete shifted column, we have to use the lineartime algorithm for SCIs.
+ *  nor a complete shifted column, we have to use the linear time algorithm for SCIs.
  *
  *  The inferinfo integer is set as follows:
  *
  *  - If a shifted column is fixed to 0 and the corresponding bar does not necessarily has value 1
  *    then we fix these entries to 0 and inferinfo is i * nblocks + j, where (i,j) is the leader of the
  *    bar. The SCI depends on whether i is in Gamma or not (see Lemma 1 in the paper and the comments
- *    above.)
+ *    above).
  *
  *  - If a bar has value 1 and the shifted column has one entry that is not fixed, it can be fixed to
  *    1 and inferinfo is (nspcons*nblocks) + i * nblocks + j, where (i,j) is the leader of the bar; see
@@ -1725,16 +1746,25 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
       {
 	 int i;
 	 int j;
+         int nspcons;
 	 int nblocks;
+         int diagsize;
 
 	 assert( consdata->nblocks > 0 );
+	 assert( consdata->nspcons > 0 );
 	 assert( consdata->vars != NULL );
 
+         nspcons = consdata->nspcons;
 	 nblocks = consdata->nblocks;
 	 vars = consdata->vars;
 
+         /* get last row of triangle */
+         diagsize = nblocks;
+         if ( nspcons < nblocks )
+            diagsize = nspcons;
+
 	 /* fix variables to 0 */
-	 for (i = 0; i < nblocks; ++i)
+	 for (i = 0; i < diagsize; ++i)
 	 {
 	    for (j = i+1; j < nblocks; ++j)
 	    {
