@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.8 2010/07/28 13:13:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.9 2010/08/30 16:50:07 bzfwinkm Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -145,7 +145,7 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data for the linking constraint handler */
+/** creates constraint handler data for the linking constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */

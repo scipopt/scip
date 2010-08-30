@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.66 2010/08/10 13:22:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.67 2010/08/30 16:50:07 bzfwinkm Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1280,7 +1280,7 @@ SCIP_RETCODE createSubProblem(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* create variable hashmap */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    /* creating ppc SCIP instance */
    SCIP_CALL( SCIPcreate(&ppcscip) );

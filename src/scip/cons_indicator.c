@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.83 2010/08/27 20:59:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.84 2010/08/30 16:50:07 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -342,7 +342,7 @@ SCIP_RETCODE checkIIS(
    SCIP_CALL( SCIPlpiCreate(&lp, "checkLP", SCIP_OBJSEN_MINIMIZE) );
 
    /* set up hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&varHash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
 
    /* loop through indicator constraints */
    for (c = 0; c < nconss; ++c)
@@ -628,9 +628,9 @@ SCIP_RETCODE initAlternativeLP(
    SCIPdebugMessage("Initializing alternative LP ...\n");
 
    /* create hash map of variables */
-   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->lbHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varHash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->lbHash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubHash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
 
    /* create alternative LP */
    SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altLP, "altLP", SCIP_OBJSEN_MINIMIZE) );
@@ -2574,7 +2574,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    if ( conshdlrdata->sepaAlternativeLP )
    {
       /* generate hash for storing all slack variables (size is just a guess) */
-      SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->slackHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
+      SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->slackHash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
       assert( conshdlrdata->slackHash != NULL );
 
       /* first initialize slack hash */

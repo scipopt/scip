@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.75 2010/08/27 21:15:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.76 2010/08/30 16:50:07 bzfwinkm Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1037,7 +1037,7 @@ SCIP_RETCODE applyVarBoundConstraints(
    SCIP_CALL( SCIPallocBufferArray(scip, &varlb, heurdata->nvarbndconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varub, heurdata->nvarbndconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varidx, heurdata->nvarbndconss) );
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), heurdata->nvarbndconss) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * heurdata->nvarbndconss)) );
    varcnt = 0;
    
    for( i = 0; i < heurdata->nvarbndconss; ++i )
@@ -1318,7 +1318,7 @@ SCIP_RETCODE SCIPconstructNlpiProblemNlpHeur(
    SCIP_CALL( SCIPnlpiSetRealPar(nlpi, *nlpiproblem, SCIP_NLPPAR_INFINITY, SCIPinfinity(scip)) );
 
    /* init mapping from SCIP variables to NLPI indices */
-   SCIP_CALL( SCIPhashmapCreate(&var_scip2nlp, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&var_scip2nlp, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
    
    /* alloc space for variable lower bound, upper bounds, and names */
    SCIP_CALL( SCIPallocBufferArray(scip, &varlb, nvars) );
@@ -1376,7 +1376,7 @@ SCIP_RETCODE SCIPconstructNlpiProblemNlpHeur(
    /* initialize hashmap for constraints if user wants to have one */
    if( conssmap != NULL )
    {
-      SCIP_CALL( SCIPhashmapCreate(conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
+      SCIP_CALL( SCIPhashmapCreate(conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
    }
    mynnlpconss = 0;
    

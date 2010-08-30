@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.6 2010/06/07 16:43:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.7 2010/08/30 16:50:07 bzfwinkm Exp $"
 
 /**@file   scip/expression.c
  * @brief  more methods for expressions and expression trees
@@ -294,7 +294,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
 
    /* create hash map from variable to indices in tree->vars and check if there is a nonfixed variable */
    havefixedvar = FALSE;
-   SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, SCIPcalcHashtableSize(tree->nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, SCIPcalcHashtableSize(5 * tree->nvars)) );
    for( i = 0; i < tree->nvars; ++i )
    {
       SCIP_CALL( SCIPhashmapInsert(varhash, (void*)tree->vars[i], (void*)(size_t)i) );

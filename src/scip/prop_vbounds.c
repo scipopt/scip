@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.6 2010/08/06 17:57:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.7 2010/08/30 16:50:08 bzfwinkm Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -735,7 +735,7 @@ SCIP_DECL_PROPINITSOL(propInitsolVbounds)
 
    /* create hash table for storing the involved variables */
    assert(propdata->nvars == 0);
-   SCIP_CALL( SCIPhashmapCreate(&propdata->varHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&propdata->varHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
    
    /* create the topological sorted variable array with respect to the variable lower bounds */
    assert(propdata->nlbvars == 0);

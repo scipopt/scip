@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.92 2010/08/18 18:16:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.93 2010/08/30 16:50:08 bzfwinkm Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2611,7 +2611,7 @@ SCIP_RETCODE SCIPwriteLp(
    if ( conshdlrInd != NULL )
    {
       /* create hashtable storing linear constraints that should not be output */
-      SCIP_CALL( SCIPhashmapCreate(&consHidden, SCIPblkmem(scip), 1000) );
+      SCIP_CALL( SCIPhashmapCreate(&consHidden, SCIPblkmem(scip), SCIPcalcHashtableSize(1000)) );
 
       /* loop through indicator constraints (works only in transformed problem) */
       if ( transformed )

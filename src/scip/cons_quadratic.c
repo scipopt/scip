@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.112 2010/08/30 09:58:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.113 2010/08/30 16:50:07 bzfwinkm Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3569,7 +3569,7 @@ SCIP_RETCODE checkCurvature(
    consdata->isconvex  = TRUE;
    consdata->isconcave = TRUE;
 
-   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
+   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
    for( i = 0; i < n; ++i )
    {
       if( consdata->quadvarterms[i].nadjbilin > 0 )
@@ -4224,7 +4224,7 @@ SCIP_RETCODE generateCutCareful(
    /* create mapping quadvars to index in quadvars arrays, if have bilin terms */
    if( consdata->nbilinterms )
    {
-      SCIP_CALL( SCIPhashmapCreate(&quadvaridx, SCIPblkmem(scip), consdata->nquadvars) );
+      SCIP_CALL( SCIPhashmapCreate(&quadvaridx, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * consdata->nquadvars)) );
       for( j = 0; j < consdata->nquadvars; ++j)
       {
          x = consdata->quadvars[j];
@@ -8356,7 +8356,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          local, modifiable, dynamic, removable, FALSE) );
 
    /* add quadratic variables and remember their indices */
-   SCIP_CALL( SCIPhashmapCreate(&quadvaridxs, SCIPblkmem(scip), SCIPcalcHashtableSize(nquadterms)) );
+   SCIP_CALL( SCIPhashmapCreate(&quadvaridxs, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nquadterms)) );
    nbilinterms = 0;
    for( i = 0; i < nquadterms; ++i )
    {

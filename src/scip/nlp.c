@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.11 2010/08/27 21:09:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.12 2010/08/30 16:50:08 bzfwinkm Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -683,7 +683,7 @@ SCIP_RETCODE nlrowSetupQuadVarsHash(
    if( nlrow->nquadvars < 3 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPhashmapCreate(&nlrow->quadvarshash, blkmem, SCIPcalcHashtableSize(nlrow->nquadvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&nlrow->quadvarshash, blkmem, SCIPcalcHashtableSize(5 * nlrow->nquadvars)) );
    assert(nlrow->quadvarshash != NULL);
 
    for( i = 0; i < nlrow->nquadvars; ++i )
@@ -4409,7 +4409,7 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->nvars = 0;
    (*nlp)->sizevars = 0;
    (*nlp)->vars = NULL;
-   SCIP_CALL( SCIPhashmapCreate(&(*nlp)->varhash, blkmem, SCIPcalcHashtableSize(nvars_estimate)) );
+   SCIP_CALL( SCIPhashmapCreate(&(*nlp)->varhash, blkmem, SCIPcalcHashtableSize(5 * nvars_estimate)) );
 
    (*nlp)->nvars_solver = 0;
    (*nlp)->sizevars_solver = 0;
