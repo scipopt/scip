@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.92 2010/06/18 11:14:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.93 2010/08/30 09:57:07 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -472,6 +472,7 @@ SCIP_RETCODE SCIPbranchcandAddRelaxCand(
 
    assert(branchcand != NULL);
    assert(var != NULL);
+   assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var)/2.0, SCIPvarGetUbLocal(var)/2.0)); /* there should be enough domain left to create two child nodes with domain width > epsilon */
    assert(branchcand->npriorelaxcands <= branchcand->nrelaxcands);
    assert(branchcand->nrelaxcands <= branchcand->relaxcandssize);
 
