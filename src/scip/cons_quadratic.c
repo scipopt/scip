@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.111 2010/08/30 08:55:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.112 2010/08/30 09:58:01 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5050,7 +5050,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* do not propose fixed variables */
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var)/2.0, SCIPvarGetUbLocal(consdata->quadvarterms[i].var)/2.0) )
             continue;
          val = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[i].var);
          if( ABS(val) > brvarval )
