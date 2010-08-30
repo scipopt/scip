@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.33 2010/08/30 18:57:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.34 2010/08/30 19:02:21 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -110,7 +110,6 @@ struct SCIP_ConshdlrData
    SCIP_Real             sparsifynzgrowth;/**< growth rate of maximal allowed nonzeros in cuts in sparsification */
    SCIP_Bool             linfeasshift;   /**< whether to try to make solutions feasible in check by shifting the variable on the right hand side */
 };
-
 
 
 /*
