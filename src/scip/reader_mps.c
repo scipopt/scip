@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.129 2010/08/30 18:57:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.130 2010/08/30 19:34:49 bzfviger Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -3653,11 +3653,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* if there is an offsets on rhs, then we have linear a coefficient that need to be processed here */
          if (SCIPgetRhsOffsetSOC(scip, cons) != 0.0)
          {
-            SCIP_VAR* rhsvar = SCIPgetRhsVarSOC(scip, cons);
-            SCIP_Real coef   = SCIPgetRhsCoefSOC(scip, cons);
-            SCIP_Real offset = SCIPgetRhsOffsetSOC(scip, cons);
+            SCIP_VAR* rhsvar;
             SCIP_Real lincoef;
-            
+
+            coef   = SCIPgetRhsCoefSOC(scip, cons);
+            offset = SCIPgetRhsOffsetSOC(scip, cons);
+            rhsvar = SCIPgetRhsVarSOC(scip, cons);
             lincoef = -2 * offset * coef * coef;
             rhs += offset * offset * coef * coef;
             
