@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.31 2010/08/29 17:37:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.32 2010/08/30 10:44:05 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -95,14 +95,12 @@ struct SCIP_ConshdlrData
    SCIP_HEUR*            nlpheur;        /**< a pointer to the NLP heuristic */
    SCIP_HEUR*            rensheur;       /**< a pointer to the RENS heuristic */
    SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
-   int                   newsoleventfilterpos;  /**< filter position of new solution event handler, if catched */
-   SCIP_Longint          nextbranchnode; /**< (lower bound on) index of node where to branch next time if adding weak cuts fails */ 
+   int                   newsoleventfilterpos; /**< filter position of new solution event handler, if catched */
    
    SCIP_Bool             glineur;        /**< is the Glineur outer approx prefered to Ben-Tal Nemirovski? */
    SCIP_Bool             doscaling;      /**< are constraint violations scaled? */
    SCIP_Bool             projectpoint;   /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
-   int                   branchfreq;     /**< frequency of branching on a node instead of adding weak cuts */
    SCIP_Bool             linearizenlpsol;/**< whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic */
    SCIP_Real             minefficacy;    /**< minimal efficacy of a cut to be added to LP in separation loop */
    SCIP_Bool             sparsify;       /**< whether to sparsify cuts */
@@ -403,6 +401,7 @@ SCIP_RETCODE evalLhs(
    return SCIP_OKAY;
 }
 
+/* computes the norm of the gradient of the SOC function */ 
 static
 SCIP_Real getGradientNorm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -993,7 +992,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
          continue;
       }
       
-      SCIP_CALL( generateSparseCut(scip, conss[c], sol, &row, SCIPfeastol(scip), conshdlrdata->sparsifymaxloss, conshdlrdata->sparsifynzgrowth) );
+      SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );
 
       if( row == NULL )
          continue;
@@ -2354,141 +2353,6 @@ SCIP_RETCODE propagateBounds(
    return SCIP_OKAY;
 }
 
-/** chooses a branching variable from the variables on the right hand side of violated constraints and branches on it */
-static
-SCIP_RETCODE branchOnRhsVariable(
-   SCIP*          scip,       /**< SCIP data structure */
-   SCIP_CONS**    conss,      /**< constraints */
-   int            nconss,     /**< number of constraints */
-   SCIP_Bool*     success     /**< buffer to store whether we found a branching variable and did a branching */ 
-   )
-{
-   SCIP_CONSDATA*   consdata;
-   SCIP_VAR*        brvar = NULL;
-   SCIP_Real        diam, brvardiam;
-   SCIP_Real        leftub=0.0, rightlb=0.0;
-   SCIP_Real        leftobjest, rightobjest;
-   SCIP_Real        lb, ub;
-   int              c;
-   
-   assert(scip    != NULL);
-   assert(conss   != NULL || nconss == 0);
-   assert(success != NULL);
-   
-   *success = FALSE;
-   
-   brvardiam = 3 * SCIPfeastol(scip); /* do not branch on variables with diameter less than this value */
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-      
-      /* branching on multiaggr. variables does not work well */
-      if( SCIPvarGetStatus(consdata->rhsvar) == SCIP_VARSTATUS_MULTAGGR )
-         continue;
-
-      if( SCIPisFeasPositive(scip, consdata->violation) )
-      {
-         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->rhsvar)) )
-         {
-            brvardiam = SCIPinfinity(scip);
-            brvar = consdata->rhsvar;
-            break;
-         }
-         
-         diam = SCIPvarGetUbLocal(consdata->rhsvar) - SCIPvarGetLbLocal(consdata->rhsvar);
-         if( diam > brvardiam )
-         {
-            brvardiam = diam;
-            brvar = consdata->rhsvar;
-         }
-      }
-   }
-   
-   if( brvar == NULL )
-      return SCIP_OKAY;
-   
-   lb = SCIPvarGetLbLocal(brvar);
-   ub = SCIPvarGetUbLocal(brvar);
-
-   leftub = SCIPgetVarSol(scip, brvar);
-   assert(!SCIPisNegative(scip, leftub));
-   if( SCIPisInfinity(scip, leftub) )
-      leftub = SCIPvarGetLbLocal(brvar) + 1000;
-   else
-   {
-      if( leftub < 0.95 * lb + 0.05 * ub )
-         leftub = 0.95 * lb + 0.05 * ub;
-      else if( leftub > 0.05 * lb + 0.95 * ub )
-         leftub = 0.05 * lb + 0.95 * ub;
-      
-      /* for very tiny intervals we set it into the middle */
-      if( !SCIPisGT(scip, leftub, lb) || !SCIPisLT(scip, leftub, ub) )
-         leftub = (lb + ub) * 0.5;
-   }
-   
-   if( SCIPvarGetType(brvar) == SCIP_VARTYPE_CONTINUOUS )
-   {
-      rightlb     = leftub;
-      leftobjest  = SCIPcalcChildEstimate(scip, brvar, leftub);
-      rightobjest = leftobjest;
-   }
-   else
-   {
-      leftub  = SCIPceil(scip, leftub + 0.001);
-      rightlb = leftub - 1.0;
-      assert(rightlb >= 0.0);
-      leftobjest  = SCIPcalcChildEstimate(scip, brvar,  leftub);
-      rightobjest = SCIPcalcChildEstimate(scip, brvar, rightlb);
-   }
-
-   if( leftobjest > SCIPinfinity(scip) )
-      leftobjest = SCIPinfinity(scip) / 5.0;
-   if( rightobjest > SCIPinfinity(scip) )
-      rightobjest = leftobjest;
-
-   if( SCIPvarGetStatus(brvar) == SCIP_VARSTATUS_MULTAGGR )
-   {
-      SCIP_NODE* node;
-      SCIP_CONS* cons;
-      SCIP_Real  val = 1.0;
-      SCIPdebugMessage("branching on multiaggregated variable %s: new intervals: [%g, %g] [%g, %g]\n", SCIPvarGetName(brvar), lb, leftub, rightlb, ub);
-
-      SCIP_CALL( SCIPcreateChild(scip, &node, 0.0, leftobjest) );
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "branch", 1, &brvar, &val, lb, leftub, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-      SCIP_CALL( SCIPcreateChild(scip, &node, 0.0, rightobjest) );
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "branch", 1, &brvar, &val, rightlb, ub, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   }
-   else
-   {
-      if( SCIPvarGetType(brvar) != SCIP_VARTYPE_CONTINUOUS )
-      {
-         SCIPdebugMessage("branching on discrete variable %s\n", SCIPvarGetName(brvar));
-         SCIP_CALL( SCIPbranchVar(scip, brvar, NULL, NULL, NULL) );
-      }
-      else
-      {
-         SCIP_NODE* node;
-         SCIPdebugMessage("branching on continuous variable %s: new intervals: [%g, %g] [%g, %g]\n", SCIPvarGetName(brvar), lb, leftub, rightlb, ub);
-
-         SCIP_CALL( SCIPcreateChild(scip, &node, 0.0, leftobjest) );
-         SCIP_CALL( SCIPchgVarUbNode(scip, node, brvar, leftub) );
-
-         SCIP_CALL( SCIPcreateChild(scip, &node, 0.0, rightobjest) );
-         SCIP_CALL( SCIPchgVarLbNode(scip, node, brvar, rightlb) );
-      }
-   }
-
-   *success = TRUE;
-
-   return SCIP_OKAY;
-}
-
 
 /*
  * Quadratic constraint upgrading
@@ -3183,8 +3047,6 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
       }
    }
    
-   conshdlrdata->nextbranchnode = conshdlrdata->branchfreq;
-   
    conshdlrdata->newsoleventfilterpos = -1;
    if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL) )
    {
@@ -3462,7 +3324,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    SCIP_CONSDATA*     consdata;
    SCIP_CONS*         maxviolcons;
    SCIP_Bool          success;
-   SCIP_Bool          allow_weak_cuts;
    int                nbndchg;
    int                c;
    
@@ -3483,11 +3344,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
       return SCIP_OKAY;
    }
 
-   /* try separation */
-   allow_weak_cuts = !conshdlrdata->branchfreq || SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) < conshdlrdata->nextbranchnode;
-   if( !allow_weak_cuts )
-      conshdlrdata->nextbranchnode += conshdlrdata->branchfreq;
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, allow_weak_cuts, &success) );
+   /* try separation, this should usually work */
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, &success) );
    if( success )
    {
       SCIPdebugMessage("enforced by separation\n");
@@ -3507,29 +3365,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
       if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
       {
          SCIPdebugMessage("enforced by %s\n", *result == SCIP_CUTOFF ? "cutting off node" : "reducing domain");
-         return SCIP_OKAY;
-      }
-   }
-
-   /* branch on variable on right hand side */
-   SCIP_CALL( branchOnRhsVariable(scip, &maxviolcons, 1, &success) );
-   if( !success ) /* if branching on maximal violated constraint was not possible, consider all (violated) constraints */
-   {
-      SCIP_CALL( branchOnRhsVariable(scip, conss, nconss, &success) );
-   }
-   if( success )
-   {
-      SCIPdebugMessage("branched on right hand side variable\n");
-      *result = SCIP_BRANCHED;
-      return SCIP_OKAY;
-   }
-   else if( !allow_weak_cuts )
-   { /* try again separation, now also allow weaker cuts */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, &success) );
-      if( success )
-      {
-         SCIPdebugMessage("enforced by separation via weak cut\n");
-         *result = SCIP_SEPARATED;
          return SCIP_OKAY;
       }
    }
@@ -3566,6 +3401,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOC)
    return SCIP_OKAY;
 }
 
+
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckSOC)
@@ -3599,8 +3435,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
          
          if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "\nWARNING: solution not feasible w.r.t. constraint: (violation: %f)\n",  consdata->violation);
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );            
+            SCIPinfoMessage(scip, NULL, "\tviolation: %f\n",  consdata->violation);
          }
 
          if( conshdlrdata->nlpheur != NULL )
@@ -3615,6 +3451,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
    
    if( conshdlrdata->nlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
       SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
+   
+   /* @todo try to make feasible by increasing variable on rhs */
 
    return SCIP_OKAY;
 }
@@ -4041,7 +3879,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",      "whether a constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",          &conshdlrdata->doscaling,        FALSE, TRUE,          NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/projectpoint", "whether the reference point of a cut should be projected onto the feasible set of the SOC constraint",          &conshdlrdata->projectpoint,     FALSE, FALSE,         NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/nauxvars",     "number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off", &conshdlrdata->nauxvars,         FALSE, 0, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/branchfreq",   "frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off",               &conshdlrdata->branchfreq,       TRUE,  0, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",      "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",                          &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENS heuristic",            &conshdlrdata->linearizenlpsol,  FALSE, TRUE,          NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",  "minimal efficacy of a cut to be added to LP in separation",                                                     &conshdlrdata->minefficacy,      FALSE, 0.0001, 0, SCIPinfinity(scip), NULL, NULL) );
