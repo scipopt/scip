@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.624 2010/08/27 21:11:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.625 2010/08/30 17:07:57 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1260,7 +1260,7 @@ SCIP_RETCODE SCIPcopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(targetscip), SCIPgetNVars(sourcescip)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(5 * SCIPgetNVars(sourcescip))) );
    }
 
    /* copy all variables and constraints */
@@ -12089,6 +12089,9 @@ SCIP_RETCODE SCIPwriteLP(
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
             scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, &cutoff) );
    }
+
+   /* we need a flushed lp to write the current lp */
+   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set) );
 
    SCIP_CALL( SCIPlpWrite(scip->lp, fname) );
    
