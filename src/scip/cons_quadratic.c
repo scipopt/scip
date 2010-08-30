@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.110 2010/08/29 17:37:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.111 2010/08/30 08:55:39 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3439,7 +3439,7 @@ SCIP_RETCODE presolveUpgrade(
             /* upgrade function requires more memory: resize upgdconss and call again */
             assert(-*nupgdconss > upgdconsssize);
             upgdconsssize = -*nupgdconss;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -*nupgdconss) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, upgdconss, -*nupgdconss) );
 
             SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
                nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
