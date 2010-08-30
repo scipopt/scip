@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.113 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.114 2010/08/30 18:51:50 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -723,6 +723,38 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpresolGetPriority(presols[i]),
          SCIPpresolIsDelayed(presols[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPpresolGetDesc(presols[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display pricer command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPricers)
+{  /*lint --e{715}*/
+   SCIP_PRICER** pricers;
+   int npricers;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   pricers = SCIPgetPricers(scip);
+   npricers = SCIPgetNPricers(scip);
+
+   /* display list of pricers */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " pricer               priority  description\n");
+   SCIPdialogMessage(scip, NULL, " ----------           --------  -----------\n");
+   for( i = 0; i < npricers; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpricerGetName(pricers[i]));
+      if( strlen(SCIPpricerGetName(pricers[i])) > 20 )
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpricerGetPriority(pricers[i]), SCIPpricerIsDelayed(pricers[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, "%s", SCIPpricerGetDesc(pricers[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -2354,6 +2386,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayPresolvers, NULL, NULL,
             "presolvers", "display presolvers", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display pricers */
+   if( !SCIPdialogHasEntry(submenu, "pricers") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayPricers, NULL, NULL,
+            "pricers", "display pricers", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

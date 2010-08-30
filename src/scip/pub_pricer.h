@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_pricer.h,v 1.18 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_pricer.h,v 1.19 2010/08/30 18:51:50 bzfheinz Exp $"
 
 /**@file   pub_pricer.h
  * @ingroup PUBLICMETHODS
@@ -90,6 +90,12 @@ SCIP_Real SCIPpricerGetTime(
 /** returns whether the given pricer is in use in the current problem */
 extern
 SCIP_Bool SCIPpricerIsActive(
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   );
+
+/** returns whether the pricer should be delayed until no other pricer finds a new variable */
+extern
+SCIP_Bool SCIPpricerIsDelayed(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.30 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.31 2010/08/30 18:51:50 bzfheinz Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -300,16 +300,6 @@ SCIP_RETCODE SCIPpricerDeactivate(
    return SCIP_OKAY;
 }
 
-/** returns whether the given pricer is in use in the current problem */
-SCIP_Bool SCIPpricerIsActive(
-   SCIP_PRICER*          pricer              /**< variable pricer */
-   )
-{
-   assert(pricer != NULL);
-
-   return pricer->active;
-}
-
 /** calls reduced cost pricing method of variable pricer */
 SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PRICER*          pricer,             /**< variable pricer */
@@ -508,6 +498,36 @@ int SCIPpricerGetNVarsFound(
    return pricer->nvarsfound;
 }
 
+/** gets time in seconds used in this pricer */
+SCIP_Real SCIPpricerGetTime(
+   SCIP_PRICER*            pricer                /**< variable pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   return SCIPclockGetTime(pricer->pricerclock);
+}
+
+/** returns whether the given pricer is in use in the current problem */
+SCIP_Bool SCIPpricerIsActive(
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   return pricer->active;
+}
+
+/** returns whether the pricer should be delayed until no other pricer finds a new variable */
+SCIP_Bool SCIPpricerIsDelayed(
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   return pricer->delay;
+}
+
 /** is variable pricer initialized? */
 SCIP_Bool SCIPpricerIsInitialized(
    SCIP_PRICER*            pricer                /**< variable pricer */
@@ -518,13 +538,4 @@ SCIP_Bool SCIPpricerIsInitialized(
    return pricer->initialized;
 }
 
-/** gets time in seconds used in this pricer */
-SCIP_Real SCIPpricerGetTime(
-   SCIP_PRICER*            pricer                /**< variable pricer */
-   )
-{
-   assert(pricer != NULL);
-
-   return SCIPclockGetTime(pricer->pricerclock);
-}
 

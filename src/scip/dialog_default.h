@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.42 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.43 2010/08/30 18:51:50 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -86,6 +86,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayParameters);
 /** dialog execution method for the display presolvers command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers);
+
+/** dialog execution method for the display pricer command */
+extern  
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPricers);
 
 /** dialog execution method for the display problem command */
 extern
