@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.128 2010/08/30 16:50:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.129 2010/08/30 18:57:48 bzfviger Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -3621,6 +3621,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       {
          /* SOC constraints are of the form lhsconstant + sum_i (lhscoef_i*(lhsvar_i+lhsoffset_i))^2 <= (rhscoef*(rhsvar+rhsoffset))^2 */
          
+         SCIP_Real* lincoefs;
+         SCIP_Real  coef;
+         SCIP_Real  offset;
+         
          /* store constraint */
          consSOC[nConsSOC++] = cons;
          
@@ -3629,28 +3633,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          rhs = -SCIPgetLhsConstantSOC(scip, cons);
          
-         /* if there are offsets on lhs, then we have linear coefficients that need to be processed here */
-         if( SCIPgetLhsOffsetsSOC(scip, cons) )
+         /* offsets on lhs give linear coefficients that need to be processed here */
+         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nconsvars) );
+
+         for( v = 0; v < nconsvars; ++v )
          {
-            SCIP_Real* lincoefs;
-            SCIP_Real  coef;
-            SCIP_Real  offset;
-            SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nconsvars) );
-            
-            for( v = 0; v < nconsvars; ++v )
-            {
-               offset = SCIPgetLhsOffsetsSOC(scip, cons)[v];
-               coef = SCIPgetLhsCoefsSOC(scip, cons) ? SCIPgetLhsCoefsSOC(scip, cons)[v] : 1.0;
-               
-               lincoefs[v] = 2 * offset * coef * coef;
-               rhs -= offset * offset * coef * coef;
-            }
-            
-            SCIP_CALL( getLinearCoeffs(scip, consname,
-               SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
-            
-            SCIPfreeBufferArray(scip, &lincoefs);
+            offset = SCIPgetLhsOffsetsSOC(scip, cons)[v];
+            coef = SCIPgetLhsCoefsSOC(scip, cons)[v];
+
+            lincoefs[v] = 2 * offset * coef * coef;
+            rhs -= offset * offset * coef * coef;
          }
+
+         SCIP_CALL( getLinearCoeffs(scip, consname,
+            SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
+
+         SCIPfreeBufferArray(scip, &lincoefs);
 
          /* if there is an offsets on rhs, then we have linear a coefficient that need to be processed here */
          if (SCIPgetRhsOffsetSOC(scip, cons) != 0.0)
@@ -4003,7 +4001,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* print alpha_i^2 x_i^2 terms */
          for( v = 0; v < nconsvars; ++v )
          {
-            if( coefs && coefs[v] == 0.0 )
+            if( coefs[v] == 0.0 )
                continue;
             
             /* get variable name */
@@ -4011,7 +4009,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             /* get coefficient^2 as string */
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", coefs ? coefs[v]*coefs[v] : 1.0);
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", coefs[v]*coefs[v]);
 
             /* print "x x coeff" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
@@ -4047,22 +4045,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       /* output each indicator constraint */
       for ( c = 0; c < nConsIndicator; ++c )
       {
-	 SCIP_VAR* binvar;
-	 SCIP_CONS* lincons;
+         SCIP_VAR* binvar;
+         SCIP_CONS* lincons;
 
          cons = consIndicator[c];
-	 binvar = SCIPgetBinaryVarIndicator(cons);
-	 lincons = SCIPgetLinearConsIndicator(cons);
+         binvar = SCIPgetBinaryVarIndicator(cons);
+         lincons = SCIPgetLinearConsIndicator(cons);
 
-	 /* create value string */
-	 if ( SCIPvarIsNegated(binvar) )
-	    (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.0);
-	 else
-	    (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 1.0);
+         /* create value string */
+         if ( SCIPvarIsNegated(binvar) )
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.0);
+         else
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 1.0);
 
          printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
-	 printRecord(scip, file, SCIPvarGetName(binvar), valuestr, maxnamelen);
-	 SCIPinfoMessage(scip, file, "\n");
+         printRecord(scip, file, SCIPvarGetName(binvar), valuestr, maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
       }
    }
 

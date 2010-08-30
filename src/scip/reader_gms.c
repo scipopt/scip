@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.41 2010/07/06 17:29:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.42 2010/08/30 18:57:48 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -786,10 +786,10 @@ SCIP_Bool isGAMSprintableSOC(
 
    for( i = 0; i < nlhsvars; ++i )
    {
-      if( lhscoeffs  && lhscoeffs [i] != 1.0 )
+      if( lhscoeffs [i] != 1.0 )
          return FALSE;
 
-      if( lhsoffsets && lhsoffsets[i] != 0.0 )
+      if( lhsoffsets[i] != 0.0 )
          return FALSE;
 
       if( !SCIPvarIsActive(lhsvars[i]) )
@@ -1685,10 +1685,11 @@ SCIP_RETCODE SCIPwriteGms(
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
          SCIP_CALL( printSOCCons(scip, file, consname,
-               SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
-               SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons), transformed) );
+            SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
+            SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons), transformed) );
+         
          nlcons = nlcons || !isGAMSprintableSOC(SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
-               SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons));
+            SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons));
       }
 #ifdef WITH_SIGNPOWER
       else if( strcmp(conshdlrname, "signpower") == 0 )

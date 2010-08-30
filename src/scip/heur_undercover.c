@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.67 2010/08/30 16:50:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.68 2010/08/30 18:57:48 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -657,7 +657,7 @@ SCIP_RETCODE createPpcProblem(
                goto TERMINATE;
             }
 
-            coef = SCIPgetLhsCoefsSOC(scip, soccons) == NULL ? 1.0 : SCIPgetLhsCoefsSOC(scip, soccons)[t];
+            coef = SCIPgetLhsCoefsSOC(scip, soccons)[t];
             if( termIsLinear(scip, soclhsvars[t], coef, local) )
                continue;
 
