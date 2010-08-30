@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.113 2010/08/30 16:50:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.114 2010/08/30 18:56:57 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -6600,7 +6600,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   SCIP_HASHMAP*      terms;
 #ifndef NDEBUG
    int                i;
 #endif
@@ -6614,7 +6613,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
    assert(conshdlrdata != NULL);
 
    *result = SCIP_FEASIBLE;
-   terms = NULL;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -7645,7 +7643,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
             }
          }
-         if( conshdlrdata->nlpheur == NULL && !maypropfeasible )
+         if( (conshdlrdata->nlpheur == NULL || sol == NULL) && !maypropfeasible )
             return SCIP_OKAY;
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = consdata->lhsviol + consdata->rhsviol;
@@ -7683,7 +7681,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
          return SCIP_OKAY;
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->nlpheur )
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->nlpheur && sol != NULL )
    {
       SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
    }
