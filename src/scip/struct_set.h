@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.101 2010/08/16 16:56:08 bzfgamra Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.102 2010/08/30 20:39:24 bzfviger Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -123,6 +123,9 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
+   SCIP_Bool             continnonlinpresent;/**< marks whether any constraints with continuous nonlinear variables are present */
+   SCIP_Bool             nonlinearitypresent;/**< marks whether any constraints with discrete nonlinear variables are present */
+   SCIP_Bool             nlprequired;        /**< marks whether any plugin has use for an NLP */ 
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */

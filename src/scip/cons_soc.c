@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.34 2010/08/30 19:02:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.35 2010/08/30 20:39:24 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2915,10 +2915,12 @@ SCIP_DECL_CONSINITPRE(consInitpreSOC)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 {  /*lint --e{715}*/
-   int c;
-   int dummy;
+   SCIP_CONSDATA* consdata;
    SCIP_Bool iscutoff;
    SCIP_Bool isdeleted;
+   int dummy;
+   int c;
+   int i;
    
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -2938,12 +2940,25 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
-#if 0
+
+      /* if conss[c] has been deleted, skip the rest */
       if( isdeleted )
-      { /* conss[c] has been deleted */
          continue;
+      
+      /* tell SCIP that we have something nonlinear */
+      SCIPmarkNonlinearitiesPresent(scip);
+      if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
+      {
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         for( i = 0; i < consdata->nvars; ++i )
+            if( SCIPvarGetType(consdata->vars[i]) >= SCIP_VARTYPE_CONTINUOUS )
+            {
+               SCIPmarkContinuousNonlinearitiesPresent(scip);
+               break;
+            }
       }
-#endif
    }
 
    return SCIP_OKAY;

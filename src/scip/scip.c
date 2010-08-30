@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.625 2010/08/30 17:07:57 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.626 2010/08/30 20:39:24 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5961,6 +5961,7 @@ SCIP_RETCODE initSolve(
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
+   assert(scip->nlp == NULL);
    assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
    /* reset statistics for current branch and bound run */
@@ -5977,11 +5978,11 @@ SCIP_RETCODE initSolve(
    /* switch stage to INITSOLVE */
    scip->set->stage = SCIP_STAGE_INITSOLVE;
 
-   /* initialize NLP by adding variables */
-   if( scip->nlp != NULL )
+   /* initialize NLP if there are nonlinearities and there is someone who can make use of it */
+   assert(!scip->set->continnonlinpresent || scip->set->nonlinearitypresent); /* if there is continous nonlinearity, then there should be nonlinearity in general */
+   if( scip->set->nonlinearitypresent && scip->set->nlprequired )
    {
-      SCIP_CALL( SCIPnlpReset(scip->nlp, SCIPblkmem(scip), scip->set, scip->lp) );
-      SCIP_CALL( SCIPnlpAddVars(scip->nlp, SCIPblkmem(scip), scip->set, scip->transprob->nvars, scip->transprob->vars) );
+      SCIP_CALL( SCIPconstructNLP(scip) );
    }
 
    /* create VBC output file */
@@ -6074,12 +6075,13 @@ SCIP_RETCODE freeSolve(
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, restart) );
 
-   /* clear the NLP, and flush the changes to clear the NLP of the solver */
+   /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
    if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpReset(scip->nlp, SCIPblkmem(scip), scip->set, scip->lp) );
-   }
-
+      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->lp) );
+   scip->set->continnonlinpresent = FALSE;
+   scip->set->nonlinearitypresent = FALSE;
+   scip->set->nlprequired         = FALSE;
+   
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat) );
    SCIPlpInvalidateRootObjval(scip->lp);
@@ -6140,8 +6142,6 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->lp) );
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
-   if( scip->nlp != NULL )
-      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
@@ -12664,12 +12664,96 @@ SCIP_RETCODE SCIPprintRow(
  * NLP methods
  */
 
+/** marks that there are constraints that are representable by nonlinear constraints involving continuous variables
+ * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows
+ * and that are still nonlinear after fixing all discrete variables in the CIP.
+ * 
+ * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ * 
+ */ 
+void SCIPmarkContinuousNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkContinuousNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   scip->set->continnonlinpresent = TRUE;
+   scip->set->nonlinearitypresent = TRUE;
+}
+
+/** marks that there are constraints that are representable by nonlinear constraints
+ * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
+ * 
+ * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ * 
+ * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkContinuousNonlinearitiesPresent dispensable.
+ */ 
+void SCIPmarkNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   scip->set->nonlinearitypresent = TRUE;
+}
+
+/** marks that there is a plugin that makes use of an NLP if nonlinear constraints are present
+ * This method should be called by heuristics, separators, or propagators that can make use of an NLP relaxation of the problem.
+ * 
+ * If some constraint handler signals that it has nonlinear rows to contribute and there are plugins that can use an NLP,
+ * then SCIP initializes the NLP when initializing the solving process (initsol).
+ */
+void SCIPmarkRequireNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkRequireNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   scip->set->nlprequired = TRUE;
+}
+
+/** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
+ * @see SCIPmarkContinuousNonlinearitiesPresent
+ */
+SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasContinuousNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   return scip->set->continnonlinpresent;
+}
+
+/** returns whether constraints representable as nonlinear rows are present
+ * @see SCIPmarkNonlinearitiesPresent
+ */
+SCIP_Bool SCIPhasNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   return scip->set->nonlinearitypresent;
+}
+
+/** returns whether some plugin requires an NLP
+ * @see SCIPmarkRequireNLP */ 
+extern
+SCIP_Bool SCIPisNLPRequired(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPRequired", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   
+   return scip->set->nlprequired;
+}
+
 /** returns, whether an NLP has been constructed */
 SCIP_Bool SCIPisNLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPConstructed", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPConstructed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return (scip->nlp != NULL);
 }
@@ -12679,7 +12763,7 @@ SCIP_NLP* SCIPgetNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->nlp;
 }
@@ -12689,7 +12773,7 @@ SCIP_RETCODE SCIPconstructNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPconstructNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPconstructNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
@@ -12714,7 +12798,7 @@ SCIP_RETCODE SCIPflushNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPflushNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPflushNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12736,7 +12820,7 @@ SCIP_RETCODE SCIPgetNLPVarsData(
    int*                  nvars               /**< pointer to store the number of NLP variables, or NULL */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNLPVarsData", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNLPVarsData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12761,7 +12845,7 @@ SCIP_RETCODE SCIPgetNLPNlRowsData(
    int*                  nnlrows             /**< pointer to store the number of NLP nonlinear rows, or NULL */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNLPNlRowsData", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNLPNlRowsData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12786,7 +12870,7 @@ SCIP_RETCODE SCIPaddNlRow(
    SCIP_NLROW*           nlrow               /**< nonlinear row to add to NLP */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12807,7 +12891,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
    SCIP_Real*            initialguess        /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no startpoint */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetNLPInitialGuess", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetNLPInitialGuess", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12830,7 +12914,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
 {
    SCIP_Real* vals;
 
-   SCIP_CALL( checkStage(scip, "SCIPsetNLPInitialGuessSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetNLPInitialGuessSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12853,7 +12937,7 @@ SCIP_RETCODE SCIPsolveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsolveNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsolveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12873,7 +12957,7 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPSolstat", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPSolstat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12894,7 +12978,7 @@ SCIP_RETCODE SCIPcreateNLPSol(
    SCIP_HEUR*            heur                /**< heuristic that solved NLP, or NULL */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPcreateNLPSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcreateNLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12914,7 +12998,7 @@ SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPObjval", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12933,7 +13017,7 @@ SCIP_RETCODE SCIPwriteNLP(
    const char*           fname               /**< file name */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPwriteNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPwriteNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12964,7 +13048,7 @@ SCIP_RETCODE SCIPgetNLPI(
 {
    assert(nlpi != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetNLPI", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNLPI", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -12993,7 +13077,7 @@ SCIP_RETCODE SCIPstartDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPstartDiveNLP", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPstartDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -13014,7 +13098,7 @@ SCIP_RETCODE SCIPendDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPendDiveNLP", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPendDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -13036,7 +13120,7 @@ SCIP_RETCODE SCIPchgVarObjDiveNLP(
    SCIP_Real             coef                /**< new value for coefficient */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarObjDiveNLP", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarObjDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -13059,7 +13143,7 @@ SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
    SCIP_Real             ub                  /**< new upper bound */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarBoundsDiveNLP", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarBoundsDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -13083,7 +13167,7 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    SCIP_Real*            ubs                 /**< new upper bounds */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarsBoundsDiveNLP", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarsBoundsDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -13103,7 +13187,7 @@ SCIP_RETCODE SCIPsolveDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsolveDiveNLP", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsolveDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL )
    {
@@ -13403,7 +13487,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPrecalcNlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPrecalcNlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
@@ -13423,7 +13507,7 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
    SCIP_Real*            activity            /**< buffer to store activity value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetMlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetMlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
@@ -13443,7 +13527,7 @@ SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNlRowNLPFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNlRowNLPFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
@@ -13462,7 +13546,7 @@ SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPrecalcNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPrecalcNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->set, scip->stat) );
 
@@ -13476,7 +13560,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoActivity(
    SCIP_Real*            pseudoactivity      /**< buffer to store pseudo activity value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->set, scip->stat, pseudoactivity) );
 
@@ -13490,7 +13574,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
    SCIP_Real*            pseudofeasibility   /**< buffer to store pseudo feasibility value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNlRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNlRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->set, scip->stat, pseudofeasibility) );
 
@@ -13503,7 +13587,7 @@ SCIP_RETCODE SCIPrecalcNlRowActivity(
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPrecalcNlRowActivity", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPrecalcNlRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
@@ -13524,7 +13608,7 @@ SCIP_RETCODE SCIPgetNlRowActivity(
    SCIP_Real*            activity            /**< buffer to store activitiy value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNlRowActivity", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNlRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
@@ -13545,7 +13629,7 @@ SCIP_RETCODE SCIPgetNlRowFeasibility(
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNlRowFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNlRowFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
@@ -13567,7 +13651,7 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP_Real*            activity            /**< buffer to store activitiy value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNlRowSolActivity", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNlRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
    {
@@ -13593,7 +13677,7 @@ SCIP_RETCODE SCIPgetNlRowSolFeasibility(
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetNlRowSolFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetNlRowSolFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
    {
@@ -13635,7 +13719,7 @@ SCIP_RETCODE SCIPprintNlRow(
 {
    assert(nlrow != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintNlRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowPrint(nlrow, file) );
 

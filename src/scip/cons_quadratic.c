@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.114 2010/08/30 18:56:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.115 2010/08/30 20:39:24 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -6600,9 +6600,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-#ifndef NDEBUG
    int                i;
-#endif
    int                c;
    
    assert(scip != NULL);
@@ -6633,6 +6631,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
       assert(consdata->linvarsmerged);
       assert(consdata->quadvarsmerged);
       assert(consdata->bilinmerged);
+      
+      /* @todo should check if constraint is linear now and upgrade */
 
 #ifndef NDEBUG
       for( i = 0; i < consdata->nlinvars; ++i )
@@ -6643,6 +6643,19 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 #endif
 
       SCIP_CALL( boundUnboundedVars(scip, conss[c], conshdlrdata->defaultbound, NULL) );
+      
+      /* tell SCIP that we have something nonlinear */
+      if( consdata->nquadvars > 0 )
+      {
+         SCIPmarkNonlinearitiesPresent(scip);
+         if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
+            for( i = 0; i < consdata->nquadvars; ++i )
+               if( SCIPvarGetType(consdata->quadvarterms[i].var) >= SCIP_VARTYPE_CONTINUOUS )
+               {
+                  SCIPmarkContinuousNonlinearitiesPresent(scip);
+                  break;
+               }
+      }
    }
 
    return SCIP_OKAY;

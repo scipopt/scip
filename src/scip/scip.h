@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.403 2010/08/27 21:11:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.404 2010/08/30 20:39:24 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4534,6 +4534,64 @@ SCIP_RETCODE SCIPprintRow(
 
 /**@name NLP Methods */
 /**@{ */
+
+/** marks that there are constraints that are representable by nonlinear constraints involving continuous variables
+ * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows
+ * and that are still nonlinear after fixing all discrete variables in the CIP.
+ * 
+ * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ * 
+ */ 
+extern
+void SCIPmarkContinuousNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** marks that there are constraints that are representable by nonlinear constraints
+ * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
+ * 
+ * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ * 
+ * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkContinuousNonlinearitiesPresent dispensable.
+ */ 
+extern
+void SCIPmarkNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** marks that there is a plugin that makes use of an NLP if nonlinear constraints are present
+ * This method should be called by heuristics, separators, or propagators that can make use of an NLP relaxation of the problem.
+ * 
+ * If some constraint handler signals that it has nonlinear rows to contribute and there are plugins that can use an NLP,
+ * then SCIP initializes the NLP when initializing the solving process (initsol).
+ */ 
+extern
+void SCIPmarkRequireNLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
+ * @see SCIPmarkContinuousNonlinearitiesPresent
+ */
+extern
+SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether constraints representable as nonlinear rows are present
+ * @see SCIPmarkNonlinearitiesPresent
+ */
+extern
+SCIP_Bool SCIPhasNonlinearitiesPresent(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether some plugin requires an NLP
+ * @see SCIPmarkRequireNLP */ 
+extern
+SCIP_Bool SCIPisNLPRequired(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** returns, whether an NLP has been constructed */
 extern
