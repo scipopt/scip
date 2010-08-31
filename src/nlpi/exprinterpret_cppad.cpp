@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.11 2010/08/29 16:25:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.12 2010/08/31 20:19:05 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -890,14 +890,29 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
    assert(data != NULL);
 
+   int n = SCIPexprtreeGetNVars(tree);
+   int nn = n*n;
+
+   if( data->need_retape_always )
+   {
+      // @todo can we do something better here, e.g., by looking at the expression tree by ourself?
+
+      for( int i = 0; i < nn; ++i )
+         sparsity[i] = TRUE;
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("HessianSparsityDense for "); SCIPexprtreePrint(tree, NULL); printf("\n");
+      SCIPdebugMessage("sparsity = all elements, due to discontinuouities\n");
+#endif
+
+      return SCIP_OKAY;
+   }
+
    if( data->need_retape )
    {
       SCIP_Real val;
       SCIP_CALL( SCIPexprintEval(exprint, tree, varvals, &val) );
    }
-
-   int n = SCIPexprtreeGetNVars(tree);
-   int nn = n*n;
 
    vector<bool> r(nn, false);
    for (int i = 0; i < n; ++i)

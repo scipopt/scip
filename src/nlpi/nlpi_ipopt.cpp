@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.14 2010/08/23 19:33:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.15 2010/08/31 20:19:05 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -857,9 +857,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
     
-#ifdef SCIP_DEBUG
+//#ifdef SCIP_DEBUG
 //   SCIP_CALL( SCIPnlpiOraclePrintProblem(problem->oracle, NULL) );
-#endif
+//#endif
    
    assert(IsValid(problem->ipopt));
    assert(IsValid(problem->nlp));
