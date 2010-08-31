@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.19 2010/08/31 15:50:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.20 2010/08/31 18:47:37 bzfpfets Exp $"
 
 /**@file   lpi_msk.c
  * @ingroup LPIS
@@ -876,6 +876,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
 
+   sub = NULL;
    SCIP_CALL( getIndicesFromDense(dstat, ncols, &count, &sub) );
 
    col = 0;
@@ -894,7 +895,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    if (count > 0)
    {
-      SCIPdebugMessage("Deleting %d vars %d,...\n",count,sub[0]);
+      SCIPdebugMessage("Deleting %d vars %d,...\n", count, sub[0]);
       MOSEK_CALL( MSK_remove(lpi->task, MSK_ACC_VAR, count, sub) );
       BMSfreeMemoryArray(&sub);
    }
@@ -1028,6 +1029,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
 
+   sub = NULL;
    SCIP_CALL( getIndicesFromDense(dstat, nrows, &count, &sub) );
 
    row = 0;
