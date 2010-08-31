@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.36 2010/08/31 16:25:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.37 2010/08/31 16:31:17 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -195,10 +195,16 @@ SCIP_RETCODE catchVarEvents(
    
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( catchLhsVarEvents(scip, eventhdlr, cons, i) );
+      if( consdata->vars[i] != NULL )
+      {
+         SCIP_CALL( catchLhsVarEvents(scip, eventhdlr, cons, i) );
+      }
    }
 
-   SCIP_CALL( catchRhsVarEvents(scip, eventhdlr, cons) );
+   if( consdata->rhsvar != NULL )
+   {
+      SCIP_CALL( catchRhsVarEvents(scip, eventhdlr, cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -273,7 +279,10 @@ SCIP_RETCODE dropVarEvents(
 
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( dropLhsVarEvents(scip, eventhdlr, cons, i) );
+      if( consdata->vars[i] != NULL )
+      {
+         SCIP_CALL( dropLhsVarEvents(scip, eventhdlr, cons, i) );
+      }
    }
 
    SCIPfreeBlockMemoryArray(scip, &consdata->lhsbndchgeventdatas, consdata->nvars);
