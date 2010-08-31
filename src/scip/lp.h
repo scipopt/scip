@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.140 2010/08/20 10:55:41 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.141 2010/08/31 15:25:50 bzfpfets Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -190,9 +190,20 @@ SCIP_Real SCIPcolGetFarkasValue(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** gets strong branching information on a column variable */
+/** start strong branching - call before any strongbranching */
 extern
-SCIP_RETCODE SCIPcolGetStrongbranch(
+SCIP_RETCODE SCIPlpStartStrongbranch(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** end strong branching - call after any strongbranching */
+extern
+SCIP_RETCODE SCIPlpEndStrongbranch(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** gets strong branching information on a column variable with fractional value */
+SCIP_RETCODE SCIPcolGetStrongbranchFrac(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -204,6 +215,58 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   );
+
+/** gets strong branching information on a column variable with integral value */
+SCIP_RETCODE SCIPcolGetStrongbranchInt(
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_LP*              lp,                 /**< LP data */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   );
+
+/** gets strong branching information on column variables with fractional values */
+extern
+SCIP_RETCODE SCIPcolGetStrongbranchesFrac(
+   SCIP_COL**            cols,               /**< LP columns */
+   int                   ncols,              /**< number of columns */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_LP*              lp,                 /**< LP data */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   );
+
+/** gets strong branching information on column variables with integral values */
+extern
+SCIP_RETCODE SCIPcolGetStrongbranchesInt(
+   SCIP_COL**            cols,               /**< LP columns */
+   int                   ncols,              /**< number of columns */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_LP*              lp,                 /**< LP data */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
