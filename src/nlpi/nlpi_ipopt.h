@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.3 2010/06/17 12:04:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.4 2010/08/31 11:05:33 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
@@ -24,6 +24,8 @@
 
 #ifndef __SCIP_NLPI_IPOPT_H__
 #define __SCIP_NLPI_IPOPT_H__
+
+#ifdef WITH_IPOPT
 
 #include "nlpi/type_nlpi.h"
 
@@ -48,6 +50,14 @@ const char* SCIPgetSolverDescIpopt(void);
 
 #ifdef __cplusplus
 }
+#endif
+
+#else /* WITH_IPOPT not defined */
+
+#define SCIPcreateNlpSolverIpopt(blkmem, nlpi) SCIP_OKAY
+#define SCIPgetSolverNameIpopt()               ""
+#define SCIPgetSolverDescIpopt()               ""
+
 #endif
 
 #endif /* __SCIP_NLPI_IPOPT_H__ */

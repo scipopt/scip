@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.47 2010/08/30 20:53:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.48 2010/08/31 11:05:33 bzfviger Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -132,6 +132,8 @@
 #include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+
+#include "nlpi/nlpi_ipopt.h"
 
 #if 0
 #include "scip/cons_binpack.h"

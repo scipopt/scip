@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.102 2010/08/30 20:53:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.103 2010/08/31 11:05:33 bzfviger Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -24,16 +24,13 @@
 #include "scip/scipdefplugins.h"
 #include "scip/debug.h"
 
-#ifdef WITH_IPOPT
-#include "nlpi/nlpi_ipopt.h"
-#endif
-
-
 /** includes default SCIP plugins into SCIP */
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_NLPI* nlpi;
+
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
@@ -142,14 +139,14 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
 
-#ifdef WITH_IPOPT
+   /* include NLPI's, if available */
+   nlpi = NULL;
+   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
+   if( nlpi != NULL )
    {
-      SCIP_NLPI* nlpiipopt;
-      SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpiipopt) );
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpiipopt) );
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
    }
-#endif
 
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
