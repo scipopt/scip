@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.41 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.42 2010/08/31 17:44:35 bzfwinkm Exp $"
 
 /**@file   pub_cons.h
  * @ingroup PUBLICMETHODS
@@ -133,6 +133,12 @@ SCIP_Real SCIPconshdlrGetPropTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for feasibility checking in this constraint handler */
+extern
+SCIP_Real SCIPconshdlrGetCheckTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets number of calls to the constraint handler's separation method */
 extern
 SCIP_Longint SCIPconshdlrGetNSepaCalls(
@@ -154,6 +160,12 @@ SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
 /** gets number of calls to the constraint handler's propagation method */
 extern
 SCIP_Longint SCIPconshdlrGetNPropCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's checking method */
+extern
+SCIP_Longint SCIPconshdlrGetNCheckCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

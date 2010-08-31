@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.203 2010/08/24 14:18:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.204 2010/08/31 17:44:35 bzfwinkm Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1861,11 +1861,13 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conshdlr)->checktime, SCIP_CLOCKTYPE_DEFAULT) );
 
    (*conshdlr)->nsepacalls = 0;
    (*conshdlr)->nenfolpcalls = 0;
    (*conshdlr)->nenfopscalls = 0;
    (*conshdlr)->npropcalls = 0;
+   (*conshdlr)->ncheckcalls = 0;
    (*conshdlr)->ncutoffs = 0;
    (*conshdlr)->ncutsfound = 0;
    (*conshdlr)->nconssfound = 0;
@@ -1967,6 +1969,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    SCIPclockFree(&(*conshdlr)->enfolptime);
    SCIPclockFree(&(*conshdlr)->enfopstime);
    SCIPclockFree(&(*conshdlr)->proptime);
+   SCIPclockFree(&(*conshdlr)->checktime);
 
    BMSfreeMemoryArray(&(*conshdlr)->name);
    BMSfreeMemoryArray(&(*conshdlr)->desc);
@@ -2004,11 +2007,13 @@ SCIP_RETCODE SCIPconshdlrInit(
    SCIPclockReset(conshdlr->enfolptime);
    SCIPclockReset(conshdlr->enfopstime);
    SCIPclockReset(conshdlr->proptime);
+   SCIPclockReset(conshdlr->checktime);
 
    conshdlr->nsepacalls = 0;
    conshdlr->nenfolpcalls = 0;
    conshdlr->nenfopscalls = 0;
    conshdlr->npropcalls = 0;
+   conshdlr->ncheckcalls = 0;
    conshdlr->ncutoffs = 0;
    conshdlr->ncutsfound = 0;
    conshdlr->nconssfound = 0;
@@ -2972,10 +2977,19 @@ SCIP_RETCODE SCIPconshdlrCheck(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->checktime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss, 
             sol, checkintegrality, checklprows, printreason, result) );
       SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->checktime, set);
+
+      /* update statistics */
+      conshdlr->ncheckcalls++;
       
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -3447,6 +3461,16 @@ SCIP_Real SCIPconshdlrGetPropTime(
    return SCIPclockGetTime(conshdlr->proptime);
 }
 
+/** gets time in seconds used for feasibility checking in this constraint handler */
+SCIP_Real SCIPconshdlrGetCheckTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->checktime);
+}
+
 /** gets number of calls to the constraint handler's separation method */
 SCIP_Longint SCIPconshdlrGetNSepaCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -3485,6 +3509,16 @@ SCIP_Longint SCIPconshdlrGetNPropCalls(
    assert(conshdlr != NULL);
 
    return conshdlr->npropcalls;
+}
+
+/** gets number of calls to the constraint handler's checking method */
+SCIP_Longint SCIPconshdlrGetNCheckCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->ncheckcalls;
 }
 
 /** gets total number of times, this constraint handler detected a cutoff */

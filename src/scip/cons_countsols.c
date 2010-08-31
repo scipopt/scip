@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.45 2010/07/29 16:41:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.46 2010/08/31 17:44:35 bzfwinkm Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1508,7 +1508,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsCountsols)
 static 
 SCIP_DECL_CONSCHECK(consCheckCountsols)
 {  /*lint --e{715}*/  
-   /**@todo solutions which come from scip_ckeck should be ignored since it is not clear who
+   /**@todo solutions which come from scip_check should be ignored since it is not clear who
     *       generated these solution; later we should analyze this problem */
    SCIP_CONSHDLRDATA* conshdlrdata;
 

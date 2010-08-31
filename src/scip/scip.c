@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.627 2010/08/31 15:53:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.628 2010/08/31 17:44:35 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -18080,7 +18080,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
 
    /**@todo add constraint statistics: how many constraints (instead of cuts) have been added? */
-   SCIPmessageFPrintInfo(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -18094,13 +18094,14 @@ void printConstraintStatistics(
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(file, " %10d%c%10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(file, " %10d%c%10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
             startnactiveconss,
             maxnactiveconss > startnactiveconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr),
             SCIPconshdlrGetNPropCalls(conshdlr),
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
+            SCIPconshdlrGetNCheckCalls(conshdlr),
             SCIPconshdlrGetNCutoffs(conshdlr),
             SCIPconshdlrGetNDomredsFound(conshdlr),
             SCIPconshdlrGetNCutsFound(conshdlr),
@@ -18121,7 +18122,7 @@ void printConstraintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS\n");
+   SCIPmessageFPrintInfo(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS      Check\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -18133,13 +18134,14 @@ void printConstraintTimingStatistics(
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr) + SCIPconshdlrGetEnfoLPTime(conshdlr)
             + SCIPconshdlrGetEnfoPSTime(conshdlr),
             SCIPconshdlrGetSepaTime(conshdlr),
             SCIPconshdlrGetPropTime(conshdlr),
             SCIPconshdlrGetEnfoLPTime(conshdlr),
-            SCIPconshdlrGetEnfoPSTime(conshdlr));
+            SCIPconshdlrGetEnfoPSTime(conshdlr),
+            SCIPconshdlrGetCheckTime(conshdlr));
       }
    }
 }

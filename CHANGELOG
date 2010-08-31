@@ -85,6 +85,7 @@ interface:
 - added SCIPsortPtrBool() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - new method SCIPresetParam() to reset the value of a single parameter to its default value
 - new method SCIPpricerIsDelayed() which returns if the pricer is delayed (see pub_pricer.h)
+- new methods SCIPconshdlrGetCheckTime() and SCIPconshdlrGetNCheckCalls() which returns the running time in the feasibility checking of the corresponding constraint handler respectively the number of calls of the checking method (implemented in cons.c)
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -176,6 +177,7 @@ features:
 - a XML-parser is available in the src/xml subdirectory
 - can now read XML-solution files as used by CPLEX
 - added new dialog "display pricers" which displays all included pricers 
+- now the statistic displays the number of calls of the feasibility cheing method of each constraint handler and the running time of it
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
