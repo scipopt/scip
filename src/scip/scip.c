@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.629 2010/08/31 18:04:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.630 2010/08/31 19:00:19 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7739,8 +7739,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    return SCIP_OKAY;
 }
 
-/** gets strong branching information on column variables with fractional value */
-SCIP_RETCODE SCIPgetVarStrongbranchesFrac(
+/** gets strong branching information on column variables with fractional values */
+SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables to get strong branching values for */
    int                   nvars,              /**< number of variables */
@@ -7766,7 +7766,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchesFrac(
 
    assert(lperror != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchesFrac", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetVarsStrongbranchesFrac", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    assert( vars != NULL );
 
@@ -7865,6 +7865,132 @@ SCIP_RETCODE SCIPgetVarStrongbranchesFrac(
    return SCIP_OKAY;
 }
 
+/** gets strong branching information on column variables with integral values */
+SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables to get strong branching values for */
+   int                   nvars,              /**< number of variables */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching variables down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching variables up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
+   SCIP_Bool*            downinf,            /**< array to store whether the downward branches are infeasible, or NULL */
+   SCIP_Bool*            upinf,              /**< array to store whether the upward branches are infeasible, or NULL */
+   SCIP_Bool*            downconflict,       /**< array to store whether conflict constraints were created for
+                                              *   infeasible downward branches, or NULL */
+   SCIP_Bool*            upconflict,         /**< array to store whether conflict constraints were created for
+                                              *   infeasible upward branches, or NULL */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured or the
+                                              *   solving process should be stopped (e.g., due to a time limit) */
+   )
+{
+   SCIP_COL** cols;
+   int j;
+
+   assert(lperror != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetVarsStrongbranchesInt", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( vars != NULL );
+
+   /* set up data */
+   cols = NULL;
+   SCIP_CALL( SCIPallocBufferArray(scip, cols, nvars) );
+   for (j = 0; j < nvars; ++j)
+   {
+      SCIP_VAR* var;
+      SCIP_COL* col;
+
+      if( downvalid != NULL )
+         downvalid[j] = FALSE;
+      if( upvalid != NULL )
+         upvalid[j] = FALSE;
+      if( downinf != NULL )
+         downinf[j] = FALSE;
+      if( upinf != NULL )
+         upinf[j] = FALSE;
+      if( downconflict != NULL )
+         downconflict[j] = FALSE;
+      if( upconflict != NULL )
+         upconflict[j] = FALSE;
+      
+      var = vars[j];
+      assert( var != NULL );
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      {
+         SCIPerrorMessage("cannot get strong branching information on non-COLUMN variable <%s>\n", SCIPvarGetName(var));
+         SCIPfreeBufferArray(scip, &cols);
+         return SCIP_INVALIDDATA;
+      }
+
+      col = SCIPvarGetCol(var);
+      assert(col != NULL);
+      cols[j] = col;
+
+      if( !SCIPcolIsInLP(col) )
+      {
+         SCIPerrorMessage("cannot get strong branching information on variable <%s> not in current LP\n", SCIPvarGetName(var));
+         SCIPfreeBufferArray(scip, &cols);
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   /* check if the solving process should be aborted */
+   if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
+   {
+      /* mark this as if the LP failed */
+      *lperror = TRUE;
+   }
+   else
+   {
+      /* call strong branching for columns */
+      SCIP_CALL( SCIPcolGetStrongbranchesInt(cols, nvars, scip->set, scip->stat, scip->lp, itlim,
+            down, up, downvalid, upvalid, lperror) );
+      
+      /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
+       * declare the sub nodes infeasible
+       */
+      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
+      {
+         for (j = 0; j < nvars; ++j)
+         {
+            SCIP_Bool downcutoff;
+            SCIP_Bool upcutoff;
+            SCIP_COL* col;
+            
+            col = cols[j];
+            downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
+            upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
+            if( downinf != NULL )
+               downinf[j] = downcutoff;
+            if( upinf != NULL )
+               upinf[j] = upcutoff;
+            
+            /* analyze infeasible strong branching sub problems:
+             * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
+             * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
+             */
+            if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
+               && SCIPvarIsBinary(vars[j]) && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
+            {
+               if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
+                  || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
+               {
+                  SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+                        scip->transprob, scip->tree, scip->lp, col, &(downconflict[j]), &(upconflict[j])) );
+               }
+            }
+         }
+      }
+   }
+   SCIPfreeBufferArray(scip, &cols);
+
+   return SCIP_OKAY;
+}
+
 /** gets strong branching information on COLUMN variable of the last SCIPgetVarStrongbranch() call;
  *  returns values of SCIP_INVALID, if strong branching was not yet called on the given variable;
  *  keep in mind, that the returned old values may have nothing to do with the current LP solution
@@ -7882,7 +8008,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchLast(
    SCIP_Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchLast", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetVarsStrongbranchLast", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {

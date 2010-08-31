@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.405 2010/08/31 15:53:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.406 2010/08/31 19:00:19 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2570,8 +2570,30 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
                                               *   solving process should be stopped (e.g., due to a time limit) */
    );
 
-/** gets strong branching information on column variables with fractional value */
-SCIP_RETCODE SCIPgetVarStrongbranchesFrac(
+/** gets strong branching information on column variables with fractional values */
+SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables to get strong branching values for */
+   int                   nvars,              /**< number of variables */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching variables down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching variables up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
+                                              *   otherwise, they can only be used as an estimate value */
+   SCIP_Bool*            downinf,            /**< array to store whether the downward branches are infeasible, or NULL */
+   SCIP_Bool*            upinf,              /**< array to store whether the upward branches are infeasible, or NULL */
+   SCIP_Bool*            downconflict,       /**< array to store whether conflict constraints were created for
+                                              *   infeasible downward branches, or NULL */
+   SCIP_Bool*            upconflict,         /**< array to store whether conflict constraints were created for
+                                              *   infeasible upward branches, or NULL */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured or the
+                                              *   solving process should be stopped (e.g., due to a time limit) */
+   );
+
+/** gets strong branching information on column variables with integral values */
+SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables to get strong branching values for */
    int                   nvars,              /**< number of variables */
