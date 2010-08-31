@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.71 2010/08/25 18:31:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.72 2010/08/31 15:50:57 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -1793,9 +1793,27 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return SCIP_OKAY;
 }
 
+/** start strong branching - call before any strongbranching */
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing; in the future: use code as in OSI
+   return SCIP_OKAY;
+}
 
-/** performs strong branching iterations on all candidates */
-SCIP_RETCODE SCIPlpiStrongbranch(
+/** end strong branching - call after any strongbranching */
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing; in the future: use code as in OSI
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one arbitrary candidate */
+static
+SCIP_RETCODE lpiStrongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current primal solution value of column */
@@ -1952,6 +1970,268 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    return SCIP_OKAY;
 }
 
+/** performs strong branching iterations on given arbitrary candidates */
+static
+SCIP_RETCODE lpiStrongbranches(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiStrongbranches() on %d variables (%d iterations)\n", ncols, itlim);
+
+   assert( lpi != 0 );
+   assert( lpi->clp != 0 );
+   assert( cols != 0 );
+   assert( psols != 0 );
+   assert( down != 0 );
+   assert( up != 0 );
+   assert( downvalid != 0 );
+   assert( upvalid != 0 );
+
+   ClpSimplex* clp = lpi->clp;
+
+   // set up output arrays
+   int n = clp->numberColumns();
+   assert( 0 < ncols && ncols <= n );
+   double** outputSolution;
+   SCIP_ALLOC( BMSallocMemoryArray( &outputSolution, 2*ncols) );
+   for (int j = 0; j < 2*ncols; ++j)
+   {
+      SCIP_ALLOC( BMSallocMemoryArray( &(outputSolution[j]), n) );
+   }
+
+   int* outputStatus;
+   SCIP_ALLOC( BMSallocMemoryArray(&outputStatus, 2*ncols) );
+
+   int* outputIterations;
+   SCIP_ALLOC( BMSallocMemoryArray(&outputIterations, 2*ncols) );
+
+   // set iteration limit
+   int iterlimit = clp->maximumIterations();
+   clp->setMaximumIterations(itlim);
+
+   // store objective value
+   double objval = clp->objectiveValue();
+
+   // store special options for later reset
+   int specialoptions = clp->specialOptions();
+
+   /** Clp special options:
+    *       1 - Don't keep changing infeasibility weight
+    *       2 - Keep nonLinearCost round solves
+    *       4 - Force outgoing variables to exact bound (primal)
+    *       8 - Safe to use dense initial factorization
+    *      16 - Just use basic variables for operation if column generation
+    *      32 - Create ray even in BAB
+    *      64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
+    *     128 - Switch off all matrix sanity checks
+    *     256 - No row copy
+    *     512 - If not in values pass, solution guaranteed, skip as much as possible
+    *    1024 - In branch and bound
+    *    2048 - Don't bother to re-factorize if < 20 iterations
+    *    4096 - Skip some optimality checks
+    *    8192 - Do Primal when cleaning up primal
+    *   16384 - In fast dual (so we can switch off things)
+    *   32768 - called from Osi
+    *   65536 - keep arrays around as much as possible (also use maximumR/C)
+    *  131072 - transposeTimes is -1.0 and can skip basic and fixed
+    *  262144 - extra copy of scaled matrix
+    *  524288 - Clp fast dual
+    * 1048576 - don't need to finish dual (can return 3)
+    *  NOTE   - many applications can call Clp but there may be some short cuts
+    *           which are taken which are not guaranteed safe from all applications.
+    *           Vetted applications will have a bit set and the code may test this
+    *           At present I expect a few such applications - if too many I will
+    *           have to re-think.  It is up to application owner to change the code
+    *           if she/he needs these short cuts.  I will not debug unless in Coin
+    *           repository.  See COIN_CLP_VETTED comments.
+    *  0x01000000 is Cbc (and in branch and bound)
+    *  0x02000000 is in a different branch and bound
+    *
+    *  2048 does not seem to work
+    *  262144 does not seem to work
+    */
+#ifndef NDEBUG
+   // in debug mode: leave checks on
+   clp->setSpecialOptions(64|512|1024);
+#else
+   clp->setSpecialOptions(64|128|512|1024|4096);
+#endif
+
+   /* 'startfinish' options for strong branching:
+    *  1 - do not delete work areas and factorization at end
+    *  2 - use old factorization if same number of rows
+    *  4 - skip as much initialization of work areas as possible
+    *      (based on whatsChanged in clpmodel.hpp) ** work in progress
+    *
+    *  4 does not seem to work in strong branching ...
+    */
+   int startFinishOptions = 1;
+   if ( lpi->validFactorization )
+      startFinishOptions = startFinishOptions | 2;
+
+   // set new lower and upper bounds for variables
+   for (int j = 0; j < ncols; ++j)
+   {
+      assert( 0 <= cols[j] && cols[j] < n );
+      down[j] = EPSCEIL(psols[j] - 1.0, 1e-06);
+      up[j]   = EPSFLOOR(psols[j] + 1.0, 1e-06);
+
+      // The bounds returned by CLP seem to be valid using the above options
+      downvalid[j] = TRUE;
+      upvalid[j] = TRUE;
+   }
+
+   /** For strong branching.  On input lower and upper are new bounds while
+    *  on output they are change in objective function values (>1.0e50
+    *  infeasible).  Return code is
+    *   0 if nothing interesting,
+    *  -1 if infeasible both ways and
+    *  +1 if infeasible one way (check values to see which one(s))
+    *  -2 if bad factorization
+    * Solutions are filled in as well - even down, odd up - also status and number of iterations
+    *
+    * The bools are:
+    *   bool stopOnFirstInfeasible
+    *   bool alwaysFinish
+    *
+    * At the moment: we need alwaysFinish to get correct bounds.
+    */
+   int res = clp->strongBranching(ncols, cols, up, down, outputSolution, outputStatus, outputIterations, false, true, startFinishOptions);
+
+   // reset special options
+   clp->setSpecialOptions(specialoptions);
+
+   lpi->validFactorization = true;
+
+   for (int j = 0; j < ncols; ++j)
+   {
+      down[j] += objval;
+      up[j] += objval;
+
+      // correct iteration count
+      if (iter)
+         *iter += outputIterations[2*j] + outputIterations[2*j+1];
+
+      BMSfreeMemoryArray(&outputSolution[2*j]);
+      BMSfreeMemoryArray(&outputSolution[2*j+1]);
+   }
+
+   // reset iteration limit
+   clp->setMaximumIterations(iterlimit);
+
+   // free local memory
+   BMSfreeMemoryArray( &outputStatus );
+   BMSfreeMemoryArray( &outputIterations );
+   BMSfreeMemoryArray( &outputSolution );
+
+   if ( res == -2 )
+      return SCIP_LPERROR;
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given @b fractional candidates */
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   if ( iter != NULL )
+      *iter = 0;
+
+   /* pass call on to lpiStrongbranches() */
+   SCIP_CALL( lpiStrongbranches(lpi, cols, ncols, psols, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one candidate with @b integral value */
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given candidates with @b integral values */
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   if ( iter != NULL )
+      *iter = 0;
+
+   /* pass call on to lpiStrongbranches() */
+   SCIP_CALL( lpiStrongbranches(lpi, cols, ncols, psols, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
 
 
 

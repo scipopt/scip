@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.135 2010/08/19 13:07:30 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.136 2010/08/31 15:50:57 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -2243,7 +2243,341 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return SCIP_OKAY;
 }
 
-/** performs strong branching iterations on all candidates */
+/** manually performs strong branching on one integral variable */
+static
+SCIP_RETCODE lpiStrongbranchIntegral(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+)
+{
+   const char lbound = 'L';
+   const char ubound = 'U';
+   SCIP_Real oldlb;
+   SCIP_Real oldub;
+   SCIP_Real newlb;
+   SCIP_Real newub;
+   int objsen;
+   int olditlim;
+   int it;
+   
+   SCIPdebugMessage(" -> strong branching on integral variable %d\n", col);
+
+   assert( EPSISINT(psol, 1e-06) );
+
+   objsen = CPXgetobjsen(cpxenv, lpi->cpxlp);
+
+   /* results of CPLEX are valid in any case */
+   *downvalid = TRUE;
+   *upvalid = TRUE;
+
+   /* save current LP basis and bounds*/
+   SCIP_CALL( getBase(lpi) );
+   CHECK_ZERO( CPXgetlb(cpxenv, lpi->cpxlp, &oldlb, col, col) );
+   CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, &oldub, col, col) );
+
+   /* save old iteration limit and set iteration limit to strong branching limit */
+   if( itlim > CPX_INT_MAX )
+      itlim = CPX_INT_MAX;
+   olditlim = getIntParam(lpi, CPX_PARAM_ITLIM);
+   setIntParam(lpi, CPX_PARAM_ITLIM, itlim);
+      
+   /* down branch */
+   newub = EPSCEIL(psol-1.0, 1e-06);
+   if( newub >= oldlb - 0.5 )
+   {
+      CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &ubound, &newub) );
+      SCIP_CALL( SCIPlpiSolveDual(lpi) );
+      if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+         *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+      else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+      {
+         SCIP_CALL( SCIPlpiGetObjval(lpi, down) );
+      }
+      else
+         *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+      if( iter != NULL )
+      {
+         SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+         *iter += it;
+      }
+      SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
+      
+      CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &ubound, &oldub) );
+      SCIP_CALL( setBase(lpi) );
+   }
+   else
+      *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+
+   /* up branch */
+   newlb = EPSFLOOR(psol+1.0, 1e-06);
+   if( newlb <= oldub + 0.5 )
+   {
+      CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &lbound, &newlb) );
+      SCIP_CALL( SCIPlpiSolveDual(lpi) );
+      if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+         *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
+      else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+      {
+         SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
+      }
+      else
+         *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+      if( iter != NULL )
+      {
+         SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+         *iter += it;
+      }
+      SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
+      
+      CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &lbound, &oldlb) );
+      SCIP_CALL( setBase(lpi) );
+   }
+   else
+      *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
+   
+   /* reset iteration limit */
+   setIntParam(lpi, CPX_PARAM_ITLIM, olditlim);
+
+   return SCIP_OKAY;
+}
+
+/** start strong branching */
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /* no work necessary */
+   return SCIP_OKAY;
+}
+
+/** end strong branching */
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /* no work necessary */
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< fractional current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   int retval;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(down != NULL);
+   assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
+
+   SCIPdebugMessage("calling CPLEX strongbranching on fractional variable %d (%d iterations)\n", col, itlim);
+
+   assert( ! EPSISINT(psol, 1e-06) );
+
+   /* results of CPLEX are valid in any case */
+   *downvalid = TRUE;
+   *upvalid = TRUE;
+
+   SCIP_CALL( setParameterValues(&(lpi->cpxparam)) );
+
+   retval = CPXstrongbranch(cpxenv, lpi->cpxlp, &col, 1, down, up, itlim);
+   if( retval == CPXERR_NEED_OPT_SOLN )
+   {
+      SCIPdebugMessage(" -> no optimal solution available\n");
+      return SCIP_LPERROR;
+   }
+   else if( retval == CPXERR_TILIM_STRONGBRANCH )
+   {
+      SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
+      return SCIP_LPERROR;
+   }
+   CHECK_ZERO( retval );
+   SCIPdebugMessage(" -> down: %g, up:%g\n", *down, *up);
+
+   /* CPLEX is not able to return the iteration counts in strong branching */
+   if( iter != NULL )
+      *iter = -1;
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given @b fractional candidates */
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   int retval;
+   int j;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(cols != NULL);
+   assert(psols != NULL);
+   assert(down != NULL);
+   assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
+
+   SCIPdebugMessage("calling CPLEX strongbranching on %d fractional variables (%d iterations)\n", ncols, itlim);
+
+   SCIP_CALL( setParameterValues(&(lpi->cpxparam)) );
+
+   /* init */
+   for (j = 0; j < ncols; ++j)
+   {
+      /* results of CPLEX are valid in any case */
+      *downvalid = TRUE;
+      *upvalid = TRUE;
+      
+      assert( ! EPSISINT(psols[j], 1e-06) );
+   }
+
+   retval = CPXstrongbranch(cpxenv, lpi->cpxlp, cols, ncols, down, up, itlim);
+   if( retval == CPXERR_NEED_OPT_SOLN )
+   {
+      SCIPdebugMessage(" -> no optimal solution available\n");
+      return SCIP_LPERROR;
+   }
+   else if( retval == CPXERR_TILIM_STRONGBRANCH )
+   {
+      SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
+      return SCIP_LPERROR;
+   }
+   CHECK_ZERO( retval );
+
+   /* CPLEX is not able to return the iteration counts in strong branching */
+   if( iter != NULL )
+      *iter = -1;
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one candidate with @b integral value */
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(down != NULL);
+   assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
+
+   SCIPdebugMessage("calling CPLEX strongbranching on variable %d with integral value (%d iterations)\n", col, itlim);
+
+   assert( EPSISINT(psol, 1e-06) );
+
+   SCIP_CALL( setParameterValues(&(lpi->cpxparam)) );
+
+   if ( iter != NULL )
+      *iter = 0;
+
+   SCIP_CALL( lpiStrongbranchIntegral(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given candidates with @b integral values */
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   int j;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(cols != NULL);
+   assert(psols != NULL);
+   assert(down != NULL);
+   assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
+
+   SCIPdebugMessage("calling CPLEX strongbranching on %d variables with integer values (%d iterations)\n", ncols, itlim);
+
+   SCIP_CALL( setParameterValues(&(lpi->cpxparam)) );
+
+   if ( iter != NULL )
+      *iter = 0;
+
+   /* init */
+   for (j = 0; j < ncols; ++j)
+   {
+      assert( EPSISINT(psols[j], 1e-06) );
+      SCIP_CALL( lpiStrongbranchIntegral(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
+
+
+
+
+
+
+
+/** performs strong branching iterations on one candidate -- DELETE THIS ????????????? */
 SCIP_RETCODE SCIPlpiStrongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
@@ -2279,90 +2613,10 @@ SCIP_RETCODE SCIPlpiStrongbranch(
     */
    if( EPSISINT(psol, 1e-06) )
    {
-      const char lbound = 'L';
-      const char ubound = 'U';
-      SCIP_Real oldlb;
-      SCIP_Real oldub;
-      SCIP_Real newlb;
-      SCIP_Real newub;
-      int objsen;
-      int olditlim;
-      int it;
-
-      SCIPdebugMessage(" -> strong branching on integral variable\n");
-
       if( iter != NULL )
          *iter = 0;
 
-      objsen = CPXgetobjsen(cpxenv, lpi->cpxlp);
-
-      /* save current LP basis and bounds*/
-      SCIP_CALL( getBase(lpi) );
-      CHECK_ZERO( CPXgetlb(cpxenv, lpi->cpxlp, &oldlb, col, col) );
-      CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, &oldub, col, col) );
-
-      /* save old iteration limit and set iteration limit to strong branching limit */
-      if( itlim > CPX_INT_MAX )
-         itlim = CPX_INT_MAX;
-      olditlim = getIntParam(lpi, CPX_PARAM_ITLIM);
-      setIntParam(lpi, CPX_PARAM_ITLIM, itlim);
-      
-      /* down branch */
-      newub = EPSCEIL(psol-1.0, 1e-06);
-      if( newub >= oldlb - 0.5 )
-      {
-         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &ubound, &newub) );
-         SCIP_CALL( SCIPlpiSolveDual(lpi) );
-         if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-            *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
-         else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-         {
-            SCIP_CALL( SCIPlpiGetObjval(lpi, down) );
-         }
-         else
-            *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
-         if( iter != NULL )
-         {
-            SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-            *iter += it;
-         }
-         SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
-
-         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &ubound, &oldub) );
-         SCIP_CALL( setBase(lpi) );
-      }
-      else
-         *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
-
-      /* up branch */
-      newlb = EPSFLOOR(psol+1.0, 1e-06);
-      if( newlb <= oldub + 0.5 )
-      {
-         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &lbound, &newlb) );
-         SCIP_CALL( SCIPlpiSolveDual(lpi) );
-         if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-            *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJULIM) : getDblParam(lpi, CPX_PARAM_OBJLLIM);
-         else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-         {
-            SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
-         }
-         else
-            *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
-         if( iter != NULL )
-         {
-            SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-            *iter += it;
-         }
-         SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
-
-         CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, 1, &col, &lbound, &oldlb) );
-         SCIP_CALL( setBase(lpi) );
-      }
-      else
-         *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
-
-      /* reset iteration limit */
-      setIntParam(lpi, CPX_PARAM_ITLIM, olditlim);
+      SCIP_CALL( lpiStrongbranchIntegral(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
    }
    else
    {
@@ -2389,6 +2643,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    return SCIP_OKAY;
 }
+
 
 /**@} */
 

@@ -1891,9 +1891,27 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return retval;
 }
 
+/** start strong branching - call before any strongbranching */
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing
+   return SCIP_OKAY;
+}
 
-/** performs strong branching iterations on all candidates */
-SCIP_RETCODE SCIPlpiStrongbranch(
+/** end strong branching - call after any strongbranching */
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one candidate */
+static
+SCIP_RETCODE lpiStrongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current primal solution value of column */
@@ -2067,6 +2085,302 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    return SCIP_OKAY;
 }
 
+/** performs strong branching iterations on given candidates */
+static
+SCIP_RETCODE lpiStrongbranches(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   int objsen;
+   int j;
+
+   assert( lpi != NULL );
+   assert( lpi->xprslp != NULL );
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+
+   SCIPdebugMessage("calling Xpress strongbranching on %d variables (%d iterations)\n", ncols, itlim);
+
+   if( iter != NULL )
+      *iter = 0;
+
+   objsen = lpi->objsense;
+
+#if (XPVERSION >= 18)
+   /* From version 17.01.01 we have the dedicated strong branching function */
+   /* XPRSstrongbranch(). Note: It does not work with version 17.01.00. */
+   {
+      int*    mbndind;
+      double* dbndval;
+      char*   cbndtype;
+      double* dobjval;
+      int*    mstatus;
+
+      int XPRS_CC XPRSstrongbranch
+        ( XPRSprob prob, const int _nbnd, const int *_mbndind, 
+	  const char *_cbndtype, const double *_dbndval,
+          const int _itrlimit, double *_dsbobjval, int *_msbstatus );
+
+      /* Set the branching bounds (down first, up second). */
+      BMSallocMemoryArray(mbndind, 2*ncols;)
+      BMSallocMemoryArray(dbndval, 2*ncols);
+      BMSallocMemoryArray(cbndtype, 2*ncols);
+      BMSallocMemoryArray(dobjval, 2*ncols);
+      BMSallocMemoryArray(mstatus, 2*ncols);
+
+      for (j = 0; j < ncols; ++j)
+      {
+         mbndind[2*j]  = col;
+         dbndval[2*j]  = EPSCEIL(psols[j] - 1.0, 1e-06);
+         cbndtype[2*j] = 'U';
+
+         mbndind[2*j+1]  = col;
+         dbndval[2*j+1]  = EPSFLOOR(psols[j] + 1.0, 1e-06);
+         cbndtype[2*j+1] = 'L';
+      }
+
+      /* Apply strong branching to the 2*ncols branches. */
+      CHECK_ZERO( XPRSstrongbranch(lpi->xprslp, 2*ncols, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
+
+      for (j = 0; j < ncols; ++j)
+      {
+         upvalid[j]   = TRUE;
+         downvalid[j] = TRUE;
+
+         /* Get the objective of the down branch. */
+         if ((mstatus[2*j] == XPRS_LP_INFEAS) || (mstatus[2*j] == XPRS_LP_CUTOFF_IN_DUAL)) 
+            down[j] = objsen == +1 ? 1e+40 : -1e+40;
+         else if ((mstatus[2*j] == XPRS_LP_OPTIMAL) || (mstatus[2*j] == XPRS_LP_UNFINISHED))
+            down[j] = dobjval[2*j];
+         else 
+         {
+            /* Something weird happened. */
+            downvalid[j] = FALSE;
+         }
+
+         /* Get the objective of the up branch. */
+         if ((mstatus[2*j+1] == XPRS_LP_INFEAS) || (mstatus[2*j+1] == XPRS_LP_CUTOFF_IN_DUAL))
+            up[j] = objsen == +1 ? 1e+40 : -1e+40;
+         else if ((mstatus[2*j+1] == XPRS_LP_OPTIMAL) || (mstatus[2*j+1] == XPRS_LP_UNFINISHED)) 
+            up[j] = dobjval[2*j+1];
+         else 
+         {
+            /* Something weird happened. */
+            upvalid[j] = FALSE;
+         }
+      }
+
+      /* When using the XPRSstrongbranch function we are unable to provide */
+      /* an iteration count. */
+      if (iter) 
+         *iter = -1;
+
+      BMSfreeMemoryArray(mstatus);
+      BMSfreeMemoryArray(dobjval);
+      BMSfreeMemoryArray(cbndtype);
+      BMSfreeMemoryArray(dbndval);
+      BMSfreeMemoryArray(mbndind)
+   }
+#else
+   {
+     int olditlim;
+
+     /* save current LP basis */
+     SCIP_CALL( getBase(lpi) );
+     
+     /* save old iteration limit and set iteration limit to strong */
+     /* branching limit */
+     if ( itlim > XPRS_MAXINT ) 
+        itlim = XPRS_MAXINT;
+     CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &olditlim) );
+     CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, itlim) );
+
+     for (j = 0; j < ncols; ++j)
+     {
+        const char lbound = 'L';
+        const char ubound = 'U';
+        SCIP_Real oldlb;
+        SCIP_Real oldub;
+        SCIP_Real newlb;
+        SCIP_Real newub;
+        SCIP_Real psol;
+        int col;
+        int it;
+
+        upvalid[j]   = TRUE;
+        downvalid[j] = TRUE;
+
+        col = cols[j];
+        psol = psols[j];
+
+        /* save current LP bounds*/
+        CHECK_ZERO( XPRSgetlb(lpi->xprslp, &oldlb, col, col) );
+        CHECK_ZERO( XPRSgetub(lpi->xprslp, &oldub, col, col) );
+     
+        /* down branch */
+        newub = EPSCEIL(psol-1.0, 1e-06);
+        if( newub >= oldlb - 0.5 )
+        {
+           CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &newub) );
+           SCIP_CALL( SCIPlpiSolveDual(lpi) );
+           if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+              down[j] = objsen == +1 ? 1e+40 : -1e+40;
+           else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+           {
+              SCIP_CALL( SCIPlpiGetObjval(lpi, &(down[j])) );
+           }
+           else
+              down[j] = objsen == +1 ? 1e+40 : -1e+40;
+
+           if( iter != NULL )
+           {
+              SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+              *iter += it;
+           }
+           SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, down[j]);
+           
+           CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &oldub) );
+           SCIP_CALL( setBase(lpi) );
+        }
+        else
+           down[j] = objsen == +1 ? 1e+40 : -1e+40;
+        
+        /* up branch */
+        newlb = EPSFLOOR(psol+1.0, 1e-06);
+        if( newlb <= oldub + 0.5 )
+        {
+           CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &newlb) );
+           SCIP_CALL( SCIPlpiSolveDual(lpi) );
+           if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+              up[j] = objsen == +1 ? 1e+40 : -1e+40;
+           else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+           {
+              SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
+           }
+           else
+              up[j] = objsen == +1 ? 1e+40 : -1e+40;
+           if( iter != NULL )
+           {
+              SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+              *iter += it;
+           }
+           SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, up[j]);
+           
+           CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &oldlb) );
+           SCIP_CALL( setBase(lpi) );
+        }
+        else
+           up[j] = objsen == +1 ? 1e+40 : -1e+40;
+     }
+
+     /* reset iteration limit */
+     CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, olditlim) );
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< fractional current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given @b fractional candidates */
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranches() */
+   SCIP_CALL( lpiStrongbranches(lpi, cols, psols, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one candidate with @b integral value */
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given candidates with @b integral values */
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranches() */
+   SCIP_CALL( lpiStrongbranches(lpi, cols, psols, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
 /**@} */
 
 

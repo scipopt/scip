@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.18 2010/08/06 17:24:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.19 2010/08/31 15:50:58 bzfpfets Exp $"
 
 /**@file   lpi_msk.c
  * @ingroup LPIS
@@ -2194,8 +2194,27 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return SCIP_OKAY;
 }
 
+/** start strong branching - call before any strongbranching */
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing
+   return SCIP_OKAY;
+}
+
+/** end strong branching - call after any strongbranching */
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing
+   return SCIP_OKAY;
+}
+
 /** performs strong branching iterations on all candidates */
-SCIP_RETCODE SCIPlpiStrongbranch(
+static
+SCIP_RETCODE piStrongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current primal solution value of column */
@@ -2418,6 +2437,124 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    SCIPdebugMessage("End SCIPlpiStrongbranch (%d)\n", lpi->lpid);
 
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< fractional current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given @b fractional candidates */
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   int j;
+
+   assert( iter != NULL );
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   assert( down != NULL );
+
+   if ( iter != NULL )
+      *iter = 0;
+
+   for (j = 0; j < ncols; ++j)
+   {
+      /* pass call on to lpiStrongbranch() */
+      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+   }
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one candidate with @b integral value */
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given candidates with @b integral values */
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   int j;
+
+   assert( iter != NULL );
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   assert( down != NULL );
+
+   if ( iter != NULL )
+      *iter = 0;
+
+   for (j = 0; j < ncols; ++j)
+   {
+      /* pass call on to lpiStrongbranch() */
+      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+   }
    return SCIP_OKAY;
 }
 
