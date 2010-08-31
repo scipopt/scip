@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.111 2010/08/28 16:49:47 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.112 2010/08/31 10:58:10 bzfwinkm Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -32,10 +32,7 @@
 
 /* in this case the SoPlex results are double checked using CPLEX */
 #ifdef WITH_LPSCHECK
-extern "C"
-{
 #include <cplex.h>
-}
 
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
 #define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
