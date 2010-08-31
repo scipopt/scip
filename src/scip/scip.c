@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.628 2010/08/31 17:44:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.629 2010/08/31 18:04:34 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7771,6 +7771,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchesFrac(
    assert( vars != NULL );
 
    /* set up data */
+   cols = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, cols, nvars) );
    for (j = 0; j < nvars; ++j)
    {
