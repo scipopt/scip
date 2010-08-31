@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.77 2010/08/27 21:11:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.78 2010/08/31 15:19:45 bzfpfets Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2393,7 +2393,6 @@ SCIP_RETCODE SCIPparamsetSetToDefaults(
 }
 
 /** installs default value for a single parameter */
-extern
 SCIP_RETCODE SCIPparamsetSetToDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
