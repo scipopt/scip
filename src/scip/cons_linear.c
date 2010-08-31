@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.369 2010/08/19 13:56:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.370 2010/08/31 18:38:06 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -10300,7 +10300,11 @@ SCIP_RETCODE SCIPcopyConsLinear(
    (*success) = TRUE;
    
    if( nvars == 0 )
+   {
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       return SCIP_OKAY;
+   }
    
    /* duplicate variable array */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, sourcevars, nvars) );
