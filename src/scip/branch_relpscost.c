@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.63 2010/07/18 20:25:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.64 2010/08/31 15:50:32 bzfpfets Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -278,6 +278,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real reliable;
       SCIP_Real maxlookahead;
       SCIP_Real lookahead;
+      SCIP_Bool initstrongbranching;
       SCIP_Longint nodenum;
       SCIP_Longint nlpiterationsquot;
       SCIP_Longint nsblpiterations;
@@ -300,6 +301,8 @@ SCIP_RETCODE execRelpscost(
       avgcutoffscore = MAX(avgcutoffscore, 0.1);
       avgpscostscore = SCIPgetAvgPseudocostScore(scip);
       avgpscostscore = MAX(avgpscostscore, 0.1);
+
+      initstrongbranching = FALSE;
 
       /* get maximal number of candidates to initialize with strong branching; if the current solutions is not basic,
        * we cannot apply the simplex algorithm and therefore don't initialize any candidates
@@ -514,7 +517,12 @@ SCIP_RETCODE execRelpscost(
             inititer, SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
          /* use strong branching on candidate */
-         SCIP_CALL( SCIPgetVarStrongbranch(scip, branchcands[c], inititer, 
+         if ( ! initstrongbranching )
+         {
+            initstrongbranching = TRUE;
+            SCIP_CALL( SCIPstartStrongbranch(scip) );
+         }
+         SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, branchcands[c], inititer, 
                &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* check for an error in strong branching */
@@ -649,6 +657,11 @@ SCIP_RETCODE execRelpscost(
 	    lookahead, maxlookahead);
       }
 #endif
+
+      if ( initstrongbranching )
+      {
+         SCIP_CALL( SCIPendStrongbranch(scip) );
+      }
       
       /* get the score of the best uninitialized strong branching candidate */
       if( i < ninitcands )

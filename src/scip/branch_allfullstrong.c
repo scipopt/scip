@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.37 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.38 2010/08/31 15:50:32 bzfpfets Exp $"
 
 /**@file   branch_allfullstrong.c
  * @ingroup BRANCHINGRULES
@@ -122,6 +122,9 @@ SCIP_RETCODE branch(
       int i;
       int c;
 
+      /* init strong branching */
+      SCIP_CALL( SCIPstartStrongbranch(scip) );
+
       /* search the full strong candidate:
        * cycle through the candidates, starting with the position evaluated in the last run
        */
@@ -142,8 +145,16 @@ SCIP_RETCODE branch(
             integral ? "integral" : "fractional", SCIPvarGetName(pseudocands[c]), SCIPvarGetLbLocal(pseudocands[c]), 
             SCIPvarGetUbLocal(pseudocands[c]), solval);
 
-         SCIP_CALL( SCIPgetVarStrongbranch(scip, pseudocands[c], INT_MAX, 
-               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         if ( integral )
+         {
+            SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX, 
+                  &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, pseudocands[c], INT_MAX, 
+                  &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         }
          nsbcalls++;
 
          /* display node information line in root node */
@@ -297,6 +308,9 @@ SCIP_RETCODE branch(
 
       /* remember last evaluated candidate */
       branchruledata->lastcand = c;
+
+      /* end strong branching */
+      SCIP_CALL( SCIPendStrongbranch(scip) );
    }
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )

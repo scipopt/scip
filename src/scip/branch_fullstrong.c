@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.57 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.58 2010/08/31 15:50:32 bzfpfets Exp $"
 
 /**@file   branch_fullstrong.c
  * @ingroup BRANCHINGRULES
@@ -190,6 +190,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       /* get current node number */
       nodenum = SCIPgetNNodes(scip);
 
+      /* init strong branching */
+      SCIP_CALL( SCIPstartStrongbranch(scip) );
+
       /* search the full strong candidate
        * cycle through the candidates, starting with the position evaluated in the last run
        */
@@ -227,7 +230,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                SCIPvarGetName(lpcands[c]), lpcandssol[c]);
 
             /* apply strong branching */
-            SCIP_CALL( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, 
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX, 
                   &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
             nsbcalls++;
             
@@ -333,6 +336,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
             c, nlpcands, npriolpcands, SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,
             SCIPvarGetName(lpcands[bestcand]), bestscore);
       }
+
+      /* end strong branching */
+      SCIP_CALL( SCIPendStrongbranch(scip) );
 
       /* remember last evaluated candidate */
       branchruledata->lastcand = c;
