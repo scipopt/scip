@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.1 2010/08/30 20:53:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.2 2010/08/31 17:17:49 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -188,7 +188,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPnlpStatisticsCreate(&heurdata->nlpstatistics) );
 
    /* do not abort subproblem on CTRL-C */
-   /* SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "misc/catchctrlc", FALSE) ); */
+   SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "misc/catchctrlc", FALSE) );
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 0) );
@@ -663,14 +663,14 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPvarGetOrigvarSum(&subvar, &scalar, &constant) );
       if( subvar == NULL )
       {
-         startpoint[i] = SCIP_INVALID;
+         startpoint[i] = MIN(MAX(0.0, SCIPvarGetLbGlobal(subvar)), SCIPvarGetUbGlobal(subvar));
          continue;
       }
 
       assert(SCIPvarGetProbindex(subvar) >= 0);
       assert(SCIPvarGetProbindex(subvar) <  heurdata->nsubvars);
       var = heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)];
-      if( var == NULL )
+      if( var == NULL || REALABS(SCIPgetSolVal(scip, refpoint, var)) > 1.0e+12 )
          startpoint[i] = MIN(MAX(0.0, SCIPvarGetLbGlobal(subvar)), SCIPvarGetUbGlobal(subvar));
       else
          /* scalar*subvar+constant corresponds to nlpvar[i], so nlpvar[i] gets value scalar*varval+constant */
