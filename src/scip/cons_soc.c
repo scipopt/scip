@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.35 2010/08/30 20:39:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.36 2010/08/31 16:25:15 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -1093,7 +1093,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
       consdata->offsets[i] = offset;
       if( coef != 1.0 )
       {
-         consdata->coefs[i]   *= coef;
+         consdata->coefs[i]    = REALABS(coef * consdata->coefs[i]);
          consdata->offsets[i] /= coef;
       }
       consdata->vars[i] = x;
@@ -1189,9 +1189,9 @@ SCIP_RETCODE presolveRemoveFixedVariables(
       assert(consdata->nvars < oldnvars);
       
       /* shrink arrays in consdata */
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vars,                oldnvars, consdata->nvars) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->offsets,             oldnvars, consdata->nvars) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->coefs,               oldnvars, consdata->nvars) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vars,    oldnvars, consdata->nvars) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->offsets, oldnvars, consdata->nvars) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->coefs,   oldnvars, consdata->nvars) );
       
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
    }
@@ -2155,6 +2155,8 @@ SCIP_RETCODE propagateBounds(
          SCIPintervalSetRoundingMode(roundmode);
          SCIPintervalSquareRoot(SCIPinfinity(scip), &a, a);
          
+         assert(consdata->coefs[i] >= 0.0); /* should be ensured in create and presolveRemoveFixed */
+
          c = a;
          if( consdata->coefs[i]   != 1.0 )
             SCIPintervalDivScalar(SCIPinfinity(scip), &c, c, consdata->coefs[i]);
@@ -3998,6 +4000,9 @@ SCIP_RETCODE SCIPcreateConsSOC(
    if( coefs != NULL )
    {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->coefs, coefs, nvars) );
+      for( i = 0; i < nvars; ++i )
+         if( consdata->coefs[i] < 0.0 )
+            consdata->coefs[i] = -consdata->coefs[i];
    }
    else
    {
