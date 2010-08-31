@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.370 2010/08/31 18:38:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.371 2010/08/31 18:42:55 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -2887,6 +2887,10 @@ SCIP_RETCODE chgLhs(
    assert(cons != NULL);
    assert(!SCIPisInfinity(scip, lhs));
 
+   /* adjust value to not be smaller than -inf */
+   if ( SCIPisInfinity(scip, -lhs) )
+      lhs = -SCIPinfinity(scip);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || (consdata->vars != NULL && consdata->vals != NULL));
@@ -2990,6 +2994,10 @@ SCIP_RETCODE chgRhs(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPisInfinity(scip, -rhs));
+
+   /* adjust value to not be larger than inf */
+   if ( SCIPisInfinity(scip, rhs) )
+      rhs = SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
