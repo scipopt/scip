@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.136 2010/08/31 15:50:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.137 2010/08/31 15:52:59 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -2566,85 +2566,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
-
-/** performs strong branching iterations on one candidate -- DELETE THIS ????????????? */
-SCIP_RETCODE SCIPlpiStrongbranch(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   col,                /**< column to apply strong branching on */
-   SCIP_Real             psol,               /**< current primal solution value of column */
-   int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Real*            down,               /**< stores dual bound after branching column down */
-   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
-   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
-                                              *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
-                                              *   otherwise, it can only be used as an estimate value */
-   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
-   )
-{
-   assert(cpxenv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->cpxlp != NULL);
-   assert(down != NULL);
-   assert(up != NULL);
-   assert(downvalid != NULL);
-   assert(upvalid != NULL);
-
-   SCIPdebugMessage("calling CPLEX strongbranching on variable %d (%d iterations)\n", col, itlim);
-
-   /* results of CPLEX are valid in any case */
-   *downvalid = TRUE;
-   *upvalid = TRUE;
-
-   SCIP_CALL( setParameterValues(&(lpi->cpxparam)) );
-
-   /* if the solution value is integral, we have to apply strong branching manually; otherwise, the CPLEX
-    * method CPXstrongbranch() is applicable
-    */
-   if( EPSISINT(psol, 1e-06) )
-   {
-      if( iter != NULL )
-         *iter = 0;
-
-      SCIP_CALL( lpiStrongbranchIntegral(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
-   }
-   else
-   {
-      int retval;
-
-      retval = CPXstrongbranch(cpxenv, lpi->cpxlp, &col, 1, down, up, itlim);
-      if( retval == CPXERR_NEED_OPT_SOLN )
-      {
-         SCIPdebugMessage(" -> no optimal solution available\n");
-         return SCIP_LPERROR;
-      }
-      else if( retval == CPXERR_TILIM_STRONGBRANCH )
-      {
-         SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
-         return SCIP_LPERROR;
-      }
-      CHECK_ZERO( retval );
-      SCIPdebugMessage(" -> down: %g, up:%g\n", *down, *up);
-
-      /* CPLEX is not able to return the iteration counts in strong branching */
-      if( iter != NULL )
-         *iter = -1;
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /**@} */
 
 
