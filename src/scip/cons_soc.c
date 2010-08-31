@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.37 2010/08/31 16:31:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.38 2010/08/31 17:16:36 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -1204,7 +1204,10 @@ SCIP_RETCODE presolveRemoveFixedVariables(
       
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
    }
-   
+
+   SCIPdebugMessage("\t-> ");
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
    if( consdata->nvars == 0 )
    { /* all variables on left hand size have been removed, remaining constraint is sqrt(gamma) <= ... */
       assert(!SCIPisNegative(scip, consdata->constant));
@@ -1410,9 +1413,6 @@ SCIP_RETCODE presolveRemoveFixedVariables(
       *isdeleted = TRUE;
       return SCIP_OKAY;
    }
-   
-   SCIPdebugMessage("\t-> ");
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    return SCIP_OKAY;
 }
