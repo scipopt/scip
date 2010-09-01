@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.630 2010/08/31 19:00:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.631 2010/09/01 07:41:41 bzfgleix Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1392,7 +1392,7 @@ SCIP_RETCODE SCIPaddStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
-   char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char**                valueptr,           /**< pointer to store the current parameter value, or NULL; if not NULL then *valueptr should be NULL */
    SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    const char*           defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
