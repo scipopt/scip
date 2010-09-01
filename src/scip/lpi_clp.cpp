@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.72 2010/08/31 15:50:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.73 2010/09/01 18:27:25 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -2310,7 +2310,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
-   return ( lpi->clp->status() == 2 && lpi->clp->unboundedRay() );
+   return ( lpi->clp->status() == 2 );
 }
 
 
@@ -2328,7 +2328,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
-   return ( lpi->clp->status() == 2 && lpi->clp->unboundedRay() );
+   return ( lpi->clp->status() == 2 );
 }
 
 
@@ -2411,7 +2411,7 @@ SCIP_Bool SCIPlpiHasDualRay(
 
    /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
     * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
-   if ( lpi->clp->infeasibilityRayExists() )
+   if ( lpi->clp->rayExists() )
    {
       if ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0)
          return TRUE;
