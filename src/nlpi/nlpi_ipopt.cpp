@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.17 2010/09/01 12:32:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.18 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -804,6 +804,25 @@ SCIP_DECL_NLPICHGNONLINCOEF(nlpiChgNonlinCoefIpopt)
     
    SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
    invalidateSolution(problem);
+
+   return SCIP_OKAY;
+}
+
+/** change the constant offset in the objective
+ *
+ * input:
+ *  - nlpi datastructure for solver interface
+ *  - problem datastructure for problem instance
+ *  - objconstant new value for objective constant
+ */
+static
+SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantIpopt )
+{
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+    
+   SCIP_CALL( SCIPnlpiOracleChgObjConstant(problem->oracle, objconstant) );
 
    return SCIP_OKAY;
 }
@@ -1668,8 +1687,9 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
       nlpiCreateProblemIpopt, nlpiFreeProblemIpopt, nlpiGetProblemPointerIpopt,
       nlpiAddVarsIpopt, nlpiAddConstraintsIpopt, nlpiSetObjectiveIpopt, 
       nlpiChgVarBoundsIpopt, nlpiChgConsSidesIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
-      nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt, nlpiChgExprtreeIpopt, nlpiChgNonlinCoefIpopt, nlpiSetInitialGuessIpopt,
-      nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetTermstatIpopt, nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
+      nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt, nlpiChgExprtreeIpopt, nlpiChgNonlinCoefIpopt,
+      nlpiChgObjConstantIpopt, nlpiSetInitialGuessIpopt, nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetTermstatIpopt,
+      nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
       nlpiGetWarmstartSizeIpopt, nlpiGetWarmstartMemoIpopt, nlpiSetWarmstartMemoIpopt,
       nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,
       nlpiGetStringParIpopt, nlpiSetStringParIpopt,

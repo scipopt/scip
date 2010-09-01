@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.h,v 1.4 2010/08/23 19:33:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.h,v 1.5 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file   nlpioracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -198,6 +198,14 @@ SCIP_RETCODE SCIPnlpiOracleChgExprParam(
    int                   considx,            /**< index of constraint where parameter should be changed in expression tree, or -1 for objective */
    int                   paramidx,           /**< index of parameter */
    SCIP_Real             paramval            /**< new value of parameter */
+   );
+
+/** changes the constant value in the objective function
+ */
+extern
+SCIP_RETCODE SCIPnlpiOracleChgObjConstant(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_Real             objconstant         /**< new value for objective constant */
    );
 
 /** gives the current number of variables */

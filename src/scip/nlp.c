@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.12 2010/08/30 16:50:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.13 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -417,8 +417,7 @@ SCIP_RETCODE nlrowConstantChanged(
       }
       else if( nlrow->nlpiindex == -1 )
       {
-         /* @todo: do not have NLPI function to change objective constant, so we replace the whole objective in next NLP solve */
-         nlp->objflushed = FALSE;
+         SCIP_CALL( SCIPnlpiChgObjConstant(nlp->solver, nlp->problem, nlrow->constant) );
       }
    }
 

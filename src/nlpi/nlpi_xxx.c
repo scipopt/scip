@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.6 2010/06/07 16:44:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.7 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file    nlpi_xxx.c
  * @ingroup NLPIS
@@ -414,6 +414,22 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefXxx )
    return SCIP_OKAY;
 }
 
+/** change the constant offset in the objective
+ *
+ * input:
+ *  - nlpi datastructure for solver interface
+ *  - problem datastructure for problem instance
+ *  - objconstant new value for objective constant
+ */
+static
+SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantXxx )
+{
+   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPABORT();
+   
+   return SCIP_OKAY;
+}
+
 /** sets initial guess for primal variables
  *
  * input:
@@ -713,7 +729,7 @@ SCIP_RETCODE SCIPcreateNlpSolverXxx(
       nlpiAddVarsXxx, nlpiAddConstraintsXxx, nlpiSetObjectiveXxx, 
       nlpiChgVarBoundsXxx, nlpiChgConsSidesXxx, nlpiDelVarSetXxx, nlpiDelConstraintSetXxx,
       nlpiChgLinearCoefsXxx, nlpiChgQuadraticCoefsXxx, nlpiChgExprtreeXxx, nlpiChgNonlinCoefXxx,
-      nlpiSetInitialGuessXxx, nlpiSolveXxx, nlpiGetSolstatXxx, nlpiGetTermstatXxx,
+      nlpiChgObjConstantXxx, nlpiSetInitialGuessXxx, nlpiSolveXxx, nlpiGetSolstatXxx, nlpiGetTermstatXxx,
       nlpiGetSolutionXxx, nlpiGetStatisticsXxx,
       nlpiGetWarmstartSizeXxx, nlpiGetWarmstartMemoXxx, nlpiSetWarmstartMemoXxx,
       nlpiGetIntParXxx, nlpiSetIntParXxx, nlpiGetRealParXxx, nlpiSetRealParXxx, nlpiGetStringParXxx, nlpiSetStringParXxx,

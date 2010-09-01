@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.14 2010/09/01 12:20:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.15 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -2297,6 +2297,20 @@ SCIP_RETCODE SCIPnlpiOracleChgExprParam(
 
    SCIPexprtreeSetParamVal(considx >= 0 ? oracle->consexprtrees[considx] : oracle->objexprtree, paramidx, paramval);
 
+   return SCIP_OKAY;
+}
+
+/** changes the constant value in the objective function
+ */
+SCIP_RETCODE SCIPnlpiOracleChgObjConstant(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_Real             objconstant         /**< new value for objective constant */
+   )
+{
+   assert(oracle != NULL);
+
+   oracle->objconstant = objconstant;
+   
    return SCIP_OKAY;
 }
 

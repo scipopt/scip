@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.6 2010/06/04 17:57:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.7 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -306,6 +306,15 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  */
 #define SCIP_DECL_NLPICHGNONLINCOEF(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, int idxparam, \
    SCIP_Real value)
+
+/** change the constant offset in the objective
+ *
+ * input:
+ *  - nlpi datastructure for solver interface
+ *  - problem datastructure for problem instance
+ *  - objconstant new value for objective constant
+ */
+#define SCIP_DECL_NLPICHGOBJCONSTANT(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real objconstant)
 
 /** sets initial guess for primal variables
  *

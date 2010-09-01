@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlpi.h,v 1.4 2010/06/04 17:57:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlpi.h,v 1.5 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file   struct_nlpi.h
  * @brief  data definitions for an NLP solver interface
@@ -55,6 +55,7 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs));       /**< change coefficients in quadratic part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPRTREE       ((*nlpichgexprtree));        /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef));      /**< change one parameter in nonlinear expressions of a constraint or objective */
+   SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant));     /**< change the constant offset in the objective */
    SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess));    /**< set initial guess for primal variables in a problem  */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve));              /**< solve a problem */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat));         /**< get solution status for a problem  */

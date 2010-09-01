@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.5 2010/06/04 17:57:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.6 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -59,6 +59,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs)),       /**< change coefficients in quadratic part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPRTREE       ((*nlpichgexprtree)),        /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef)),      /**< change one parameter in nonlinear expressions of a constraint or objective */
+   SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
    SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess for primal variables */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat)),         /**< get solution status */
@@ -254,6 +255,14 @@ SCIP_RETCODE SCIPnlpiChgNonlinCoef(
    int                   idxcons,            /**< index of constraint or -1 for objective */
    int                   idxparam,           /**< index of parameter */
    SCIP_Real             value               /**< new value for nonlinear parameter */
+);
+
+/** change the constant offset in the objective */
+extern
+SCIP_RETCODE SCIPnlpiChgObjConstant(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   SCIP_Real             objconstant         /**< new value for objective constant */
 );
 
 /** sets initial guess for primal variables */
