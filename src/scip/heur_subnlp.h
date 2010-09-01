@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.h,v 1.1 2010/08/30 20:53:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.h,v 1.2 2010/09/01 11:14:35 bzfviger Exp $"
 
 /**@file   heur_subnlp.h
  * @brief  NLP local search primal heuristic using subSCIPs
@@ -61,6 +61,17 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_Longint*         iterused            /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    );
 
+/** adds all known linear constraint to the NLP, if initialized and not done already
+ * This function is temporary and will hopefully become obsolete in the near future.
+ */ 
+extern
+SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints, i.e., linear constraints that involve only discrete variables */
+   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
+);
+   
 /** gets subSCIP used by NLP heuristic, or NULL if none */
 extern
 SCIP* SCIPgetSubScipHeurSubNlp(

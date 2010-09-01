@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.3 2010/09/01 09:11:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.4 2010/09/01 11:14:35 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -31,6 +31,9 @@
 #include "nlpi/nlpi.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_knapsack.h"
 
 #include "scip/heur_nlp.h"
 
@@ -60,7 +63,11 @@ struct SCIP_HeurData
                          
    SCIP_SOL*             startcand;          /**< candidate for start point for heuristic */
    SCIP_Real             startcandviol;      /**< violation of start point candidate w.r.t. constraint that reported this candidate */
-                         
+
+   SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
+   SCIP_Bool             comblinearconsadded;/**< whether the linear constraint adding method has been called for combinatorial constraints already */
+   SCIP_Bool             contlinearconsadded;/**< whether the linear constraint adding method has been called for continuous constraints already */
+
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0 for off */
@@ -70,7 +77,6 @@ struct SCIP_HeurData
    char*                 nlpoptfile;         /**< name of NLP solver specific option file */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
                          
-   SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
@@ -312,13 +318,19 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 static
 SCIP_RETCODE addLinearConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler for linear constraints */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for linear constraints */
+   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
+   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints to NLP */
    )
 {
    SCIP_CONS**   conss;
    int           nconss;
    SCIP_NLROW*   nlrow;
    int           i;
+   int           j;
+   SCIP_Bool     iscombinatorial;
+   int           nvars;
+   SCIP_VAR**    vars;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -333,6 +345,26 @@ SCIP_RETCODE addLinearConstraints(
    {
       if( !SCIPconsIsEnabled(conss[i]) )
          continue;
+      
+      nvars = SCIPgetNVarsLinear(scip, conss[i]);
+      vars  = SCIPgetVarsLinear(scip, conss[i]);
+      
+      /* check if constraint should be added, only need this check if we do not wanna any constraint anyway */
+      if( !addcombconss || !addcontconss )
+      {
+         iscombinatorial = TRUE;
+         
+         for( j = 0; j < nvars; ++j )
+            if( SCIPvarGetType(vars[j]) >= SCIP_VARTYPE_CONTINUOUS )
+            {
+               iscombinatorial = FALSE;
+               break;
+            }
+
+         /* skip constraint, if not of interest */
+         if( (iscombinatorial && !addcombconss) || (!iscombinatorial && !addcontconss) )
+            continue;
+      }
       
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
          SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
@@ -350,7 +382,9 @@ SCIP_RETCODE addLinearConstraints(
 static
 SCIP_RETCODE addVarboundConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler for linear constraints */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for linear constraints */
+   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
+   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints to NLP */
    )
 {
    SCIP_CONS**   conss;
@@ -359,6 +393,7 @@ SCIP_RETCODE addVarboundConstraints(
    int           i;
    SCIP_VAR*     vars[2];
    SCIP_Real     coefs[2];
+   SCIP_Bool     iscombinatorial;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -376,6 +411,13 @@ SCIP_RETCODE addVarboundConstraints(
       
       vars[0] = SCIPgetVarVarbound(scip, conss[i]);
       vars[1] = SCIPgetVbdvarVarbound(scip, conss[i]);
+      
+      iscombinatorial = SCIPvarGetType(vars[0]) < SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[1]) < SCIP_VARTYPE_CONTINUOUS;
+      
+      /* skip constraint, if not of interest */
+      if( (iscombinatorial && !addcombconss) || (!iscombinatorial && !addcontconss) )
+         continue;
+      
       coefs[0] = 1.0;
       coefs[1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
       
@@ -391,10 +433,232 @@ SCIP_RETCODE addVarboundConstraints(
    return SCIP_OKAY;
 }
 
-/** adds all linear constraints (including specialized variants) from a SCIP instance to its NLP */
+/** adds logic-or constraints to NLP */
 static
-SCIP_RETCODE addAllLinearConstraints(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_RETCODE addLogicOrConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler for linear constraints */
+   )
+{
+   SCIP_CONS**   conss;
+   int           nconss;
+   SCIP_NLROW*   nlrow;
+   int           i;
+   int           j;
+   SCIP_Real*    coefs;
+   int           coefssize;
+   int           nvars;
+   
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   if( !nconss )
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   
+   coefs = NULL;
+   coefssize = 0;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      /* skip local constraints */
+      if( !SCIPconsIsEnabled(conss[i]) )
+         continue;
+      
+      nvars = SCIPgetNVarsLogicor(scip, conss[i]);
+
+      if( coefssize < nvars )
+      {
+         if( coefs == NULL )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, nvars) );
+         }
+         for( j = coefssize; j < nvars; ++j )
+            coefs[j] = 1.0;
+         coefssize = nvars;
+      }
+      
+      /* logic or constraints: 1 == sum_j x_j */
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
+         nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
+         0, NULL, 0, NULL, NULL,
+         1.0, 1.0) );
+      
+      SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
+      SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+   }
+
+   SCIPfreeBufferArrayNull(scip, &coefs);
+
+   return SCIP_OKAY;
+}
+
+/** adds setppc constraints to NLP */
+static
+SCIP_RETCODE addSetppcConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler for linear constraints */
+   )
+{
+   SCIP_CONS**   conss;
+   int           nconss;
+   SCIP_NLROW*   nlrow;
+   int           i;
+   int           j;
+   SCIP_Real*    coefs;
+   int           coefssize;
+   int           nvars;
+   SCIP_Real     lhs;
+   SCIP_Real     rhs;
+   
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   if( !nconss )
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   
+   coefs = NULL;
+   coefssize = 0;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      /* skip local constraints */
+      if( !SCIPconsIsEnabled(conss[i]) )
+         continue;
+      
+      nvars = SCIPgetNVarsSetppc(scip, conss[i]);
+
+      if( coefssize < nvars )
+      {
+         if( coefs == NULL )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, nvars) );
+         }
+         for( j = coefssize; j < nvars; ++j )
+            coefs[j] = 1.0;
+         coefssize = nvars;
+      }
+      
+      /* setppc constraint: 1 ~ sum_j x_j */
+      
+      switch( SCIPgetTypeSetppc(scip, conss[i]) )
+      {
+         case SCIP_SETPPCTYPE_PARTITIONING:
+            lhs = 1.0;
+            rhs = 1.0;
+            break;
+
+         case SCIP_SETPPCTYPE_PACKING:
+            lhs = -SCIPinfinity(scip);
+            rhs = 1.0;
+            break;
+
+         case SCIP_SETPPCTYPE_COVERING:
+            lhs = 1.0;
+            rhs = SCIPinfinity(scip);
+            break;
+      }
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
+         nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
+         0, NULL, 0, NULL, NULL,
+         lhs, rhs) );
+      
+      SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
+      SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+   }
+
+   SCIPfreeBufferArrayNull(scip, &coefs);
+
+   return SCIP_OKAY;
+}
+
+/** adds knapsack constraints to NLP */
+static
+SCIP_RETCODE addKnapsackConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler for linear constraints */
+   )
+{
+   SCIP_CONS**   conss;
+   int           nconss;
+   SCIP_NLROW*   nlrow;
+   int           i;
+   int           j;
+   SCIP_Real*    coefs;
+   int           coefssize;
+   int           nvars;
+   
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   if( !nconss )
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+
+   coefs = NULL;
+   coefssize = 0;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      /* skip local constraints */
+      if( !SCIPconsIsEnabled(conss[i]) )
+         continue;
+      
+      nvars = SCIPgetNVarsKnapsack(scip, conss[i]);
+
+      if( coefssize < nvars )
+      {
+         if( coefs == NULL )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, nvars) );
+         }
+         coefssize = nvars;
+      }
+      
+      for( j = 0; j < nvars; ++j )
+         coefs[j] = (SCIP_Real)SCIPgetWeightsKnapsack(scip, conss[i])[j];
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
+         nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
+         0, NULL, 0, NULL, NULL,
+         -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i])) );
+      
+      SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
+      SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+   }
+
+   SCIPfreeBufferArrayNull(scip, &coefs);
+
+   return SCIP_OKAY;
+}
+
+/** adds combinatorial and/or continuous variants of linear constraints from a SCIP instance to its NLP */
+static
+SCIP_RETCODE addLinearConstraintsToNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
+   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints to NLP */
 )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -403,29 +667,39 @@ SCIP_RETCODE addAllLinearConstraints(
    conshdlr = SCIPfindConshdlr(scip, "linear");
    if( conshdlr != NULL )
    {
-      SCIP_CALL( addLinearConstraints(scip, conshdlr) );
+      SCIP_CALL( addLinearConstraints(scip, conshdlr, addcombconss, addcontconss) );
    }
 
-   /* add varbound constraints (but I would be surprised to find some) */
+   /* add varbound constraints */
    conshdlr = SCIPfindConshdlr(scip, "varbound");
    if( conshdlr != NULL )
    {
-      SCIP_CALL( addVarboundConstraints(scip, conshdlr) );
+      SCIP_CALL( addVarboundConstraints(scip, conshdlr, addcombconss, addcontconss) );
    }
 
-#ifndef NDEBUG
-   /* there should be no logicor, setppc, or knapsack constraints left after fixing all integer variables */
-   conshdlr = SCIPfindConshdlr(scip, "logicor");
-   assert(conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
+   if( addcombconss )
+   {
+      /* add logic-or constraints */
+      conshdlr = SCIPfindConshdlr(scip, "logicor");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( addLogicOrConstraints(scip, conshdlr) );
+      }
 
-   /* add setppc constraints */
-   conshdlr = SCIPfindConshdlr(scip, "setppc");
-   assert(conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
-   
-   /* add knapsack constraints */
-   conshdlr = SCIPfindConshdlr(scip, "knapsack");
-   assert(conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
-#endif
+      /* add setppc constraints */
+      conshdlr = SCIPfindConshdlr(scip, "setppc");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( addSetppcConstraints(scip, conshdlr) );
+      }
+
+      /* add knapsack constraints */
+      conshdlr = SCIPfindConshdlr(scip, "knapsack");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( addKnapsackConstraints(scip, conshdlr) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -645,8 +919,8 @@ SCIP_RETCODE solveSubNLP(
    nlp = SCIPgetNLP(heurdata->subscip);
    assert(nlp != NULL);
 
-   /* add linear constraints from subscip into subNLP (shall be replaced by catching row events in NLP) */
-   SCIP_CALL( addAllLinearConstraints(heurdata->subscip) );
+   /* add non-combinatorial linear constraints from subscip into subNLP (shall be replaced by catching row events in NLP) */
+   SCIP_CALL( addLinearConstraintsToNlp(heurdata->subscip, FALSE, TRUE) );
 
    /* set starting values (=refpoint, if not NULL; otherwise LP solution (or pseudo solution)) */
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, SCIPnlpGetNVars(nlp)) );
@@ -996,7 +1270,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    return SCIP_OKAY;
 }
 
-
 /*
  * Callback methods of primal heuristic
  */
@@ -1126,7 +1399,10 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
 
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
    
+   /* reset some flags */
    heurdata->triedsetupsubscip = FALSE;
+   heurdata->comblinearconsadded = FALSE;
+   heurdata->contlinearconsadded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1336,6 +1612,36 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    return SCIP_OKAY;
 }
 
+/** adds all known linear constraint to the NLP, if initialized and not done already
+ * This function is temporary and will hopefully become obsolete in the near future.
+ */ 
+SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints, i.e., linear constraints that involve only discrete variables */
+   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
+)
+{
+   SCIP_HEURDATA* heurdata;
+   
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* return, if nothing to do */
+   if( (!addcombconss || heurdata->comblinearconsadded) && (!addcontconss || heurdata->contlinearconsadded) )
+      return SCIP_OKAY;
+   
+   SCIP_CALL( addLinearConstraintsToNlp(scip,
+      addcombconss && !heurdata->comblinearconsadded,
+      addcontconss && !heurdata->contlinearconsadded) );
+   
+   return SCIP_OKAY;
+}
+
 /** updates the starting point for the NLP heuristic
  * 
  * Is called by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
@@ -1351,6 +1657,7 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    
    assert(scip != NULL);
    assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(solcand != NULL);
    assert(SCIPisPositive(scip, violation));
    
@@ -1393,6 +1700,7 @@ SCIP* SCIPgetSubScipHeurSubNlp(
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1409,6 +1717,7 @@ SCIP_HASHMAP* SCIPgetVarMappingHeurSubNlp(
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
