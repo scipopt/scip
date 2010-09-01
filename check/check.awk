@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.94 2010/09/01 19:02:26 bzfwanie Exp $
+# $Id: check.awk,v 1.95 2010/09/01 19:53:58 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -501,8 +501,7 @@ BEGIN {
 	 reltol = 1e-5 * max(abs(pb),1.0);
 	 abstol = 1e-4;
 
-	 if( ( firstpb-rootdb > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) )
-            || ( rootdb-firstpb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+	 if( ( firstpb-rootdb > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( rootdb-firstpb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
 	    status = "fail";
 	    failtime += tottime;
 	    fail++;
@@ -535,16 +534,14 @@ BEGIN {
 	 reltol = 1e-5 * max(abs(pb),1.0);
 	 abstol = 1e-4;
 
-	 if( ( firstpb-rootdb > max(abstol,reltol) && db-sol[prob] > reltol)
-            || ( rootdb-firstpb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
+	 if( ( firstpb-rootdb > max(abstol,reltol) && db-sol[prob] > reltol) || ( rootdb-firstpb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
 	    status = "fail";
 	    failtime += tottime;
 	    fail++;
 	 }
 	 else {
 	    if( timeout || gapreached || sollimitreached ) {
-	       if( (firstpb-rootdb > max(abstol,reltol) && sol[prob]-pb > reltol)
-                  || (rootdb-firstpb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
+	       if( (firstpb-rootdb > max(abstol,reltol) && sol[prob]-pb > reltol) || (rootdb-firstpb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
 		  status = "better";
 		  timeouttime += tottime;
 		  timeouts++;

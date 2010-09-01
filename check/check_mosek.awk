@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_mosek.awk,v 1.8 2010/09/01 19:02:26 bzfwanie Exp $
+# $Id: check_mosek.awk,v 1.9 2010/09/01 19:53:58 bzfwanie Exp $
 #
 #@file    check_mosek.awk
 #@brief   MOSEK Check Report Generator
@@ -24,6 +24,10 @@
 function abs(x)
 {
    return x < 0 ? -x : x;
+}
+function min(x,y)
+{
+   return (x) < (y) ? (x) : (y);
 }
 function max(x,y)
 {
@@ -265,8 +269,7 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-         if( ( pb-db > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol))
-            || ( db-pb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) ) {
+         if( ( pb-db > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || ( db-pb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) ) {
             printf("fail\n");
             failtime += tottime;
             fail++;
@@ -294,16 +297,14 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-	 if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol)
-            || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
+	 if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol) || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
             printf("fail\n");
             failtime += tottime;
             fail++;
          }
          else {
             if (timeout) {
-	       if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol)
-                  || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
+	       if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
                   printf("better\n");
                   timeouttime += tottime;
                   timeouts++;

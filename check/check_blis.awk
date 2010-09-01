@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_blis.awk,v 1.7 2010/09/01 19:02:26 bzfwanie Exp $
+# $Id: check_blis.awk,v 1.8 2010/09/01 19:53:58 bzfwanie Exp $
 #
 #@file    check_blis.awk
 #@brief   BLIS Check Report Generator
@@ -24,6 +24,10 @@
 function abs(x)
 {
    return x < 0 ? -x : x;
+}
+function min(x,y)
+{
+   return (x) < (y) ? (x) : (y);
 }
 function max(x,y)
 {
@@ -41,16 +45,21 @@ BEGIN {
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
    printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
+   printf("\\usepackage{supertabular}\n")                           >TEXFILE;
    printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
    printf("\\begin{document}\n\n")                                  >TEXFILE;
-   printf("\\begin{table}[p]\n")                                    >TEXFILE;
    printf("\\begin{center}\n")                                      >TEXFILE;
    printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
    printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-   printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
-   printf("\\toprule\n")                                            >TEXFILE;
-   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
-   printf("\\midrule\n")                                            >TEXFILE;
+   printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
+   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time ") >TEXFILE;
+   printf("\\\\\n") > TEXFILE;
+   printf("\\midrule\n}\n")                                         >TEXFILE;
+   printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
+   printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns)      >TEXFILE;
+   printf("\\bottomrule\n}\n")                                      >TEXFILE;
+   printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
+   printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
 
    printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
    printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
@@ -251,20 +260,20 @@ BEGIN {
          gapstr = " Large";
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
-	 timeout = 1;
-	 aborted = 0;
-	 tottime = endtime - starttime;
+         timeout = 1;
+         aborted = 0;
+         tottime = endtime - starttime;
       }
       if( aborted && tottime == 0.0 )
-	 tottime = timelimit;
+         tottime = timelimit;
       if( timelimit > 0.0 )
-	 tottime = min(tottime, timelimit);
+         tottime = min(tottime, timelimit);
 
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-	     pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+             pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
       printf("%-19s %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
-	     shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+             shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
          printf("abort\n");
@@ -275,8 +284,7 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-         if( ( pb-db > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol))
-	     || ( db-pb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) ) {
+         if( ( pb-db > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( db-pb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
             printf("fail\n");
             failtime += tottime;
             fail++;
@@ -304,16 +312,14 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-	 if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol)
-	     || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
+         if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol) || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
             printf("fail\n");
             failtime += tottime;
             fail++;
          }
          else {
             if (timeout) {
-	       if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol)
-		   || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
+               if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
                   printf("better\n");
                   timeouttime += tottime;
                   timeouts++;
@@ -363,40 +369,40 @@ BEGIN {
          }
       }
       else if( solstatus[prob] == "inf" ) {
-	 if( !feasible ) {
-	    if( timeout ) {
-	       status = "timeout";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       status = "ok";
-	       pass++;
-	    }
-	 }
-	 else {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
+         if( !feasible ) {
+            if( timeout ) {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               status = "ok";
+               pass++;
+            }
+         }
+         else {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
       }
       else if( solstatus[prob] == "feas" ) {
-	 if( feasible ) {
-	    if( timeout ) {
-	       status = "timeout";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       status = "ok";
-	       pass++;
-	    }
-	 }
-	 else {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
+         if( feasible ) {
+            if( timeout ) {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               status = "ok";
+               pass++;
+            }
+         }
+         else {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
       }
       else {
          reltol = 1e-5 * max(abs(pb),1.0);
@@ -416,14 +422,14 @@ BEGIN {
       }
    
       if( writesolufile ) {
-	 if( pb == +infty && db == +infty )
-	    printf("=inf= %s\n",prob)>NEWSOLUFILE;
-	 else if( pb == db )
-	    printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else if( pb < +infty )
-	    printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else
-	    printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
+         if( pb == +infty && db == +infty )
+            printf("=inf= %s\n",prob)>NEWSOLUFILE;
+         else if( pb == db )
+            printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else if( pb < +infty )
+            printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else
+            printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
       }
    
       sbab     += bbnodes;
@@ -441,11 +447,11 @@ END {
 
    printf("\\midrule\n")                                                 >TEXFILE;
    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
-	  "Total", nprobs, sbab, stottime) >TEXFILE;
+          "Total", nprobs, sbab, stottime) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-	  "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+          "Geom. Mean", nodegeom, timegeom) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-	  "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+          "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
    printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{tabular*}\n")                                           >TEXFILE;
@@ -461,9 +467,9 @@ END {
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
    printf("----------------------------------------------------------------\n");
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
-	  nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+          nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f\n",
-	  nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+          nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
 #   printf("@02 timelimit: %g\n", timelimit);
