@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.10 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.11 2010/09/01 20:32:43 bzfpfets Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -100,9 +100,9 @@ SCIP_DECL_HEURFREE(heurFreeTrySol)
 }
 
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolTrySol)
+SCIP_DECL_HEUREXITSOL(heurExitTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -110,7 +110,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTrySol)
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
 
-   SCIPdebugMessage("exitsol method of trysol primal heuristic.\n");
+   SCIPdebugMessage("exit method of trysol primal heuristic.\n");
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -119,6 +119,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTrySol)
    /* free solution if one is still present */
    if ( heurdata->sol != NULL )
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+   assert( heurdata->sol == NULL );
 
    return SCIP_OKAY;
 }
@@ -174,7 +175,7 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
 
 
 #define heurInitTrySol NULL
-#define heurExitTrySol NULL
+#define heurExitsolTrySol NULL
 #define heurInitsolTrySol NULL
 
 
