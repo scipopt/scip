@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.4 2010/09/01 11:14:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.5 2010/09/01 12:18:34 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -38,7 +38,7 @@
 #include "scip/heur_nlp.h"
 
 #define HEUR_NAME             "subnlp"
-#define HEUR_DESC             "primal heuristic that performs a local search in an NLP obtained from a presolved subSCIP after fixing integer variables"
+#define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
 #define HEUR_DISPCHAR         'q'
 #define HEUR_PRIORITY         -2000000
 #define HEUR_FREQ             1
@@ -76,6 +76,7 @@ struct SCIP_HeurData
    char*                 nlpsolver;          /**< name of NLP solver to use */
    char*                 nlpoptfile;         /**< name of NLP solver specific option file */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
+   int                   maxpresolverounds;  /**< limit on number of presolve rounds in subSCIP */
                          
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
@@ -204,6 +205,7 @@ SCIP_RETCODE createSubSCIP(
     * disable LP solve
     * set nodelimit to 0
     * heuristics and separators were not copied into subscip, so should not need to switch off */
+   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/probing/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrestarts", 0) );
 #if 0 /* should not need all this, since we normally do not go until root node anyway */
@@ -1608,6 +1610,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which NLP heuristic should at least improve the incumbent",
          &heurdata->minimprove, TRUE, 0.01, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxpresolverounds",
+         "limit on number of presolve rounds in subSCIP (-1 for unlimited, 0 for no presolve)",
+         &heurdata->maxpresolverounds, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
