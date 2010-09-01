@@ -12,10 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.1 2010/09/01 16:51:24 bzfheinz Exp $"
-
-#define SCIP_DEBUG
-#define PROFILE_DEBUG
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.2 2010/09/01 17:07:33 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
