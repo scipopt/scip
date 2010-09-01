@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.13 2010/08/29 16:25:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.14 2010/09/01 12:20:19 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1126,7 +1126,7 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    (*oracle)->blkmem   = blkmem;
    (*oracle)->infinity = SCIP_DEFAULT_INFINITY;
    
-   SCIPmessageFPrintInfo(NULL, "Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
+   SCIPdebugMessage("Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
    SCIP_CALL( SCIPexprintCreate(blkmem, &(*oracle)->exprinterpreter) );
 
    return SCIP_OKAY;
