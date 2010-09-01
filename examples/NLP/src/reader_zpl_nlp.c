@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.5 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.6 2010/09/01 19:37:48 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -793,7 +793,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    *result = SCIP_SUCCESS;
 
    if( readerror_ )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    else
       return SCIP_OKAY;
 }

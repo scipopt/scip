@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_col.c,v 1.9 2010/09/01 19:37:48 bzfpfets Exp $"
 
 /**@file   reader_col.c
  * @brief  COL file reader
@@ -254,13 +254,13 @@ SCIP_RETCODE readCol(
    if ( SCIPfeof(fp) )
    {
       SCIPerrorMessage("Error! Could not find line starting with 'p'.\n");
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    /* wrong format of the line containig number of nodes and edges */
    if ( buf[2] != 'e' || buf[3] != 'd' || buf[4] != 'g' || buf[5] != 'e' )
    {
       SCIPerrorMessage("Line starting with 'p' must continue with 'edge'!\n");
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    char_p = &buf[6];
    /* if line reads 'edges' (non-standard!), instead of 'edge'. */
@@ -274,12 +274,12 @@ SCIP_RETCODE readCol(
    if ( nnodes <= 0 )
    {
       SCIPerrorMessage("Number of vertices must be positive!\n");
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    if ( nedges < 0 )
    {	  
       SCIPerrorMessage("Number of edges must be nonnegative!\n");
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    }
    /* create array for edges */
    SCIP_CALL( SCIPallocMemoryArray(scip, &edges, nedges) );

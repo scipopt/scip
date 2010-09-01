@@ -92,9 +92,6 @@ inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str, int buff
    case SCIP_KEYALREADYEXISTING:
       SCIPsnprintf(buffer_str, buffersize, "the given key is already existing in table");
       return buffer_str;
-   case SCIP_PARSEERROR:
-      SCIPsnprintf(buffer_str, buffersize, "invalid input given to the parser");
-      return buffer_str;
    case SCIP_MAXDEPTHLEVEL:
       SCIPsnprintf(buffer_str, buffersize, "maximal branching depth level exceeded");
       return buffer_str;
