@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.38 2010/08/31 17:16:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.39 2010/09/01 09:11:16 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -30,6 +30,7 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_nlp.h"
+#include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/intervalarith.h"
 #include "scip/expression.h"
@@ -94,6 +95,7 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_HEUR*            nlpheur;        /**< a pointer to the NLP heuristic, if available */
+   SCIP_HEUR*            subnlpheur;     /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;       /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;     /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
@@ -977,7 +979,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
    if( SCIPsolGetHeur(sol) == NULL )
       return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
+   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -2866,6 +2868,7 @@ SCIP_DECL_CONSINIT(consInitSOC)
    assert(conshdlrdata != NULL);
    
    conshdlrdata->nlpheur    = SCIPfindHeur(scip, "nlp");
+   conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->rensheur   = SCIPfindHeur(scip, "rens");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
@@ -2896,6 +2899,7 @@ SCIP_DECL_CONSEXIT(consExitSOC)
    assert(conshdlrdata != NULL);
    
    conshdlrdata->nlpheur    = NULL;
+   conshdlrdata->subnlpheur = NULL;
    conshdlrdata->rensheur   = NULL;
    conshdlrdata->trysolheur = NULL;
 
@@ -3013,7 +3017,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
    }
    
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL) )
+   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -3049,7 +3053,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
       SCIP_EVENTHDLR* eventhdlr;
 
       /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL);
+      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
@@ -3447,7 +3451,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       /* if solution polishing is off and there is no NLP heuristic or we just check the LP solution,
        * then there is no need to check remaining constraints (NLP heuristic will pick up LP solution anyway) */
-      if( !dolinfeasshift && (conshdlrdata->nlpheur == NULL || sol == NULL))
+      if( !dolinfeasshift && (conshdlrdata->nlpheur == NULL || conshdlrdata->subnlpheur == NULL || sol == NULL))
          break;
    }
 
@@ -3466,6 +3470,10 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
    else if( conshdlrdata->nlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
    {
       SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
+   }
+   else if( conshdlrdata->subnlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
+   {
+      SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }
    
    return SCIP_OKAY;
@@ -3854,6 +3862,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->nlpheur = NULL;
+   conshdlrdata->subnlpheur = NULL;
    conshdlrdata->rensheur = NULL;
    conshdlrdata->trysolheur = NULL;
    

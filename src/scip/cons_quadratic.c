@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.115 2010/08/30 20:39:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.116 2010/09/01 09:11:16 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -43,6 +43,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/intervalarith.h"
 #include "scip/heur_nlp.h"
+#include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "nlpi/nlpi.h"
 
@@ -135,6 +136,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
 
    SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
+   SCIP_HEUR*            subnlpheur;                /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;                /**< a pointer to the TRYSOL heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
@@ -4835,7 +4837,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
    if( SCIPsolGetHeur(sol) == NULL )
       return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
+   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -6512,6 +6514,7 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
 #endif
    
    conshdlrdata->nlpheur    = SCIPfindHeur(scip, "nlp");
+   conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->rensheur   = SCIPfindHeur(scip, "rens");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
@@ -6558,6 +6561,7 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 #endif
    
    conshdlrdata->nlpheur    = NULL;
+   conshdlrdata->subnlpheur = NULL;
    conshdlrdata->rensheur   = NULL;
    conshdlrdata->trysolheur = NULL;
 
@@ -6743,7 +6747,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
    }
 
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL) && conshdlrdata->linearizenlpsol )
+   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) && conshdlrdata->linearizenlpsol )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -6776,7 +6780,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIP_EVENTHDLR* eventhdlr;
 
       /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensheur != NULL);
+      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
       assert(conshdlrdata->linearizenlpsol);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
@@ -7656,7 +7660,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
             }
          }
-         if( (conshdlrdata->nlpheur == NULL || sol == NULL) && !maypropfeasible )
+         if( (conshdlrdata->nlpheur == NULL || conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible )
             return SCIP_OKAY;
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = consdata->lhsviol + consdata->rhsviol;
@@ -7694,9 +7698,13 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
          return SCIP_OKAY;
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->nlpheur && sol != NULL )
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->nlpheur != NULL && sol != NULL )
    {
       SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
+   }
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL )
+   {
+      SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }
 
    return SCIP_OKAY;

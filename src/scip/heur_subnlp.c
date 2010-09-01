@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.2 2010/08/31 17:17:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.3 2010/09/01 09:11:16 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -38,7 +38,7 @@
 #define HEUR_DESC             "primal heuristic that performs a local search in an NLP obtained from a presolved subSCIP after fixing integer variables"
 #define HEUR_DISPCHAR         'q'
 #define HEUR_PRIORITY         -2000000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
