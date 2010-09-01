@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.4 2010/08/31 11:05:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.5 2010/09/01 12:30:23 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
@@ -47,6 +47,12 @@ const char* SCIPgetSolverNameIpopt(void);
 /** gets string that describes Ipopt (version number) */
 extern
 const char* SCIPgetSolverDescIpopt(void);
+
+/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
+extern
+void* SCIPgetIpoptApplication(
+   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
+   );
 
 #ifdef __cplusplus
 }

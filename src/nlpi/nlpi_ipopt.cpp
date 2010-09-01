@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.15 2010/08/31 20:19:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.16 2010/09/01 12:30:23 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -299,7 +299,7 @@ protected:
 
 /** clears the last solution arrays and sets the solstat and termstat to unknown and other, resp. */
 static
-void SCIPnlpiIpoptInvalidateSolution(
+void invalidateSolution(
    SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
 )
 {
@@ -522,7 +522,7 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
    
    problem->firstrun = TRUE;
    BMSfreeMemoryArrayNull(&problem->initguess);
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
    
    return SCIP_OKAY;
 }
@@ -569,7 +569,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
       exprvaridxs, exprtrees, names) );
 
    problem->firstrun = TRUE;
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -607,7 +607,7 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
       exprvaridxs, exprtree) );
 
    problem->firstrun = TRUE;
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -631,7 +631,7 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
     
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
 
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -655,7 +655,7 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
 
    SCIP_CALL( SCIPnlpiOracleChgConsSides(problem->oracle, nconss, indices, lhss, rhss) );
 
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -683,7 +683,7 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
    problem->firstrun = TRUE;
    BMSfreeMemoryArrayNull(&problem->initguess); // @TODO keep initguess for remaining variables 
 
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -709,7 +709,7 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
 
    problem->firstrun = TRUE;
 
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -734,7 +734,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
    assert(problem->oracle != NULL);
    
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(problem->oracle, idx, nvals, varidxs, vals) );
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -758,7 +758,7 @@ SCIP_DECL_NLPICHGQUADCOEFS(nlpiChgQuadraticCoefsIpopt)
    assert(problem->oracle != NULL);
    
    SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -779,7 +779,7 @@ SCIP_DECL_NLPICHGEXPRTREE(nlpiChgExprtreeIpopt)
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -803,7 +803,7 @@ SCIP_DECL_NLPICHGNONLINCOEF(nlpiChgNonlinCoefIpopt)
    assert(problem->oracle != NULL);
     
    SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
-   SCIPnlpiIpoptInvalidateSolution(problem);
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -903,7 +903,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             return SCIP_NOMEMORY;
          case Invalid_Number_Detected:
             SCIPwarningMessage("Ipopt failed because of an invalid number in function or derivative value\n");
-            SCIPnlpiIpoptInvalidateSolution(problem);
+            invalidateSolution(problem);
             problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
             problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
          default: ;
@@ -1687,6 +1687,16 @@ const char* SCIPgetSolverNameIpopt(void)
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
+}
+
+/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
+void* SCIPgetIpoptApplication(
+   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
+   )
+{
+   assert(nlpiproblem != NULL);
+   
+   return (void*)GetRawPtr(nlpiproblem->ipopt);
 }
 
 /** Method to return some info about the nlp */
