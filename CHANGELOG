@@ -1643,6 +1643,7 @@ plugins:
 - during probing, propagation of bounds is now always performed in linear constraint handler, ignoring the
   parameter "tightenboundsfreq"
 - new implementation of the clique graph construction method in clique separator
+- new constraint handler "cons_cumulative.{c,h}"
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -1716,6 +1717,8 @@ features:
 - included debugging module to check whether cutting planes cut off the optimal solution
 - if verblevel is at least NORMAL, an automatical check of the best solution is performed in the original problem,
   and an error message is displayed, if it violates an original constraint
+- due to the new constraint handler "cons_cumulative.{c,h}" SCIP can resource-constraint scheduling problem 
+
 
 fixed bugs:
 - fixed bug in MPS file reader
