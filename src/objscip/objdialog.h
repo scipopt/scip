@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.h,v 1.12 2010/09/01 14:23:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objdialog.h,v 1.13 2010/09/01 15:03:40 bzfpfets Exp $"
 
 /**@file   objdialog.h
  * @brief  C++ wrapper for dialogs
@@ -98,7 +98,7 @@ public:
       SCIP_DIALOG*       dialog              /**< the dialog itself */
       )
    {  /*lint --e{715}*/
-      SCIPdialogMessage(scip, NULL, "%s", scip_desc);
+      SCIPdialogMessage(scip, NULL, "%s", scip_desc_);
       return SCIP_OKAY;
    }
 
