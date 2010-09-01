@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.18 2010/08/18 18:15:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.19 2010/09/01 20:32:05 bzfpfets Exp $"
 
 /**@file   reader_sol.c
  * @ingroup FILEREADERS 
@@ -76,6 +76,9 @@ SCIP_RETCODE readXMLSol(
    varsnode = xml_find_node(start, tag);
    if ( varsnode == NULL )
    {
+      /* free xml data */
+      xml_free_node(start);
+
       SCIPerrorMessage("Variable section not found.\n");
       return SCIP_READERROR;
    }
@@ -159,9 +162,15 @@ SCIP_RETCODE readXMLSol(
       /* free solution */
       SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
+      /* free xml data */
+      xml_free_node(start);
+
       return SCIP_READERROR;
    }
-   
+
+   /* free xml data */
+   xml_free_node(start);
+
    return SCIP_OKAY;
 }
 
