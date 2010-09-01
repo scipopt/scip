@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.5 2010/09/01 12:18:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.6 2010/09/01 15:19:47 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -851,7 +851,7 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPsolve(heurdata->subscip) );
       
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
-       * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this proboably linear subproblem. */
+       * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem. */
       if( !SCIPisNLPConstructed(heurdata->subscip) )
       {
          SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1) );
@@ -892,7 +892,9 @@ SCIP_RETCODE solveSubNLP(
    /* we should either have variables, or the problem was trivial, in which case it should have been solved to optimality */
    assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_OPTIMAL);
 
-   if( !SCIPisNLPConstructed(heurdata->subscip) )
+   /* @todo if subscip is infeasible here, one should use this information to cutoff current fixation in main scip */
+   
+   if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED || !SCIPisNLPConstructed(heurdata->subscip) )
       goto cleanup;
 
    /* in most cases, the status should be nodelimit
@@ -906,7 +908,7 @@ SCIP_RETCODE solveSubNLP(
       case SCIP_STATUS_NODELIMIT:
          break; /* this is the status that is most likely happening */
       case SCIP_STATUS_OPTIMAL: 
-      case SCIP_STATUS_INFEASIBLE: /* @todo should use this information to cutoff current fixation in main scip */ 
+      case SCIP_STATUS_INFEASIBLE: 
       case SCIP_STATUS_USERINTERRUPT:
       case SCIP_STATUS_TIMELIMIT:
       case SCIP_STATUS_MEMLIMIT:
