@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_mosek.awk,v 1.9 2010/09/01 19:53:58 bzfwanie Exp $
+# $Id: check_mosek.awk,v 1.10 2010/09/01 20:59:45 bzfwanie Exp $
 #
 #@file    check_mosek.awk
 #@brief   MOSEK Check Report Generator
@@ -41,24 +41,7 @@ BEGIN {
    writesolufile = 0;   # should a solution file be created from the results
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
-
-   printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
-   printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
-   printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
-   printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
-   printf("\\begin{document}\n\n")                                  >TEXFILE;
-   printf("\\begin{table}[p]\n")                                    >TEXFILE;
-   printf("\\begin{center}\n")                                      >TEXFILE;
-   printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
-   printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-   printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
-   printf("\\toprule\n")                                            >TEXFILE;
-   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
-   printf("\\midrule\n")                                            >TEXFILE;
-
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
-   printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   headerprinted = 0;
 
    nprobs   = 0;
    sbab     = 0;
@@ -76,6 +59,7 @@ BEGIN {
    timeouts = 0;
    settings = "default";
    version  = "?";
+#   timelimit  = 0.0;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
@@ -210,6 +194,34 @@ BEGIN {
 /^=ready=/ {
    logging = 0;
    
+   #since the header depends on the parameter settings it is no longer possible to print it in the BEGIN section
+   if( !headerprinted ) {
+      printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
+      printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
+      printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
+      printf("\\usepackage{supertabular}\n")                           >TEXFILE;
+      printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
+      printf("\\begin{document}\n\n")                                  >TEXFILE;
+      printf("\\begin{center}\n")                                      >TEXFILE;
+      printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
+      printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
+      printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
+      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") >TEXFILE;
+      printf("\\midrule\n}\n")                                         >TEXFILE;
+      printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
+      printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns) >TEXFILE;
+      printf("\\bottomrule\n}\n")                                      >TEXFILE;
+      printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
+      printf("\\tablecaption{Mosek with %s settings}\n",settings)       >TEXFILE;
+      printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
+
+      printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+      printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
+      printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+
+      headerprinted = 1;
+   }
+
    if( !onlyinsolufile || solstatus[prob] != "" ) {
       temp = pb;
       pb = 1.0*temp;
@@ -244,15 +256,15 @@ BEGIN {
       else
          gapstr = " Large";
 
-      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
-	 timeout = 1;
-	 aborted = 0;
-	 tottime = endtime - starttime;
-      }
-      if( aborted && tottime == 0.0 )
-	 tottime = timelimit;
-      if( timelimit > 0.0 )
-	 tottime = min(tottime, timelimit);
+#      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
+#	 timeout = 1;
+#	 aborted = 0;
+#	 tottime = endtime - starttime;
+#      }
+#      if( aborted && tottime == 0.0 )
+#	 tottime = timelimit;
+#      if( timelimit > 0.0 )
+#	 tottime = min(tottime, timelimit);
 
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
@@ -439,10 +451,8 @@ END {
       "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
    printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
-   printf("\\end{tabular*}\n")                                           >TEXFILE;
-   printf("\\caption{Mosek with default settings}\n")                    >TEXFILE;
+   printf("\\end{supertabular*}\n")                                      >TEXFILE;
    printf("\\end{center}\n")                                             >TEXFILE;
-   printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
    printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");

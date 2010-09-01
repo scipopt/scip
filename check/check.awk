@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.95 2010/09/01 19:53:58 bzfwanie Exp $
+# $Id: check.awk,v 1.96 2010/09/01 20:59:45 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -325,7 +325,7 @@ BEGIN {
 #
 /^=ready=/ {
 
-   #since the header depends on the parameter printsoltimes it is no longer possible to print it in the BEGIN section
+   #since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
    if( !headerprinted ) {
       ntexcolumns = 8 + (2 * printsoltimes);
       
@@ -346,9 +346,10 @@ BEGIN {
       printf("\\\\\n") > TEXFILE;
       printf("\\midrule\n}\n")                                         >TEXFILE;
       printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
-      printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns)      >TEXFILE;
+      printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns) >TEXFILE;
       printf("\\bottomrule\n}\n")                                      >TEXFILE;
       printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
+      printf("\\tablecaption{SCIP with %s settings}\n",settings)       >TEXFILE;
       printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr") >TEXFILE;
       if( printsoltimes )
          printf("rr") > TEXFILE;
@@ -774,7 +775,6 @@ END {
 
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{supertabular*}\n")                                      >TEXFILE;
-   printf("{\\bfseries Settings:} %s\n", settings)                       >TEXFILE;
    printf("\\end{center}\n")                                             >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
