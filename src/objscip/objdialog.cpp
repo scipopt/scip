@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.cpp,v 1.9 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objdialog.cpp,v 1.10 2010/09/01 14:14:11 bzfheinz Exp $"
 
 /**@file   objdialog.cpp
  * @brief  C++ wrapper for dialogs
@@ -177,4 +177,23 @@ SCIP_RETCODE SCIPincludeObjDialog(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns the dialog object of the given name, or 0 if not existing */
+scip::ObjDialog* SCIPfindObjDialog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of dialog */
+   )
+{
+   SCIP_DIALOG* dialog;
+   SCIP_DIALOGDATA* dialogdata;
+   
+   dialog = SCIPfindDialog(scip, name);
+   if( dialog == NULL )
+      return 0;
+
+   dialogdata = SCIPdialogGetData(dialog);
+   assert(dialogdata != NULL);
+   
+   return dialogdata->objdialog;
 }

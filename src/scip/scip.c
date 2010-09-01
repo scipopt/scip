@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.632 2010/09/01 10:16:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.633 2010/09/01 14:14:11 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3210,6 +3210,19 @@ SCIP_Bool SCIPexistsDialog(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPexistsDialog", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsetExistsDialog(scip->set, dialog);
+}
+
+/** returns the dialog of the given name, or NULL if not existing */
+SCIP_DIALOG* SCIPfindDialog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of dialog */
+   )
+{
+   assert(name != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPfindDialog", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindDialog(scip->set, name);
 }
 
 /** captures a dialog */

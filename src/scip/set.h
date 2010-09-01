@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.119 2010/08/27 21:11:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.120 2010/09/01 14:14:12 bzfheinz Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -653,6 +653,13 @@ SCIP_Bool SCIPsetExistsDialog(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
+/** returns the dialog of the given name, or NULL if not existing */
+extern
+SCIP_DIALOG* SCIPsetFindDialog(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of dialog */
+   );
+   
 /** inserts NLPI in NLPI list */
 extern
 SCIP_RETCODE SCIPsetIncludeNlpi(
