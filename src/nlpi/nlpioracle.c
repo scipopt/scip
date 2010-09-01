@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.15 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.16 2010/09/01 13:53:21 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -72,6 +72,7 @@ struct SCIP_NlpiOracle
    int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
    
    int*                  vardegrees;         /**< array with maximal degree of variable over objective and all constraints */
+   SCIP_Bool             vardegreesuptodate; /**< whether the variable degrees are up to date */
    
    SCIP_EXPRINT*         exprinterpreter;    /**< interpreter for expression trees: evaluation and derivatives */
 };
@@ -290,7 +291,7 @@ SCIP_RETCODE moveVariable(
    assert(oracle->varlbs[toidx] <= -oracle->infinity);
    assert(oracle->varubs[toidx] >=  oracle->infinity);
    assert(oracle->varnames == NULL || oracle->varnames[toidx] == NULL);
-   assert(oracle->vardegrees[toidx] == -1);
+   assert(!oracle->vardegreesuptodate || oracle->vardegrees[toidx] == -1);
    
    oracle->varlbs[toidx] = oracle->varlbs[fromidx];
    oracle->varubs[toidx] = oracle->varubs[fromidx];
@@ -358,8 +359,67 @@ SCIP_RETCODE freeVariables(
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &oracle->vardegrees, oracle->nvars);
    
    oracle->nvars = 0;
+   oracle->vardegreesuptodate = TRUE; 
    
    return SCIP_OKAY;
+}
+
+/** Updates the degrees of all variables. */
+static
+void updateVariableDegrees(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to store NLPIORACLE data structure */
+   )
+{
+   int i;
+   int j;
+   
+   assert(oracle != NULL);
+   assert(oracle->nvars == 0 || oracle->vardegrees != NULL);
+   
+   if( oracle->vardegreesuptodate || oracle->nvars == 0 )
+      return;
+   
+   /* assume all variables do not appear in NLP */
+   BMSclearMemoryArray(oracle->vardegrees, oracle->nvars);
+
+   if( oracle->objlinidxs != NULL )
+      for( j = 0; j < oracle->objnlin; ++j )
+         oracle->vardegrees[oracle->objlinidxs[j]] = 1;
+   
+   if( oracle->conslinidxs != NULL )
+      for( i = 0; i < oracle->nconss; ++i )
+         if( oracle->conslinidxs[i] != NULL )
+            for( j = 0; j < oracle->conslinlens[i]; ++j )
+               oracle->vardegrees[oracle->conslinidxs[i][j]] = 1;
+   
+   if( oracle->objquadelems != NULL )
+      for( j = 0; j < oracle->objquadlen; ++j )
+      {
+         oracle->vardegrees[oracle->objquadelems[j].idx1] = 2;
+         oracle->vardegrees[oracle->objquadelems[j].idx2] = 2;
+      }
+   
+   if( oracle->consquadelems != NULL )
+      for( i = 0; i < oracle->nconss; ++i )
+         if( oracle->consquadelems[i] != NULL )
+            for( j = 0; j < oracle->consquadlens[i]; ++j )
+            {
+               oracle->vardegrees[oracle->consquadelems[i][j].idx1] = 2;
+               oracle->vardegrees[oracle->consquadelems[i][j].idx2] = 2;
+            }
+   
+   /* @todo could use exprtreeGetDegree to get actual degree of a variable in tree */
+   if( oracle->objexprvaridxs != NULL )
+      for( j = 0; j < SCIPexprtreeGetNVars(oracle->objexprtree); ++j )
+         oracle->vardegrees[oracle->objexprvaridxs[j]] = INT_MAX;
+   
+   if( oracle->consexprvaridxs != NULL )
+      for( i = 0; i < oracle->nconss; ++i )
+         if( oracle->consexprvaridxs[i] != NULL )
+            for( j = 0; j < SCIPexprtreeGetNVars(oracle->consexprtrees[i]); ++j )
+               oracle->vardegrees[oracle->consexprvaridxs[i][j]] = INT_MAX;
+   
+   oracle->vardegreesuptodate = TRUE;
 }
 
 /** applies a mapping of indices to one array of indices */
@@ -1125,6 +1185,7 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    
    (*oracle)->blkmem   = blkmem;
    (*oracle)->infinity = SCIP_DEFAULT_INFINITY;
+   (*oracle)->vardegreesuptodate = TRUE;
    
    SCIPdebugMessage("Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
    SCIP_CALL( SCIPexprintCreate(blkmem, &(*oracle)->exprinterpreter) );
@@ -1460,12 +1521,13 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
                   SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, &oracle->consquadelems[oracle->nconss+i], nquadelems[i], newlen) );
                   oracle->consquadlens[oracle->nconss+i] = newlen;
                }
-               /* update variable degress for variables in quadratic part */
-               for( j = 0; j < oracle->consquadlens[oracle->nconss+i]; ++j )
-               {
-                  oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx1] = MAX(2, oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx1]);
-                  oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx2] = MAX(2, oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx2]);
-               }
+               /* update variable degress for variables in quadratic part to keep uptodate */
+               if( oracle->vardegreesuptodate )
+                  for( j = 0; j < oracle->consquadlens[oracle->nconss+i]; ++j )
+                  {
+                     oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx1] = MAX(2, oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx1]);
+                     oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx2] = MAX(2, oracle->vardegrees[oracle->consquadelems[oracle->nconss+i][j].idx2]);
+                  }
 
                addednlcon = TRUE;
             }
@@ -1509,12 +1571,14 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->consexprtrees[oracle->nconss + i]) );
             
             SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs[oracle->nconss + i], exprvaridxs[i], SCIPexprtreeGetNVars(exprtrees[i])) );
-            for (j = 0; j < SCIPexprtreeGetNVars(exprtrees[i]); ++j)
-            {
-               assert(exprvaridxs[i][j] >= 0);
-               assert(exprvaridxs[i][j] <  oracle->nvars);
-               oracle->vardegrees[exprvaridxs[i][j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
-            }
+            /* update variable degrees of variables to keep them up to date */
+            if( oracle->vardegreesuptodate )
+               for (j = 0; j < SCIPexprtreeGetNVars(exprtrees[i]); ++j)
+               {
+                  assert(exprvaridxs[i][j] >= 0);
+                  assert(exprvaridxs[i][j] <  oracle->nvars);
+                  oracle->vardegrees[exprvaridxs[i][j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
+               }
          }
          else
          {
@@ -1590,7 +1654,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->objexprvaridxs, SCIPexprtreeGetNVars(oracle->objexprtree));
       SCIP_CALL( SCIPexprtreeFree(&oracle->objexprtree) );
       
-      /* @TODO this does not clear the vardegrees's */
+      oracle->vardegreesuptodate = FALSE;
    }
    
    if( nquadelems != 0 || oracle->objquadlen != 0 || exprtree != NULL || oracle->objexprtree != NULL )
@@ -1608,8 +1672,9 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objlinidxs, lininds, nlin) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objlinvals, linvals, nlin) );
       oracle->objnlin = nlin;
-      for( i = 0; i < nlin; ++i )
-         oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
+      if( oracle->vardegreesuptodate )
+         for( i = 0; i < nlin; ++i )
+            oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
       
       SCIPsortIntReal(oracle->objlinidxs, oracle->objlinvals, nlin);
    }
@@ -1645,12 +1710,13 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
          oracle->objquadlen = newlen;
       }
 
-      /* update variable degrees for variables in quadratic part */
-      for( j = 0; j < oracle->objquadlen; ++j )
-      {
-         oracle->vardegrees[oracle->objquadelems[j].idx1] = MAX(2, oracle->vardegrees[oracle->objquadelems[j].idx1]);
-         oracle->vardegrees[oracle->objquadelems[j].idx2] = MAX(2, oracle->vardegrees[oracle->objquadelems[j].idx2]);
-      }
+      /* update variable degrees for variables in quadratic part to keep them up to date */
+      if( oracle->vardegreesuptodate )
+         for( j = 0; j < oracle->objquadlen; ++j )
+         {
+            oracle->vardegrees[oracle->objquadelems[j].idx1] = MAX(2, oracle->vardegrees[oracle->objquadelems[j].idx1]);
+            oracle->vardegrees[oracle->objquadelems[j].idx2] = MAX(2, oracle->vardegrees[oracle->objquadelems[j].idx2]);
+         }
    }
    
    if( exprtree != NULL )
@@ -1664,12 +1730,13 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->objexprtree) );
       
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objexprvaridxs, exprvaridxs, SCIPexprtreeGetNVars(oracle->objexprtree)) );
-      for (j = 0; j < SCIPexprtreeGetNVars(oracle->objexprtree); ++j)
-      {
-         assert(exprvaridxs[j] >= 0);
-         assert(exprvaridxs[j] <  oracle->nvars);
-         oracle->vardegrees[exprvaridxs[j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
-      }
+      if( oracle->vardegreesuptodate )
+         for (j = 0; j < SCIPexprtreeGetNVars(oracle->objexprtree); ++j)
+         {
+            assert(exprvaridxs[j] >= 0);
+            assert(exprvaridxs[j] <  oracle->nvars);
+            oracle->vardegrees[exprvaridxs[j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
+         }
    }
    
    return SCIP_OKAY;
@@ -1881,6 +1948,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
 
    invalidateJacobiSparsity(oracle);
    invalidateHessianLagSparsity(oracle);
+   oracle->vardegreesuptodate = FALSE;
    
    lastgood = oracle->nconss - 1;
    while( lastgood >= 0 && delstats[lastgood] == 1)
@@ -2037,7 +2105,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
          {
             (*lincoefs)[pos] = newcoefs[i];
          }
-         else
+         else if( newcoefs[i] != 0.0 )
          {
             if( !addednew )
             { /* first coefficient that is added new, realloc memory */
@@ -2175,6 +2243,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    if( addednew )
    {
       invalidateJacobiSparsity(oracle);
+      invalidateHessianLagSparsity(oracle);
       SCIPquadelemSort(*myquadelems, *myquadlen);
    }
    
@@ -2197,6 +2266,9 @@ SCIP_RETCODE SCIPnlpiOracleChgExprtree(
    assert(considx < oracle->nconss);
    assert((exprvaridxs != NULL) == (exprtree != NULL));
 
+   invalidateHessianLagSparsity(oracle);
+   oracle->vardegreesuptodate = FALSE;
+   
    /* free previous expression tree */
    if( considx == -1 )
    {
@@ -2225,15 +2297,9 @@ SCIP_RETCODE SCIPnlpiOracleChgExprtree(
          BMSfreeBlockMemoryArray(oracle->blkmem, &oracle->consexprvaridxs[considx], SCIPexprtreeGetNVars(oracle->consexprtrees[considx]));
          SCIP_CALL( SCIPexprtreeFree(&oracle->consexprtrees[considx]) );
       }
-      else if( exprtree == NULL )
-      {
-         /* nothing to do */
-         return SCIP_OKAY;
-      }
    }
 
    invalidateJacobiSparsity(oracle);
-   /* @TODO need to reset variable degrees! */
 
    /* if user did not want to set new tree, then we are done */
    if( exprtree == NULL )
@@ -2265,13 +2331,14 @@ SCIP_RETCODE SCIPnlpiOracleChgExprtree(
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &oracle->objexprvaridxs, exprvaridxs, SCIPexprtreeGetNVars(oracle->objexprtree)) );
    }
 
-   /* increase variable decrease */
-   for( j = 0; j < SCIPexprtreeGetNVars((SCIP_EXPRTREE*)exprtree); ++j )
-   {
-      assert(exprvaridxs[j] >= 0);
-      assert(exprvaridxs[j] <  oracle->nvars);
-      oracle->vardegrees[exprvaridxs[j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
-   }
+   /* increase variable degree to keep them up to date */
+   if( oracle->vardegreesuptodate )
+      for( j = 0; j < SCIPexprtreeGetNVars((SCIP_EXPRTREE*)exprtree); ++j )
+      {
+         assert(exprvaridxs[j] >= 0);
+         assert(exprvaridxs[j] <  oracle->nvars);
+         oracle->vardegrees[exprvaridxs[j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
+      }
 
    return SCIP_OKAY;
 }
@@ -2366,6 +2433,8 @@ int SCIPnlpiOracleGetVarDegree(
    assert(varidx >= 0);
    assert(varidx < oracle->nvars);
    
+   updateVariableDegrees(oracle);
+   
    return oracle->vardegrees[varidx];
 }
 
@@ -2377,6 +2446,8 @@ int* SCIPnlpiOracleGetVarDegrees(
    )
 {
    assert(oracle != NULL);
+
+   updateVariableDegrees(oracle);
 
    return oracle->vardegrees;
 }
@@ -2438,7 +2509,9 @@ int SCIPnlpiOracleGetMaxDegree(
    int maxdegree;
    
    assert(oracle != NULL);
-   
+
+   updateVariableDegrees(oracle);
+
    maxdegree = 0;
    for( i = 0; i < oracle->nvars; ++i )
    {
@@ -2941,7 +3014,10 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
          SCIPmessageFPrintInfo(file, "%10s", oracle->varnames[i]);
       else
          SCIPmessageFPrintInfo(file, "x%09d", i);
-      SCIPmessageFPrintInfo(file, ": [%8g, %8g]\n", oracle->varlbs[i], oracle->varubs[i]);
+      SCIPmessageFPrintInfo(file, ": [%8g, %8g]", oracle->varlbs[i], oracle->varubs[i]);
+      if( oracle->vardegreesuptodate )
+         SCIPmessageFPrintInfo(file, "\t degree: %d", oracle->vardegrees[i]);
+      SCIPmessageFPrintInfo(file, "\n");
    }
    
    SCIPmessageFPrintInfo(file, "objective: ");
