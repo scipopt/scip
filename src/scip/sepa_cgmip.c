@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.25 2010/08/29 13:17:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.26 2010/09/01 12:13:06 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -2856,7 +2856,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "generate cuts for problems with only integer variables?",
          &sepadata->onlyintvars, FALSE, DEFAULT_ONLYINTVARS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cgmip/onlyActiveRows",
+         "separating/cgmip/onlyactiverows",
          "use only active rows to generate cuts?",
          &sepadata->onlyActiveRows, FALSE, DEFAULT_ONLYACTIVEROWS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -2864,7 +2864,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "use cutpool to store CG-cuts even if the are not efficient?",
          &sepadata->useCutpool, FALSE, DEFAULT_USECUTPOOL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cgmip/primalSeparation",
+         "separating/cgmip/primalseparation",
          "only separate cuts that are tight for the best feasible solution?",
          &sepadata->primalSeparation, FALSE, DEFAULT_PRIMALSEPARATION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -2876,11 +2876,11 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "terminate separation if a violated (but possibly sub-optimal) cut has been found?",
          &sepadata->earlyterm, FALSE, DEFAULT_EARLYTERM, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cgmip/addViolationCons",
+         "separating/cgmip/addviolationcons",
          "add constraint to subscip that only allows violated cuts?",
          &sepadata->addViolationCons, FALSE, DEFAULT_ADDVIOLATIONCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cgmip/addViolConshdlr",
+         "separating/cgmip/addviolconshdlr",
          "add constraint handler to filter out violated cuts?",
          &sepadata->addViolConshdlr, FALSE, DEFAULT_ADDVIOLCONSHDLR, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
