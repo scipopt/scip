@@ -182,6 +182,7 @@ features:
 - can now read XML-solution files as used by CPLEX
 - added new dialog "display pricers" which displays all included pricers 
 - now the statistic displays the number of calls of the feasibility checking method of each constraint handler and the running time of it
+- the LP reader can now read MIQPs and MIQCPs and write quadratic and SOC constraints
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
