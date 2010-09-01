@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.406 2010/08/31 19:00:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.407 2010/09/01 10:16:27 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4638,7 +4638,9 @@ void SCIPmarkNonlinearitiesPresent(
    );
 
 /** marks that there is a plugin that makes use of an NLP if nonlinear constraints are present
- * This method should be called by heuristics, separators, or propagators that can make use of an NLP relaxation of the problem.
+ * This method should be called by heuristics, separators, propagators, or relaxators that can make use of an NLP relaxation of the problem.
+ * 
+ * The function should be called during initialization or presolving.
  * 
  * If some constraint handler signals that it has nonlinear rows to contribute and there are plugins that can use an NLP,
  * then SCIP initializes the NLP when initializing the solving process (initsol).

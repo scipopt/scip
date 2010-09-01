@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.631 2010/09/01 07:41:41 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.632 2010/09/01 10:16:27 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6080,7 +6080,6 @@ SCIP_RETCODE freeSolve(
       SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->lp) );
    scip->set->continnonlinpresent = FALSE;
    scip->set->nonlinearitypresent = FALSE;
-   scip->set->nlprequired         = FALSE;
    
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat) );
@@ -13077,7 +13076,9 @@ void SCIPmarkNonlinearitiesPresent(
 }
 
 /** marks that there is a plugin that makes use of an NLP if nonlinear constraints are present
- * This method should be called by heuristics, separators, or propagators that can make use of an NLP relaxation of the problem.
+ * This method should be called by heuristics, separators, propagators, or relaxators that can make use of an NLP relaxation of the problem.
+ * 
+ * The function should be called during initialization or presolving.
  * 
  * If some constraint handler signals that it has nonlinear rows to contribute and there are plugins that can use an NLP,
  * then SCIP initializes the NLP when initializing the solving process (initsol).
