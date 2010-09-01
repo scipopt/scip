@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.29 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.30 2010/09/01 16:33:16 bzfheinz Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -63,9 +63,9 @@ public:
         scip_extension_(0)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_desc_, desc, std::strlen(desc)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(0, &scip_extension_, extension, std::strlen(extension)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_extension_, extension, std::strlen(extension)+1) );
    }
 
    /** destructor */
@@ -73,9 +73,9 @@ public:
    {
       /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(0, &scip_name_);
-      SCIPfreeMemoryArray(0, &scip_desc_);
-      SCIPfreeMemoryArray(0, &scip_extension_);
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
+      SCIPfreeMemoryArray(scip_, &scip_extension_);
    }
 
    /** destructor of file reader to free user data (called when SCIP is exiting) */
