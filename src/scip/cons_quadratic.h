@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.22 2010/08/29 17:37:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.23 2010/09/01 14:28:51 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -165,6 +165,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
  * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
  * \f]
  */
+extern
 SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -187,6 +188,40 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint dynamic? */
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
+   );
+
+/** Adds a linear variable with coefficient to a quadratic constraint.
+ */
+extern
+SCIP_RETCODE SCIPaddLinearVarQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< coefficient of variable */
+   );
+
+/** Adds a quadratic variable with linear and square coefficient to a quadratic constraint.
+ */
+extern
+SCIP_RETCODE SCIPaddQuadVarQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             lincoef,            /**< linear coefficient of variable */
+   SCIP_Real             sqrcoef             /**< square coefficient of variable */
+   );
+
+/** Adds a bilinear term to a quadratic constraint.
+ * The variables of the bilinear term must have been added before.
+ * The variables need to be different.
+ */
+extern
+SCIP_RETCODE SCIPaddBilinTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var1,               /**< first variable */
+   SCIP_VAR*             var2,               /**< second variable */
+   SCIP_Real             coef                /**< coefficient of bilinear term */
    );
 
 /** Gets the quadratic constraint as a nonlinear row representation.

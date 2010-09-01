@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.116 2010/09/01 09:11:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.117 2010/09/01 14:28:51 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -8546,6 +8546,91 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
       
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** Adds a linear variable with coefficient to a quadratic constraint.
+ */
+SCIP_RETCODE SCIPaddLinearVarQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< coefficient of variable */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var  != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(coef)));
+   
+   SCIP_CALL( addLinearCoef(scip, cons, var, coef) );
+   
+   return SCIP_OKAY;
+}
+
+/** Adds a quadratic variable with linear and square coefficient to a quadratic constraint.
+ */
+SCIP_RETCODE SCIPaddQuadVarQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             lincoef,            /**< linear coefficient of variable */
+   SCIP_Real             sqrcoef             /**< square coefficient of variable */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var  != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(lincoef)));
+   assert(!SCIPisInfinity(scip, REALABS(sqrcoef)));
+   
+   SCIP_CALL( addQuadVarTerm(scip, cons, var, lincoef, sqrcoef, SCIPconsIsTransformed(cons)) );
+   
+   return SCIP_OKAY;
+}
+
+/** Adds a bilinear term to a quadratic constraint.
+ * The variables of the bilinear term must have been added before.
+ * The variables need to be different.
+ */
+SCIP_RETCODE SCIPaddBilinTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var1,               /**< first variable */
+   SCIP_VAR*             var2,               /**< second variable */
+   SCIP_Real             coef                /**< coefficient of bilinear term */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int            var1pos;
+   int            var2pos;
+   
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+   assert(var1 != var2);
+   assert(!SCIPisInfinity(scip, REALABS(coef)));
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var1, &var1pos) );
+   if( var1pos < 0 )
+   {
+      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n");
+      return SCIP_INVALIDDATA;
+   }
+   
+   SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var2, &var2pos) );
+   if( var2pos < 0 )
+   {
+      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n");
+      return SCIP_INVALIDDATA;
+   }
+   
+   SCIP_CALL( addBilinearTerm(scip, cons, var1pos, var2pos, coef) );
 
    return SCIP_OKAY;
 }
