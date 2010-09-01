@@ -117,7 +117,9 @@ do
 	    date
 	    date >>$ERRFILE
 	    echo -----------------------------
+	    date +"@03 %s"
 	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $BLISBIN -Alps_instance $i -param $TMPFILE" 2>>$ERRFILE
+	    date +"@04 %s"
 	    echo -----------------------------
 	    date
 	    date >>$ERRFILE

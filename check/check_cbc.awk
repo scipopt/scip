@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.13 2010/06/03 15:28:09 bzfwanie Exp $
+# $Id: check_cbc.awk,v 1.14 2010/09/01 19:02:26 bzfwanie Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
@@ -23,11 +23,11 @@
 #
 function abs(x)
 {
-    return x < 0 ? -x : x;
+   return x < 0 ? -x : x;
 }
 function max(x,y)
 {
-    return (x) > (y) ? (x) : (y);
+   return (x) > (y) ? (x) : (y);
 }
 BEGIN {
    timegeomshift = 60.0;
@@ -71,13 +71,14 @@ BEGIN {
    pass     = 0;
    timeouts = 0;
    settings = "default";
-   threads  = 1;
+   version = "?";
+   threads = 1;
 }
-/=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
-/=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
-/=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
-/=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
-
+/=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
+/=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
+/=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
+/=feas=/ { solstatus[$2] = "feas"; }                # no feasible solution known
+/=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
 #
 # problem name
 #
@@ -161,8 +162,7 @@ BEGIN {
 # problem size
 #
 /^Problem / {
-   if ( $3 == "has" )
-   {
+   if ( $3 == "has" ) {
       origcons = $4;
       origvars = $6;
       if ( cons == 0 )
@@ -170,8 +170,7 @@ BEGIN {
       if ( vars == 0 )
          vars = origvars;
    }
-   else
-   {
+   else {
       cons = $3;
       vars = $5;
    }
@@ -196,7 +195,7 @@ BEGIN {
 # solution
 #
 /^Result - Finished objective/ {
-   pb       = ( $5 == 1e+50 ) ? +infty : $5; # since CBC (version 2.3.0) doesn't report infeasibility in tree, this is a workaround
+   pb       = ( $5 == 1e+50 ) ? +infty : $5;  # since CBC (version 2.3.0) doesn't report infeasibility in tree, this is a workaround
    db       = pb;
    bbnodes  = $7;
    dualiter = $10;
@@ -294,21 +293,19 @@ BEGIN {
 # 7) otherwise => unknown
 #
 /^=ready=/ {
-   if( !onlyinsolufile || solstatus[prob] != "" )
-   {
+   if( !onlyinsolufile || solstatus[prob] != "" ) {
       temp = pb;
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
 
-      bbnodes = max(bbnodes, 1); # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
+      bbnodes = max(bbnodes, 1);  # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
       nprobs++;
     
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 && pb < infty)
-      {
+      if( abs(pb - db) < 1e-06 && pb < infty ) {
          gap = 0.0;
          optimal = 1;
          markersym = "  ";
@@ -330,46 +327,49 @@ BEGIN {
       else
          gapstr = " Large";
 
+      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
+	 timeout = 1;
+	 aborted = 0;
+	 tottime = endtime - starttime;
+      }
+      if( aborted && tottime == 0.0 )
+	 tottime = timelimit;
+      if( timelimit > 0.0 )
+	 tottime = min(tottime, timelimit);
+
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
       printf("%-19s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
-          shortprob, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+         shortprob, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
-      if( aborted )
-      {
+      if( aborted ) {
          printf("abort\n");
          failtime += tottime;
          fail++;
       }
-      else if( solstatus[prob] == "opt" )
-      {
+      else if( solstatus[prob] == "opt" ) {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-         if( (db <= pb && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || (db >= pb && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) )
-         {
+         if( ( pb-db > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol))
+            || ( db-pb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) ) {
             printf("fail\n");
             failtime += tottime;
             fail++;
          }
-         else
-         {
-            if (timeout)
-            {
+         else {
+            if (timeout) {
                printf("timeout\n");
                timeouttime += tottime;
                timeouts++;
             }
-            else
-            {
-               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
-               {
+            else {
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol ) {
                   printf("ok\n");
                   pass++;
                }
-               else
-               {
+               else {
                   printf("fail\n");
                   failtime += tottime;
                   fail++;
@@ -377,43 +377,36 @@ BEGIN {
             }
          }
       }
-      else if( solstatus[prob] == "best" )
-      {
+      else if( solstatus[prob] == "best" ) {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-         if( (db <= pb && db-sol[prob] > reltol) || (db >= pb && sol[prob]-db > reltol) )
-         {
+	 if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol)
+            || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
             printf("fail\n");
             failtime += tottime;
             fail++;
          }
-         else
-         {
-            if (timeout)
-            {
-               if ( (db <= pb && sol[prob]-pb > reltol) || (db >= pb && pb-sol[prob] > reltol) )
-               {
+         else {
+            if (timeout) {
+	       if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol)
+                  || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
                   printf("better\n");
                   timeouttime += tottime;
                   timeouts++;
                }
-               else
-               {
+               else {
                   printf("timeout\n");
                   timeouttime += tottime;
                   timeouts++;
                }
             }
-            else
-            {
-               if( abs(pb - db) <= max(abstol, reltol) )
-               {
+            else {
+               if( abs(pb - db) <= max(abstol, reltol) ) {
                   printf("solved\n");
                   pass++;
                }
-               else
-               {
+               else {
                   printf("fail\n");
                   failtime += tottime;
                   fail++;
@@ -421,28 +414,22 @@ BEGIN {
             }
          }
       }
-      else if( solstatus[prob] == "unkn" )
-      {
+      else if( solstatus[prob] == "unkn" ) {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
          
-         if( abs(pb - db) <= max(abstol, reltol) )
-         {
+         if( abs(pb - db) <= max(abstol, reltol) ) {
             printf("solved\n");
             pass++;
          }
-         else
-         {
-            if( abs(pb) < infty )
-            {
+         else {
+            if( abs(pb) < infty ) {
                printf("better\n");
                timeouttime += tottime;
                timeouts++;
             }
-            else
-            {
-               if( timeout )
-               {
+            else {
+               if( timeout ) {
                   printf("timeout\n");
                   timeouttime += tottime;
                   timeouts++;
@@ -452,56 +439,68 @@ BEGIN {
             }
          }
       }
-      else if( solstatus[prob] == "inf" )
-      {
-         if (feasible)
-         {
-            if (timeout)
-            {
-               status = "timeout";
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else
-            {
-               status = "ok";
-               pass++;
-            }
-         }
-         else
-         {
-            status = "fail";
-            failtime += tottime;
-            fail++;
-         }
+      else if( solstatus[prob] == "inf" ) {
+	 if( !feasible ) {
+	    if( timeout ) {
+	       status = "timeout";
+	       timeouttime += tottime;
+	       timeouts++;
+	    }
+	    else {
+	       status = "ok";
+	       pass++;
+	    }
+	 }
+	 else {
+	    status = "fail";
+	    failtime += tottime;
+	    fail++;
+	 }
       }
-      else
-      {
-         if (timeout)
-         {
-            printf("timeout\n");
+      else if( solstatus[prob] == "feas" ) {
+	 if( feasible ) {
+	    if( timeout ) {
+	       status = "timeout";
+	       timeouttime += tottime;
+	       timeouts++;
+	    }
+	    else {
+	       status = "ok";
+	       pass++;
+	    }
+	 }
+	 else {
+	    status = "fail";
+	    failtime += tottime;
+	    fail++;
+	 }
+      }
+      else {
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
+
+         if( abs(pb - db) < max(abstol,reltol) ) {
+            status = "solved not verified";
+            pass++;
+         }
+         else if( timeout ) {
+            status = "timeout";
             timeouttime += tottime;
             timeouts++;
          }
          else
-            printf("unknown\n");
+            status = "unknown";
       }
-   
-      if( writesolufile )
-      {
-         if( pb == +infty && db == +infty )
-            printf("=inf= ")>NEWSOLUFILE;
-         else if( pb == db )
-            printf("=opt= ")>NEWSOLUFILE;
-         else if ( pb < +infty )
-            printf("=best= ")>NEWSOLUFILE;
-         else
-            printf("=unkn= ")>NEWSOLUFILE;
 
-         if( pb < +infty || pb == db )
-            printf("%s %16.9g\n",prob,pb)>NEWSOLUFILE;
-         else
-            printf("%s ?\n",prob)>NEWSOLUFILE;
+      if( writesolufile ) {
+	 if( pb == +infty && db == +infty )
+	    printf("=inf= %s\n",prob)>NEWSOLUFILE;
+	 else if( pb == db )
+	    printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+	 else if( pb < +infty )
+	    printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+	 else
+	    printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
       }
    
       sbab     += bbnodes;

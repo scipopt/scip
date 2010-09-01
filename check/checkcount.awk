@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.awk,v 1.6 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: checkcount.awk,v 1.7 2010/09/01 19:02:26 bzfwanie Exp $
 #
 #@file    checkcount.awk
 #@brief   SCIP Check Report Generator for counting tests
@@ -32,7 +32,7 @@ function max(x,y)
    return (x) > (y) ? (x) : (y);
 }
 BEGIN {
-   useshortnames = 0;   # should problem name be truncated to fit into column?
+   useshortnames = 0;  # should problem name be truncated to fit into column?
    printf("SCIP %s\n", LPS);
    printf("SETTING %s\n", SETTING);
    printf("------------------------+------+---------------+--------+--------+----------+-------+------------------+--------\n");
@@ -52,7 +52,8 @@ BEGIN {
    timelimit = 0.0;
    memlimit = 0;
 }
-# read number of solutions form the solution file for comparison
+
+# read number of solutions from the solution file for comparison
 /^=sol=/  {  knownsols[$2] = $3; }
 
 /^@01/ { 
@@ -71,7 +72,7 @@ BEGIN {
    else
       shortprob = prob;
 
-# Escape _ for TeX
+   # Escape _ for TeX
    n = split(prob, a, "_");
    pprob = a[1];
    for( i = 2; i <= n; i++ )
@@ -121,8 +122,7 @@ BEGIN {
 /^  Variables        :/ {
    if( inoriginalprob )
       origvars = $3;
-   else
-   {
+   else {
       vars = $3;
       intvars = $6;
       implvars = $8;
@@ -160,38 +160,32 @@ BEGIN {
 #
 /^Conflict Analysis  :/ { inconflict = 1; }
 /^  propagation      :/ {
-   if( inconflict == 1 )
-   {
+   if( inconflict == 1 ) {
       conftime += $3;
    }
 }
 /^  infeasible LP    :/ {
-   if( inconflict == 1 )
-   {
+   if( inconflict == 1 ) {
       conftime += $4;
    }
 }
 /^  strong branching :/ {
-   if( inconflict == 1 )
-   {
+   if( inconflict == 1 ) {
       conftime += $4; 
    }
 }
 /^  pseudo solution  :/ {
-   if( inconflict == 1 )
-   {
+   if( inconflict == 1 ) {
       conftime += $4; 
    }
 }
 /^  applied globally :/ {
-   if( inconflict == 1 )
-   {
+   if( inconflict == 1 ) {
       confclauses += $7; 
    }
 }
 /^  applied locally  :/ {
-   if( inconflict == 1 )
-   {
+   if( inconflict == 1 ) {
       confclauses += $7; 
    }
 }
@@ -217,22 +211,19 @@ BEGIN {
 /^=ready=/ {
    nprobs++;
   
-   if( !readerror )
-   {
+   if( !readerror ) {
       # figure problem type out 
       if( vars == 0 )
          probtype = "--";
       else if( binvars == 0 && intvars == 0 )
          probtype = "LP";
-      else if( contvars == 0 )
-      {
+      else if( contvars == 0 ) {
          if( intvars == 0 && implvars == 0 )
             probtype = "BP";
          else
             probtype = "IP";
       }
-      else
-      {
+      else {
          if( intvars == 0 )
             probtype = "01MIP";
          else
@@ -246,42 +237,33 @@ BEGIN {
       sbab += bbnodes;
       tottimestr = sprintf("%.1f", tottime);
 
-      if( interrupted )
-      {
+      if( interrupted ) {
          fail++;
-         if(memlimitreached)
-         {
+         if(memlimitreached) {
             memouts++;
          }
-         if( timelimitreached )
-         {
+         if( timelimitreached ) {
             tottimestr = "timeout";
             timeouts++;
          }
       }      
-      else if( counted )
-      {
+      else if( counted ) {
          pass++;
       }
-      else
-      {
+      else {
          tottimestr = "error";
       }
   
-      if( knownsols[prob] == "" )
-      {
+      if( knownsols[prob] == "" ) {
          status = "unknown";
       }
-      else if( (interrupted && knownsols[prob] >= sols) )
-      {
+      else if( (interrupted && knownsols[prob] >= sols) ) {
          status = "ok";
       }
-      else if( !interrupted &&  knownsols[prob] == sols )
-      {
+      else if( !interrupted &&  knownsols[prob] == sols ) {
          status = "ok";
       }
-      else
-      {
+      else {
          status = "fail";
          swrong++;
       }
@@ -291,8 +273,7 @@ BEGIN {
       else
          solsstr = sprintf("%d", sols);
 
-      if( interrupted )
-      {
+      if( interrupted ) {
          texsolsstr = sprintf("$\\geq$%s", solsstr);
          solsstr = sprintf(">%s", solsstr);
       }
@@ -300,12 +281,11 @@ BEGIN {
          texsolsstr = sprintf("%s", solsstr);
      
       printf("%-25s %-5s %7d %7d %8.1f %8d %10s %7.1f %18s %7s\n",
-	     shortprob, probtype, origcons, origvars,
-	     conftime, feasST, bbnodes, tottimestr, solsstr, status);
+         shortprob, probtype, origcons, origvars,
+         conftime, feasST, bbnodes, tottimestr, solsstr, status);
    }
-   else
-   {
-# read error
+   else { 
+      # read error
       readerrors++;
      
       printf("%-25s %-5s %7d %7d %8d %9d %7s %8d %8d %8d %18s %6s\n",

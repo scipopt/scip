@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.62 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: check.sh,v 1.63 2010/09/01 19:02:26 bzfwanie Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -149,7 +149,7 @@ do
 	    echo set limits time $TIMELIMIT        >> $TMPFILE
 	    echo set limits nodes $NODELIMIT       >> $TMPFILE
 	    echo set limits memory $MEMLIMIT       >> $TMPFILE
-#THREADS not supported yet (version 1.2.0.8)
+#THREADS not supported yet (version 1.2.1.6)
 	    echo set timing clocktype 1            >> $TMPFILE
 	    echo set display verblevel 4           >> $TMPFILE
 	    echo set display freq $DISPFREQ        >> $TMPFILE
@@ -157,7 +157,6 @@ do
 	    if test "$LPS" == "none"      
 	    then
 		echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
-
 	    fi
 	    echo set save $SETFILE                 >> $TMPFILE
 	    echo read $i                           >> $TMPFILE
