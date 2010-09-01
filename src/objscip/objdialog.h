@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.h,v 1.11 2010/09/01 14:14:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objdialog.h,v 1.12 2010/09/01 14:23:01 bzfheinz Exp $"
 
 /**@file   objdialog.h
  * @brief  C++ wrapper for dialogs
@@ -88,15 +88,17 @@ public:
    
    /** description output method of dialog
     *
-    *  This method should output (usually a single line of) information describing the meaning of the dialog.
-    *  The method is called, when the help menu of the parent's dialog is displayed.
-    *  If no description output method is given, the description string of the dialog is displayed instead.
+    *  This method should output (usually a single line of) information describing the meaning of the dialog.  The
+    *  method is called, when the help menu of the parent's dialog is displayed.  
+    *  If no description output method is given/implemented, the description string of the dialog is displayed instead
+    *  (see below).
     */
    virtual SCIP_RETCODE scip_desc(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_DIALOG*       dialog              /**< the dialog itself */
       )
    {  /*lint --e{715}*/
+      SCIPdialogMessage(scip, NULL, "%s", scip_desc);
       return SCIP_OKAY;
    }
 

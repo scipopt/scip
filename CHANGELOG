@@ -266,6 +266,7 @@ fixed bugs:
 - fixed bug in solve.c where relaxation branching candidates were cleared, but the relaxation was still marked solved and not called again, furthermore, adjusted criterions for solving a relaxation again
 - fixed bug in SoPlex autopricing due to which autopricing had behaved like steepest edge pricing so far
 - fixed bug in cons_linear.c:applyFixings() which could lead to lhs/rhs smaller/larger than -/+infinity
+- fixed bug w.r.t. ObjDialog and displaying the description of the dialog
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
