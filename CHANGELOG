@@ -268,7 +268,7 @@ fixed bugs:
 - fixed bug w.r.t. ObjDialog and displaying the description of the dialog
 - fixed bug with multiaggregations whose infimum and supremum are both infinite: in such a case multiaggregation is now forbidden
 - fixed numerical issue with multiaggregations which are infinite in one direction: value of multiaggregated variable could have been larger then inifinity
-- fixed bug w.r.t. of adding a variable bound of variable to its self
+- fixed bug w.r.t. of adding a variable bound variable to its self
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
