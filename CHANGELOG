@@ -161,9 +161,9 @@ features:
 - new method SCIPwriteVarsList() which writes an array of variables in cip-Format to given stream
 - new method SCIPparseVarName() which parses a string in cip-format as a variable name
 - new method SCIPparsearList() which parses an string as a variable list in cip-format 
-- constraint handler "logicor" can pares its output 
-- constraint handler "and" can pares its output 
-- constraint handler "or" can pares its output 
+- constraint handler "logicor" can parse its output 
+- constraint handler "and" can parse its output 
+- constraint handler "or" can parse its output 
 - constraint handler "or" can copy its constraints 
 - can now forbid upgrading of individual linear constraints (SCIPmarkDoNotUpgradeConsLinear())
 - added new dialog for setting presolving to aggressive, fast, or off in interactive shell
@@ -178,7 +178,7 @@ features:
   outputs the given solution in Flatzinc format w.r.t. the output annotations
 - can now read and write indicator constraints in the (extended) MPS format
 - the SoPlex interface can now double check each SoPlex result against CPLEX (lpi_spx.cpp)
-- a XML-parser is available in the src/xml subdirectory
+- an XML-parser is available in the src/xml subdirectory
 - can now read XML-solution files as used by CPLEX
 - added new dialog "display pricers" which displays all included pricers 
 - now the statistic displays the number of calls of the feasibility checking method of each constraint handler and the running time of it
@@ -266,6 +266,8 @@ fixed bugs:
 - fixed bug in SoPlex autopricing due to which autopricing had behaved like steepest edge pricing so far
 - fixed bug in cons_linear.c:applyFixings() which could lead to lhs/rhs smaller/larger than -/+infinity
 - fixed bug w.r.t. ObjDialog and displaying the description of the dialog
+- fixed bug with multiaggregations whose infimum and supremum are both infinite: in such a case multiaggregation is now forbidden
+- fixed numerical issue with multiaggregations which are infinite in one direction: value of multiaggregated variable could have been larger then inifinity
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

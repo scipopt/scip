@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.371 2010/08/31 18:42:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.372 2010/09/02 07:54:35 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5480,6 +5480,9 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Bool coefszeroone;
    SCIP_Bool coefsintegral;
    SCIP_Bool varsintegral;
+   SCIP_Bool supinf;                         /* might the supremum of the multiaggregation be infinite? */
+   SCIP_Bool infinf;                         /* might the infimum of the multiaggregation be infinite? */
+
    int maxnlocksstay;
    int maxnlocksremove;
    int bestslackpos;
@@ -5698,6 +5701,35 @@ SCIP_RETCODE convertLongEquality(
       SCIPdebugMessage("linear equality <%s> is integer infeasible\n", SCIPconsGetName(cons));
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
       *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   supinf = FALSE;
+   infinf = FALSE;
+   
+   /* check whether the the infimum and the supremum of the multiaggregation can be get infinite */
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      if( v != bestslackpos )
+      {
+         if( SCIPisGT(scip, consdata->vals[v], 0.0) )
+         {
+            supinf = supinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v]));
+            infinf = infinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v]));
+         }
+         else if( SCIPisLT(scip, consdata->vals[v], 0.0) )
+         {
+            supinf = supinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v]));
+            infinf = infinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v]));
+         }
+      }
+   }
+ 
+   /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+    * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */     
+   if( supinf && infinf )
+   {      
+      SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");     
       return SCIP_OKAY;
    }
 
@@ -6224,6 +6256,8 @@ SCIP_RETCODE dualPresolve(
       int j;
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
+      SCIP_Bool supinf;                      /* might the supremum of the multiaggregation be infinite? */
+      SCIP_Bool infinf;                      /* might the infimum of the multiaggregation be infinite? */
 
       assert(!bestislhs || lhsexists);
       assert(bestislhs || rhsexists);
@@ -6241,6 +6275,9 @@ SCIP_RETCODE dualPresolve(
       SCIPdebug(SCIPprintCons(scip, cons, NULL));
       SCIPdebugMessage("linear constraint <%s> (dual): multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
       naggrs = 0;
+      supinf = FALSE;
+      infinf = FALSE;
+
       for( j = 0; j < consdata->nvars; ++j )
       {
          if( j != bestpos )
@@ -6254,6 +6291,18 @@ SCIP_RETCODE dualPresolve(
                assert(SCIPisIntegral(scip, aggrcoefs[naggrs]));
                aggrcoefs[naggrs] = SCIPfloor(scip, aggrcoefs[naggrs]+0.5);
             }
+     
+            if( SCIPisGT(scip, aggrcoefs[naggrs], 0.0) )
+            {
+               supinf = supinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j]));
+               infinf = infinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j]));
+            }
+            else if( SCIPisLT(scip, aggrcoefs[naggrs], 0.0) )
+            {
+               supinf = supinf || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j]));
+               infinf = infinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j]));
+            }
+
             naggrs++;
          }
       }
@@ -6269,9 +6318,20 @@ SCIP_RETCODE dualPresolve(
          aggrconst = SCIPfloor(scip, aggrconst+0.5);
       }
 
+      aggregated = FALSE;
+      infeasible = FALSE;
+
       /* perform the multi-aggregation */
-      SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
-       
+      if( !supinf || !infinf )
+      {
+         SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
+      }
+      else
+      {
+         /* If the infimum and the supremum of a multiaggregation are both infinite, then the multiaggregation might not be resolvable.
+          * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
+         SCIPdebugMessage("do not perform multiaggregation: infimum and supremum are both infinite\n");
+      }
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &aggrcoefs);
       SCIPfreeBufferArray(scip, &aggrvars);

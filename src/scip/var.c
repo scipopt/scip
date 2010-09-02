@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.290 2010/08/20 10:41:53 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.291 2010/09/02 07:54:35 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2196,6 +2196,7 @@ SCIP_RETCODE varAddParent(
 {
    assert(var != NULL);
    assert(parentvar != NULL);
+
    /* the direct original counterpart must be stored as first parent */
    assert(var->nparentvars == 0 || SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL);
 
@@ -2916,7 +2917,7 @@ SCIP_RETCODE SCIPvarTransform(
       /* link original and transformed variable */
       origvar->data.original.transvar = *transvar;
       SCIP_CALL( varAddParent(*transvar, blkmem, set, origvar) );
-      
+
       /* copy rounding locks */
       (*transvar)->nlocksdown = origvar->nlocksdown;
       (*transvar)->nlocksup = origvar->nlocksup;
@@ -3540,6 +3541,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          scalars[v] = activescalars[v];
       }
    }
+
+   if( SCIPsetIsInfinity(set, *constant) )
+      *constant = SCIPsetInfinity(set);
+   else if( SCIPsetIsInfinity(set, -(*constant)) )
+      *constant = -SCIPsetInfinity(set);
 
    SCIPsetFreeBufferArray(set, &tmpvars2);
    SCIPsetFreeBufferArray(set, &tmpscalars2);
