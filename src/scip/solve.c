@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.308 2010/08/27 14:38:32 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.309 2010/09/02 17:23:30 bzfviger Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1732,12 +1732,12 @@ SCIP_RETCODE priceAndCutLoop(
                      SCIP_Real objreldiff;
                      int nfracs;
 
-		     if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
-		     {
-			SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
-		     }
-		     else
-			nfracs = INT_MAX;
+                     if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+                     {
+                        SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
+                     }
+                     else
+                        nfracs = INT_MAX;
                      lpobjval = SCIPlpGetObjval(lp, set);
                      objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
                      SCIPdebugMessage(" -> LP bound moved from %g to %g (reldiff: %g)\n",
@@ -2699,8 +2699,8 @@ SCIP_RETCODE solveNode(
             SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
          }
          
-	 /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
-	 SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
+         /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
+         SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
       }
 
       /* check if heuristics leave us with an invalid LP */
