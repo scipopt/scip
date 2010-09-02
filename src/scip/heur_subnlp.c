@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.6 2010/09/01 15:19:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.7 2010/09/02 13:14:54 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -175,6 +175,7 @@ SCIP_RETCODE createSubSCIP(
     * catch global bound change events */
    heurdata->nsubvars = SCIPgetNOrigVars(heurdata->subscip);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars) );
+   BMSclearMemoryArray(heurdata->var_subscip2scip, heurdata->nsubvars);
    for( i = 0; i < nvars; i++ )
    {
       SCIP_VAR* subvar;
