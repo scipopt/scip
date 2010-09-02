@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.49 2010/08/05 19:20:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.50 2010/09/02 12:43:35 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1627,8 +1627,8 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of multiplication! */
-         resultant->inf = -operand1.inf * operand1.inf;
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of multiplication!, parenthesis are important! */
+         resultant->inf = -(operand1.inf * operand1.inf);
       }
 
       if( operand1.sup >=  infinity )
@@ -1642,9 +1642,10 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of multiplication! */
-         resultant->sup = -operand1.sup * operand1.sup;
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of multiplication!, parenthesis are important! */
+         resultant->sup = -(operand1.sup * operand1.sup);
       }
+      assert(resultant->inf <= resultant->sup);
    }
    else if( operand2 == 0.5 )
    { /* another common case where pow can easily be avoided */
@@ -1659,7 +1660,7 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of multiplication! */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of sqrt! */
          resultant->inf = -sqrt(-operand1.inf);
       }
 
@@ -1674,9 +1675,10 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of multiplication! */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of sqrt! */
          resultant->sup = -sqrt(-operand1.sup);
       }
+      assert(resultant->inf <= resultant->sup);
    }
    else
    {
