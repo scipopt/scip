@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.13 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.14 2010/09/02 14:55:42 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -4304,7 +4304,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
-      SCIPdebugMessage( "-> handling bound changed event %d, variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPdebugMessage( "-> handling bound changed event %x, variable <%s>\n", etype, SCIPvarGetName(var) );
       SCIP_CALL( nlpUpdateVarBounds(scip->nlp, var) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )

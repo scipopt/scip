@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.39 2010/09/01 09:11:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.40 2010/09/02 14:55:42 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -985,7 +985,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("catched new sol event %d from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
+   SCIPdebugMessage("catched new sol event %x from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
 
    for( c = 0; c < nconss; ++c )
    {
