@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.291 2010/09/02 07:54:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.292 2010/09/02 20:46:48 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -7108,9 +7108,66 @@ SCIP_RETCODE varAddVbound(
 {
    SCIP_Bool added;
 
+   /* It can happen that the variable "var" and the variable "vbvar" are the same variable. For example if a variable
+    * gets aggregated, the variable bounds (vbound) of that variable are copied to the other variable. A variable bound
+    * variable of the aggregated variable might be the same as the one its gets aggregated too.
+    * 
+    * If the variable "var" and the variable "vbvar" are the same, the variable bound which should be added here has to
+    * be redundant. This is the case since an infeasibility should have be detected in the previous methods. As well as
+    * the bounds of the variable which should be also already be tightened in the previous methods. Therefore, the
+    * variable bound can be ignored.
+    *
+    * From the way the the variable bound system is implemented (detecting infeasibility, tighten bounds), the
+    * equivalence of the variables should be checked here.
+    */
+   if( var == vbvar )
+   {
+      /* in this case the variable bound has to be redundant, this means for possible assignments to this variable; this
+       * can be checked via the global bounds of the variable */
+#ifndef NDEBUG
+      SCIP_Real lb;
+      SCIP_Real ub;
+      
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
+      if(vbtype == SCIP_BOUNDTYPE_LOWER)
+      {
+         if( vbcoef > 0.0 )
+         {
+            assert(SCIPsetIsGE(set, lb,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsGE(set, ub,  ub * vbcoef + vbconstant) );
+         }
+         else
+         {
+            assert(SCIPsetIsGE(set, lb,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsGE(set, ub,  lb * vbcoef + vbconstant) );
+         }
+      }
+      else
+      {
+         assert(vbtype = SCIP_BOUNDTYPE_UPPER);
+         if( vbcoef > 0.0 )
+         {
+            assert(SCIPsetIsLE(set, lb,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsLE(set, ub,  ub * vbcoef + vbconstant) );
+         }
+         else
+         {
+            assert(SCIPsetIsLE(set, lb,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsLE(set, ub,  lb * vbcoef + vbconstant) );
+         }
+      }
+#endif
+      SCIPdebugMessage("redundant variable bound: <%s> %s %g<%s> %+g\n", 
+         SCIPvarGetName(var), vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef, SCIPvarGetName(vbvar), vbconstant);
+      
+      return SCIP_OKAY;
+   }
+
    SCIPdebugMessage("adding variable bound: <%s> %s %g<%s> %+g\n", 
       SCIPvarGetName(var), vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef, SCIPvarGetName(vbvar), vbconstant);
-
+   
    /* check variable bound on debugging solution */
    SCIP_CALL( SCIPdebugCheckVbound(set, var, vbtype, vbvar, vbcoef, vbconstant) ); /*lint !e506 !e774*/
 
