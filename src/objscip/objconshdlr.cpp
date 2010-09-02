@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.45 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.46 2010/09/02 08:47:02 bzfpfets Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -548,6 +548,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
 
    assert(scip != NULL);
    assert(objconshdlr != NULL);
+   assert(objconshdlr->scip_ == scip);
 
    /* create obj constraint handler data */
    conshdlrdata = new SCIP_CONSHDLRDATA;
