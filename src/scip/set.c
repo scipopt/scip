@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.240 2010/09/01 16:33:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.241 2010/09/02 13:59:46 bzfpfets Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -417,20 +417,20 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    }
 
    /* copy all constraint handler plugins */
-   if( copyconshdlrs && sourceset->conshdlrs != NULL )
+   if( copyconshdlrs && sourceset->conshdlrs_include != NULL )
    {	
       /* copy them in order they were added to the sourcescip */
       for( p = 0; p < sourceset->nconshdlrs; ++p )
       {
-         if( SCIPconshdlrIsClonable(sourceset->conshdlrs[p]) )
+         if( SCIPconshdlrIsClonable(sourceset->conshdlrs_include[p]) )
          {
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset) );
          }
-         else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs[p]) )
+         else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
          {
             *success = FALSE;
             SCIPdebugMessage("constraint handler <%s> (which does not need constraints) cannot be copied.", 
-               SCIPconshdlrGetName(sourceset->conshdlrs[p]));
+               SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
          }
       }
    }
