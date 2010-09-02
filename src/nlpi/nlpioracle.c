@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.16 2010/09/01 13:53:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.17 2010/09/02 13:19:19 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -3082,6 +3082,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    nllevel = 0;
    
    SCIPmessageFPrintInfo(file, "$offlisting\n");
+   SCIPmessageFPrintInfo(file, "$offdigit\n");
    SCIPmessageFPrintInfo(file, "* NLPI Oracle Problem %s\n", oracle->name ? oracle->name : "");
    SCIPmessageFPrintInfo(file, "Variables ");
    for( i = 0; i < oracle->nvars; ++i )
