@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlp.h,v 1.4 2010/05/31 15:49:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlp.h,v 1.5 2010/09/03 18:02:17 bzfviger Exp $"
 
 /**@file   struct_nlp.h
  * @brief  datastructures for NLP management
@@ -107,7 +107,7 @@ struct SCIP_NlRow
 struct SCIP_Nlp
 {
    /* NLP solver */
-   SCIP_NLPI*            solver;             /**< interface to NLP solver */
+   SCIP_NLPI*            solver;             /**< interface to NLP solver, or NULL if no NLP solvers are available */
    SCIP_NLPIPROBLEM*     problem;            /**< problem in NLP solver */
 
    /* status */

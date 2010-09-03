@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.15 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.16 2010/09/03 18:02:17 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -3172,8 +3172,6 @@ SCIP_RETCODE nlpUpdateVarBounds(
 
    assert(nlp != NULL);
    assert(var != NULL);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
    assert(SCIPhashmapExists(nlp->varhash, var));
 
    /* original variable bounds are ignored during diving
@@ -3189,6 +3187,9 @@ SCIP_RETCODE nlpUpdateVarBounds(
       return SCIP_OKAY;
 
    /* update bounds in NLPI problem */
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
+   
    pos = nlp->varmap_nlp2nlpi[pos];
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -3210,8 +3211,6 @@ SCIP_RETCODE nlpUpdateScipObjCoef(
 
    assert(nlp != NULL);
    assert(var != NULL);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
    assert(SCIPhashmapExists(nlp->varhash, var));
 
    /* if its a user objective, then we have nothing to do here
@@ -3240,6 +3239,9 @@ SCIP_RETCODE nlpUpdateScipObjCoef(
 
    /* if we are here, then the objective in the NLPI is up to date,
     * we keep it this way by changing the coefficient of var in the NLPI problem objective */
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
+   
    pos = nlp->varmap_nlp2nlpi[pos];
    objidx = -1;
    SCIP_CALL( SCIPnlpiChgLinearCoefs(nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
@@ -3680,8 +3682,6 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
    assert(nlp    != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
    assert(nlp->nunflushednlrowdel >= 0);
    assert(!nlp->indiving);
 
@@ -3694,6 +3694,9 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
 #endif
       return SCIP_OKAY;
    }
+
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    /* create marker which rows have to be deleted */
    SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&rowset, nlp->nnlrows_solver * sizeof(int)) );
@@ -3771,8 +3774,6 @@ SCIP_RETCODE nlpFlushVarDeletions(
    assert(nlp    != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
    assert(nlp->nunflushedvardel >= 0);
    assert(nlp->nunflushednlrowdel == 0);
    assert(!nlp->indiving);
@@ -3786,6 +3787,9 @@ SCIP_RETCODE nlpFlushVarDeletions(
 #endif
       return SCIP_OKAY;
    }
+
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    /* create marker which variables have to be deleted */
    SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&colset, nlp->nvars_solver * sizeof(int)) );
@@ -3888,6 +3892,9 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 #endif
       return SCIP_OKAY;
    }
+
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    SCIP_CALL( nlpEnsureNlRowsSolverSize(nlp, blkmem, set, nlp->nnlrows_solver + nlp->nunflushednlrowadd) );
 
@@ -4012,8 +4019,6 @@ SCIP_RETCODE nlpFlushVarAdditions(
    assert(nlp    != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
    assert(nlp->nunflushedvaradd >= 0);
    assert(!nlp->indiving);
 
@@ -4026,6 +4031,9 @@ SCIP_RETCODE nlpFlushVarAdditions(
 #endif
       return SCIP_OKAY;
    }
+
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    SCIP_CALL( nlpEnsureVarsSolverSize(nlp, blkmem, set, nlp->nvars_solver + nlp->nunflushedvaradd) );
 
@@ -4095,14 +4103,15 @@ SCIP_RETCODE nlpFlushObjective(
    assert(nlp    != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
-   assert(nlp->solver != NULL);
-   assert(nlp->problem != NULL);
    assert(nlp->nunflushedvaradd == 0);
    assert(nlp->nunflushedvardel == 0);
    assert(!nlp->indiving);
 
    if( nlp->objflushed )
       return SCIP_OKAY;
+
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    if( nlp->objective == NULL )
    {
@@ -4188,6 +4197,19 @@ SCIP_RETCODE nlpSolve(
    assert(blkmem != NULL);
    assert(set    != NULL);
    assert(stat   != NULL);
+
+   if( nlp->solver == NULL )
+   {
+      SCIPwarningMessage("Attempted to solve NLP, but no solver available.\n");
+      
+      nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
+      
+      return SCIP_OKAY;
+   }
+   
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    /* set initial guess, if available */
    if( nlp->haveinitguess )
@@ -4370,32 +4392,34 @@ SCIP_RETCODE SCIPnlpCreate(
 
    SCIP_ALLOC( BMSallocMemory(nlp) );
 
-   /* NLP solver and problem */
-   assert(set->nlp_solver != NULL);
-   if( set->nlp_solver[0] == '\0' )
-   { /* take solver with highest priority */
-      if( set->nnlpis == 0 )
-      {
-         SCIPerrorMessage("Attempt to create an NLP, but no NLP solver plugin (NLPI) is available.\n");
-         return SCIP_ERROR;
-      }
-      else
-      {
+   /* select NLP solver (if any available) and setup problem */
+   if( set->nnlpis > 0 )
+   {
+      assert(set->nlp_solver != NULL);
+      if( set->nlp_solver[0] == '\0' )
+      { /* take solver with highest priority */
          assert(set->nlpis != NULL);
          (*nlp)->solver = set->nlpis[set->nnlpis-1];
       }
+      else
+      { /* find user specified NLP solver */
+         (*nlp)->solver = SCIPsetFindNlpi(set, set->nlp_solver);
+         if( (*nlp)->solver == NULL )
+         {
+            SCIPerrorMessage("Selected NLP solver <%s> not available.\n", set->nlp_solver);
+            return SCIP_PLUGINNOTFOUND;
+         }
+      }
+      assert((*nlp)->solver != NULL);
+      SCIP_CALL( SCIPnlpiCreateProblem((*nlp)->solver, &(*nlp)->problem, "scip_nlp") );
    }
    else
-   { /* find user specified NLP solver */
-      (*nlp)->solver = SCIPsetFindNlpi(set, set->nlp_solver);
-      if( (*nlp)->solver == NULL )
-      {
-         SCIPerrorMessage("Selected NLP solver <%s> not available.\n", set->nlp_solver);
-         return SCIP_PLUGINNOTFOUND;
-      }
+   {
+      /* maybe someone wanna use the NLP just to collect nonlinearities, but is not necessarily interesting on solving
+       * so we allow this and just continue */
+      (*nlp)->solver = NULL;
+      (*nlp)->problem = NULL;
    }
-   assert((*nlp)->solver != NULL);
-   SCIP_CALL( SCIPnlpiCreateProblem((*nlp)->solver, &(*nlp)->problem, "scip_nlp") );
 
    /* status */
    (*nlp)->nunflushedvaradd   = 0;
@@ -4499,7 +4523,10 @@ SCIP_RETCODE SCIPnlpFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlp)->vars, (*nlp)->sizevars);
 
    /* free NLPI problem */
-   SCIP_CALL( SCIPnlpiFreeProblem((*nlp)->solver, &(*nlp)->problem) );
+   if( (*nlp)->problem != NULL )
+   {
+      SCIP_CALL( SCIPnlpiFreeProblem((*nlp)->solver, &(*nlp)->problem) );
+   }
 
    /* free NLP data structure */
    BMSfreeMemory(nlp);
@@ -4684,7 +4711,6 @@ SCIP_RETCODE SCIPnlpDelVar(
 
    return SCIP_OKAY;
 }
-
 
 /** ensures, that nonlinear rows array of NLP can store at least num entries */
 SCIP_RETCODE SCIPnlpEnsureNlRowsSize(
@@ -5175,6 +5201,14 @@ SCIP_RETCODE SCIPnlpStartDive(
       SCIPerrorMessage("NLP is already in diving mode\n");
       return SCIP_ERROR;
    }
+   
+   if( nlp->solver == NULL )
+   {
+      /* In diving mode we do not cache changes but put them directly in the NLPI problem, which does not exsts if there is no solver.
+       * So we forbid diving of no solver is available. */
+      SCIPerrorMessage("Cannot start diving if no NLP solver is available\n");
+      return SCIP_ERROR;
+   }
 
    SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
 
@@ -5204,6 +5238,9 @@ SCIP_RETCODE SCIPnlpEndDive(
       SCIPerrorMessage("NLP not in diving mode, cannot end dive\n");
       return SCIP_ERROR;
    }
+   
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    /* reset variable bounds in NLPI problem to their current values */
    SCIP_CALL( SCIPbufferAllocMem(set->buffer, set, (void**)&varidx, nlp->nvars * sizeof(int)) );
@@ -5258,6 +5295,8 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
    assert(var != NULL);
    assert(SCIPhashmapExists(nlp->varhash, var));
    assert(nlp->indiving);
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    /* get position of variable in NLPI problem */
    pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
@@ -5320,6 +5359,8 @@ SCIP_RETCODE SCIPnlpChgVarBoundsDive(
    assert(var != NULL);
    assert(SCIPhashmapExists(nlp->varhash, var));
    assert(nlp->indiving);
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    /* get position of variable in NLPI problem */
    pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
@@ -5350,6 +5391,8 @@ SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
    assert(nlp->indiving);
    assert(lbs  != NULL || nvars == 0);
    assert(ubs  != NULL || nvars == 0);
+   assert(nlp->solver != NULL);
+   assert(nlp->problem != NULL);
 
    if( nvars == 0 )
       return SCIP_OKAY;
