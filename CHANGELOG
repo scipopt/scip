@@ -331,6 +331,10 @@ design:
 Makefile
 - added target "lintfiles" which allows to call flexelint with a list of file, for example, 
   make lintfiles FILES="src/scip/prop_vbounds.c"
+- the NLP solver interfaces and expression interpreter are located in a separate library (libnlpi.*; similar to the lpi library) and is required to link against the SCIP library
+  also projects that use SCIP via make/make.project need to change their Makefile (!!!):
+  in the $(MAINFILE) target, add $(NLPILIBFILE) behind $(LPILIBFILE) in the dependencies and add $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) to the linker flags
+
 
 SCIP version 1.2.0
 ===============

@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.9 2010/01/11 19:26:48 bzfheinz Exp $
+# $Id: Makefile,v 1.10 2010/09/03 21:04:15 bzfviger Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ NLP example using SCIP as a callable library
@@ -105,11 +105,11 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKERLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKERLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKERLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKERLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKERLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o) $@
 
