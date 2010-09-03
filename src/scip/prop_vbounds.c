@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.8 2010/09/03 07:58:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.9 2010/09/03 10:57:41 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -269,9 +269,18 @@ SCIP_RETCODE depthFirstSearch(
 
    /* store variable in the sorted variable array */
    sortedvars[(*nsortedvars)] = var;
-   
    (*nsortedvars)++;
    
+   /* insert variable bound variable into the hash table since they are involve in the later propagation */ 
+   if( varHashmap != NULL && !SCIPhashmapExists(varHashmap, var) ) 
+   { 
+      SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(var), *nusedvars); 
+      SCIP_CALL( SCIPhashmapInsert(varHashmap, var, (void*) (size_t)(*nusedvars)) ); 
+      usedvars[*nusedvars] =  var; 
+      (*nusedvars)++; 
+   } 
+
+
    return SCIP_OKAY;
 }
 
@@ -997,14 +1006,13 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
                sortedvars, &nsortedvars, lowerbound) );
          
          SCIPdebugMessage("detected connected component of size <%d>\n", nsortedvars);
-         
+        
          /* copy and capture variables to make sure, the variables are not deleted */
          for( i = 0; i < nsortedvars; ++i )
          {
             topovars[(*ntopovars)] = sortedvars[i];
             (*ntopovars)++;
          }
-         
       }
    }
    
