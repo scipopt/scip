@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.8 2010/09/03 17:04:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.9 2010/09/03 18:02:37 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -110,12 +110,6 @@ SCIP_RETCODE createSubSCIP(
 
    heurdata->triedsetupsubscip = TRUE;
 
-   if( SCIPgetNNlpis(scip) == 0 )
-   {
-      SCIPerrorMessage("No NLP solver available. Cannot setup NLP.\n");
-      return SCIP_ERROR;
-   }
-
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
@@ -150,6 +144,16 @@ SCIP_RETCODE createSubSCIP(
    if( !success )
    {
       SCIPwarningMessage("failed to copy some plugins to subSCIP, continue anyway\n");
+   }
+   
+   /* check if we still have NLPI's in subscip */
+   if( SCIPgetNNlpis(heurdata->subscip) <= 0 )
+   {
+      SCIPdebugMessage("some NLPIs from main SCIP did not copy into subSCIP, give up heuristic.\n");
+      SCIPfree(&heurdata->subscip);
+      SCIPhashmapFree(&heurdata->var_scip2subscip);
+      
+      return SCIP_OKAY;
    }
    
    /* copy parameter settings */
@@ -1369,8 +1373,11 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
 
+   /* create subSCIP for later use */
    SCIP_CALL( createSubSCIP(scip, heurdata) );
-   assert(heurdata->subscip != NULL);
+   /* creating subSCIP may fail if the NLP solver interfaces did not copy into subscip */
+   if( heurdata->subscip == NULL )
+      return SCIP_OKAY;
    
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
