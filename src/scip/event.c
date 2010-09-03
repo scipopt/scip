@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.67 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.68 2010/09/03 18:00:51 bzfwinkm Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1592,10 +1592,10 @@ SCIP_RETCODE SCIPeventfilterAdd(
 /** linear search for the given entry in event filter */
 static
 int eventfilterSearch(
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
-   SCIP_EVENTTYPE        eventtype,          /**< event type */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   SCIP_EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
+   SCIP_EVENTFILTER*const eventfilter,        /**< event filter */
+   SCIP_EVENTTYPE const  eventtype,          /**< event type */
+   SCIP_EVENTHDLR*const  eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_EVENTDATA*const  eventdata           /**< event data to pass to the event handler for the event processing */
    )
 {
    int i;
@@ -1606,8 +1606,8 @@ int eventfilterSearch(
 
    for( i = 0; i < eventfilter->len; ++i )
    {
-      if( eventhdlr == eventfilter->eventhdlrs[i]
-         && eventdata == eventfilter->eventdatas[i]
+      if( eventdata == eventfilter->eventdatas[i]
+         && eventhdlr == eventfilter->eventhdlrs[i]
          && eventtype == eventfilter->eventtypes[i]
          && eventfilter->nextpos[i] == -2 )
          return i;
