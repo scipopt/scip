@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.7 2010/09/03 17:26:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.8 2010/09/03 21:33:25 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
@@ -55,6 +55,16 @@ SCIP_Bool SCIPisIpoptAvailableIpopt(void);
 extern
 void* SCIPgetIpoptApplicationPointerIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
+   );
+
+/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
+ * It's here, because Ipopt is linked against Lapack.
+ */
+SCIP_RETCODE LapackDsyev(
+   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
+   int                   N,                  /**< dimension */
+   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
+   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
    );
 
 #ifdef __cplusplus

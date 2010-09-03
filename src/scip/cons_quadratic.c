@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.119 2010/09/03 19:25:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.120 2010/09/03 21:33:25 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -45,6 +45,7 @@
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/nlpi_ipopt.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
@@ -440,86 +441,6 @@ SCIP_Bool getNextToken(
  *  if val is >= infty1, then give infty2, else give val
  */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
-
-#ifndef WITH_LAPACK
-
-/** if WITH_LAPACK not set, but WITH_IPOPT, then we can use Lapack from Ipopt and also get the Fortran naming convention from it */
-#ifdef WITH_IPOPT
-#define WITH_LAPACK
-#include "IpoptConfig.h"
-#endif
-
-#else
-
-/** if WITH_LAPACK is set, then also F77_FUNC should be set, otherwise we try a default that works on common systems */
-#ifndef F77_FUNC
-#warning "do not know about fortran naming convention for using Lapack; please consider defining F77_FUNC"
-/* this is compiler and machine dependent; the following just assumes a Linux/gcc system */
-#define F77_FUNC(name,NAME) name ## _
-/* #define F77_FUNC_(name,NAME) name ## _ */
-#endif
-
-#endif /* ifndef/else WITH_LAPACK */
-
-#ifdef WITH_LAPACK
-
-/** LAPACK Fortran subroutine DSYEV */
-void F77_FUNC(dsyev,DSYEV)(
-   char*                 jobz,               /**< 'N' to compute eigenvalues only, 'V' to compute eigenvalues and eigenvectors */
-   char*                 uplo,               /**< 'U' if upper triangle of A is stored, 'L' if lower triangle of A is stored */
-   int*                  n,                  /**< dimension */
-   double*               A,                  /**< matrix A on entry; orthonormal eigenvectors on exit, if jobz == 'V' and info == 0; if jobz == 'N', then the matrix data is destroyed */
-   int*                  ldA,                /**< leading dimension, probably equal to n */ 
-   double*               W,                  /**< buffer for the eigenvalues in ascending order */
-   double*               WORK,               /**< workspace array */
-   int*                  LWORK,              /**< length of WORK; if LWORK = -1, then the optimal workspace size is calculated and returned in WORK(1) */
-   int*                  info                /**< == 0: successful exit; < 0: illegal argument at given position; > 0: failed to converge */
-);
-
-static
-SCIP_RETCODE LapackDsyev(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
-   int                   N,                  /**< dimension */
-   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
-   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
-   )
-{
-   int     INFO;
-   char    JOBZ = computeeigenvectors ? 'V' : 'N';
-   char    UPLO = 'L';
-   int     LDA  = N;
-   double* WORK = NULL;
-   int     LWORK;
-   double  WORK_PROBE;
-   int     i;
-
-   /* First we find out how large LWORK should be */
-   LWORK = -1;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO);
-   if( INFO != 0 )
-   {
-      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-      return SCIP_ERROR;
-   }
-
-   LWORK = (int) WORK_PROBE;
-   assert(LWORK > 0);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &WORK, LWORK) );
-   for( i = 0; i < LWORK; ++i )
-      WORK[i] = i;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO);
-   SCIPfreeBufferArray(scip, &WORK);
-   if( INFO != 0 )
-   {
-       SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
-       return SCIP_ERROR;
-   }
-
-   return SCIP_OKAY;
-}
-#endif
 
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
@@ -3489,11 +3410,9 @@ SCIP_RETCODE checkCurvature(
    int            i;
    int            n;
    int            nn;
-#ifdef WITH_LAPACK
    int            row;
    int            col;
    double*        alleigval;
-#endif
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3592,41 +3511,43 @@ SCIP_RETCODE checkCurvature(
       return SCIP_OKAY;
    }
 
-#ifdef WITH_LAPACK
-   for( i = 0; i < consdata->nbilinterms; ++i )
+   if( SCIPisIpoptAvailableIpopt() )
    {
-      assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
-      assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
-      row = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var1);
-      col = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var2);
-      if( row < col )
-         matrix[row * n + col] = consdata->bilinterms[i].coef/2;
-      else
-         matrix[col * n + row] = consdata->bilinterms[i].coef/2;
-   }
+      for( i = 0; i < consdata->nbilinterms; ++i )
+      {
+         assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
+         assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
+         row = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var1);
+         col = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var2);
+         if( row < col )
+            matrix[row * n + col] = consdata->bilinterms[i].coef/2;
+         else
+            matrix[col * n + row] = consdata->bilinterms[i].coef/2;
+      }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
-   /* TODO can we compute only min and max eigval?
+      SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
+      /* TODO can we compute only min and max eigval?
       TODO can we estimate the numerical error? 
       TODO trying a cholesky factorization may be much faster */
-   if( LapackDsyev(scip, FALSE, n, matrix, alleigval) != SCIP_OKAY )
-   {
-      SCIPwarningMessage("Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
-      consdata->isconvex = FALSE;
-      consdata->isconcave = FALSE;
+      if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
+      {
+         SCIPwarningMessage("Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
+         consdata->isconvex = FALSE;
+         consdata->isconcave = FALSE;
+      }
+      else
+      {
+         consdata->isconvex &= !SCIPisNegative(scip, alleigval[0]);
+         consdata->isconcave &= !SCIPisPositive(scip, alleigval[n-1]);
+         consdata->iscurvchecked = TRUE;
+      }
+      SCIPfreeBufferArray(scip, &alleigval);
    }
    else
    {
-      consdata->isconvex &= !SCIPisNegative(scip, alleigval[0]);
-      consdata->isconcave &= !SCIPisPositive(scip, alleigval[n-1]);
-      consdata->iscurvchecked = TRUE;
+      consdata->isconvex = FALSE;
+      consdata->isconcave = FALSE;
    }
-   SCIPfreeBufferArray(scip, &alleigval);
-   
-#else
-   consdata->isconvex = FALSE;
-   consdata->isconcave = FALSE;
-#endif
    
    SCIPhashmapFree(&var2index);
    SCIPfreeBufferArray(scip, &matrix);
@@ -6232,12 +6153,11 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
   
-#ifndef WITH_LAPACK
-   if( nconss != 0 )
+   if( nconss != 0 && !SCIPisIpoptAvailableIpopt() )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
    }
-#endif
+   
 #ifdef USECLOCK   
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock1) );
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock2) );
@@ -7947,10 +7867,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
          NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
-
-#ifdef WITH_LAPACK
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "LAPACK", "Linear Algebra PACKage (www.netlib.org/lapack)") );
-#endif
 
    return SCIP_OKAY;
 }

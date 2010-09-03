@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.19 2010/09/03 17:26:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.20 2010/09/03 21:33:25 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -2245,6 +2245,70 @@ void ScipNLP::finalize_solution(
    }
 }
 
+extern "C" {
+/** LAPACK Fortran subroutine DSYEV */
+void F77_FUNC(dsyev,DSYEV)(
+   char*                 jobz,               /**< 'N' to compute eigenvalues only, 'V' to compute eigenvalues and eigenvectors */
+   char*                 uplo,               /**< 'U' if upper triangle of A is stored, 'L' if lower triangle of A is stored */
+   int*                  n,                  /**< dimension */
+   double*               A,                  /**< matrix A on entry; orthonormal eigenvectors on exit, if jobz == 'V' and info == 0; if jobz == 'N', then the matrix data is destroyed */
+   int*                  ldA,                /**< leading dimension, probably equal to n */ 
+   double*               W,                  /**< buffer for the eigenvalues in ascending order */
+   double*               WORK,               /**< workspace array */
+   int*                  LWORK,              /**< length of WORK; if LWORK = -1, then the optimal workspace size is calculated and returned in WORK(1) */
+   int*                  info                /**< == 0: successful exit; < 0: illegal argument at given position; > 0: failed to converge */
+);
+}
+
+/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
+ * It's here, because Ipopt is linked against Lapack.
+ */
+SCIP_RETCODE LapackDsyev(
+   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
+   int                   N,                  /**< dimension */
+   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
+   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
+   )
+{
+   int     INFO;
+   char    JOBZ = computeeigenvectors ? 'V' : 'N';
+   char    UPLO = 'L';
+   int     LDA  = N;
+   double* WORK = NULL;
+   int     LWORK;
+   double  WORK_PROBE;
+   int     i;
+
+   /* First we find out how large LWORK should be */
+   LWORK = -1;
+   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO);
+   if( INFO != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
+      return SCIP_ERROR;
+   }
+
+   LWORK = (int) WORK_PROBE;
+   assert(LWORK > 0);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&WORK, LWORK) );
+   
+   for( i = 0; i < LWORK; ++i )
+      WORK[i] = i;
+   
+   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO);
+   
+   BMSfreeMemoryArray(&WORK);
+   
+   if( INFO != 0 )
+   {
+       SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
+       return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 #else /* ifdef WITH_IPOPT */
 
 /** create solver interface for Ipopt solver */
@@ -2286,6 +2350,20 @@ void* SCIPgetIpoptApplicationPointerIpopt(
    SCIPerrorMessage("Ipopt not available!\n");
    SCIPABORT();
    return NULL;
+}
+
+/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
+ * It's here, because Ipopt is linked against Lapack.
+ */
+SCIP_RETCODE LapackDsyev(
+   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
+   int                   N,                  /**< dimension */
+   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
+   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
+   )
+{
+   SCIPerrorMessage("Ipopt not available, cannot use it's Lapack link!\n");
+   return SCIP_ERROR;
 }
 
 #endif

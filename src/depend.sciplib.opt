@@ -1943,7 +1943,7 @@ $(LIBOBJDIR)/scip/cons_quadratic.o: src/scip/cons_quadratic.c src/scip/cons_quad
   src/scip/type_buffer.h src/scip/struct_set.h src/scip/tree.h \
   src/scip/misc.h src/scip/intervalarith.h src/scip/cons_linear.h \
   src/scip/cons_and.h src/scip/cons_varbound.h src/scip/heur_subnlp.h \
-  src/scip/heur_trysol.h src/nlpi/nlpi.h
+  src/scip/heur_trysol.h src/nlpi/nlpi.h src/nlpi/nlpi_ipopt.h
 $(LIBOBJDIR)/scip/cons_setppc.o: src/scip/cons_setppc.c src/scip/cons_setppc.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
