@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.635 2010/09/03 08:39:12 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.636 2010/09/03 09:39:12 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13087,7 +13087,7 @@ void SCIPmarkRequireNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkRequireNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkRequireNLP", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    
    scip->set->nlprequired = TRUE;
 }
@@ -13123,7 +13123,7 @@ SCIP_Bool SCIPisNLPRequired(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPRequired", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPRequired", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    
    return scip->set->nlprequired;
 }
