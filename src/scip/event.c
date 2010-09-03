@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.68 2010/09/03 18:00:51 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.69 2010/09/03 18:01:11 bzfwinkm Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1592,7 +1592,7 @@ SCIP_RETCODE SCIPeventfilterAdd(
 /** linear search for the given entry in event filter */
 static
 int eventfilterSearch(
-   SCIP_EVENTFILTER*const eventfilter,        /**< event filter */
+   SCIP_EVENTFILTER*const eventfilter,       /**< event filter */
    SCIP_EVENTTYPE const  eventtype,          /**< event type */
    SCIP_EVENTHDLR*const  eventhdlr,          /**< event handler to call for the event processing */
    SCIP_EVENTDATA*const  eventdata           /**< event data to pass to the event handler for the event processing */
