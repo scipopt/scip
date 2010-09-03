@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.7 2010/09/02 13:14:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.8 2010/09/03 17:04:15 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1358,7 +1358,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
       return SCIP_OKAY;
    
    /* do not setup subSCIP if no NLP solver is available */
-   if( SCIPgetNNlpis(scip) < 0 )
+   if( SCIPgetNNlpis(scip) <= 0 )
       return SCIP_OKAY;
 
    /* do not setup subSCIP if no continuous nonlinear variables are present */
