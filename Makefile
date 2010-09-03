@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.363 2010/09/01 16:51:24 bzfheinz Exp $
+# $Id: Makefile,v 1.364 2010/09/03 10:26:41 bzfhende Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -528,6 +528,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_rins.o \
 			scip/heur_rootsoldiving.o \
 			scip/heur_rounding.o \
+			scip/heur_shiftandpropagate.o \
 			scip/heur_shifting.o \
 			scip/heur_simplerounding.o \
 			scip/heur_subnlp.o \
