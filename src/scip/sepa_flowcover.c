@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.31 2010/06/09 13:37:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.32 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -2101,8 +2101,8 @@ SCIP_RETCODE cutGenerationHeuristic(
          && SCIPisFeasGT(scip, transvarvubcoefs[j], lambda) )
          l2tmpvubcoefsmax = MAX(l2tmpvubcoefsmax, transvarvubcoefs[j]);
 
-      /* u_j >= lambda */
-      if( SCIPisFeasGE(scip, transvarvubcoefs[j], lambda) )
+      /* u_j + 1 > lambda */
+      if( SCIPisFeasGT(scip, transvarvubcoefs[j] + 1.0, lambda) )
          nvubcoefsmax = MAX(nvubcoefsmax, transvarvubcoefs[j]);
          
       /* u_j > lambda */
@@ -2117,7 +2117,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    /* store max { u_j : j in N and u_j >= lambda } + 1 */
    if( !SCIPisInfinity(scip, -nvubcoefsmax) )
    {
-      assert(SCIPisGT(scip, nvubcoefsmax + 1, lambda));
+      assert(SCIPisFeasGT(scip, nvubcoefsmax + 1.0, lambda));
       startidx--;
       candsetdelta[startidx] = nvubcoefsmax + 1.0;
       ncandsetdelta++;

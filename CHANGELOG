@@ -183,6 +183,7 @@ features:
 - added new dialog "display pricers" which displays all included pricers 
 - now the statistic displays the number of calls of the feasibility checking method of each constraint handler and the running time of it
 - the LP reader can now read MIQPs and MIQCPs and write quadratic and SOC constraints
+- uncommented decomposeProblem() in sepa_zerohalf.c (in default settings, not used anyway): was not adapted to the case that contiuous variables are allowed in a row 
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
@@ -269,6 +270,12 @@ fixed bugs:
 - fixed bug with multiaggregations whose infimum and supremum are both infinite: in such a case multiaggregation is now forbidden
 - fixed numerical issue with multiaggregations which are infinite in one direction: value of multiaggregated variable could have been larger then inifinity
 - fixed bug w.r.t. of adding a variable bound variable to its self
+- fixed bug in cutpool.c: hashkey of a row changed during the solving process (if a row is made integral after creation, maxabsval can be invalid when adding it to the pool, but might be recomputed later on)
+- fixed bug in lp.c: SCIPlpGetUnboundedSol() did not ensure that unbounded solution lies withing the bounds of the variables
+- fixed bug concering the incorrect assumption that everry solution computed in SCIPlpGetUnboundedSol() is integral (we will not branch but return "infeasible or unbounded" like in presolving)
+- fixed bug in sepa_flowcover.c: numerical issues while computing candidate set for lambda
+- fixed bug in cons_knapsack.c and sepa_clique.c: the assumption that implications are always nonredundant and contain only active variables is not correct anymore as the corresponing vbound might be missing because of numerics
+- fixed bug in cons_linear.c in detectRedundantConstraints() and corrected old bug fix in SCIProwCreate(): we want lhs <= rhs to be satisfied without numerical tolerances in order to avoid numerical problems in the LP solver
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

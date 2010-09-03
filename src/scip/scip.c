@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.636 2010/09/03 09:39:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.637 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -381,8 +381,17 @@ SCIP_Real getDualbound(
    SCIP_Real lowerbound;
 
    lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
-      return getPrimalbound(scip);
+   {
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with 
+       * dual bound = -inf instead of dual bound = primal bound = +inf
+       */
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+         return (-SCIPinfinity(scip));
+      else
+         return getPrimalbound(scip);
+   }
    else
       return SCIPprobExternObjval(scip->transprob, scip->set, lowerbound);
 }
@@ -17692,8 +17701,16 @@ SCIP_Real SCIPgetGap(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
-      return 0.0;
-
+   {
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with 
+       * gap = +inf instead of gap = 0 
+       */
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+         return SCIPsetInfinity(scip->set);
+      else
+         return 0.0;
+   } 
+   
    primalbound = getPrimalbound(scip);
    dualbound = getDualbound(scip);
 
@@ -18678,9 +18695,20 @@ void printSolutionStatistics(
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
          if( scip->primal->nsols == 0 )
-            SCIPmessageFPrintInfo(file, "  Primal Bound     : infeasible\n");
+         {
+            if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+               SCIPmessageFPrintInfo(file, "  Primal Bound     : infeasible or unbounded\n");
+            else
+            {
+               assert(SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE);
+               SCIPmessageFPrintInfo(file, "  Primal Bound     : infeasible\n");
+            }
+         }
          else
+         {
+            assert(SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED);
             SCIPmessageFPrintInfo(file, "  Primal Bound     :  unbounded\n");
+         }
       }
       else
          SCIPmessageFPrintInfo(file, "  Primal Bound     :          -\n");

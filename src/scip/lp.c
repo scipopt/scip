@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.352 2010/08/31 15:25:50 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.353 2010/09/03 12:51:16 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3507,7 +3507,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchInt(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY );
    assert(lp->validsollp == stat->lpcount);
    assert(col->lppos < lp->ncols);
    assert(lp->cols[col->lppos] == col);
@@ -4118,7 +4118,11 @@ SCIP_RETCODE SCIProwCreate(
    assert(stat != NULL);
    assert(len >= 0);
    assert(len == 0 || (cols != NULL && vals != NULL));
-   assert(SCIPsetIsLE(set, lhs, rhs));
+   /* note, that the assert tries to avoid numerical troubles in the LP solver. 
+    * in case, for example, lhs > rhs but they are equal with tolerances, one could pass lhs=rhs=lhs+rhs/2 to 
+    * SCIProwCreate() (see cons_linear.c: detectRedundantConstraints())
+    */
+   assert(lhs <= rhs); 
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, row) );
 
@@ -13274,15 +13278,28 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    rayscale = -2*SCIPsetInfinity(set)/rayobjval;
 
    /* calculate the unbounded point: x' = x + rayscale * ray */
-   SCIPdebugMessage("unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
+   SCIPdebugMessage("unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale); 
+
+   /* ensure that unbounded point does not violate the bounds of the variables */
+   for( c = 0; c < nlpicols; ++c )
+   {
+      assert(SCIPsetIsFeasPositive(set, rayscale));
+
+      if( SCIPsetIsFeasPositive(set, ray[c]) )
+      {
+         rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
+      }
+      else if( SCIPsetIsFeasNegative(set, ray[c]) )
+      {
+         rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
+      }
+   }
 
    for( c = 0; c < nlpicols; ++c )
    {
       lpicols[c]->primsol = primsol[c] + rayscale * ray[c];
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;
-      /*debugMessage(" col <%s>: basesol=%f, ray=%f, unbdsol=%f\n", 
-        SCIPvarGetName(lpicols[c]->var), primsol[c], ray[c], lpicols[c]->primsol);*/
    }
 
    for( r = 0; r < nlpirows; ++r )
@@ -13290,7 +13307,6 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       lpirows[r]->dualsol = SCIP_INVALID;
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
       lpirows[r]->validactivitylp = lpcount;
-      /*debugMessage(" row <%s>: activity=%f\n", lpirows[r]->name, lpirows[r]->activity);*/
    }
 
    /* free temporary memory */

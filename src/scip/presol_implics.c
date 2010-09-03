@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.13 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.14 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /**@file   presol_implics.c
  * @ingroup PRESOLVERS
@@ -284,7 +284,11 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
 
    /**@todo check cliques of x == 0 and x == 1 for equal entries y == b -> fix y == !b */
 
-   /* perform the bound changes */
+   /* perform the bound changes
+    *
+    * note, that we cannot assume y to be active (see var.c: varRemoveImplicsVbs()), but it should not cause any 
+    * troubles as this case seems to be handled correctly in SCIPtightenVarLb/Ub().
+    */
    for( v = 0; v < nbdchgs && *result != SCIP_CUTOFF; ++v )
    {
       SCIP_Bool infeasible;
@@ -316,7 +320,11 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
       }
    }
 
-   /* perform the aggregations */
+   /* perform the aggregations
+    * 
+    * note, that we cannot assume y to be active (see var.c: varRemoveImplicsVbs()), but it should not cause any 
+    * troubles as this case seems to be handled correctly in SCIPaggregateVars().
+    */
    for( v = 0; v < naggregations && *result != SCIP_CUTOFF; ++v )
    {
       SCIP_Bool infeasible;

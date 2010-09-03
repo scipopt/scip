@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.203 2010/07/02 13:33:34 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.204 2010/09/03 12:51:16 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -4081,31 +4081,31 @@ SCIP_RETCODE propagateCons(
 		  /* fix all other variables of the negated clique to 1 */
 		  for( v = nvars - 1; v >= 0; --v )
 		  {
-		    if( v != i && SCIPvarGetLbLocal(consdata->vars[v]) < 0.5 && consdata->negcliquepartition[v] == cliquenum )
-		    {
-		       SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(consdata->vars[v]));
-		       SCIP_CALL( SCIPinferBinvarCons(scip, consdata->vars[v], TRUE, cons, SCIPvarGetIndex(consdata->vars[i]), &infeasible, &tightened) );
-		       if( infeasible )
-		       {
-                          assert( SCIPvarGetUbLocal(consdata->vars[v]) < 0.5 );
+                     if( v != i && SCIPvarGetLbLocal(consdata->vars[v]) < 0.5 && consdata->negcliquepartition[v] == cliquenum )
+                     {
+                        SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(consdata->vars[v]));
+                        SCIP_CALL( SCIPinferBinvarCons(scip, consdata->vars[v], TRUE, cons, SCIPvarGetIndex(consdata->vars[i]), &infeasible, &tightened) );
+                        if( infeasible )
+                        {
+                           assert( SCIPvarGetUbLocal(consdata->vars[v]) < 0.5 );
                           
-                          /* initialize the conflict analysis */
-			  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+                           /* initialize the conflict analysis */
+                           SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-                          /* add the two variables which are fixed to zero within a negated clique */
-			  SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
-			  SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+                           /* add the two variables which are fixed to zero within a negated clique */
+                           SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+                           SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
 
-                          /* start the conflict analysis */
-			  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+                           /* start the conflict analysis */
+                           SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
-			  *cutoff = TRUE;
-			  break;
-		       }	 
-		       assert(tightened);
-		       ++(*nfixedvars);
-		       SCIP_CALL( SCIPresetConsAge(scip, cons) );
-		    }
+                           *cutoff = TRUE;
+                           break;
+                        }	 
+                        assert(tightened);
+                        ++(*nfixedvars);
+                        SCIP_CALL( SCIPresetConsAge(scip, cons) );
+                     }
 		  }
 		  if( *cutoff )
 		     break;
@@ -5006,7 +5006,12 @@ SCIP_RETCODE tightenWeightsLift(
 
          assert(SCIPvarIsBinary(implvars[j]));
          probindex = SCIPvarGetProbindex(implvars[j]);
-         assert(0 <= probindex && probindex < nbinvars);
+         assert(probindex < nbinvars);
+
+         /* consider only implications with active implvar */
+         if( probindex < 0 )
+            continue;
+
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER); /* the negation of the implication */
          
          /* insert the item into the list of the implied variable/value */

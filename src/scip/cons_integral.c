@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.54 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.55 2010/09/03 12:51:16 bzfwolte Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -127,6 +127,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    SCIPdebugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
+   /* if the root LP is unbounded, we want to terminate with UNBOUNDED or INFORUNBOUNDED,
+    * depending on whether we are able to construct an integral solution; in any case we do not want to branch
+    */
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   {
+      if( SCIPgetNLPBranchCands(scip) == 0 )
+         *result = SCIP_FEASIBLE;
+      else
+         *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
+
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
 
@@ -156,7 +168,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   SCIPdebugMessage("Check method of integrality constraint\n");
+   SCIPdebugMessage("Check method of integrality constraint (checkintegrality=%d)\n", checkintegrality);
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
 

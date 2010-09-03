@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.63 2010/05/11 12:03:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.64 2010/09/03 12:51:16 bzfwolte Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -119,16 +119,22 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    SCIP_ROW* row;
    unsigned int keyval;
    int maxabsval;
-
+   SCIP_Real maxval;  
+   SCIP_SET* set;
+   
+   set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
 
-   if( row->maxval > INT_MAX )
+   maxval = SCIProwGetMaxval(row, set);
+   assert(row->nummaxval > 0);
+   
+   if( maxval > INT_MAX )
       maxabsval = 0;
-   else if( row->maxval < 1.0 )
-      maxabsval = (int) 10000*row->maxval;
+   else if( maxval < 1.0 )
+      maxabsval = (int) 10000*maxval;
    else
-      maxabsval = (int) row->maxval;
+      maxabsval = (int) maxval;
 
    keyval = (row->maxidx << 29) + (row->len << 22) + (row->minidx << 11) + maxabsval; /*lint !e701*/
 
@@ -275,7 +281,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
 
    SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, 
          (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
-         hashGetKeyCut, hashKeyEqCut, hashKeyValCut, NULL) );
+         hashGetKeyCut, hashKeyEqCut, hashKeyValCut, (void*) set) );
 
    (*cutpool)->cuts = NULL;
    (*cutpool)->cutssize = 0;

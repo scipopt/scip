@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.45 2010/07/28 06:01:32 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.46 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -401,7 +401,12 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             yi = SCIPvarGetProbindex(y);
             yindex = SCIPvarGetIndex(y);
             assert(SCIPvarGetType(y) == SCIP_VARTYPE_BINARY);
-            assert(0 <= yi && yi < SCIPgetNBinVars(scip));
+            assert(yi < SCIPgetNBinVars(scip));
+
+            /* consider only implications with active implvar y */
+            if( yi < 0 )
+               continue;
+
             assert(xindex < yindex); /* the implied variables are sorted by increasing variable index */
             assert(yindex < SCIPvarGetIndex(ximplvars[i+1]));
 
@@ -460,7 +465,12 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                   /* we found z with xindex < yindex < zindex and x + y + z <= 1 */
                   z = ximplvars[xk];
                   zi = SCIPvarGetProbindex(z);
-                  assert(0 <= zi && zi < nvars);
+                  assert(zi < nvars);
+
+                  /* consider only implications with active implvar z */
+                  if( zi < 0 )
+                     continue;
+
                   assert(SCIPvarGetIndex(z) == zindex);
                   assert(xindex < yindex && yindex < zindex);
 
@@ -567,6 +577,12 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
 
             y = ximplvars[yk];
             yi = SCIPvarGetProbindex(y);
+            assert(yi < nvars);
+
+            /* consider only implications with active implvar y */
+            if( yi < 0 )
+               continue;
+
             assert(SCIPvarGetType(y) == SCIP_VARTYPE_BINARY);
             
             /* check, whether the implicant is y == 0 or y == 1 (y conflicts with x == xvalue) */
@@ -583,6 +599,12 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
 
                z = ximplvars[zk];
                zi = SCIPvarGetProbindex(z);
+               assert(zi < nvars);
+
+               /* consider only implications with active implvar z */
+               if( zi < 0 )
+                  continue;
+
                assert(SCIPvarGetType(z) == SCIP_VARTYPE_BINARY);
                
                /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
@@ -672,7 +694,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
          
          probidx = SCIPvarGetProbindex(implvars[j]);
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-         assert(0 <= probidx && probidx < SCIPgetNVars(scip));
+         assert(probidx < SCIPgetNVars(scip));
 
          graphidx = cliquegraphidx[implvalue][probidx];
          if( graphidx >= 0 )

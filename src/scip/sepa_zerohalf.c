@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.30 2010/07/21 08:41:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.31 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -467,11 +467,11 @@ struct Zerohalf_LPData
    int                   ncols;              /**< number of LP columns */
    int                   nvarbounds;         /**< number of variable bounds (-x_j <= -lb_j, x_j <= ub_j) */
   
-   ZEROHALF_SUBLPDATA**  subproblems;        /**< decomposed subproblems (subset of the variables, rows and columns above)*/
+   ZEROHALF_SUBLPDATA**  subproblems;        /**< decomposed subproblems (subset of the variables, rows and columns above) */
    int                   nsubproblems;       /**< number of subproblems */
 
    SCIP_Real*            intscalarsleftrow;  /**< array of scalars that would make left half-rows (-a^Tx <= -lhs) rows integral (0.0 if scalar has not been calculated) */
-   SCIP_Real*            intscalarsrightrow;  /**< array of scalars that would make right half-rows (a^Tx <= rhs) rows integral (0.0 if scalar has not been calculated) */
+   SCIP_Real*            intscalarsrightrow; /**< array of scalars that would make right half-rows (a^Tx <= rhs) rows integral (0.0 if scalar has not been calculated) */
 
    /* row related index sets */
    int*                  subproblemsindexofrow;        /**< is rows index relevant? value <0: not relevant,
@@ -2179,7 +2179,6 @@ SCIP_RETCODE getRelevantRows(
       }
 
       lpdata->intscalarsleftrow[r]  = intscalarleftrow;
-
       lpdata->intscalarsrightrow[r] = intscalarrightrow;
 
       /* calculate lhs/rhs & slacks */
@@ -2529,7 +2528,6 @@ SCIP_RETCODE storeMod2Data(
    assert(problem->rcolslbslack != NULL);
    assert(problem->rcolsubslack != NULL);
    assert(mod2data != NULL);
-
   
    /* identify varbounds to be added to the matrix */
    SCIP_CALL(SCIPallocBufferArray(scip, &varboundstoadd, 2 * problem->nrcols)); /* <0: lb, >0: ub */
@@ -2551,7 +2549,7 @@ SCIP_RETCODE storeMod2Data(
 	 SCIP_Real lb;
 	 SCIP_Real ub;
          
-	 lb = SCIPcolGetLb(lpdata->cols[problem->rcols[c]]);
+         lb = SCIPcolGetLb(lpdata->cols[problem->rcols[c]]);
 	 ub = SCIPcolGetUb(lpdata->cols[problem->rcols[c]]);
 
 	 if( ISEVEN(scip, lb) != ISEVEN(scip, ub) )
@@ -3886,12 +3884,31 @@ SCIP_RETCODE preprocessModGaussElim(
 
 /** decomposes the problem into subproblems which can be considered separately */
 static
-SCIP_RETCODE decomposeProblem (
+SCIP_RETCODE decomposeProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */       
    ZEROHALF_LPDATA*      lpdata              /**< data of current LP relaxation */  
    )
 {
+   /* ????????? TODO: this is buggy in different ways.
+    * 1. it might happen that we ignore a variable of the current row and of all other rows. 
+    * thus at the end, the variable will not occure in any subproblem. BUT, currently we do not update 
+    * lpdata->subproblemsindexofcol[lppos] and lpdata->rcolsindexofcol[lppos] accordingly. 
+    * consequently, it might happen that lpdata->rcolsindexofcol[lppos] > problem->nrcols, with 
+    * with problem being the subproblem still associated to our column. therefore, a corresponding assert 
+    * assert(rcolsindex < problem->nrcols) in storeMod2Data() is violated 
+    * [e.g., for IP/atamtuerk/mik/unbounded/mik.250-1-50.3.mps.gz].
+    * we could recognize whether a variable is never added to a subproblem and update its data structures,
+    * but i'm not sure whether this will be correct, i.e., whether it is really ok to ignore some variables here.
+    * 2. in particular, it seems like that this method has not been adapted to that we can deal with 
+    * continuous variables now. (see the below todo of Manuel)
+    * 3. in case we end up with only one subproblem, we use the old problem. but in this case we do not update 
+    * the problem data and hence it is not consistent with the lpdata anymore where we might have set some 
+    * rows to be irrelevant.  
+    *
+    * therefore, we will currently do nothing in here.
+    */
+#if 0 
    BITARRAY              processedrows;
    int                   nprocessedrows;
    int                   processedrowsbitarraysize;
@@ -3970,7 +3987,6 @@ SCIP_RETCODE decomposeProblem (
    assert(problem->rrowsrhs != NULL);
    assert(problem->rrowsslack != NULL);
   
-
    if( sepadata->dtimer == NULL )
    {
       ZEROHALFcreateTimer((sepadata->dtimer));    
@@ -4006,6 +4022,7 @@ SCIP_RETCODE decomposeProblem (
    nprocessedcols = 0;
    k = 0;
    unprocessedrowidx = 0;
+
    while (nprocessedrows < problem->nrrows)
    {
       ++k;
@@ -4024,7 +4041,7 @@ SCIP_RETCODE decomposeProblem (
       queue[0] = i;
       queuefirst = 0;
       queuelast = 1;
-    
+
       while (queuelast > queuefirst)
       {
          assert(queuelast <= problem->nrrows);
@@ -4047,6 +4064,7 @@ SCIP_RETCODE decomposeProblem (
             if( lppos == -1 )
                continue;
             rcolsidx = lpdata->rcolsindexofcol[lppos];
+
             if( lpdata->subproblemsindexofcol[lppos] != problemindex || rcolsidx < 0 )
             {
                if( ISODD(scip, colvals[cidx]) )          
@@ -4151,7 +4169,7 @@ SCIP_RETCODE decomposeProblem (
       /* don't create new "sub"problem if problem can't be decomposed */
       if( lpdata->nsubproblems == 0 && nprocessedrows == problem->nrrows )
          continue; 
-    
+
       /* create new subproblem */    
       SCIP_CALL(ZerohalfSubLPDataCreate(scip, &subproblem));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(subproblem->rrows), nrrowsinsubprob));
@@ -4198,6 +4216,7 @@ SCIP_RETCODE decomposeProblem (
             lpdata->rcolsindexofcol[colindex] = i;
          }
       }
+
       lpdata->subproblems[lpdata->nsubproblems] = subproblem;
       lpdata->nsubproblems++;
 
@@ -4213,12 +4232,12 @@ SCIP_RETCODE decomposeProblem (
       lpdata->nsubproblems = 1;
       totalnrrows = problem->nrrows;
       totalnrcols = problem->nrcols;
+      
    }
    else
    {
       ZerohalfSubLPDataFree(scip, &problem);  
    }
-
   
    /* free temporary memory */
    SCIPfreeMemoryArray(scip, &rcolsinsubprob);
@@ -4241,6 +4260,7 @@ SCIP_RETCODE decomposeProblem (
       ndelvarbounds,
       0, 0, ZEROHALFevalTimer(sepadata->dtimer));
     
+#endif
    return SCIP_OKAY;
 }
 
@@ -7002,13 +7022,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    }
 
 #ifdef ZEROHALF__PRINT_STATISTICS
-   SCIP_CALL(printPreprocessingStatistics(scip, lpdata));
+   SCIP_CALL( printPreprocessingStatistics(scip, lpdata) );
 #endif
   
    /* try to decompose problem into subproblems (and delete obviously redundant subproblems)*/
    if( sepadata->decomposeproblem )
    {
-      SCIP_CALL(decomposeProblem(scip, sepadata, lpdata)); 
+      SCIP_CALL( decomposeProblem(scip, sepadata, lpdata) ); 
    }
 
    /* sort subproblems */
@@ -7027,7 +7047,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    SCIP_CALL(SCIPallocBufferArray(scip, &zerohalfcuts, maxcuts));
  
    /* process each subproblem */
-   for( i = 0 ; i < lpdata->nsubproblems ; ++i)
+   for( i = 0; i < lpdata->nsubproblems; ++i )
    {
       /* check if enough cuts have been found */
       if( nsepacuts >= maxsepacuts || nzerohalfcuts >= maxcuts )
@@ -7050,16 +7070,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          /* create weightvector */
          SCIP_Real* weights;
          weights = NULL;
-         SCIP_CALL(getZerohalfWeightvectorForSingleRow(scip, sepadata, lpdata, lpdata->subproblems[subproblemindex]->rrows[0],
-               0, &weights));
+         SCIP_CALL( getZerohalfWeightvectorForSingleRow(scip, sepadata, lpdata, lpdata->subproblems[subproblemindex]->rrows[0],
+               0, &weights) );
          if( weights == NULL )
             continue;
 
          /* create zerohalf cut */
-         SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[nzerohalfcuts]),
-               lpdata->subproblems[subproblemindex], NULL, 1, 1, DECOMPOSITION));
-         SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
-               lpdata, weights, normtype, nzerohalfcuts, &varsolvals, zerohalfcuts[nzerohalfcuts]));
+         SCIP_CALL( ZerohalfCutDataCreate(scip, &(zerohalfcuts[nzerohalfcuts]),
+               lpdata->subproblems[subproblemindex], NULL, 1, 1, DECOMPOSITION) );
+         SCIP_CALL( createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+               lpdata, weights, normtype, nzerohalfcuts, &varsolvals, zerohalfcuts[nzerohalfcuts]) );
       
          /* add cut to LP */
          SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[nzerohalfcuts], &nsepacuts, result) );

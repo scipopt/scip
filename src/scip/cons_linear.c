@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.372 2010/09/02 07:54:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.373 2010/09/03 12:51:16 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -1398,7 +1398,7 @@ void consdataUpdateChgLb(
             }
          }
          consdata->lastmaxactivity = consdata->maxactivity;
-      }      
+      }
       assert(!SCIPisInfinity(scip, -consdata->minactivity) && !SCIPisInfinity(scip, consdata->minactivity));
       assert(!SCIPisInfinity(scip, -consdata->maxactivity) && !SCIPisInfinity(scip, consdata->maxactivity));
    }
@@ -7296,11 +7296,18 @@ SCIP_RETCODE detectRedundantConstraints(
             rhs = MIN(consdata1->rhs, -consdata0->lhs);
          }
 
-         if( SCIPisLT(scip, rhs, lhs) )
+         if( SCIPisFeasLT(scip, rhs, lhs) )
          {
             SCIPdebugMessage("aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
             *cutoff = TRUE;
             break;
+         }
+
+         /* ensure that lhs <= rhs holds without tolerances as we only allow such rows to enter the LP */
+         if( lhs > rhs )
+         {
+            rhs = (lhs + rhs)/2;
+            lhs = rhs;
          }
 
          /* check which constraint has to stay; 

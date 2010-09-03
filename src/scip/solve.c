@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.309 2010/09/02 17:23:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.310 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1927,11 +1927,19 @@ SCIP_RETCODE solveNodeLP(
       /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in separators */
       if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror) )
       {
+         SCIP_Bool checklprows;
          SCIP_Bool stored;
          SCIP_SOL* sol;
          
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
-         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+            checklprows = FALSE;
+         else
+            checklprows = TRUE;
+
+         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, 
+               checklprows, &stored) );
 
          /* if the solution was accepted, the root node can be cut off by bounding */
          if( stored && set->nactivepricers == 0 )
@@ -1941,8 +1949,9 @@ SCIP_RETCODE solveNodeLP(
             SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
             assert(*cutoff);
          }
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+            *unbounded = TRUE;
       }
-
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -1996,7 +2005,7 @@ SCIP_RETCODE solveNodeLP(
    /* update number of root node iterations if the root node was processed */
    if( SCIPnodeGetDepth(tree->focusnode) == 0 ) 
       stat->nrootlpiterations += stat->nlpiterations - nlpiterations;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2185,7 +2194,7 @@ SCIP_RETCODE enforceConstraints(
       { 
          assert(lp->flushed);
          assert(lp->solved);
-         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+         assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
          SCIP_CALL( SCIPconshdlrEnforceLPSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, sepastore, *infeasible,
                &result) );
       }
@@ -2607,7 +2616,7 @@ SCIP_RETCODE solveNode(
             *cutoff ? SCIPsetInfinity(set) : lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set),
             stat->nlpiterations, stat->lpcount);
 
-         /* check, if the path was cutoff */
+        /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
          /* if an error occured during LP solving, switch to pseudo solution */
@@ -2992,9 +3001,8 @@ SCIP_RETCODE solveNode(
       SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
       *infeasible = TRUE;
       *restart = FALSE;
-      *unbounded = FALSE;
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -3224,7 +3232,6 @@ SCIP_RETCODE SCIPsolveCIP(
       assert(SCIPtreeGetCurrentNode(tree) == focusnode);
       assert(SCIPtreeGetFocusNode(tree) == focusnode);
 
-
       /* check for restart */
       if( !(*restart) )
       {
@@ -3381,8 +3388,16 @@ SCIP_RETCODE SCIPsolveCIP(
       /* set the solution status */
       if( unbounded )
       {
-         /* switch status to UNBOUNDED */
-         stat->status = SCIP_STATUS_UNBOUNDED;
+         if( primal->nsols > 0 )
+         {
+            /* switch status to UNBOUNDED */
+            stat->status = SCIP_STATUS_UNBOUNDED;
+         }
+         else
+         {
+            /* switch status to INFORUNB */
+            stat->status = SCIP_STATUS_INFORUNBD;
+         }
       }
       else if( primal->nsols == 0
          || SCIPsetIsGE(set, SCIPsolGetObj(primal->sols[0], set, prob), 

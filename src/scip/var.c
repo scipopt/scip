@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.292 2010/09/02 20:46:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.293 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1647,6 +1647,11 @@ SCIP_RETCODE varRemoveImplicsVbs(
          var->closestvblpcount = -1;
       }
    }
+
+   /**@todo in general, variable bounds like x >= b*z + d corresponding to an implication like z = ub ==> x >= b*ub + d 
+    *       might be missing because we only add variable bounds with reasonably small value of b. thus, we currently 
+    *       cannot remove such variables x from z's implications.
+    */
 
    /* remove the (redundant) variable upper bounds */
    if( var->vubs != NULL )

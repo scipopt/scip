@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.28 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.29 2010/09/03 12:51:17 bzfwolte Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -159,6 +159,10 @@ SCIP_RETCODE separateCuts(
          assert(impltypes != NULL);
          assert(implbounds != NULL);
 
+         /* consider only implications with active implvar */
+         if( SCIPvarGetProbindex(implvars[j]) < 0 )
+            continue;
+
          solval = solvals[SCIPvarGetProbindex(implvars[j])];
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
@@ -167,7 +171,8 @@ SCIP_RETCODE separateCuts(
             /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
             
-            if (SCIPisLE(scip, implbounds[j], ub))
+            /* consider only nonredundant implications */
+            if( SCIPisLE(scip, implbounds[j], ub) )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
@@ -182,7 +187,8 @@ SCIP_RETCODE separateCuts(
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
  
-            if (SCIPisGE(scip, implbounds[j], lb))
+            /* consider only nonredundant implications */
+            if( SCIPisGE(scip, implbounds[j], lb) )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
@@ -208,6 +214,10 @@ SCIP_RETCODE separateCuts(
       {
          SCIP_Real solval;
 
+         /* consider only implications with active implvar */
+         if( SCIPvarGetProbindex(implvars[j]) < 0 )
+            continue;
+
          solval = solvals[SCIPvarGetProbindex(implvars[j])];
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
@@ -215,6 +225,8 @@ SCIP_RETCODE separateCuts(
          
             /* implication x == 0 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
+
+            /* consider only nonredundant implications */
             if( SCIPisLE(scip, implbounds[j], ub) )
             {
                /* add cut if violated */
@@ -230,6 +242,7 @@ SCIP_RETCODE separateCuts(
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
             
+            /* consider only nonredundant implications */
             if( SCIPisGE(scip, implbounds[j], lb) )
             { 
                /* add cut if violated */

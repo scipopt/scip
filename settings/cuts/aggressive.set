@@ -786,7 +786,7 @@ separating/zerohalf/trynegscaling = TRUE
 
 # should problem be decomposed into subproblems (if possible) before applying preprocessing?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/zerohalf/preprocessing/decomposeproblem = TRUE
+separating/zerohalf/preprocessing/decomposeproblem = FALSE
 
 # value of delta parameter used in preprocessing method 'd'
 # [type: real, range: [0,1], default: 0.5]
