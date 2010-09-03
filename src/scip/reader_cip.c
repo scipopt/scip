@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.21 2010/08/16 16:06:34 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.22 2010/09/03 20:53:37 bzfwinkm Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -52,6 +52,7 @@ struct CipInput
    SCIP_FILE*           file;
    char*                strbuf;
    int                  len;
+   int                  readingsize;
    int                  linenumber;
    CIPSECTION           section;
    SCIP_Bool            haserror;
@@ -73,6 +74,7 @@ SCIP_RETCODE getInputString(
    )
 {
    char* endline;
+   char* endcharacter;
 
    assert(cipinput != NULL);
 
@@ -82,19 +84,50 @@ SCIP_RETCODE getInputString(
    /* read next line */
    cipinput->endfile = (SCIPfgets(cipinput->strbuf, cipinput->len, cipinput->file) == NULL);
    
-   if( cipinput-> endfile )
+   if( cipinput->endfile )
       return SCIP_OKAY;
    
    cipinput->linenumber++;
    endline = strchr(cipinput->strbuf, '\n');
    
-   if( endline == NULL )
+   endcharacter = strchr(cipinput->strbuf, ';'); 
+   while( endline == NULL || (endcharacter == NULL && cipinput->section == CIP_CONSTRAINTS && strncmp(cipinput->strbuf, "END", 3) != 0 ) )
    {
-      SCIPerrorMessage("Error: line %d exceeds %d characters\n", cipinput->linenumber, cipinput->len);
+      int pos;
+
+      if( endline == NULL )
+         pos = cipinput->len - 1;
+      else
+         pos = endline - cipinput->strbuf;
+ 
+      /* if necessary reallocate memory */
+      if( pos + cipinput->readingsize >= cipinput->len )
+      {
+         cipinput->len = SCIPcalcMemGrowSize(scip, pos + cipinput->readingsize);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &(cipinput->strbuf), cipinput->len) );
+      }
+      
+      /* read next line */
+      cipinput->endfile = (SCIPfgets(&(cipinput->strbuf[pos]), cipinput->readingsize, cipinput->file) == NULL);
+      
+      if( cipinput->endfile )
+         return SCIP_OKAY;
+
+      cipinput->linenumber++;
+      endline = strchr(cipinput->strbuf, '\n');
+      endcharacter = strchr(cipinput->strbuf, ';'); 
+   }
+   assert(endline != NULL);
+
+   /*SCIPdebugMessage("read line: %s\n", cipinput->strbuf);*/
+   
+   if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline != NULL && endline - endcharacter != 1 )
+   {
+      SCIPerrorMessage("Constraint line has to end with ';\\n'.\n");
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
-   
+
    *endline = '\0';
    
    return SCIP_OKAY;
@@ -432,13 +465,14 @@ SCIP_DECL_READERREAD(readerReadCip)
       return SCIP_NOFILE;
    }
 
-   cipinput.len = 100000;
+   cipinput.len = 131071;
    SCIP_CALL( SCIPallocBufferArray(scip, &(cipinput.strbuf), cipinput.len) );
 
    cipinput.linenumber = 0;
    cipinput.section = CIP_START;
    cipinput.haserror = FALSE;
    cipinput.endfile = FALSE;
+   cipinput.readingsize = 65535;
 
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
    
