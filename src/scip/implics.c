@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.41 2010/07/30 12:20:00 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.42 2010/09/03 20:51:50 bzfwinkm Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1795,9 +1795,30 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       if( clique->nvars == 2 )
       {
          /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
-         SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-               clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-               (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
+         if( SCIPvarGetType(clique->vars[0]) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                  clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+                  (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
+         }
+         else
+         {
+            /** in case the variable are not of binary type we have to add the implication as variable bound */
+
+            assert(SCIPvarGetType(clique->vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(clique->vars[0]));
+
+            /* add variable upper or rather variable lower bound on vars[0] */
+            if( clique->values[0] )
+            {
+               SCIP_CALL( SCIPvarAddVub(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     clique->vars[1], clique->values[1] ? -1.0 : 1.0, clique->values[1] ? 1.0 : 0.0, FALSE, infeasible, NULL) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarAddVlb(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                     clique->vars[1], clique->values[1] ? 1.0 : -1.0, clique->values[1] ? 0.0 : 1.0, FALSE, infeasible, NULL) );
+            }
+         }
       }
       
       /* check if the clique is already contained in the clique table, or if it is redundant (too small) */
