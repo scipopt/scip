@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.50 2010/09/03 10:14:00 bzfhende Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.51 2010/09/03 19:25:23 bzfviger Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -73,7 +73,6 @@
 #include "scip/heur_linesearchdiving.h"
 #include "scip/heur_localbranching.h"
 #include "scip/heur_mutation.h"
-#include "scip/heur_nlp.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
 #include "scip/heur_oneopt.h"

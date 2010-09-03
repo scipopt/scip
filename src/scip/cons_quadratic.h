@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.23 2010/09/01 14:28:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.24 2010/09/03 19:25:22 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -333,7 +333,7 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the violation of a constraint by a solution */
+/** Gets the violation of a constraint by a solution. */
 extern
 SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -341,24 +341,15 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
    SCIP_Real*            violation           /**< buffer to store violation of constraint */
    );
-   
 
-/** NLPI initialization method of constraint handler
- * 
- *  The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
- */
+/** Adds the constraint to an NLPI problem. */
 extern
-SCIP_RETCODE SCIPconsInitNlpiQuadratic(
+SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for quadratic constraints */
+   SCIP_CONS*            cons,               /**< constraint */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
-   int                   nconss,             /**< number of constraints */
-   SCIP_CONS**           conss,              /**< quadratic constraints */
-   SCIP_HASHMAP*         scipvar2nlpvar,     /**< mapping from SCIP variables to variable indices in NLPI */
-   SCIP_HASHMAP*         conssmap,           /**< mapping from SCIP constraints to constraint indices in NLPI */
-   int*                  nlpconsscounter,    /**< counter of NLP constraints */
-   SCIP_Bool             onlysubnlp,         /**< whether to include only constraints that are relevant for a subNLP */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraint */
+   SCIP_HASHMAP*         scipvar2nlpivar,    /**< mapping from SCIP variables to variable indices in NLPI */
    SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
 

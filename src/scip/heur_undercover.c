@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.68 2010/08/30 18:57:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.69 2010/09/03 19:25:23 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -45,7 +45,7 @@
 #ifdef WITH_SIGNPOWER
 #include "cons_signpower.h"
 #endif
-#include "scip/heur_nlp.h"
+#include "scip/heur_subnlp.h"
 
 #define HEUR_NAME             "undercover"
 #define HEUR_DESC             "solves a linearization of a CIP determined by a set covering approach"
@@ -1908,7 +1908,7 @@ SCIP_RETCODE SCIPapplyUndercover(
             SCIP_HEUR* nlpheur;
             SCIP_RESULT nlpresult;
 
-            nlpheur = SCIPfindHeur(scip, "nlp");
+            nlpheur = SCIPfindHeur(scip, "subnlp");
 
             if( nlpheur != NULL )
             {
@@ -1917,7 +1917,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                {
                   SCIPdebugMessage("undercover heuristic calling NLP heuristic for post optimization\n");
 
-                  SCIP_CALL( SCIPapplyNlpHeur(scip, nlpheur, &nlpresult, newsol, (SCIP_Longint) INT_MAX, timelimit, NULL) );
+                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, newsol, (SCIP_Longint) INT_MAX, timelimit, 0.0, NULL) );
 
                   SCIPdebugMessage("NLP heuristic called by undercover %ssuccessfully\n", nlpresult == SCIP_FOUNDSOL ? "" : "un");
                }

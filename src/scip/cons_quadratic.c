@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.118 2010/09/02 14:55:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.119 2010/09/03 19:25:22 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -42,7 +42,6 @@
 #include "scip/cons_and.h"
 #include "scip/cons_varbound.h"
 #include "scip/intervalarith.h"
-#include "scip/heur_nlp.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "nlpi/nlpi.h"
@@ -135,7 +134,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
 
-   SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
    SCIP_HEUR*            subnlpheur;                /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;                /**< a pointer to the TRYSOL heuristic, if available */
@@ -4837,7 +4835,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
    if( SCIPsolGetHeur(sol) == NULL )
       return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
+   if( SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -6178,273 +6176,6 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
-/** method to call for checking if potential constraints for the NLP are present */
-static
-SCIP_DECL_HEURNLPHAVECONS(haveCons)
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-   int c, i;
-   
-   assert(scip   != NULL);
-   assert(result != NULL);
-   
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-   
-   *result = FALSE;
-
-   /* check each constraint whether it has some nonlinear variable */
-   for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; --c )
-   {
-      consdata = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[c]);
-      assert(consdata != NULL);
-      
-      if( consdata->nquadvars == 0 )
-         continue;
-
-      /* if fixedint is FALSE, then any quadratic variable will do */
-      if( !fixedint )
-      {
-         *result = TRUE;
-         return SCIP_OKAY;
-      }
-     
-      /* otherwise we have to check whether there is a continuous quadratic variable */
-      for( i = 0; i < consdata->nquadvars; ++i )
-         if( SCIPvarGetType(consdata->quadvarterms[i].var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(consdata->quadvarterms[i].var) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            *result = TRUE;
-            return SCIP_OKAY;
-         }
-   }
-   
-   return SCIP_OKAY;
-}
-
-/** adds quadratic constraints to an NLPI problem */
-static
-SCIP_DECL_HEURNLPNLPIINIT(initNlpi)
-{
-   SCIP_CONSHDLR* conshdlr;
-   
-   assert(scip != NULL);
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-   assert(varmap != NULL);
-   
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-   
-   SCIP_CALL( SCIPconsInitNlpiQuadratic(scip, conshdlr, nlpi, problem,
-      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap,
-      consmap, conscounter, onlysubnlp, names) );
-   
-   return SCIP_OKAY;
-}
-
-#define SCIP_DECL_HEURNLPNLPIINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, int* conscounter, SCIP_Bool onlysubnlp, SCIP_Bool names)
-
-/** NLPI initialization method of constraint handler
- * 
- *  The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
- */
-SCIP_RETCODE SCIPconsInitNlpiQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for quadratic constraints */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
-   int                   nconss,             /**< number of constraints */
-   SCIP_CONS**           conss,              /**< quadratic constraints */
-   SCIP_HASHMAP*         scipvar2nlpvar,     /**< mapping from SCIP variables to variable indices in NLPI */
-   SCIP_HASHMAP*         conssmap,           /**< mapping from SCIP constraints to constraint indices in NLPI */
-   int*                  nlpconsscounter,    /**< counter of NLP constraints */
-   SCIP_Bool             onlysubnlp,         /**< whether to include only constraints that are relevant for a subNLP */
-   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_Real*     lhs;
-   SCIP_Real*     rhs;
-   const char**   consnames;
-   int*           nlininds;
-   int**          lininds;
-   SCIP_Real**    linvals;
-   int*           nquadelems;
-   SCIP_QUADELEM** quadelems;
-   SCIP_VAR*      othervar;
-   int            idx1;
-   int            idx2;
-   int            i;
-   int            j;
-   int            k;
-   int            l;
-   int            lincnt;
-   int            quadnnz;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(nlpi != NULL);
-   assert(conssmap == NULL || nlpconsscounter != NULL);
-
-   if( nconss == 0 )
-      return SCIP_OKAY;
-
-   assert(conss != NULL);
-   assert(scipvar2nlpvar != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss) );
-   if( names )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &consnames, nconss) );
-   }
-   else
-      consnames = NULL;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &linvals,  nconss) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems,  nconss) );
-
-   for( i = 0; i < nconss; ++i )
-   {
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-      
-      /* skip local constraints; TODO do not add empty constraints to NLP */
-      if( SCIPconsIsLocal(conss[i]) )
-      {
-         lhs[i] = -SCIPinfinity(scip);
-         rhs[i] =  SCIPinfinity(scip);
-         nlininds[i] = 0;
-         nquadelems[i] = 0;
-         continue;
-      }
-
-      lhs[i] = consdata->lhs;
-      rhs[i] = consdata->rhs;
-      
-      if( names )
-         consnames[i] = SCIPconsGetName(conss[i]);
-      
-      /* count nonzeros in quadratic part */
-      nlininds[i] = consdata->nlinvars;
-      quadnnz = consdata->nbilinterms;
-      for( j = 0; j < consdata->nquadvars; ++j )
-      {
-         if( consdata->quadvarterms[j].sqrcoef )
-            ++quadnnz;
-         if( consdata->quadvarterms[j].lincoef != 0.0 )
-            ++nlininds[i];
-      }
-
-      if( nlininds[i] )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], nlininds[i]) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[i], nlininds[i]) );
-      }
-      else
-      {
-         lininds[i] = NULL;
-         linvals[i] = NULL;
-      }
-
-      for( j = 0; j < consdata->nlinvars; ++j )
-      {
-         linvals[i][j] = consdata->lincoefs[j];
-         assert(SCIPhashmapExists(scipvar2nlpvar, consdata->linvars[j]));
-         lininds[i][j] = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpvar, consdata->linvars[j]);
-      }
-
-      if( quadnnz == 0 )
-      {
-         nquadelems[i] = 0;
-         quadelems[i] = NULL;
-         continue;
-      }
-
-      nquadelems[i] = quadnnz;
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[i], quadnnz) );
-
-      k = 0;
-      lincnt = consdata->nlinvars;
-      for( j = 0; j < consdata->nquadvars; ++j )
-      {
-         assert(SCIPhashmapExists(scipvar2nlpvar, consdata->quadvarterms[j].var));
-         idx1 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpvar, consdata->quadvarterms[j].var);
-         if( consdata->quadvarterms[j].lincoef != 0.0 )
-         {
-            lininds[i][lincnt] = idx1;
-            linvals[i][lincnt] = consdata->quadvarterms[j].lincoef;
-            ++lincnt;
-         }
-
-         if( consdata->quadvarterms[j].sqrcoef != 0.0 )
-         {
-            assert(k < quadnnz);
-            quadelems[i][k].idx1 = idx1;
-            quadelems[i][k].idx2 = idx1;
-            quadelems[i][k].coef = consdata->quadvarterms[j].sqrcoef;
-            ++k;
-         }
-
-         for( l = 0; l < consdata->quadvarterms[j].nadjbilin; ++l )
-         {
-            othervar = consdata->bilinterms[consdata->quadvarterms[j].adjbilin[l]].var2;
-            /* if othervar is on position 2, then we process this bilinear term later (or it was processed already) */
-            if( othervar == consdata->quadvarterms[j].var )
-               continue;
-
-            assert(k < quadnnz);
-            assert(SCIPhashmapExists(scipvar2nlpvar, othervar));
-            idx2 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpvar, othervar);
-            quadelems[i][k].idx1 = MIN(idx1, idx2);
-            quadelems[i][k].idx2 = MAX(idx1, idx2);
-            quadelems[i][k].coef = consdata->bilinterms[consdata->quadvarterms[j].adjbilin[l]].coef;
-            ++k;
-         }
-      }
-      assert(k == quadnnz);
-      assert(lincnt == nlininds[i]);
-      
-      if( conssmap != NULL )
-      {
-         SCIP_CALL( SCIPhashmapInsert(conssmap, conss[i], (void*)(size_t)*nlpconsscounter) );
-      }
-      if( nlpconsscounter != NULL )
-         ++*nlpconsscounter;
-   }
-
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss,
-      lhs, rhs,
-      nlininds, lininds, linvals,
-      nquadelems, quadelems,
-      NULL, NULL, consnames) );
-
-   for( i = nconss-1; i >= 0; --i )
-   {
-      SCIPfreeBufferArrayNull(scip, &quadelems[i]);
-      SCIPfreeBufferArrayNull(scip, &lininds[i]);
-      SCIPfreeBufferArrayNull(scip, &linvals[i]);
-   }
-
-   SCIPfreeBufferArray(scip, &quadelems);
-   SCIPfreeBufferArray(scip, &nquadelems);
-
-   SCIPfreeBufferArray(scip, &nlininds);
-   SCIPfreeBufferArray(scip, &lininds);
-   SCIPfreeBufferArray(scip, &linvals);
-
-   SCIPfreeBufferArray(scip, &rhs);
-   SCIPfreeBufferArray(scip, &lhs);
-   SCIPfreeBufferArrayNull(scip, &consnames);
-
-   return SCIP_OKAY;
-}
-
 /*
  * Callback methods of constraint handler
  */
@@ -6513,17 +6244,10 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock3) );
 #endif
    
-   conshdlrdata->nlpheur    = SCIPfindHeur(scip, "nlp");
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->rensheur   = SCIPfindHeur(scip, "rens");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
-   if( conshdlrdata->nlpheur != NULL )
-   {
-      /** tell NLP heuristic which method to use for adding quadratic constraints to NLP */ 
-      SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
-   }
-   
    /* catch variable events */
    for( c = 0; c < nconss; ++c )
    {
@@ -6560,7 +6284,6 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
    SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->clock3) );
 #endif
    
-   conshdlrdata->nlpheur    = NULL;
    conshdlrdata->subnlpheur = NULL;
    conshdlrdata->rensheur   = NULL;
    conshdlrdata->trysolheur = NULL;
@@ -6747,7 +6470,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
    }
 
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) && conshdlrdata->linearizenlpsol )
+   if( nconss != 0 && (conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) && conshdlrdata->linearizenlpsol )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -6780,7 +6503,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIP_EVENTHDLR* eventhdlr;
 
       /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
+      assert(conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
       assert(conshdlrdata->linearizenlpsol);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
@@ -7660,7 +7383,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
             }
          }
-         if( (conshdlrdata->nlpheur == NULL || conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible )
+         if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible )
             return SCIP_OKAY;
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = consdata->lhsviol + consdata->rhsviol;
@@ -7698,10 +7421,6 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
          return SCIP_OKAY;
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->nlpheur != NULL && sol != NULL )
-   {
-      SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
-   }
    if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
@@ -8849,5 +8568,132 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    
    *violation = MAX(consdata->lhsviol, consdata->rhsviol);
    
+   return SCIP_OKAY;
+}
+
+/** Adds the constraint to an NLPI problem. */
+SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraint */
+   SCIP_HASHMAP*         scipvar2nlpivar,    /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int            nlininds;
+   int*           lininds;
+   SCIP_Real*     linvals;
+   int            nquadelems;
+   SCIP_QUADELEM* quadelems;
+   SCIP_VAR*      othervar;
+   const char*    name;
+   int            j;
+   int            l;
+   int            lincnt;
+   int            quadcnt;
+   int            idx1;
+   int            idx2;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nlpi != NULL);
+   assert(nlpiprob != NULL);
+   assert(scipvar2nlpivar != NULL);
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* count nonzeros in quadratic part */
+   nlininds = consdata->nlinvars;
+   nquadelems = consdata->nbilinterms;
+   for( j = 0; j < consdata->nquadvars; ++j )
+   {
+      if( consdata->quadvarterms[j].sqrcoef )
+         ++nquadelems;
+      if( consdata->quadvarterms[j].lincoef != 0.0 )
+         ++nlininds;
+   }
+
+   /* setup linear part */
+   lininds = NULL;
+   linvals = NULL;
+   lincnt  = 0;
+   if( nlininds > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nlininds) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nlininds) );
+      
+      for( j = 0; j < consdata->nlinvars; ++j )
+      {
+         linvals[j] = consdata->lincoefs[j];
+         assert(SCIPhashmapExists(scipvar2nlpivar, consdata->linvars[j]));
+         lininds[j] = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpivar, consdata->linvars[j]);
+      }
+      
+      lincnt = consdata->nlinvars;
+   }
+
+   /* setup quadratic part */
+   quadelems = NULL;
+   if( nquadelems > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nquadelems) );
+   }
+   quadcnt = 0;
+     
+   for( j = 0; j < consdata->nquadvars; ++j )
+   {
+      assert(SCIPhashmapExists(scipvar2nlpivar, consdata->quadvarterms[j].var));
+      idx1 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpivar, consdata->quadvarterms[j].var);
+      if( consdata->quadvarterms[j].lincoef != 0.0 )
+      {
+         lininds[lincnt] = idx1;
+         linvals[lincnt] = consdata->quadvarterms[j].lincoef;
+         ++lincnt;
+      }
+
+      if( consdata->quadvarterms[j].sqrcoef != 0.0 )
+      {
+         assert(quadcnt < nquadelems);
+         quadelems[quadcnt].idx1 = idx1;
+         quadelems[quadcnt].idx2 = idx1;
+         quadelems[quadcnt].coef = consdata->quadvarterms[j].sqrcoef;
+         ++quadcnt;
+      }
+
+      for( l = 0; l < consdata->quadvarterms[j].nadjbilin; ++l )
+      {
+         othervar = consdata->bilinterms[consdata->quadvarterms[j].adjbilin[l]].var2;
+         /* if othervar is on position 2, then we process this bilinear term later (or it was processed already) */
+         if( othervar == consdata->quadvarterms[j].var )
+            continue;
+
+         assert(quadcnt < nquadelems);
+         assert(SCIPhashmapExists(scipvar2nlpivar, othervar));
+         idx2 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpivar, othervar);
+         quadelems[quadcnt].idx1 = MIN(idx1, idx2);
+         quadelems[quadcnt].idx2 = MAX(idx1, idx2);
+         quadelems[quadcnt].coef = consdata->bilinterms[consdata->quadvarterms[j].adjbilin[l]].coef;
+         ++quadcnt;
+      }
+   }
+
+   assert(quadcnt == nquadelems);
+   assert(lincnt  == nlininds);
+
+   name = names ? SCIPconsGetName(cons) : NULL;
+
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1,
+      &consdata->lhs, &consdata->rhs,
+      &nlininds, &lininds, &linvals ,
+      &nquadelems, &quadelems,
+      NULL, NULL, &name) );
+
+   SCIPfreeBufferArrayNull(scip, &quadelems);
+   SCIPfreeBufferArrayNull(scip, &lininds);
+   SCIPfreeBufferArrayNull(scip, &linvals);
+
    return SCIP_OKAY;
 }

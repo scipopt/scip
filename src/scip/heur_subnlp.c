@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.9 2010/09/03 18:02:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.10 2010/09/03 19:25:23 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -34,8 +34,6 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_knapsack.h"
-
-#include "scip/heur_nlp.h"
 
 #define HEUR_NAME             "subnlp"
 #define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
@@ -866,11 +864,8 @@ SCIP_RETCODE solveSubNLP(
    else
    {
       /* If all variables were removed by presolve, but presolve did not end with status SOLVED,
-       * then the problem should not be found infeasible by presolve, but seems trivial.
-       * We thus run solve, still with nodelimit=1, and hope to find some (maybe trivial) solution. */
+       * then we run solve, still with nodelimit=1, and hope to find some (maybe trivial) solution. */
       SCIP_CALL( SCIPsolve(heurdata->subscip) );
-      assert(SCIPgetNSols(heurdata->subscip) > 0);
-      assert(SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_OPTIMAL);
    }
 
    /* if subSCIP found solutions already, then pass them to main scip */
@@ -894,8 +889,8 @@ SCIP_RETCODE solveSubNLP(
       }
    }
 
-   /* we should either have variables, or the problem was trivial, in which case it should have been solved to optimality */
-   assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_OPTIMAL);
+   /* we should either have variables, or the problem was trivial, in which case it should have been solved */
+   assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
 
    /* @todo if subscip is infeasible here, one should use this information to cutoff current fixation in main scip */
    
@@ -1443,11 +1438,6 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     * probably because we do not have nonlinear continuous or implicit integer variables */
    if( heurdata->subscip == NULL )
       return SCIP_OKAY;
-   
-   /* steel start candidate from NLP heuristic, if noone provided us with a candidate
-    * candidate may still be NULL, if NLP heuristic does not have one too */
-   if( heurdata->startcand == NULL )
-      heurdata->startcand = SCIPgetStartcandHeurNlp(scip, SCIPfindHeur(scip, "nlp"), TRUE);
    
    if( heurdata->startcand == NULL )
    {  /* if no start candidate is given, we like to consider the LP solution of the current node */

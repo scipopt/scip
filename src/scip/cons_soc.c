@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.40 2010/09/02 14:55:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.41 2010/09/03 19:25:22 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -29,7 +29,6 @@
 #include "scip/cons_soc.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
-#include "scip/heur_nlp.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/intervalarith.h"
@@ -94,7 +93,6 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_HEUR*            nlpheur;        /**< a pointer to the NLP heuristic, if available */
    SCIP_HEUR*            subnlpheur;     /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;       /**< a pointer to the RENS heuristic, if available */
    SCIP_HEUR*            trysolheur;     /**< a pointer to the trysol heuristic, if available */
@@ -979,7 +977,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
    if( SCIPsolGetHeur(sol) == NULL )
       return SCIP_OKAY;
-   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
+   if( SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
@@ -2546,277 +2544,6 @@ cleanup:
  * Callback methods of constraint handler
  */
 
-/** method to call for checking if potential constraints for the NLP are present */
-static
-SCIP_DECL_HEURNLPHAVECONS(haveCons)
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-   int c, i;
-   
-   assert(scip   != NULL);
-   assert(result != NULL);
-   
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-   
-   *result = FALSE;
-
-   /* check each constraint whether it has some nonlinear variable */
-   for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; --c )
-   {
-      consdata = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[c]);
-      assert(consdata != NULL);
-      
-      if( consdata->nvars == 0 )
-         continue;
-
-      /* if fixedint is FALSE, then any quadratic variable will do */
-      if( !fixedint )
-      {
-         *result = TRUE;
-         return SCIP_OKAY;
-      }
-     
-      /* otherwise we have to check whether there is a continuous quadratic variable */
-      for( i = 0; i < consdata->nvars; ++i )
-         if( SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            *result = TRUE;
-            return SCIP_OKAY;
-         }
-   }
-   
-   return SCIP_OKAY;
-}
-
-/** adds SOC constraints to an NLPI problem */
-static
-SCIP_DECL_HEURNLPNLPIINIT(initNlpi)
-{
-   SCIP_CONSHDLR* conshdlr;
-   
-   assert(scip != NULL);
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-   assert(varmap != NULL);
-   
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-   
-   SCIP_CALL( SCIPconsInitNlpiSOC(scip, conshdlr, nlpi, problem,
-      SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetConss(conshdlr), varmap,
-      consmap, conscounter, onlysubnlp, names) );
-   
-   return SCIP_OKAY;
-}
-
-/** NLPI initialization method of constraint handler
- * 
- * The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
- */
-SCIP_RETCODE SCIPconsInitNlpiSOC(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for SOC constraints */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
-   int                   nconss,             /**< number of constraints */
-   SCIP_CONS**           conss,              /**< SOC constraints */
-   SCIP_HASHMAP*         var_scip2nlp,       /**< mapping from SCIP variables to variable indices in NLPI */
-   SCIP_HASHMAP*         conssmap,           /**< mapping from SCIP constraints to constraint indices in NLPI */
-   int*                  nlpconsscounter,    /**< counter of NLP constraints */
-   SCIP_Bool             onlysubnlp,         /**< whether to include only constraints that are relevant for a subNLP */
-   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_Real*     lhs;
-   SCIP_Real*     rhs;
-   const char**   consnames;
-   int*           nlininds = NULL;
-   int**          lininds  = NULL;
-   SCIP_Real**    linvals  = NULL;
-   int*           nquadelems;
-   SCIP_QUADELEM** quadelems;
-   int            quadnnz;
-   int            i, j;
-   int            lincnt;
-   SCIP_Bool      havelin;
-
-   assert(scip     != NULL);
-   assert(conshdlr != NULL);
-   assert(nlpi     != NULL);
-   assert(conss    != NULL || nconss == 0);
-   assert(conssmap == NULL || nlpconsscounter != NULL);
-
-   if( nconss == 0 )
-      return SCIP_OKAY;
-   
-   /* @todo try different nlp-formulations of a soc constraint (sqrt not good, but convex would be nice) */
-
-   /* check if there is a linear part, i.e., whether there are offsets */
-   havelin = FALSE;
-   for( i = 0; !havelin && i < nconss; ++i )
-   {
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-      
-      if( SCIPconsIsLocal(conss[i]) )
-         continue;
-
-      if( consdata->rhsoffset != 0.0 )
-         havelin = TRUE;
-
-      for( j = 0; !havelin && j < consdata->nvars; ++j )
-         if( consdata->offsets[j] != 0.0 )
-            havelin = TRUE;
-   }
-
-   assert(var_scip2nlp != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss) );
-   if( names )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &consnames, nconss) );
-   }
-   else
-      consnames = NULL;
-
-   if( havelin )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nconss) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nconss) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &linvals,  nconss) );
-      BMSclearMemoryArray(nlininds, nconss);
-      BMSclearMemoryArray(lininds,  nconss);
-      BMSclearMemoryArray(linvals,  nconss);
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems,  nconss) );
-
-   for( i = 0; i < nconss; ++i )
-   {
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-      
-      /* skip local constraints; TODO do not add empty constraints to NLP */
-      if( SCIPconsIsLocal(conss[i]) )
-      {
-         if (nlininds)
-            nlininds[i] = 0;
-         nquadelems[i] = 0;
-         quadelems[i]  = NULL;
-         lhs[i] = -SCIPinfinity(scip);
-         rhs[i] =  SCIPinfinity(scip);
-         continue;
-      }
-
-      lhs[i] = -SCIPinfinity(scip);
-      rhs[i] = -consdata->constant;
-      
-      if( names )
-         consnames[i] = SCIPconsGetName(conss[i]);
-      
-      quadnnz = consdata->nvars + 1;
-
-      nquadelems[i] = consdata->nvars + 1;
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[i], consdata->nvars + 1) );
-      
-      if( nlininds != NULL )
-         nlininds[i] = consdata->rhsoffset ? 1 : 0;
-      else
-         assert(consdata->rhsoffset == 0.0);
-      for( j = 0; j < consdata->nvars; ++j )
-      {
-         if( consdata->offsets[j] != 0.0 )
-         {
-            assert(nlininds != NULL);
-            ++nlininds[i];
-         }
-      }
-      if( nlininds && nlininds[i] )
-      {
-         assert( havelin == TRUE );
-         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], nlininds[i]) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[i], nlininds[i]) );
-      }
-
-      lincnt = 0;
-      for( j = 0; j < consdata->nvars; ++j )
-      {
-         quadelems[i][j].idx1 = (int) (size_t) SCIPhashmapGetImage(var_scip2nlp, consdata->vars[j]);
-         quadelems[i][j].idx2 = quadelems[i][j].idx1;
-         quadelems[i][j].coef = consdata->coefs ? (consdata->coefs[j] * consdata->coefs[j]) : 1.0;
-         
-         if( consdata->offsets[j] != 0.0 )
-         {
-            lininds[i][lincnt] = quadelems[i][j].idx1;
-            linvals[i][lincnt] = 2 * quadelems[i][j].coef * consdata->offsets[j];
-            ++lincnt;
-            
-            rhs[i] -= quadelems[i][j].coef * consdata->offsets[j] * consdata->offsets[j];
-         }
-      }
-      quadelems[i][consdata->nvars].idx1 = (int) (size_t) SCIPhashmapGetImage(var_scip2nlp, consdata->rhsvar);
-      quadelems[i][consdata->nvars].idx2 = quadelems[i][consdata->nvars].idx1;
-      quadelems[i][consdata->nvars].coef = - consdata->rhscoeff * consdata->rhscoeff;
-      
-      if( consdata->rhsoffset != 0.0 )
-      {
-         assert(lininds != NULL);
-         assert(linvals != NULL);
-         lininds[i][lincnt] = quadelems[i][consdata->nvars].idx1;
-         linvals[i][lincnt] = - 2 * consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset;
-         ++lincnt;
-         
-         rhs[i] += consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset * consdata->rhsoffset;
-      }
-      assert(nlininds == NULL || lincnt == nlininds[i]);
-      
-      if( conssmap != NULL )
-      {
-         SCIP_CALL( SCIPhashmapInsert(conssmap, conss[i], (void*)(size_t)*nlpconsscounter) );
-      }
-      if( nlpconsscounter != NULL )
-         ++*nlpconsscounter;
-   }
-
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss,
-      lhs, rhs,
-      nlininds, lininds, linvals,
-      nquadelems, quadelems,
-      NULL, NULL, consnames) );
-
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIPfreeBufferArrayNull(scip, &quadelems[i]);
-      if( havelin )
-      {
-         SCIPfreeBufferArrayNull(scip, &lininds[i]);
-         SCIPfreeBufferArrayNull(scip, &linvals[i]);
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &lhs);
-   SCIPfreeBufferArray(scip, &rhs);
-   SCIPfreeBufferArrayNull(scip, &consnames);
-
-   if( havelin )
-   {
-      SCIPfreeBufferArray(scip, &nlininds);
-      SCIPfreeBufferArray(scip, &lininds);
-      SCIPfreeBufferArray(scip, &linvals);
-   }
-
-   SCIPfreeBufferArray(scip, &nquadelems);
-   SCIPfreeBufferArray(scip, &quadelems);
-
-   return SCIP_OKAY;
-}
-
-
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopySOC)
@@ -2867,16 +2594,9 @@ SCIP_DECL_CONSINIT(consInitSOC)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    
-   conshdlrdata->nlpheur    = SCIPfindHeur(scip, "nlp");
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->rensheur   = SCIPfindHeur(scip, "rens");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
-
-   /** tell NLP heuristic which method to use for adding SOC constraints to NLP */
-   if( conshdlrdata->nlpheur != NULL )
-   {
-      SCIP_CALL( SCIPincludeHeurNlpNlpiInit(scip, haveCons, initNlpi, CONSHDLR_NAME) );
-   }
 
    return SCIP_OKAY;
 }
@@ -2898,7 +2618,6 @@ SCIP_DECL_CONSEXIT(consExitSOC)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    
-   conshdlrdata->nlpheur    = NULL;
    conshdlrdata->subnlpheur = NULL;
    conshdlrdata->rensheur   = NULL;
    conshdlrdata->trysolheur = NULL;
@@ -3017,7 +2736,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
    }
    
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) )
+   if( nconss != 0 && (conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL) )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -3053,7 +2772,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
       SCIP_EVENTHDLR* eventhdlr;
 
       /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
+      assert(conshdlrdata->subnlpheur != NULL || conshdlrdata->rensheur != NULL);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
       assert(eventhdlr != NULL);
@@ -3451,7 +3170,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       /* if solution polishing is off and there is no NLP heuristic or we just check the LP solution,
        * then there is no need to check remaining constraints (NLP heuristic will pick up LP solution anyway) */
-      if( !dolinfeasshift && (conshdlrdata->nlpheur == NULL || conshdlrdata->subnlpheur == NULL || sol == NULL))
+      if( !dolinfeasshift && (conshdlrdata->subnlpheur == NULL || sol == NULL))
          break;
    }
 
@@ -3466,10 +3185,6 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       assert(*result == SCIP_INFEASIBLE);
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, polishedsol) );
       SCIP_CALL( SCIPfreeSol(scip, &polishedsol) );
-   }
-   else if( conshdlrdata->nlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
-   {
-      SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
    }
    else if( conshdlrdata->subnlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
    {
@@ -3861,7 +3576,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
-   conshdlrdata->nlpheur = NULL;
    conshdlrdata->subnlpheur = NULL;
    conshdlrdata->rensheur = NULL;
    conshdlrdata->trysolheur = NULL;
@@ -4197,4 +3911,105 @@ SCIP_Real SCIPgetRhsOffsetSOC(
    assert(SCIPconsGetData(cons) != NULL);
    
    return SCIPconsGetData(cons)->rhsoffset;
+}
+
+/** Adds the constraint to an NLPI problem.
+ * Uses nonconvex formulation as quadratic function.
+ */
+SCIP_RETCODE SCIPaddToNlpiProblemSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< SOC constraint */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraint */
+   SCIP_HASHMAP*         scipvar2nlpivar,    /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int            nlininds;
+   int*           lininds;
+   SCIP_Real*     linvals;
+   int            nquadelems;
+   SCIP_QUADELEM* quadelems;
+   int            j;
+   int            lincnt;
+   SCIP_Real      lhs;
+   SCIP_Real      rhs;
+   const char*    name;
+
+   assert(scip     != NULL);
+   assert(cons     != NULL);
+   assert(nlpi     != NULL);
+   assert(nlpiprob != NULL);
+   assert(scipvar2nlpivar != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   lhs = -SCIPinfinity(scip);
+   rhs = -consdata->constant;
+
+   /* count how length is the linear part, i.e., how many offsets we have */
+   nlininds = consdata->rhsoffset != 0.0 ? 1 : 0;
+   for( j = 0; j < consdata->nvars; ++j )
+      if( consdata->offsets[j] != 0.0 )
+         ++nlininds;
+   
+   lininds = NULL;
+   linvals = NULL;
+   if( nlininds )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nlininds) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nlininds) );
+   }
+   lincnt = 0;
+
+   nquadelems = consdata->nvars + 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nquadelems) );
+      
+   for( j = 0; j < consdata->nvars; ++j )
+   {
+      quadelems[j].idx1 = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpivar, consdata->vars[j]);
+      quadelems[j].idx2 = quadelems[j].idx1;
+      quadelems[j].coef = consdata->coefs[j] * consdata->coefs[j];
+
+      if( consdata->offsets[j] != 0.0 )
+      {
+         lininds[lincnt] = quadelems[j].idx1;
+         linvals[lincnt] = 2 * quadelems[j].coef * consdata->offsets[j];
+         ++lincnt;
+
+         rhs -= quadelems[j].coef * consdata->offsets[j] * consdata->offsets[j];
+      }
+   }
+   quadelems[consdata->nvars].idx1 = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpivar, consdata->rhsvar);
+   quadelems[consdata->nvars].idx2 = quadelems[consdata->nvars].idx1;
+   quadelems[consdata->nvars].coef = - consdata->rhscoeff * consdata->rhscoeff;
+
+   if( consdata->rhsoffset != 0.0 )
+   {
+      assert(lininds != NULL);
+      assert(linvals != NULL);
+      lininds[lincnt] = quadelems[consdata->nvars].idx1;
+      linvals[lincnt] = -2.0 * consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset;
+      ++lincnt;
+
+      rhs += consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset * consdata->rhsoffset;
+   }
+
+   assert(lincnt == nlininds);
+
+   name = names ? SCIPconsGetName(cons) : NULL;
+
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, 1,
+      &lhs, &rhs,
+      &nlininds, &lininds, &linvals,
+      &nquadelems, &quadelems,
+      NULL, NULL, &name) );
+
+   SCIPfreeBufferArrayNull(scip, &lininds);
+   SCIPfreeBufferArrayNull(scip, &linvals);
+   SCIPfreeBufferArray(scip, &quadelems);
+
+   return SCIP_OKAY;
 }

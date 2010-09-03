@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.9 2010/07/30 12:45:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.h,v 1.10 2010/09/03 19:25:22 bzfviger Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints
@@ -79,24 +79,6 @@ SCIP_RETCODE SCIPcreateConsSOC(
                                               *   are seperated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   );
-
-/** NLPI initialization method of constraint handler
- * 
- * The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
- */
-SCIP_RETCODE SCIPconsInitNlpiSOC(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for SOC constraints */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraints */
-   int                   nconss,             /**< number of constraints */
-   SCIP_CONS**           conss,              /**< SOC constraints */
-   SCIP_HASHMAP*         var_scip2nlp,       /**< mapping from SCIP variables to variable indices in NLPI */
-   SCIP_HASHMAP*         conssmap,           /**< mapping from SCIP constraints to constraint indices in NLPI */
-   int*                  nlpconsscounter,    /**< counter of NLP constraints */
-   SCIP_Bool             onlysubnlp,         /**< whether to include only constraints that are relevant for a subNLP */
-   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
 
 /** Gets the SOC constraint as a nonlinear row representation.
@@ -170,6 +152,19 @@ extern
 SCIP_Real SCIPgetRhsOffsetSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** Adds the constraint to an NLPI problem.
+ * Uses nonconvex formulation as quadratic function.
+ */
+extern
+SCIP_RETCODE SCIPaddToNlpiProblemSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< SOC constraint */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraint */
+   SCIP_HASHMAP*         scipvar2nlpivar,    /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
 
 #ifdef __cplusplus
