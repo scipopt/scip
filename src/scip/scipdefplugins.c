@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.105 2010/09/03 10:14:00 bzfhende Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.106 2010/09/03 17:26:25 bzfviger Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -142,7 +142,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeDispDefault(scip) );
 
    /* include NLPI's, if available */
-   nlpi = NULL;
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
    if( nlpi != NULL )
    {

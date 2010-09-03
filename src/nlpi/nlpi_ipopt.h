@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.6 2010/09/01 12:32:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.7 2010/09/03 17:26:24 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
@@ -25,15 +25,14 @@
 #ifndef __SCIP_NLPI_IPOPT_H__
 #define __SCIP_NLPI_IPOPT_H__
 
-#ifdef WITH_IPOPT
-
 #include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** create solver interface for Ipopt solver */
+/** create solver interface for Ipopt solver
+ * set *nlpi to NULL if Ipopt is not available */
 extern
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -48,6 +47,10 @@ const char* SCIPgetSolverNameIpopt(void);
 extern
 const char* SCIPgetSolverDescIpopt(void);
 
+/** returns whether Ipopt is available, i.e., whether WITH_IPOPT was defined at build time */
+extern
+SCIP_Bool SCIPisIpoptAvailableIpopt(void);
+
 /** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
 extern
 void* SCIPgetIpoptApplicationPointerIpopt(
@@ -56,14 +59,6 @@ void* SCIPgetIpoptApplicationPointerIpopt(
 
 #ifdef __cplusplus
 }
-#endif
-
-#else /* WITH_IPOPT not defined */
-
-#define SCIPcreateNlpSolverIpopt(blkmem, nlpi) SCIP_OKAY
-#define SCIPgetSolverNameIpopt()               ""
-#define SCIPgetSolverDescIpopt()               ""
-
 #endif
 
 #endif /* __SCIP_NLPI_IPOPT_H__ */

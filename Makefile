@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.364 2010/09/03 10:26:41 bzfhende Exp $
+# $Id: Makefile,v 1.365 2010/09/03 17:26:24 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -315,17 +315,14 @@ NLPILIBCOBJ	= 	nlpi/nlpi.o \
 			scip/intervalarith.o \
 			scip/interrupt.o \
 			scip/message.o
-NLPILIBCXXOBJ	= nlpi/intervalarith.o
+NLPILIBCXXOBJ	= nlpi/intervalarith.o \
+         nlpi/nlpi_ipopt.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ += nlpi/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
 NLPILIBCXXOBJ += nlpi/exprinterpret_cppad.o
-endif
-
-ifeq ($(IPOPT),true)
-NLPILIBCXXOBJ += nlpi/nlpi_ipopt.o
 endif
 
 NLPILIB		=	$(NLPILIBNAME).$(BASE)

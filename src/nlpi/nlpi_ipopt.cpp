@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.18 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.19 2010/09/03 17:26:24 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -26,6 +26,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "nlpi/nlpi_ipopt.h"
+
+#ifdef WITH_IPOPT
+
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
@@ -1704,9 +1707,16 @@ const char* SCIPgetSolverNameIpopt(void)
    return PACKAGE_STRING;
 }
 
+/** gets string that describes Ipopt (version number) */
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
+}
+
+/** returns whether Ipopt is available, i.e., whether WITH_IPOPT was defined at build time */
+SCIP_Bool SCIPisIpoptAvailableIpopt(void)
+{
+   return TRUE;
 }
 
 /** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
@@ -2234,3 +2244,48 @@ void ScipNLP::finalize_solution(
       }
    }
 }
+
+#else /* ifdef WITH_IPOPT */
+
+/** create solver interface for Ipopt solver */
+SCIP_RETCODE SCIPcreateNlpSolverIpopt(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+)
+{
+   assert(nlpi != NULL);
+   
+   *nlpi = NULL;
+   
+   return SCIP_OKAY;
+}
+
+/** gets string that identifies Ipopt (version number) */
+const char* SCIPgetSolverNameIpopt(void)
+{
+   return "";
+}
+
+/** gets string that describes Ipopt (version number) */
+const char* SCIPgetSolverDescIpopt(void)
+{
+   return "";
+}
+
+/** returns whether Ipopt is available, i.e., whether WITH_IPOPT was defined at build time */
+SCIP_Bool SCIPisIpoptAvailableIpopt(void)
+{
+   return FALSE;
+}
+
+/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
+void* SCIPgetIpoptApplicationPointerIpopt(
+   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
+   )
+{
+   SCIPerrorMessage("Ipopt not available!\n");
+   SCIPABORT();
+   return NULL;
+}
+
+#endif
