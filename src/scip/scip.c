@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.634 2010/09/01 16:33:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.635 2010/09/03 08:39:12 bzfgleix Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13064,7 +13064,7 @@ void SCIPmarkContinuousNonlinearitiesPresent(
  * 
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
  * 
- * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkContinuousNonlinearitiesPresent dispensable.
+ * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkNonlinearitiesPresent dispensable.
  */ 
 void SCIPmarkNonlinearitiesPresent(
    SCIP*                 scip                /**< SCIP data structure */
