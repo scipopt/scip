@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.5 2010/08/27 21:10:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.6 2010/09/03 18:14:51 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -158,6 +158,7 @@ SCIP_Bool SCIPnlrowIsInNLP(
 /**@name Nonlinear problem (NLP) methods */
 /**@{ */
 
+#if 0
 /** sets whether the current NLP is a convex problem, i.e., all restrictions are defined by convex functions w.r.t. current bounds */
 extern
 void SCIPnlpSetIsConvex(
@@ -170,6 +171,7 @@ extern
 SCIP_Bool SCIPnlpIsConvex(
    SCIP_NLP*             nlp                 /**< NLP data */
    );
+#endif
 
 /** gets array with variables of the NLP */
 extern
