@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.20 2010/08/31 18:47:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.21 2010/09/03 17:22:53 bzfwanie Exp $"
 
 /**@file   lpi_msk.c
  * @ingroup LPIS
@@ -2216,7 +2216,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
 
 /** performs strong branching iterations on all candidates */
 static
-SCIP_RETCODE piStrongbranch(
+SCIP_RETCODE SCIPlpiStrongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current primal solution value of column */
@@ -2458,7 +2458,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    )
 {
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   SCIP_CALL( SCIPlpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
 
    return SCIP_OKAY;
 }
@@ -2496,7 +2496,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    for (j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      SCIP_CALL( SCIPlpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
    }
    return SCIP_OKAY;
 }
@@ -2517,7 +2517,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    )
 {
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   SCIP_CALL( SCIPlpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
    
    return SCIP_OKAY;
 }
@@ -2555,7 +2555,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    for (j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      SCIP_CALL( SCIPlpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
    }
    return SCIP_OKAY;
 }
