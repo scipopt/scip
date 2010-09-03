@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.55 2010/05/26 17:00:54 bzfhende Exp $
+# $Id: cmpres.awk,v 1.56 2010/09/03 15:48:45 bzfgamra Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -1190,7 +1190,7 @@ END {
          timeshiftedgeom[s,cat] -= timegeomshift;
 	 timetofirstshiftedgeom[s,cat] -= timegeomshift;
 	 timetobestshiftedgeom[s,cat] -= timegeomshift;
-         nodeshiftedgeom[s,cat] = max(nodeshiftedgeom[s,cat], mintime);
+         nodeshiftedgeom[s,cat] = max(nodeshiftedgeom[s,cat], 1);
          timeshiftedgeom[s,cat] = max(timeshiftedgeom[s,cat], mintime);
 	 timetofirstshiftedgeom[s,cat] = max(timetofirstshiftedgeom[s,cat], mintime);
 	 timetobestshiftedgeom[s,cat] = max(timetobestshiftedgeom[s,cat], mintime);
