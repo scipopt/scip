@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.7 2010/08/30 16:50:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.8 2010/09/03 07:58:56 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -997,22 +997,14 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
                sortedvars, &nsortedvars, lowerbound) );
          
          SCIPdebugMessage("detected connected component of size <%d>\n", nsortedvars);
-            
-         /* */
-         if( nsortedvars == 1 )
+         
+         /* copy and capture variables to make sure, the variables are not deleted */
+         for( i = 0; i < nsortedvars; ++i )
          {
-            assert(!SCIPhashtableExists(connected, vars[v]));
-            SCIP_CALL( SCIPhashtableInsert(connected, vars[v]) );
+            topovars[(*ntopovars)] = sortedvars[i];
+            (*ntopovars)++;
          }
-         else
-         {
-            /* copy and capture variables to make sure, the variables are not deleted */
-            for( i = 0; i < nsortedvars; ++i )
-            {
-               topovars[(*ntopovars)] = sortedvars[i];
-               (*ntopovars)++;
-            }
-         }
+         
       }
    }
    
