@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.48 2010/09/01 20:59:45 bzfwanie Exp $
+# $Id: check_cplex.awk,v 1.49 2010/09/03 15:04:05 bzfwanie Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -321,9 +321,9 @@ BEGIN {
       printf("\\tablecaption{CPLEX with %s settings}\n",settings)      >TEXFILE;
       printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
 
-      printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
-      printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
-      printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+      printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+--------\n");
+      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
+      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+--------\n");
 
       headerprinted = 1;
    }

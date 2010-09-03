@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_blis.awk,v 1.9 2010/09/01 20:59:45 bzfwanie Exp $
+# $Id: check_blis.awk,v 1.10 2010/09/03 15:04:05 bzfwanie Exp $
 #
 #@file    check_blis.awk
 #@brief   BLIS Check Report Generator
@@ -279,7 +279,7 @@ BEGIN {
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
              pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-19s %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
+      printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
              shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
