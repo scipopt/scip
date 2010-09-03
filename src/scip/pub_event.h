@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_event.h,v 1.18 2010/07/30 09:57:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_event.h,v 1.19 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   pub_event.h
  * @ingroup PUBLICMETHODS
@@ -121,10 +121,6 @@ SCIP_SOL* SCIPeventGetSol(
    SCIP_EVENT*           event               /**< event */
    );
 
-#ifdef __cplusplus
-}
-#endif
-
 /** gets the left bound of open interval in the hole */
 extern
 SCIP_Real SCIPeventGetHoleLeft(
@@ -136,5 +132,63 @@ extern
 SCIP_Real SCIPeventGetHoleRight(
    SCIP_EVENT*           event               /**< event */
    );
+
+/** gets row for a row event */
+extern
+SCIP_ROW* SCIPeventGetRow(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets column for a row change coefficient event */
+extern
+SCIP_COL* SCIPeventGetRowCol(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old coefficient value for a row change coefficient event */
+extern
+SCIP_Real SCIPeventGetRowOldCoefVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new coefficient value for a row change coefficient event */
+extern
+SCIP_Real SCIPeventGetRowNewCoefVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old constant value for a row change constant event */
+extern
+SCIP_Real SCIPeventGetRowOldConstVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new constant value for a row change constant event */
+extern
+SCIP_Real SCIPeventGetRowNewConstVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets side for a row change side event */
+extern
+SCIP_SIDETYPE SCIPeventGetRowSide(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old side value for a row change side event */
+extern
+SCIP_Real SCIPeventGetRowOldSideVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new side value for a row change side event */
+extern
+SCIP_Real SCIPeventGetRowNewSideVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.41 2010/03/17 14:47:47 bzfwanie Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.42 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -172,6 +172,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_VAR*             var,                /**< priced variable */
    SCIP_Real             score,              /**< pricing score of variable (the larger, the better the variable) */
@@ -216,7 +217,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
       /* if the array consists of "maxpricevars" variables, release the worst variables */
       if( pricestore->nvars == maxpricevars )
       {
-         SCIP_CALL( SCIPvarRelease(&pricestore->vars[pricestore->nvars-1], blkmem, set, lp) );
+         SCIP_CALL( SCIPvarRelease(&pricestore->vars[pricestore->nvars-1], blkmem, set, eventqueue, lp) );
          pricestore->nvars--;
       }
       assert(pricestore->nvars < maxpricevars);
@@ -332,7 +333,7 @@ SCIP_RETCODE addBoundViolated(
       {
          SCIPdebugMessage(" -> best bound of <%s> [%g,%g] is not zero but %g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestbound);
-         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, 
+         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 
                -SCIPvarGetObj(var) * bestbound, (SCIPtreeGetCurrentDepth(tree) == 0)) );
          *added = TRUE;
       }
@@ -455,7 +456,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                 */
                if( !SCIPsetIsPositive(set, feasibility) )
                {
-                  SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, -feasibility / (col->len+1), root) );
+                  SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, -feasibility / (col->len+1), root) );
                   pricestore->nprobvarsfound++;
                   nfoundvars++;
                }
@@ -476,6 +477,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< LP data */
@@ -546,7 +548,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
       /* release the variable */
-      SCIP_CALL( SCIPvarRelease(&pricestore->vars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&pricestore->vars[v], blkmem, set, eventqueue, lp) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -590,7 +592,7 @@ SCIP_RETCODE SCIPpricestoreResetBounds(
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarslb[v]) );
       SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarsub[v]) );
-      SCIP_CALL( SCIPvarRelease(&pricestore->bdviolvars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&pricestore->bdviolvars[v], blkmem, set, eventqueue, lp) );
    }
    pricestore->naddedbdviolvars = 0;
    pricestore->nbdviolvars = 0;

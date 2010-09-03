@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.353 2010/09/03 12:51:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.354 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -47,6 +47,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
+#include "scip/event.h"
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 
@@ -790,8 +791,92 @@ void rowSwapCoefs(
       row->nonlpcolssorted = FALSE;
 }
 
+/** issues a ROWCOEFCHANGED event on the given row */
+static
+SCIP_RETCODE rowEventCoefChanged(
+   SCIP_ROW*             row,                /**< row which coefficient has changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_COL*             col,                /**< the column which coefficient has changed */
+   SCIP_Real             oldval,             /**< old value of the coefficient */
+   SCIP_Real             newval              /**< new value of the coefficient */
+   )
+{
+   assert(row != NULL);
+   assert(row->eventfilter != NULL);
+   assert(col != NULL);
+   
+   /* check, if the row is being tracked for coefficient changes
+    * if so, issue ROWCOEFCHANGED event
+    */
+   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCOEFCHANGED) != 0) )
+   {
+      SCIP_EVENT* event;
 
+      SCIP_CALL( SCIPeventCreateRowCoefChanged(&event, blkmem, row, col, oldval, newval) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, row->eventfilter, &event) );
+   }
 
+   return SCIP_OKAY;
+}
+
+/** issues a ROWCONSTCHANGED event on the given row */
+static
+SCIP_RETCODE rowEventConstantChanged(
+   SCIP_ROW*             row,                /**< row which coefficient has changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Real             oldval,             /**< old value of the constant */
+   SCIP_Real             newval              /**< new value of the constant */
+   )
+{
+   assert(row != NULL);
+   assert(row->eventfilter != NULL);
+   
+   /* check, if the row is being tracked for coefficient changes
+    * if so, issue ROWCONSTCHANGED event
+    */
+   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCONSTCHANGED) != 0) )
+   {
+      SCIP_EVENT* event;
+
+      SCIP_CALL( SCIPeventCreateRowConstChanged(&event, blkmem, row, oldval, newval) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, row->eventfilter, &event) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** issues a ROWSIDECHANGED event on the given row */
+static
+SCIP_RETCODE rowEventSideChanged(
+   SCIP_ROW*             row,                /**< row which coefficient has changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_SIDETYPE         side,               /**< the side that has changed */
+   SCIP_Real             oldval,             /**< old value of side */
+   SCIP_Real             newval              /**< new value of side */
+   )
+{
+   assert(row != NULL);
+   assert(row->eventfilter != NULL);
+   
+   /* check, if the row is being tracked for coefficient changes
+    * if so, issue ROWSIDECHANGED event
+    */
+   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWSIDECHANGED) != 0) )
+   {
+      SCIP_EVENT* event;
+
+      SCIP_CALL( SCIPeventCreateRowSideChanged(&event, blkmem, row, side, oldval, newval) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, row->eventfilter, &event) );
+   }
+
+   return SCIP_OKAY;
+}
 
 #if 0
 
@@ -932,6 +1017,7 @@ SCIP_RETCODE rowAddCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val,                /**< value of coefficient */
@@ -944,6 +1030,7 @@ SCIP_RETCODE colAddCoef(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val,                /**< value of coefficient */
@@ -998,7 +1085,7 @@ SCIP_RETCODE colAddCoef(
          /* this call might swap the current row with the first non-LP/not linked row, s.t. insertion position
           * has to be updated
           */
-         SCIP_CALL( rowAddCoef(row, blkmem, set, lp, col, val, pos) );
+         SCIP_CALL( rowAddCoef(row, blkmem, set, eventqueue, lp, col, val, pos) );
          if( row->lppos >= 0 )
             pos = col->nlprows-1;
          linkpos = col->linkpos[pos];
@@ -1061,6 +1148,7 @@ SCIP_RETCODE colDelCoefPos(
    )
 {
    SCIP_ROW* row;
+   SCIP_Real oldval;
 
    assert(col != NULL);
    assert(col->var != NULL);
@@ -1072,6 +1160,8 @@ SCIP_RETCODE colDelCoefPos(
 
    row = col->rows[pos];
    assert((row->lppos >= 0) == (pos < col->nlprows));
+   
+   oldval = col->vals[pos];
 
    /*debugMessage("deleting coefficient %g * <%s> at position %d from column <%s>\n", 
      col->vals[pos], row->name, pos, SCIPvarGetName(col->var));*/
@@ -1122,6 +1212,10 @@ SCIP_RETCODE colChgCoefPos(
    }
    else if( !SCIPsetIsEQ(set, col->vals[pos], val) )
    {
+      SCIP_Real oldval;
+      
+      oldval = col->vals[pos];
+      
       /* change existing coefficient */
       col->vals[pos] = val;
       coefChanged(col->rows[pos], col, lp);
@@ -1246,6 +1340,7 @@ SCIP_RETCODE rowAddCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val,                /**< value of coefficient */
@@ -1308,7 +1403,7 @@ SCIP_RETCODE rowAddCoef(
          /* this call might swap the current column with the first non-LP/not linked column, s.t. insertion position
           * has to be updated
           */
-         SCIP_CALL( colAddCoef(col, blkmem, set, lp, row, val, pos) );
+         SCIP_CALL( colAddCoef(col, blkmem, set, eventqueue, lp, row, val, pos) );
          if( col->lppos >= 0 )
             pos = row->nlpcols-1;
          linkpos = row->linkpos[pos];
@@ -1366,6 +1461,9 @@ SCIP_RETCODE rowAddCoef(
    SCIPdebugMessage("added coefficient %g * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
       val, SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->name, row->nunlinked);
 
+   /* issue row coefficient changed event */
+   SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, col, 0.0, val) );
+
    return SCIP_OKAY;
 }
 
@@ -1373,7 +1471,9 @@ SCIP_RETCODE rowAddCoef(
 static
 SCIP_RETCODE rowDelCoefPos(
    SCIP_ROW*             row,                /**< row to be changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    int                   pos                 /**< position in row vector to delete */
    )
@@ -1420,6 +1520,9 @@ SCIP_RETCODE rowDelCoefPos(
 
    coefChanged(row, col, lp);
 
+   /* issue row coefficient changed event */
+   SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, col, val, 0.0) );
+
    return SCIP_OKAY;
 }
 
@@ -1427,7 +1530,9 @@ SCIP_RETCODE rowDelCoefPos(
 static
 SCIP_RETCODE rowChgCoefPos(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    int                   pos,                /**< position in row vector to change */
    SCIP_Real             val                 /**< value of coefficient */
@@ -1450,16 +1555,23 @@ SCIP_RETCODE rowChgCoefPos(
    if( SCIPsetIsZero(set, val) )
    {
       /* delete existing coefficient */
-      SCIP_CALL( rowDelCoefPos(row, set, lp, pos) );
+      SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    }
    else if( !SCIPsetIsEQ(set, row->vals[pos], val) )
    {
+      SCIP_Real oldval;
+      
+      oldval = row->vals[pos];
+      
       /* change existing coefficient */
       rowDelNorms(row, set, row->cols[pos], row->vals[pos], FALSE);
       row->vals[pos] = val;
       row->integral = row->integral && SCIPcolIsIntegral(row->cols[pos]) && SCIPsetIsIntegral(set, val);
       rowAddNorms(row, set, row->cols[pos], row->vals[pos]);
       coefChanged(row, row->cols[pos], lp);
+      
+      /* issue row coefficient changed event */
+      SCIP_CALL( rowEventCoefChanged(row, blkmem, set, eventqueue, row->cols[pos], oldval, val) );
    }
 
    return SCIP_OKAY;
@@ -1523,6 +1635,7 @@ SCIP_RETCODE colLink(
    SCIP_COL*             col,                /**< column data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -1545,7 +1658,7 @@ SCIP_RETCODE colLink(
          if( col->linkpos[i] == -1 )
          {
             /* this call might swap the current row with the first non-LP/not linked row, but this is of no harm */
-            SCIP_CALL( rowAddCoef(col->rows[i], blkmem, set, lp, col, col->vals[i], i) );
+            SCIP_CALL( rowAddCoef(col->rows[i], blkmem, set, eventqueue, lp, col, col->vals[i], i) );
          }
          assert(col->rows[i]->cols[col->linkpos[i]] == col);
          assert(col->rows[i]->linkpos[col->linkpos[i]] == i);
@@ -1566,6 +1679,7 @@ SCIP_RETCODE colUnlink(
    SCIP_COL*             col,                /**< column data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -1585,7 +1699,7 @@ SCIP_RETCODE colUnlink(
          if( col->linkpos[i] >= 0 )
          {
             assert(col->rows[i]->cols[col->linkpos[i]] == col);
-            SCIP_CALL( rowDelCoefPos(col->rows[i], set, lp, col->linkpos[i]) );
+            SCIP_CALL( rowDelCoefPos(col->rows[i], blkmem, set, eventqueue, lp, col->linkpos[i]) );
             col->linkpos[i] = -1;
             col->nunlinked++;
          }
@@ -1604,6 +1718,7 @@ SCIP_RETCODE rowLink(
    SCIP_ROW*             row,                /**< row data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -1625,7 +1740,7 @@ SCIP_RETCODE rowLink(
          if( row->linkpos[i] == -1 )
          {
             /* this call might swap the current column with the first non-LP/not linked column, but this is of no harm */
-            SCIP_CALL( colAddCoef(row->cols[i], blkmem, set, lp, row, row->vals[i], i) );
+            SCIP_CALL( colAddCoef(row->cols[i], blkmem, set, eventqueue, lp, row, row->vals[i], i) );
          }
          assert(row->cols[i]->rows[row->linkpos[i]] == row);
          assert(row->cols[i]->linkpos[row->linkpos[i]] == i);
@@ -1644,7 +1759,6 @@ SCIP_RETCODE rowLink(
 static
 SCIP_RETCODE rowUnlink(
    SCIP_ROW*             row,                /**< row data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -1652,7 +1766,6 @@ SCIP_RETCODE rowUnlink(
    int i;
 
    assert(row != NULL);
-   assert(blkmem != NULL);
    assert(set != NULL);
    assert(lp != NULL);
 
@@ -2347,6 +2460,7 @@ SCIP_RETCODE SCIPcolFree(
    SCIP_COL**            col,                /**< pointer to LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -2360,7 +2474,7 @@ SCIP_RETCODE SCIPcolFree(
    assert((*col)->lpipos == -1);
 
    /* remove column indices from corresponding rows */
-   SCIP_CALL( colUnlink(*col, blkmem, set, lp) );
+   SCIP_CALL( colUnlink(*col, blkmem, set, eventqueue, lp) );
 
    BMSfreeBlockMemoryArrayNull(blkmem, &(*col)->rows, (*col)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*col)->vals, (*col)->size);
@@ -2388,6 +2502,7 @@ SCIP_RETCODE SCIPcolAddCoef(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
@@ -2396,7 +2511,7 @@ SCIP_RETCODE SCIPcolAddCoef(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   SCIP_CALL( colAddCoef(col, blkmem, set, lp, row, val, -1) );
+   SCIP_CALL( colAddCoef(col, blkmem, set, eventqueue, lp, row, val, -1) );
 
    checkLinks(lp);
 
@@ -2406,7 +2521,9 @@ SCIP_RETCODE SCIPcolAddCoef(
 /** deletes existing coefficient from column */
 SCIP_RETCODE SCIPcolDelCoef(
    SCIP_COL*             col,                /**< column to be changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< coefficient to be deleted */
    )
@@ -2435,7 +2552,7 @@ SCIP_RETCODE SCIPcolDelCoef(
       assert(row->cols[col->linkpos[pos]] == col);
       assert(row->cols_index[col->linkpos[pos]] == col->index);
       assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
-      SCIP_CALL( rowDelCoefPos(row, set, lp, col->linkpos[pos]) );
+      SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, col->linkpos[pos]) );
    }
 
    /* delete the row from the column's row vector */
@@ -2451,6 +2568,7 @@ SCIP_RETCODE SCIPcolChgCoef(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
@@ -2470,7 +2588,7 @@ SCIP_RETCODE SCIPcolChgCoef(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      SCIP_CALL( colAddCoef(col, blkmem, set, lp, row, val, -1) );
+      SCIP_CALL( colAddCoef(col, blkmem, set, eventqueue, lp, row, val, -1) );
    }
    else
    {
@@ -2484,7 +2602,7 @@ SCIP_RETCODE SCIPcolChgCoef(
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_index[col->linkpos[pos]] == col->index);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
-         SCIP_CALL( rowChgCoefPos(row, set, lp, col->linkpos[pos], val) );
+         SCIP_CALL( rowChgCoefPos(row, blkmem, set, eventqueue, lp, col->linkpos[pos], val) );
       }
 
       /* change the coefficient in the column */
@@ -2501,6 +2619,7 @@ SCIP_RETCODE SCIPcolIncCoef(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             incval              /**< value to add to the coefficient */
@@ -2523,7 +2642,7 @@ SCIP_RETCODE SCIPcolIncCoef(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      SCIP_CALL( colAddCoef(col, blkmem, set, lp, row, incval, -1) );
+      SCIP_CALL( colAddCoef(col, blkmem, set, eventqueue, lp, row, incval, -1) );
    }
    else
    {
@@ -2537,7 +2656,7 @@ SCIP_RETCODE SCIPcolIncCoef(
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_index[col->linkpos[pos]] == col->index);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
-         SCIP_CALL( rowChgCoefPos(row, set, lp, col->linkpos[pos], col->vals[pos] + incval) );
+         SCIP_CALL( rowChgCoefPos(row, blkmem, set, eventqueue, lp, col->linkpos[pos], col->vals[pos] + incval) );
       }
 
       /* change the coefficient in the column */
@@ -3938,7 +4057,9 @@ SCIP_Bool isIntegralScalar(
 static
 SCIP_RETCODE rowScale(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             scaleval,           /**< value to scale row with */
@@ -4037,7 +4158,7 @@ SCIP_RETCODE rowScale(
          }
             
          /* change the coefficient in the row, and update the norms and integrality status */
-         SCIP_CALL( rowChgCoefPos(row, set, lp, c, newval) );
+         SCIP_CALL( rowChgCoefPos(row, blkmem, set, eventqueue, lp, c, newval) );
 
          /* current coefficient has been deleted from the row because it was almost zero */
          if( oldlen != row->len ) 
@@ -4065,7 +4186,7 @@ SCIP_RETCODE rowScale(
          if( SCIPsetIsIntegral(set, newval) || (row->integral && !row->modifiable) )
             newval = SCIPsetSumCeil(set, newval);
       }
-      SCIP_CALL( SCIProwChgLhs(row, set, lp, newval) );
+      SCIP_CALL( SCIProwChgLhs(row, blkmem, set, eventqueue, lp, newval) );
    }
    if( !SCIPsetIsInfinity(set, row->rhs) )
    {
@@ -4077,11 +4198,11 @@ SCIP_RETCODE rowScale(
          if( SCIPsetIsIntegral(set, newval) || (row->integral && !row->modifiable) )
             newval = SCIPsetSumFloor(set, newval);
       }
-      SCIP_CALL( SCIProwChgRhs(row, set, lp, newval) );
+      SCIP_CALL( SCIProwChgRhs(row, blkmem, set, eventqueue, lp, newval) );
    }
 
    /* clear the row constant */
-   SCIP_CALL( SCIProwChgConstant(row, set, stat, lp, 0.0) );
+   SCIP_CALL( SCIProwChgConstant(row, blkmem, set, stat, eventqueue, lp, 0.0) );
 
    SCIPdebugMessage("scaled row <%s> (integral: %u)\n", row->name, row->integral);
    SCIPdebug(SCIProwPrint(row, NULL));
@@ -4173,6 +4294,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->pseudoactivity = SCIP_INVALID;
    (*row)->minactivity = SCIP_INVALID;
    (*row)->maxactivity = SCIP_INVALID;
+   (*row)->eventfilter = NULL;
    (*row)->index = stat->nrowidx++;
    (*row)->size = len;
    (*row)->len = len;
@@ -4210,6 +4332,9 @@ SCIP_RETCODE SCIProwCreate(
 
    /* capture the row */
    SCIProwCapture(*row);
+   
+   /* create event filter */
+   SCIP_CALL( SCIPeventfilterCreate(&(*row)->eventfilter, blkmem) );
 
    return SCIP_OKAY;
 }
@@ -4227,9 +4352,13 @@ SCIP_RETCODE SCIProwFree(
    assert(*row != NULL);
    assert((*row)->nuses == 0);
    assert((*row)->lppos == -1);
+   assert((*row)->eventfilter != NULL);
 
    /* remove column indices from corresponding rows */
-   SCIP_CALL( rowUnlink(*row, blkmem, set, lp) );
+   SCIP_CALL( rowUnlink(*row, set, lp) );
+
+   /* free event filter */
+   SCIP_CALL( SCIPeventfilterFree(&(*row)->eventfilter, blkmem, set) );
 
    BMSfreeBlockMemoryArray(blkmem, &(*row)->name, strlen((*row)->name)+1);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols, (*row)->size);
@@ -4316,6 +4445,7 @@ SCIP_RETCODE SCIProwAddCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val                 /**< value of coefficient */
@@ -4324,7 +4454,7 @@ SCIP_RETCODE SCIProwAddCoef(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   SCIP_CALL( rowAddCoef(row, blkmem, set, lp, col, val, -1) );
+   SCIP_CALL( rowAddCoef(row, blkmem, set, eventqueue, lp, col, val, -1) );
 
    checkLinks(lp);
 
@@ -4334,7 +4464,9 @@ SCIP_RETCODE SCIProwAddCoef(
 /** deletes coefficient from row */
 SCIP_RETCODE SCIProwDelCoef(
    SCIP_ROW*             row,                /**< row to be changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col                 /**< coefficient to be deleted */
    )
@@ -4368,7 +4500,7 @@ SCIP_RETCODE SCIProwDelCoef(
    }
 
    /* delete the column from the row's col vector */
-   SCIP_CALL( rowDelCoefPos(row, set, lp, pos) );
+   SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    
    checkLinks(lp);
 
@@ -4380,6 +4512,7 @@ SCIP_RETCODE SCIProwChgCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val                 /**< value of coefficient */
@@ -4400,7 +4533,7 @@ SCIP_RETCODE SCIProwChgCoef(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      SCIP_CALL( rowAddCoef(row, blkmem, set, lp, col, val, -1) );
+      SCIP_CALL( rowAddCoef(row, blkmem, set, eventqueue, lp, col, val, -1) );
    }
    else
    {
@@ -4418,7 +4551,7 @@ SCIP_RETCODE SCIProwChgCoef(
       }
 
       /* change the coefficient in the row */
-      SCIP_CALL( rowChgCoefPos(row, set, lp, pos, val) );
+      SCIP_CALL( rowChgCoefPos(row, blkmem, set, eventqueue, lp, pos, val) );
    }
 
    checkLinks(lp);
@@ -4431,6 +4564,7 @@ SCIP_RETCODE SCIProwIncCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             incval              /**< value to add to the coefficient */
@@ -4453,7 +4587,7 @@ SCIP_RETCODE SCIProwIncCoef(
    if( pos == -1 )
    {
       /* coefficient doesn't exist, or sorting is delayed: add coefficient to the end of the row's arrays */
-      SCIP_CALL( rowAddCoef(row, blkmem, set, lp, col, incval, -1) );
+      SCIP_CALL( rowAddCoef(row, blkmem, set, eventqueue, lp, col, incval, -1) );
    }
    else
    {
@@ -4471,7 +4605,7 @@ SCIP_RETCODE SCIProwIncCoef(
       }
 
       /* change the coefficient in the row */
-      SCIP_CALL( rowChgCoefPos(row, set, lp, pos, row->vals[pos] + incval) );
+      SCIP_CALL( rowChgCoefPos(row, blkmem, set, eventqueue, lp, pos, row->vals[pos] + incval) );
    }
 
    checkLinks(lp);
@@ -4482,8 +4616,10 @@ SCIP_RETCODE SCIProwIncCoef(
 /** changes constant value of a row */
 SCIP_RETCODE SCIProwChgConstant(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             constant            /**< new constant value */
    )
@@ -4497,6 +4633,8 @@ SCIP_RETCODE SCIProwChgConstant(
 
    if( !SCIPsetIsEQ(set, constant, row->constant) )
    {
+      SCIP_Real oldconstant;
+      
       if( row->validpsactivitydomchg == stat->domchgcount )
       {
          assert(row->pseudoactivity < SCIP_INVALID);
@@ -4518,8 +4656,13 @@ SCIP_RETCODE SCIProwChgConstant(
       {
          SCIP_CALL( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
       }
+      
+      oldconstant = row->constant;
 
       row->constant = constant;
+      
+      /* issue row constant changed event */
+      SCIP_CALL( rowEventConstantChanged(row, blkmem, set, eventqueue, oldconstant, constant) );
    }
 
    return SCIP_OKAY;
@@ -4528,8 +4671,10 @@ SCIP_RETCODE SCIProwChgConstant(
 /** add constant value to a row */
 SCIP_RETCODE SCIProwAddConstant(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             addval              /**< constant value to add to the row */
    )
@@ -4543,7 +4688,7 @@ SCIP_RETCODE SCIProwAddConstant(
 
    if( !SCIPsetIsZero(set, addval) )
    {
-      SCIP_CALL( SCIProwChgConstant(row, set, stat, lp, row->constant + addval) );
+      SCIP_CALL( SCIProwChgConstant(row, blkmem, set, stat, eventqueue, lp, row->constant + addval) );
    }
 
    return SCIP_OKAY;
@@ -4552,7 +4697,9 @@ SCIP_RETCODE SCIProwAddConstant(
 /** changes left hand side of LP row */
 SCIP_RETCODE SCIProwChgLhs(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             lhs                 /**< new left hand side */
    )
@@ -4563,8 +4710,15 @@ SCIP_RETCODE SCIProwChgLhs(
 
    if( !SCIPsetIsEQ(set, row->lhs, lhs) )
    {
+      SCIP_Real oldlhs;
+      
+      oldlhs = row->lhs;
+      
       row->lhs = lhs;
       SCIP_CALL( rowSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
+      
+      /* issue row side changed event */
+      SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_LEFT, oldlhs, lhs) );
    }
 
    return SCIP_OKAY;
@@ -4573,7 +4727,9 @@ SCIP_RETCODE SCIProwChgLhs(
 /** changes right hand side of LP row */
 SCIP_RETCODE SCIProwChgRhs(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             rhs                 /**< new right hand side */
    )
@@ -4584,8 +4740,15 @@ SCIP_RETCODE SCIProwChgRhs(
 
    if( !SCIPsetIsEQ(set, row->rhs, rhs) )
    {
+      SCIP_Real oldrhs;
+      
+      oldrhs = row->rhs;
+
       row->rhs = rhs;
       SCIP_CALL( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
+
+      /* issue row side changed event */
+      SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_RIGHT, oldrhs, rhs) );
    }
 
    return SCIP_OKAY;
@@ -4829,7 +4992,9 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
 /** tries to scale row, s.t. all coefficients become integral */
 SCIP_RETCODE SCIProwMakeIntegral(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
@@ -4851,7 +5016,7 @@ SCIP_RETCODE SCIProwMakeIntegral(
    if( *success )
    {
       /* scale the row */
-      SCIP_CALL( rowScale(row, set, stat, lp, intscalar, usecontvars, mindelta, maxdelta) );
+      SCIP_CALL( rowScale(row, blkmem, set, eventqueue, stat, lp, intscalar, usecontvars, mindelta, maxdelta) );
    }
 
    return SCIP_OKAY;
@@ -5728,7 +5893,50 @@ void SCIProwPrint(
    SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
 }
 
+/** includes event handler with given data in row's event filter */
+SCIP_RETCODE SCIProwCatchEvent(
+   SCIP_ROW*             row,                /**< row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTTYPE        eventtype,          /**< event type to catch */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int*                  filterpos           /**< pointer to store position of event filter entry, or NULL */
+   )
+{
+   assert(row != NULL);
+   assert(row->eventfilter != NULL);
+   assert((eventtype & ~SCIP_EVENTTYPE_ROWCHANGED) == 0);
+   assert((eventtype &  SCIP_EVENTTYPE_ROWCHANGED) != 0);
 
+   SCIPdebugMessage("catch event of type 0x%x of row <%s> with handler %p and data %p\n", 
+      eventtype, row->name, (void*)eventhdlr, (void*)eventdata);
+
+   SCIP_CALL( SCIPeventfilterAdd(row->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
+
+   return SCIP_OKAY;
+}
+
+/** deletes event handler with given data from row's event filter */
+SCIP_RETCODE SCIProwDropEvent(
+   SCIP_ROW*             row,                /**< row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTTYPE        eventtype,          /**< event type mask of dropped event */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int                   filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
+   )
+{
+   assert(row != NULL);
+   assert(row->eventfilter != NULL);
+
+   SCIPdebugMessage("drop event of row <%s> with handler %p and data %p\n", row->name, (void*)eventhdlr, (void*)eventdata);
+
+   SCIP_CALL( SCIPeventfilterDel(row->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -5808,7 +6016,8 @@ static
 SCIP_RETCODE lpFlushAddCols(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_Real* obj;
@@ -5880,7 +6089,7 @@ SCIP_RETCODE lpFlushAddCols(
        * different from zero. That means, we have to include the column in the corresponding
        * row vectors.
        */
-      SCIP_CALL( colLink(col, blkmem, set, lp) );
+      SCIP_CALL( colLink(col, blkmem, set, eventqueue, lp) );
 
       lp->lpicols[c] = col;
       col->lpipos = c;
@@ -6032,7 +6241,8 @@ static
 SCIP_RETCODE lpFlushAddRows(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_Real* lhs;
@@ -6098,7 +6308,7 @@ SCIP_RETCODE lpFlushAddRows(
        * different from zero. That means, we have to include the row in the corresponding
        * column vectors.
        */
-      SCIP_CALL( rowLink(row, blkmem, set, lp) );
+      SCIP_CALL( rowLink(row, blkmem, set, eventqueue, lp) );
 
       SCIProwCapture(row);
       lp->lpirows[r] = row;
@@ -6405,7 +6615,8 @@ SCIP_RETCODE lpFlushChgRows(
 SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    assert(lp != NULL);
@@ -6426,8 +6637,8 @@ SCIP_RETCODE SCIPlpFlush(
       SCIP_CALL( lpFlushDelRows(lp, blkmem, set) );
       SCIP_CALL( lpFlushChgCols(lp, set) );
       SCIP_CALL( lpFlushChgRows(lp, set) );
-      SCIP_CALL( lpFlushAddCols(lp, blkmem, set) );
-      SCIP_CALL( lpFlushAddRows(lp, blkmem, set) );
+      SCIP_CALL( lpFlushAddCols(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( lpFlushAddRows(lp, blkmem, set, eventqueue) );
 
       lp->flushed = TRUE;
 
@@ -6892,7 +7103,9 @@ SCIP_RETCODE SCIPlpCreate(
 SCIP_RETCODE SCIPlpFree(
    SCIP_LP**             lp,                 /**< pointer to LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    int i;
@@ -6900,7 +7113,7 @@ SCIP_RETCODE SCIPlpFree(
    assert(lp != NULL);
    assert(*lp != NULL);
    
-   SCIP_CALL( SCIPlpClear(*lp, blkmem, set) );
+   SCIP_CALL( SCIPlpClear(*lp, blkmem, set, eventqueue, eventfilter) );
 
    /* release LPI rows */
    for( i = 0; i < (*lp)->nlpirows; ++i )
@@ -6931,13 +7144,15 @@ SCIP_RETCODE SCIPlpReset(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    assert(stat != NULL);
 
-   SCIP_CALL( SCIPlpClear(lp, blkmem, set) );
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+   SCIP_CALL( SCIPlpClear(lp, blkmem, set, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
 
    /* mark the empty LP to be solved */
    lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
@@ -7012,7 +7227,10 @@ SCIP_RETCODE SCIPlpAddCol(
 /** adds a row to the LP and captures it */
 SCIP_RETCODE SCIPlpAddRow(
    SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_ROW*             row,                /**< LP row */
    int                   depth               /**< depth in the tree where the row addition is performed */
    )
@@ -7055,6 +7273,17 @@ SCIP_RETCODE SCIPlpAddRow(
    rowUpdateAddLP(row);
 
    checkLinks(lp);
+   
+   /* check, if row addition to LP events are tracked
+    * if so, issue ROWADDEDLP event
+    */
+   if( (eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWADDEDLP) != 0) )
+   {
+      SCIP_EVENT* event;
+
+      SCIP_CALL( SCIPeventCreateRowAddedLP(&event, blkmem, row) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+   }
 
    return SCIP_OKAY;
 }
@@ -7192,6 +7421,8 @@ SCIP_RETCODE SCIPlpShrinkRows(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   newnrows            /**< new number of rows in the LP */
    )
 {
@@ -7226,6 +7457,18 @@ SCIP_RETCODE SCIPlpShrinkRows(
          rowUpdateDelLP(row);
 
          SCIProwUnlock(lp->rows[r]);
+         
+         /* check, if row deletion events are tracked
+          * if so, issue ROWDELETEDLP event
+          */
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         {
+            SCIP_EVENT* event;
+
+            SCIP_CALL( SCIPeventCreateRowDeletedLP(&event, blkmem, lp->rows[r]) );
+            SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+         }
+         
          SCIP_CALL( SCIProwRelease(&lp->rows[r], blkmem, set, lp) );
       }
       assert(lp->nrows == newnrows);
@@ -7245,7 +7488,9 @@ SCIP_RETCODE SCIPlpShrinkRows(
 SCIP_RETCODE SCIPlpClear(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    assert(lp != NULL);
@@ -7253,7 +7498,7 @@ SCIP_RETCODE SCIPlpClear(
 
    SCIPdebugMessage("clearing LP\n");
    SCIP_CALL( SCIPlpShrinkCols(lp, set, 0) );
-   SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, 0) );
+   SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, 0) );
 
    return SCIP_OKAY;
 }
@@ -10098,6 +10343,7 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
 {
@@ -10105,7 +10351,7 @@ SCIP_RETCODE SCIPlpSetState(
    assert(blkmem != NULL);
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
    assert(lp->flushed);
 
    /* set LPI state in the LP solver */
@@ -11668,6 +11914,7 @@ SCIP_RETCODE lpFlushAndSolve(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             needprimalray,      /**< if the LP is unbounded, do we need a primal ray? */
    SCIP_Bool             needdualray,        /**< if the LP is infeasible, do we need a dual ray? */
    int                   fastmip,            /**< which FASTMIP setting of LP solver should be used? */
@@ -11685,7 +11932,7 @@ SCIP_RETCODE lpFlushAndSolve(
    assert(lperror != NULL);
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
    fastmip = ((!lp->flushaddedcols && !lp->flushdeletedcols) ? fastmip : 0); /* turn off FASTMIP if columns were changed */
    
    /* select LP algorithm to apply */
@@ -11814,6 +12061,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
@@ -11842,7 +12091,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       || (set->conf_enable && set->conf_useinflp));
 
    /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
    
    /* set iteration limit for this solve */
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
@@ -11867,7 +12116,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SOLVEAGAIN:
       /* solve the LP */
       oldnlps = stat->nlps;
-      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, stat, needprimalray, needdualray, fastmip, tightfeastol, fromscratch,
+      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, stat, eventqueue, needprimalray, needdualray, fastmip, tightfeastol, fromscratch,
             keepsol, lperror) );
       SCIPdebugMessage("lpFlushAndSolve() returned solstat %d (error=%u)\n", SCIPlpGetSolstat(lp), *lperror);
       assert(!(*lperror) || !lp->solved);
@@ -11924,7 +12173,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             SCIP_CALL( SCIPlpUpdateAges(lp, stat) );
 	    if ( stat->nlps % ((set->lp_rowagelimit+1)/2 + 1) == 0 )
 	    {
-	       SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat) );
+	       SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat, eventqueue, eventfilter) );
             }
 
             if( !lp->solved )
@@ -13539,6 +13788,8 @@ SCIP_RETCODE lpDelRowset(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int*                  rowdstat            /**< deletion status of rows:  1 if row should be deleted, 0 if not */
    )
 {
@@ -13576,6 +13827,17 @@ SCIP_RETCODE lpDelRowset(
          rowUpdateDelLP(row);
          row->lpdepth = -1;
 
+         /* check, if row deletion events are tracked
+          * if so, issue ROWDELETEDLP event
+          */
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         {
+            SCIP_EVENT* event;
+
+            SCIP_CALL( SCIPeventCreateRowDeletedLP(&event, blkmem, row) );
+            SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+         }
+         
          SCIP_CALL( SCIProwRelease(&lp->lpirows[r], blkmem, set, lp) );
          SCIProwUnlock(lp->rows[r]);
          SCIP_CALL( SCIProwRelease(&lp->rows[r], blkmem, set, lp) );
@@ -13697,6 +13959,8 @@ SCIP_RETCODE lpRemoveObsoleteRows(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   firstrow            /**< first row to check for clean up */
    )
 {
@@ -13751,7 +14015,7 @@ SCIP_RETCODE lpRemoveObsoleteRows(
    /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
    {
-      SCIP_CALL( lpDelRowset(lp, blkmem, set, rowdstat) );
+      SCIP_CALL( lpDelRowset(lp, blkmem, set, eventqueue, eventfilter, rowdstat) );
    }
    assert(lp->nrows == nrows - ndelrows);
 
@@ -13766,7 +14030,9 @@ SCIP_RETCODE SCIPlpRemoveNewObsoletes(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    assert(lp != NULL);
@@ -13784,7 +14050,7 @@ SCIP_RETCODE SCIPlpRemoveNewObsoletes(
    }
    if( lp->firstnewrow < lp->nrows )
    {
-      SCIP_CALL( lpRemoveObsoleteRows(lp, blkmem, set, stat, lp->firstnewrow) );
+      SCIP_CALL( lpRemoveObsoleteRows(lp, blkmem, set, stat, eventqueue, eventfilter, lp->firstnewrow) );
    }
 
    return SCIP_OKAY;
@@ -13795,7 +14061,9 @@ SCIP_RETCODE SCIPlpRemoveAllObsoletes(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    assert(lp != NULL);
@@ -13812,7 +14080,7 @@ SCIP_RETCODE SCIPlpRemoveAllObsoletes(
    }
    if( 0 < lp->nrows )
    {
-      SCIP_CALL( lpRemoveObsoleteRows(lp, blkmem, set, stat, 0) );
+      SCIP_CALL( lpRemoveObsoleteRows(lp, blkmem, set, stat, eventqueue, eventfilter, 0) );
    }
 
    return SCIP_OKAY;
@@ -13892,6 +14160,8 @@ SCIP_RETCODE lpCleanupRows(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   firstrow            /**< first row to check for clean up */
    )
 {
@@ -13941,7 +14211,7 @@ SCIP_RETCODE lpCleanupRows(
    /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
    {
-      SCIP_CALL( lpDelRowset(lp, blkmem, set, rowdstat) );
+      SCIP_CALL( lpDelRowset(lp, blkmem, set, eventqueue, eventfilter, rowdstat) );
    }
    assert(lp->nrows == nrows - ndelrows);
 
@@ -13957,6 +14227,8 @@ SCIP_RETCODE SCIPlpCleanupNew(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root                /**< are we at the root node? */
    )
 {
@@ -13982,7 +14254,7 @@ SCIP_RETCODE SCIPlpCleanupNew(
    }
    if( cleanuprows && lp->firstnewrow < lp->nrows )
    {
-      SCIP_CALL( lpCleanupRows(lp, blkmem, set, stat, lp->firstnewrow) );
+      SCIP_CALL( lpCleanupRows(lp, blkmem, set, stat, eventqueue, eventfilter, lp->firstnewrow) );
    }
 
    return SCIP_OKAY;
@@ -13994,6 +14266,8 @@ SCIP_RETCODE SCIPlpCleanupAll(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root                /**< are we at the root node? */
    )
 {
@@ -14019,7 +14293,7 @@ SCIP_RETCODE SCIPlpCleanupAll(
    }
    if( cleanuprows && 0 < lp->nrows )
    {
-      SCIP_CALL( lpCleanupRows(lp, blkmem, set, stat, 0) );
+      SCIP_CALL( lpCleanupRows(lp, blkmem, set, stat, eventqueue, eventfilter, 0) );
    }
 
    return SCIP_OKAY;
@@ -14030,7 +14304,9 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    SCIP_ROW** rows;
@@ -14083,7 +14359,7 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
    /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
    {
-      SCIP_CALL( lpDelRowset(lp, blkmem, set, rowdstat) );
+      SCIP_CALL( lpDelRowset(lp, blkmem, set, eventqueue, eventfilter, rowdstat) );
    }
    assert(lp->nrows == nrows - ndelrows);
 
@@ -14142,6 +14418,8 @@ SCIP_RETCODE SCIPlpEndDive(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR**            vars,               /**< array with all active variables */
    int                   nvars               /**< number of active variables */
@@ -14173,7 +14451,7 @@ SCIP_RETCODE SCIPlpEndDive(
    }
 
    /* reload LPI state saved at start of diving, free LPI state afterwards */
-   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lp->divelpistate) );
+   SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    assert(lp->divelpistate == NULL);
 
@@ -14183,7 +14461,7 @@ SCIP_RETCODE SCIPlpEndDive(
     *       Just declare the LP to be solved at this point (remember the LP solution status beforehand).
     */
    /* resolve LP to reset solution */
-   SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, FALSE, &lperror) );
+   SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, &lperror) );
    if( lperror )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,

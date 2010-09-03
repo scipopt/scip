@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.59 2010/05/15 12:12:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.60 2010/09/03 14:50:16 bzfviger Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -84,6 +84,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
@@ -106,6 +107,8 @@ SCIP_RETCODE SCIPseparationRound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
@@ -129,6 +132,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);

@@ -90,6 +90,8 @@ interface:
 - SCIPgetVarStrongbranch() replaced by SCIPgetVarStrongbranchFrac()/SCIPgetVarStrongbranchInt()
 - two new functions SCIPgetVarsStrongbranchesFrac()/SCIPgetVarsStrongbranchesInt() for computing strong branching information for several variables
 - lp.h/lp.c and the lpi's were changed according to the above changes.
+- adding and deletion of rows to the separation storage and to the LP can now be catched by events (SCIP_EVENTTYPE_ROWADDEDSEPA, SCIP_EVENTTYPE_ROWDELETEDSEPA, SCIP_EVENTTYPE_ROWADDEDLP, SCIP_EVENTTYPE_ROWDELETEDLP)
+- changes in a row can now be catched via row events (SCIPcatchRowEvent(), SCIPdropRowEvent(), SCIP_EVENTTYPE_ROWCOEFCHANGED, SCIP_EVENTTYPE_ROWCONSTCHANGED, SCIP_EVENTTYPE_ROWSIDECHANGED)
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

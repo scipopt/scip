@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.242 2010/08/24 14:05:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.243 2010/09/03 14:50:16 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2778,6 +2778,8 @@ SCIP_RETCODE subrootConstructLP(
    SCIP_NODE*            subroot,            /**< subroot node to construct LP for */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -2809,7 +2811,7 @@ SCIP_RETCODE subrootConstructLP(
    }
    for( r = 0; r < nrows; ++r )
    {
-      SCIP_CALL( SCIPlpAddRow(lp, set, rows[r], subroot->depth) );
+      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], subroot->depth) );
    }
 
    return SCIP_OKAY;
@@ -2821,6 +2823,8 @@ SCIP_RETCODE forkAddLP(
    SCIP_NODE*            fork,               /**< fork node to construct additional LP for */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -2852,7 +2856,7 @@ SCIP_RETCODE forkAddLP(
    }
    for( r = 0; r < nrows; ++r )
    {
-      SCIP_CALL( SCIPlpAddRow(lp, set, rows[r], fork->depth) );
+      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], fork->depth) );
    }
 
    return SCIP_OKAY;
@@ -2864,6 +2868,8 @@ SCIP_RETCODE pseudoforkAddLP(
    SCIP_NODE*            pseudofork,         /**< pseudofork node to construct additional LP for */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -2895,7 +2901,7 @@ SCIP_RETCODE pseudoforkAddLP(
    }
    for( r = 0; r < nrows; ++r )
    {
-      SCIP_CALL( SCIPlpAddRow(lp, set, rows[r], pseudofork->depth) );
+      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], pseudofork->depth) );
    }
 
    return SCIP_OKAY;
@@ -2980,6 +2986,8 @@ SCIP_RETCODE SCIPtreeLoadLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool*            initroot            /**< pointer to store whether the root LP relaxation has to be initialized */
    )
@@ -3043,15 +3051,15 @@ SCIP_RETCODE SCIPtreeLoadLP(
       assert(lpforkdepth >= 0 || tree->pathnlpcols[tree->correctlpdepth] == 0);
       assert(lpforkdepth >= 0 || tree->pathnlprows[tree->correctlpdepth] == 0);
       SCIP_CALL( SCIPlpShrinkCols(lp, set, tree->pathnlpcols[tree->correctlpdepth]) );
-      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, tree->pathnlprows[tree->correctlpdepth]) );
+      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, tree->pathnlprows[tree->correctlpdepth]) );
    }
    else
    {
       /* other subtree: fill LP with the subroot LP data */
-      SCIP_CALL( SCIPlpClear(lp, blkmem, set) );
+      SCIP_CALL( SCIPlpClear(lp, blkmem, set, eventqueue, eventfilter) );
       if( tree->focussubroot != NULL )
       {
-         SCIP_CALL( subrootConstructLP(tree->focussubroot, blkmem, set, lp) );
+         SCIP_CALL( subrootConstructLP(tree->focussubroot, blkmem, set, eventqueue, eventfilter, lp) );
          tree->correctlpdepth = tree->focussubroot->depth; 
       }
    }
@@ -3071,11 +3079,11 @@ SCIP_RETCODE SCIPtreeLoadLP(
          || SCIPnodeGetType(pathnode) == SCIP_NODETYPE_FORK);
       if( SCIPnodeGetType(pathnode) == SCIP_NODETYPE_FORK )
       {
-         SCIP_CALL( forkAddLP(pathnode, blkmem, set, lp) );
+         SCIP_CALL( forkAddLP(pathnode, blkmem, set, eventqueue, eventfilter, lp) );
       }
       else if( SCIPnodeGetType(pathnode) == SCIP_NODETYPE_PSEUDOFORK )
       {
-         SCIP_CALL( pseudoforkAddLP(pathnode, blkmem, set, lp) );
+         SCIP_CALL( pseudoforkAddLP(pathnode, blkmem, set, eventqueue, eventfilter, lp) );
       }
    }
    tree->correctlpdepth = MAX(tree->correctlpdepth, lpforkdepth);
@@ -3107,6 +3115,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -3154,13 +3163,13 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       if( SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK )
       {
          assert(lpstatefork->data.fork != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpstatefork->data.fork->lpistate) );
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.fork->lpistate) );
       }
       else
       {
          assert(SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
          assert(lpstatefork->data.subroot != NULL);
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpstatefork->data.subroot->lpistate) );
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpstatefork->data.subroot->lpistate) );
       }
       assert(lp->primalfeasible);
       assert(lp->dualfeasible);
@@ -3378,6 +3387,8 @@ SCIP_RETCODE focusnodeToFork(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
@@ -3407,13 +3418,13 @@ SCIP_RETCODE focusnodeToFork(
    if( !lp->resolvelperror && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
-      SCIP_CALL( SCIPlpCleanupNew(lp, blkmem, set, stat, (tree->focusnode->depth == 0)) );
+      SCIP_CALL( SCIPlpCleanupNew(lp, blkmem, set, stat, eventqueue, eventfilter, (tree->focusnode->depth == 0)) );
 
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3439,7 +3450,7 @@ SCIP_RETCODE focusnodeToFork(
 
       /* remove all additions to the LP at this node */
       SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
-      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
+      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
       SCIP_CALL( focusnodeToJunction(blkmem, set, tree, lp) );
@@ -3475,6 +3486,8 @@ SCIP_RETCODE focusnodeToSubroot(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
@@ -3507,19 +3520,19 @@ SCIP_RETCODE focusnodeToSubroot(
 #if 0
       if( tree->focusnode->depth == 0 )
       {
-         SCIP_CALL( SCIPlpCleanupAll(lp, blkmem, set, stat, (tree->focusnode->depth == 0)) );
+         SCIP_CALL( SCIPlpCleanupAll(lp, blkmem, set, stat, eventqueue, eventfilter, (tree->focusnode->depth == 0)) );
       }
       else
 #endif
       {
-         SCIP_CALL( SCIPlpRemoveAllObsoletes(lp, blkmem, set, stat) );
+         SCIP_CALL( SCIPlpRemoveAllObsoletes(lp, blkmem, set, stat, eventqueue, eventfilter) );
       }
 
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3545,7 +3558,7 @@ SCIP_RETCODE focusnodeToSubroot(
 
       /* remove all additions to the LP at this node */
       SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
-      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
+      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
       SCIP_CALL( focusnodeToJunction(blkmem, set, tree, lp) );
@@ -3797,7 +3810,7 @@ SCIP_RETCODE SCIPnodeFocus(
          if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */
-            SCIP_CALL( focusnodeToSubroot(blkmem, set, stat, prob, tree, lp) );
+            SCIP_CALL( focusnodeToSubroot(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp) );
             if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD
                && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT )
                subroot = tree->focusnode;
@@ -3806,7 +3819,7 @@ SCIP_RETCODE SCIPnodeFocus(
 #endif
          {
             /* convert old focus node into a fork node */
-            SCIP_CALL( focusnodeToFork(blkmem, set, stat, prob, tree, lp) );
+            SCIP_CALL( focusnodeToFork(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp) );
          }
 
          /* check, if the conversion into a subroot or fork was successful */
@@ -4932,6 +4945,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -4971,8 +4985,8 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
       /* set the LP state */
       if( lpistate != NULL )
       {
-         SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpistate) );
+         SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lpistate) );
       }
 
       /* now we don't need to load the LP state again until the next backtracking */
@@ -5018,6 +5032,7 @@ SCIP_RETCODE treeBacktrackProbing(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   probingdepth        /**< probing depth of the node in the probing path that should be reactivated,
                                               *   -1 to even deactivate the probing root, thus exiting probing mode */
    )
@@ -5082,7 +5097,7 @@ SCIP_RETCODE treeBacktrackProbing(
 
       /* undo LP extensions */
       SCIP_CALL( SCIPlpShrinkCols(lp, set, ncols) );
-      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
+      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, nrows) );
       tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
 
       /* reset the LP's marked size to the initial size of the LP at the node stored in the path */
@@ -5115,6 +5130,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
    )
 {
@@ -5123,7 +5139,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    assert(0 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
 
    /* undo the domain and constraint set changes and free the temporary probing nodes below the given probing depth */
-   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, lp, branchcand, eventqueue, probingdepth) );
+   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, lp, branchcand, eventqueue, eventfilter, probingdepth) );
 
    assert(SCIPtreeProbing(tree));
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(tree)) == SCIP_NODETYPE_PROBINGNODE);
@@ -5142,7 +5158,8 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    assert(tree != NULL);
@@ -5159,7 +5176,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    assert(set != NULL);
 
    /* undo the domain and constraint set changes of the temporary probing nodes and free the probing nodes */
-   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, lp, branchcand, eventqueue, -1) );
+   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, lp, branchcand, eventqueue, eventfilter, -1) );
    assert(SCIPtreeGetCurrentNode(tree) == tree->focusnode);
    assert(!SCIPtreeProbing(tree));
 
@@ -5168,7 +5185,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    {
       assert(set->stage == SCIP_STAGE_SOLVING);
 
-      SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+      SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
 
       /* if the LP was solved before probing starts, solve it again to restore the LP solution */
       if( tree->probinglpwassolved )
@@ -5176,11 +5193,11 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIP_Bool lperror;
          
          /* reset the LP state before probing started */
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, tree->probinglpistate) );
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
          SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
          /* resolve LP to reset solution */
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, FALSE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, &lperror) );
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,

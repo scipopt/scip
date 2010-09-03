@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.7 2010/08/26 16:48:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.8 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -411,6 +411,7 @@ SCIP_RETCODE SCIPnlpFree(
    SCIP_NLP**            nlp,                /**< pointer to NLP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    );
 
@@ -422,6 +423,7 @@ SCIP_RETCODE SCIPnlpReset(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    );
 
@@ -465,6 +467,7 @@ SCIP_RETCODE SCIPnlpDelVar(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed to release variable */
    SCIP_VAR*             var                 /**< variable */
    );

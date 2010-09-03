@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.32 2010/07/30 09:57:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.33 2010/09/03 14:50:16 bzfviger Exp $"
 
 /**@file   type_event.h
  * @ingroup TYPEDEFINITIONS
@@ -75,6 +75,15 @@ extern "C" {
 /* primal solution events */
 #define SCIP_EVENTTYPE_POORSOLFOUND   0x00800000 /**< a good enough primal feasible (but not new best) solution was found */
 #define SCIP_EVENTTYPE_BESTSOLFOUND   0x01000000 /**< a new best primal feasible solution was found */
+   
+/* linear row events */
+#define SCIP_EVENTTYPE_ROWADDEDSEPA   0x02000000 /**< a row has been added to SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWDELETEDSEPA 0x04000000 /**< a row has been removed from SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWADDEDLP     0x08000000 /**< a row has been added to the LP */
+#define SCIP_EVENTTYPE_ROWDELETEDLP   0x10000000 /**< a row has been removed from the LP */
+#define SCIP_EVENTTYPE_ROWCOEFCHANGED 0x20000000 /**< a coefficient of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWCONSTCHANGED 0x40000000/**< the constant of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWSIDECHANGED 0x80000000 /**< a side of a row has been changed (row specific event) */
 
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
@@ -103,6 +112,10 @@ extern "C" {
 #define SCIP_EVENTTYPE_SOLFOUND       (SCIP_EVENTTYPE_POORSOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND)
 #define SCIP_EVENTTYPE_SOLEVENT       (SCIP_EVENTTYPE_SOLFOUND)
 
+/* event masks for row events */
+#define SCIP_EVENTTYPE_ROWCHANGED     (SCIP_EVENTTYPE_ROWCOEFCHANGED | SCIP_EVENTTYPE_ROWCONSTCHANGED | SCIP_EVENTTYPE_ROWSIDECHANGED)
+#define SCIP_EVENTTYPE_ROWEVENT       (SCIP_EVENTTYPE_ROWADDEDSEPA | SCIP_EVENTTYPE_ROWDELETEDSEPA | SCIP_EVENTTYPE_ROWADDEDLP | SCIP_EVENTTYPE_ROWDELETEDLP | SCIP_EVENTTYPE_ROWCHANGED)
+   
 typedef unsigned int SCIP_EVENTTYPE;         /**< type of event (bit field) */
 
 
@@ -117,6 +130,13 @@ typedef struct SCIP_EventObjChg SCIP_EVENTOBJCHG; /**< data for objective value 
 typedef struct SCIP_EventBdChg SCIP_EVENTBDCHG;   /**< data for bound change events */
 typedef struct SCIP_EventHole SCIP_EVENTHOLE;     /**< data for domain hole events */
 typedef struct SCIP_EventImplAdd SCIP_EVENTIMPLADD; /**< data for implication added events */
+typedef struct SCIP_EventRowAddedSepa SCIP_EVENTROWADDEDSEPA; /**< data for row addition to sepastorage events */
+typedef struct SCIP_EventRowDeletedSepa SCIP_EVENTROWDELETEDSEPA; /**< data for row deletion from sepastorage events */
+typedef struct SCIP_EventRowAddedLP SCIP_EVENTROWADDEDLP; /**< data for row addition to LP events */
+typedef struct SCIP_EventRowDeletedLP SCIP_EVENTROWDELETEDLP; /**< data for row deletion from LP events */
+typedef struct SCIP_EventRowCoefChanged SCIP_EVENTROWCOEFCHANGED; /**< data for row coefficient change events */
+typedef struct SCIP_EventRowConstChanged SCIP_EVENTROWCONSTCHANGED; /**< data for row constant change events */
+typedef struct SCIP_EventRowSideChanged SCIP_EVENTROWSIDECHANGED; /**< data for row side change events */
 typedef struct SCIP_EventData SCIP_EVENTDATA;     /**< locally defined event specific data */
 typedef struct SCIP_EventFilter SCIP_EVENTFILTER; /**< event filter to select events to be processed by an event handler */
 typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache events and process them later */

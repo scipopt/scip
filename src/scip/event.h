@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.51 2010/07/30 09:57:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.52 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -246,6 +246,70 @@ SCIP_RETCODE SCIPeventCreateImplAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var                 /**< variable that was fixed */
+   );
+
+/** creates an event for the addition of a linear row to the separation storage */
+extern
+SCIP_RETCODE SCIPeventCreateRowAddedSepa(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was added to the separation storage*/
+   );
+
+/** creates an event for the deletion of a linear row from the separation storage */
+extern
+SCIP_RETCODE SCIPeventCreateRowDeletedSepa(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was deleted from the separation storage */
+   );
+
+/** creates an event for the addition of a linear row to the LP */
+extern
+SCIP_RETCODE SCIPeventCreateRowAddedLP(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was added to the LP */
+   );
+
+/** creates an event for the deletion of a linear row from the LP */
+extern
+SCIP_RETCODE SCIPeventCreateRowDeletedLP(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was deleted from the LP */
+   );
+
+/** creates an event for the change of a coefficient in a linear row */
+extern
+SCIP_RETCODE SCIPeventCreateRowCoefChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row,                /**< row in which a coefficient changed */
+   SCIP_COL*             col,                /**< column which coefficient changed */
+   SCIP_Real             oldval,             /**< old value of coefficient */
+   SCIP_Real             newval              /**< new value of coefficient */
+   );
+
+/** creates an event for the change of a constant in a linear row */
+extern
+SCIP_RETCODE SCIPeventCreateRowConstChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row,                /**< row in which the constant changed */
+   SCIP_Real             oldval,             /**< old value of constant */
+   SCIP_Real             newval              /**< new value of constant */
+   );
+
+/** creates an event for the change of a side of a linear row */
+extern
+SCIP_RETCODE SCIPeventCreateRowSideChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row,                /**< row which side has changed */
+   SCIP_SIDETYPE         side,               /**< which side has changed */
+   SCIP_Real             oldval,             /**< old value of side */
+   SCIP_Real             newval              /**< new value of side */
    );
 
 /** frees an event */

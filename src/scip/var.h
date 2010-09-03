@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.134 2010/08/16 16:56:08 bzfgamra Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.135 2010/09/03 14:50:16 bzfviger Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -289,6 +289,7 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    );
 
@@ -338,6 +339,7 @@ SCIP_RETCODE SCIPvarLoose(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -998,6 +1000,7 @@ SCIP_RETCODE SCIPvarAddToRow(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */

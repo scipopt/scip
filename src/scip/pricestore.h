@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.23 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.24 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   pricestore.h
  * @brief  internal methods for storing priced variables
@@ -72,6 +72,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_VAR*             var,                /**< priced variable */
    SCIP_Real             score,              /**< pricing score of variable (the larger, the better the variable) */
@@ -112,6 +113,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< LP data */

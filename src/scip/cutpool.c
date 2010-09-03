@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.64 2010/09/03 12:51:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.65 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -521,6 +521,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_Bool             root,               /**< are we at the root node? */
@@ -584,7 +586,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                /* insert cut in separation storage */
                SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), SCIProwGetLPFeasibility(row, stat, lp));
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, lp, NULL, row, FALSE, root) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
                found = TRUE;
                cut->age = 0;
             }

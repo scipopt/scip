@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.62 2010/08/31 15:20:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.63 2010/09/03 14:50:16 bzfviger Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -54,6 +54,7 @@
 #include "scip/type_lpi.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
+#include "scip/type_event.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -156,6 +157,7 @@ struct SCIP_Row
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
    SCIP_Real*            vals;               /**< coefficients of row entries */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
+   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this row */
    int                   index;              /**< consecutively numbered row identifier */
    int                   size;               /**< size of the col- and val-arrays */
    int                   len;                /**< number of nonzeros in row */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.14 2010/09/02 14:55:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.15 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -3374,6 +3374,7 @@ SCIP_RETCODE nlpDelVarPos(
    SCIP_NLP*             nlp,                /**< NLP data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed if a column-variable is freed */
    int                   pos                 /**< position of nonlinear row that is to be removed */
 )
@@ -3451,7 +3452,7 @@ SCIP_RETCODE nlpDelVarPos(
 
    /* forget about variable */
    SCIP_CALL( SCIPhashmapRemove(nlp->varhash, var) );
-   SCIP_CALL( SCIPvarRelease(&var, blkmem, set, lp) );
+   SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
    --nlp->nvars;
 
    return SCIP_OKAY;
@@ -3464,6 +3465,7 @@ SCIP_RETCODE nlpRemoveFixedVar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed to release variable */
    SCIP_VAR*             var                 /**< variable that has been fixed */
    )
@@ -3487,7 +3489,7 @@ SCIP_RETCODE nlpRemoveFixedVar(
    }
 
    /* remove variable from NLP */
-   SCIP_CALL( SCIPnlpDelVar(nlp, blkmem, set, lp, var) );
+   SCIP_CALL( SCIPnlpDelVar(nlp, blkmem, set, eventqueue, lp, var) );
 
    return SCIP_OKAY;
 }
@@ -4294,13 +4296,13 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    else if( SCIP_EVENTTYPE_VARDELETED & etype )
    {
       SCIPdebugMessage( "-> handling vardel event, variable <%s>\n", SCIPvarGetName(var) );
-      SCIP_CALL( SCIPnlpDelVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->lp, var) );
+      SCIP_CALL( SCIPnlpDelVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_VARFIXED & etype )
    {
       /* variable was fixed, aggregated, or multiaggregated */
       SCIPdebugMessage( "-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
-      SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->lp, var) );
+      SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
@@ -4461,6 +4463,7 @@ SCIP_RETCODE SCIPnlpFree(
    SCIP_NLP**            nlp,                /**< pointer to NLP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    )
 {
@@ -4474,7 +4477,7 @@ SCIP_RETCODE SCIPnlpFree(
       SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED,
       (*nlp)->eventhdlr, (SCIP_EVENTDATA*)(*nlp), (*nlp)->globalfilterpos) );
 
-   SCIP_CALL( SCIPnlpReset(*nlp, blkmem, set, lp) );
+   SCIP_CALL( SCIPnlpReset(*nlp, blkmem, set, eventqueue, lp) );
    assert((*nlp)->objective == NULL);
    assert((*nlp)->nnlrows == 0);
    assert((*nlp)->nnlrows_solver == 0);
@@ -4511,6 +4514,7 @@ SCIP_RETCODE SCIPnlpReset(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    )
 {
@@ -4542,7 +4546,7 @@ SCIP_RETCODE SCIPnlpReset(
 
    for(i = nlp->nvars - 1; i >= 0; --i)
    {
-      SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, lp, i) );
+      SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, eventqueue, lp, i) );
    }
 
    SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
@@ -4650,6 +4654,7 @@ SCIP_RETCODE SCIPnlpDelVar(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed to release variable */
    SCIP_VAR*             var                 /**< variable */
    )
@@ -4675,7 +4680,7 @@ SCIP_RETCODE SCIPnlpDelVar(
 
    varpos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
 
-   SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, lp, varpos) );
+   SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, eventqueue, lp, varpos) );
 
    return SCIP_OKAY;
 }

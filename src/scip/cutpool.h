@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.32 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.33 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -104,6 +104,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_Bool             root,               /**< are we at the root node? */

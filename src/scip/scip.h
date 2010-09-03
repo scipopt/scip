@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.409 2010/09/01 16:33:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.410 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -6174,7 +6174,7 @@ SCIP_RETCODE SCIPcheckSolOrig(
  */
 /**@{ */
 
-/** catches a global (not variable dependent) event */
+/** catches a global (not variable or row dependent) event */
 extern
 SCIP_RETCODE SCIPcatchEvent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6210,6 +6210,28 @@ extern
 SCIP_RETCODE SCIPdropVarEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< transformed variable to drop event for */
+   SCIP_EVENTTYPE        eventtype,          /**< event type mask of dropped event */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int                   filterpos           /**< position of event filter entry returned by SCIPcatchVarEvent(), or -1 */
+   );
+
+/** catches an row coefficient, constant, or side change event on the given row */
+extern
+SCIP_RETCODE SCIPcatchRowEvent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< linear row to catch event for */
+   SCIP_EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int*                  filterpos           /**< pointer to store position of event filter entry, or NULL */
+   );
+
+/** drops an row coefficient, constant, or side change event (stops to track event) on the given row */
+extern
+SCIP_RETCODE SCIPdropRowEvent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< linear row to drop event for */
    SCIP_EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */

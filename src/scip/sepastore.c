@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.65 2010/05/04 13:28:33 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.66 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -30,6 +30,7 @@
 #include "scip/var.h"
 #include "scip/tree.h"
 #include "scip/sepastore.h"
+#include "scip/event.h"
 #include "scip/debug.h"
 
 #include "scip/struct_sepastore.h"
@@ -208,6 +209,8 @@ SCIP_RETCODE sepastoreAddCut(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
@@ -226,6 +229,8 @@ SCIP_RETCODE sepastoreAddCut(
    assert(cut != NULL);
    assert(sol != NULL || !SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
+   assert(eventqueue != NULL);
+   assert(eventfilter != NULL);
 
    /* check cut for redundancy
     * in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling
@@ -238,6 +243,17 @@ SCIP_RETCODE sepastoreAddCut(
     */
    if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
+      /* check, if the row deletions from separation storage events are tracked
+       * if so, issue ROWDELETEDSEPA event
+       */
+      if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
+      {
+         SCIP_EVENT* event;
+
+         SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[0]) );
+         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+      }
+      
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts = 0;
       sepastore->nforcedcuts = 0;
@@ -309,6 +325,17 @@ SCIP_RETCODE sepastoreAddCut(
    sepastore->orthogonalities[pos] = 1.0;
    sepastore->scores[pos] = cutscore;
    sepastore->ncuts++;
+   
+   /* check, if the row addition to separation storage events are tracked
+    * if so, issue ROWADDEDSEPA event
+    */
+   if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWADDEDSEPA) != 0 )
+   {
+      SCIP_EVENT* event;
+
+      SCIP_CALL( SCIPeventCreateRowAddedSepa(&event, blkmem, cut) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+   }
 
    return SCIP_OKAY;
 }
@@ -319,6 +346,8 @@ SCIP_RETCODE sepastoreDelCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
    int                   pos                 /**< position of cut to delete */
    )
@@ -326,6 +355,17 @@ SCIP_RETCODE sepastoreDelCut(
    assert(sepastore != NULL);
    assert(sepastore->cuts != NULL);
    assert(sepastore->nforcedcuts <= pos && pos < sepastore->ncuts);
+
+   /* check, if the row deletions from separation storage events are tracked
+    * if so, issue ROWDELETEDSEPA event
+    */
+   if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
+   {
+      SCIP_EVENT* event;
+
+      SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[pos]) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+   }
 
    /* release the row */
    SCIP_CALL( SCIProwRelease(&sepastore->cuts[pos], blkmem, set, lp) );
@@ -349,6 +389,8 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
@@ -372,7 +414,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    }
 
    /* add LP row cut to separation storage */
-   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, lp, sol, cut, forcecut, root) );
+   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, cut, forcecut, root) );
 
    return SCIP_OKAY;
 }
@@ -546,6 +588,8 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_ROW*             cut,                /**< cut that was applied */
    SCIP_Real             mincutorthogonality /**< minimal orthogonality of cuts to apply to LP */
@@ -569,7 +613,7 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
             /* cut is too parallel: release the row and delete the cut */
             SCIPdebugMessage("    -> deleting parallel cut <%s> after adding <%s> (pos=%d, len=%d, orthogonality=%g, score=%g)\n",
                SCIProwGetName(sepastore->cuts[pos]), SCIProwGetName(cut), pos, SCIProwGetNNonz(cut), thisortho, sepastore->scores[pos]);
-            SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, lp, pos) );
+            SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, pos) );
             continue;
          }
          else
@@ -593,6 +637,8 @@ SCIP_RETCODE sepastoreApplyCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_ROW*             cut,                /**< cut to apply to the LP */
    SCIP_Real             mincutorthogonality,/**< minimal orthogonality of cuts to apply to LP */
@@ -607,12 +653,12 @@ SCIP_RETCODE sepastoreApplyCut(
    if( !SCIProwIsInLP(cut) )
    {
       /* add cut to the LP and capture it */
-      SCIP_CALL( SCIPlpAddRow(lp, set, cut, depth) );
+      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, cut, depth) );
       if( !sepastore->initiallp )
          sepastore->ncutsapplied++;
       
       /* update the orthogonalities */
-      SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, lp, cut, mincutorthogonality) );
+      SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality) );
       (*ncutsapplied)++;
    }
 
@@ -656,6 +702,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
@@ -710,7 +757,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          /* add cut to the LP and update orthogonalities */
          SCIPdebugMessage(" -> applying forced cut <%s>\n", SCIProwGetName(cut));
          /*SCIPdebug(SCIProwPrint(cut, NULL));*/
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
       }
    }
    
@@ -751,18 +798,18 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       /* capture cut such that it is not destroyed in sepastoreDelCut() */
       SCIProwCapture(cut);
 
-      /* release the row and delete the cut */
-      SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, lp, bestpos) );
+      /* release the row and delete the cut (also issuing ROWDELETEDSEPA event) */
+      SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, bestpos) );
       
       /* add cut to the LP and update orthogonalities */
-      SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
+      SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
 
       /* release cut */
       SCIP_CALL( SCIProwRelease(&cut, blkmem, set, lp) );
    }
 
    /* clear the separation storage and reset statistics for separation round */
-   SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, lp) );
+   SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );
 
    return SCIP_OKAY;
 }
@@ -772,6 +819,8 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp                  /**< LP data */
    )
 {
@@ -784,6 +833,17 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
    /* release cuts */
    for( c = 0; c < sepastore->ncuts; ++c )
    {
+      /* check, if the row deletions from separation storage events are tracked
+       * if so, issue ROWDELETEDSEPA event
+       */
+      if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
+      {
+         SCIP_EVENT* event;
+
+         SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[c]) );
+         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+      }
+      
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[c], blkmem, set, lp) );
    }
 

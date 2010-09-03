@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.293 2010/09/03 12:51:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.294 2010/09/03 14:50:16 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2224,6 +2224,7 @@ SCIP_RETCODE varFreeParents(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's an original variable) */
    )
 {
@@ -2280,7 +2281,7 @@ SCIP_RETCODE varFreeParents(
          return SCIP_INVALIDDATA;
       }  /*lint !e788*/
 
-      SCIP_CALL( SCIPvarRelease(&(*var)->parentvars[i], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&(*var)->parentvars[i], blkmem, set, eventqueue, lp) );
    }
 
    /* free parentvars array */
@@ -2295,6 +2296,7 @@ SCIP_RETCODE varFree(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    )
 {
@@ -2316,7 +2318,7 @@ SCIP_RETCODE varFree(
    case SCIP_VARSTATUS_LOOSE:
       break;
    case SCIP_VARSTATUS_COLUMN:
-      SCIP_CALL( SCIPcolFree(&(*var)->data.col, blkmem, set, lp) );  /* free corresponding LP column */
+      SCIP_CALL( SCIPcolFree(&(*var)->data.col, blkmem, set, eventqueue, lp) );  /* free corresponding LP column */
       break;
    case SCIP_VARSTATUS_FIXED:
    case SCIP_VARSTATUS_AGGREGATED:
@@ -2333,7 +2335,7 @@ SCIP_RETCODE varFree(
    }
 
    /* release all parent variables and free the parentvars array */
-   SCIP_CALL( varFreeParents(var, blkmem, set, lp) );
+   SCIP_CALL( varFreeParents(var, blkmem, set, eventqueue, lp) );
 
    /* free user data */
    if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_ORIGINAL )
@@ -2406,6 +2408,7 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's an original variable) */
    )
 {
@@ -2418,7 +2421,7 @@ SCIP_RETCODE SCIPvarRelease(
    (*var)->nuses--;
    if( (*var)->nuses == 0 )
    {
-      SCIP_CALL( varFree(var, blkmem, set, lp) );
+      SCIP_CALL( varFree(var, blkmem, set, eventqueue, lp) );
    }
 
    *var = NULL;
@@ -3018,6 +3021,7 @@ SCIP_RETCODE SCIPvarLoose(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -3032,7 +3036,7 @@ SCIP_RETCODE SCIPvarLoose(
    SCIPdebugMessage("deleting column for variable <%s>\n", var->name);
 
    /* free column of variable */
-   SCIP_CALL( SCIPcolFree(&var->data.col, blkmem, set, lp) );
+   SCIP_CALL( SCIPcolFree(&var->data.col, blkmem, set, eventqueue, lp) );
 
    /* switch variable status */
    var->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
@@ -10391,6 +10395,7 @@ SCIP_RETCODE SCIPvarAddToRow(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
@@ -10413,7 +10418,7 @@ SCIP_RETCODE SCIPvarAddToRow(
          SCIPerrorMessage("cannot add untransformed original variable <%s> to LP row <%s>\n", var->name, row->name);
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarAddToRow(var->data.original.transvar, blkmem, set, stat, prob, lp, row, val) );
+      SCIP_CALL( SCIPvarAddToRow(var->data.original.transvar, blkmem, set, stat, eventqueue, prob, lp, row, val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -10425,7 +10430,7 @@ SCIP_RETCODE SCIPvarAddToRow(
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
       assert(var->data.col->var == var);
-      SCIP_CALL( SCIProwIncCoef(row, blkmem, set, lp, var->data.col, val) );
+      SCIP_CALL( SCIProwIncCoef(row, blkmem, set, eventqueue, lp, var->data.col, val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -10433,14 +10438,14 @@ SCIP_RETCODE SCIPvarAddToRow(
       assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
       assert(var->locdom.lb == var->glbdom.lb); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(var->locdom.lb)));
-      SCIP_CALL( SCIProwAddConstant(row, set, stat, lp, val * var->locdom.lb) );
+      SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, val * var->locdom.lb) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      SCIP_CALL( SCIPvarAddToRow(var->data.aggregate.var, blkmem, set, stat, prob, lp,
+      SCIP_CALL( SCIPvarAddToRow(var->data.aggregate.var, blkmem, set, stat, eventqueue, prob, lp,
             row, var->data.aggregate.scalar * val) );
-      SCIP_CALL( SCIProwAddConstant(row, set, stat, lp, var->data.aggregate.constant * val) );
+      SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, var->data.aggregate.constant * val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -10452,18 +10457,18 @@ SCIP_RETCODE SCIPvarAddToRow(
        */
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
-         SCIP_CALL( SCIPvarAddToRow(var->data.multaggr.vars[i], blkmem, set, stat, prob, lp,
+         SCIP_CALL( SCIPvarAddToRow(var->data.multaggr.vars[i], blkmem, set, stat, eventqueue, prob, lp,
                row, var->data.multaggr.scalars[i] * val) );
       }
-      SCIP_CALL( SCIProwAddConstant(row, set, stat, lp, var->data.multaggr.constant * val) );
+      SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, var->data.multaggr.constant * val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIP_CALL( SCIPvarAddToRow(var->negatedvar, blkmem, set, stat, prob, lp, row, -val) );
-      SCIP_CALL( SCIProwAddConstant(row, set, stat, lp, var->data.negate.constant * val) );
+      SCIP_CALL( SCIPvarAddToRow(var->negatedvar, blkmem, set, stat, eventqueue, prob, lp, row, -val) );
+      SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, var->data.negate.constant * val) );
       return SCIP_OKAY;
 
    default:

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.114 2010/07/02 23:01:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.115 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -258,6 +258,7 @@ SCIP_RETCODE SCIPprobFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
@@ -312,7 +313,7 @@ SCIP_RETCODE SCIPprobFree(
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, set, TRUE) );
-      SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->vars);
 
@@ -320,7 +321,7 @@ SCIP_RETCODE SCIPprobFree(
    for( v = 0; v < (*prob)->nfixedvars; ++v )
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
-      SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->fixedvars);
 
@@ -387,7 +388,7 @@ SCIP_RETCODE SCIPprobTransform(
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
-      SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, NULL) );
+      SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
    }
    assert((*target)->nvars == source->nvars);
 
@@ -756,6 +757,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -778,7 +780,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          /* convert column variable back into loose variable, free LP column */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
-            SCIP_CALL( SCIPvarLoose(var, blkmem, set, prob, lp) );
+            SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
          
          /* update branching candidates and pseudo and loose objective value in the LP */
@@ -799,7 +801,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
 
          /* release variable */
-         SCIP_CALL( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, lp) );
+         SCIP_CALL( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, eventqueue, lp) );
       }
    }
    prob->ndeletedvars = 0;
@@ -1349,6 +1351,7 @@ SCIP_RETCODE SCIPprobExitSolve(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    )
@@ -1374,7 +1377,7 @@ SCIP_RETCODE SCIPprobExitSolve(
          var = prob->vars[v];
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
-            SCIP_CALL( SCIPvarLoose(var, blkmem, set, prob, lp) );
+            SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
       }
    }

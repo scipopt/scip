@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.141 2010/08/31 15:25:50 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.142 2010/09/03 14:50:15 bzfviger Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -69,6 +69,7 @@ SCIP_RETCODE SCIPcolFree(
    SCIP_COL**            col,                /**< pointer to LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -78,6 +79,7 @@ SCIP_RETCODE SCIPcolAddCoef(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
@@ -87,7 +89,9 @@ SCIP_RETCODE SCIPcolAddCoef(
 extern
 SCIP_RETCODE SCIPcolDelCoef(
    SCIP_COL*             col,                /**< column to be changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< coefficient to be deleted */
    );
@@ -98,6 +102,7 @@ SCIP_RETCODE SCIPcolChgCoef(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
@@ -109,6 +114,7 @@ SCIP_RETCODE SCIPcolIncCoef(
    SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             incval              /**< value to add to the coefficient */
@@ -374,6 +380,7 @@ SCIP_RETCODE SCIProwAddCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val                 /**< value of coefficient */
@@ -382,8 +389,10 @@ SCIP_RETCODE SCIProwAddCoef(
 /** deletes coefficient from row */
 extern
 SCIP_RETCODE SCIProwDelCoef(
-   SCIP_ROW*             row,                /**< row to be changed */
+   SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col                 /**< coefficient to be deleted */
    );
@@ -394,6 +403,7 @@ SCIP_RETCODE SCIProwChgCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val                 /**< value of coefficient */
@@ -405,6 +415,7 @@ SCIP_RETCODE SCIProwIncCoef(
    SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col,                /**< LP column */
    SCIP_Real             incval              /**< value to add to the coefficient */
@@ -414,8 +425,10 @@ SCIP_RETCODE SCIProwIncCoef(
 extern
 SCIP_RETCODE SCIProwChgConstant(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             constant            /**< new constant value */
    );
@@ -424,8 +437,10 @@ SCIP_RETCODE SCIProwChgConstant(
 extern
 SCIP_RETCODE SCIProwAddConstant(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             addval              /**< constant value to add to the row */
    );
@@ -434,7 +449,9 @@ SCIP_RETCODE SCIProwAddConstant(
 extern
 SCIP_RETCODE SCIProwChgLhs(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             lhs                 /**< new left hand side */
    );
@@ -443,7 +460,9 @@ SCIP_RETCODE SCIProwChgLhs(
 extern
 SCIP_RETCODE SCIProwChgRhs(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             rhs                 /**< new right hand side */
    );
@@ -466,7 +485,9 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
 extern
 SCIP_RETCODE SCIProwMakeIntegral(
    SCIP_ROW*             row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
@@ -639,6 +660,29 @@ SCIP_Real SCIProwGetObjParallelism(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** includes event handler with given data in row's event filter */
+extern
+SCIP_RETCODE SCIProwCatchEvent(
+   SCIP_ROW*             row,                /**< row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTTYPE        eventtype,          /**< event type to catch */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int*                  filterpos           /**< pointer to store position of event filter entry, or NULL */
+   );
+
+/** deletes event handler with given data from row's event filter */
+extern
+SCIP_RETCODE SCIProwDropEvent(
+   SCIP_ROW*             row,                /**< row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTTYPE        eventtype,          /**< event type mask of dropped event */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int                   filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
+   );
 
 
 
@@ -660,7 +704,9 @@ extern
 SCIP_RETCODE SCIPlpFree(
    SCIP_LP**             lp,                 /**< pointer to LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** resets the LP to the empty LP by removing all columns and rows from LP, releasing all rows, and flushing the
@@ -671,7 +717,9 @@ SCIP_RETCODE SCIPlpReset(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** adds a column to the LP and captures the variable */
@@ -687,7 +735,10 @@ SCIP_RETCODE SCIPlpAddCol(
 extern
 SCIP_RETCODE SCIPlpAddRow(
    SCIP_LP*              lp,                 /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_ROW*             row,                /**< LP row */
    int                   depth               /**< depth in the tree where the row addition is performed */
    );
@@ -706,6 +757,8 @@ SCIP_RETCODE SCIPlpShrinkRows(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   newnrows            /**< new number of rows in the LP */
    );
 
@@ -714,7 +767,9 @@ extern
 SCIP_RETCODE SCIPlpClear(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** remembers number of columns and rows to track the newly added ones */
@@ -872,6 +927,7 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
@@ -896,7 +952,8 @@ extern
 SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue         /**< event queue */
    );
 
 /** marks the LP to be flushed, even if the LP thinks it is not flushed */
@@ -913,6 +970,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
@@ -1126,7 +1185,9 @@ SCIP_RETCODE SCIPlpRemoveNewObsoletes(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** removes all non-basic columns and basic rows in whole LP, that are too old */
@@ -1135,7 +1196,9 @@ SCIP_RETCODE SCIPlpRemoveAllObsoletes(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** removes all non-basic columns at 0.0 and basic rows in the part of the LP created at the current node */
@@ -1145,6 +1208,8 @@ SCIP_RETCODE SCIPlpCleanupNew(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
@@ -1155,6 +1220,8 @@ SCIP_RETCODE SCIPlpCleanupAll(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
@@ -1164,7 +1231,9 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** initiates LP diving */
@@ -1182,6 +1251,8 @@ SCIP_RETCODE SCIPlpEndDive(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR**            vars,               /**< array with all active variables */
    int                   nvars               /**< number of active variables */
