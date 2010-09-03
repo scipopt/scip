@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.38 2010/08/31 15:50:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.39 2010/09/03 15:15:12 bzfberth Exp $"
 
 /**@file   branch_allfullstrong.c
  * @ingroup BRANCHINGRULES
@@ -330,7 +330,7 @@ SCIP_RETCODE branch(
       SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
          npseudocands, bestpseudocand, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLPSol(var),
          bestdown, bestup, bestscore);
-      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, &eqchild, &upchild) );
+      SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPvarGetLPSol(var), &downchild, &eqchild, &upchild) );
 
       /* update the lower bounds in the children */
       if( allcolsinlp && !exactsolve )

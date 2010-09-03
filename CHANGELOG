@@ -278,6 +278,7 @@ fixed bugs:
 - fixed bug in sepa_flowcover.c: numerical issues while computing candidate set for lambda
 - fixed bug in cons_knapsack.c and sepa_clique.c: the assumption that implications are always nonredundant and contain only active variables is not correct anymore as the corresponing vbound might be missing because of numerics
 - fixed bug in cons_linear.c in detectRedundantConstraints() and corrected old bug fix in SCIProwCreate(): we want lhs <= rhs to be satisfied without numerical tolerances in order to avoid numerical problems in the LP solver
+- fixed bug in tree.c: if an explicit branching point is given, we may not recompute a better centering point
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.243 2010/09/03 14:50:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.244 2010/09/03 15:15:12 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4592,6 +4592,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_Real downub;
    SCIP_Real fixval;
    SCIP_Real uplb;
+
+   SCIP_Bool validval;
    
    assert(tree != NULL);
    assert(set != NULL);
@@ -4605,13 +4607,12 @@ SCIP_RETCODE SCIPtreeBranchVar(
    if( upchild != NULL )
       *upchild = NULL;
 
+   /* store whether a valid value was given for branching */
+   validval = (val != SCIP_INVALID);
+
    /* get the corresponding active problem variable
     * if branching value is given, then transform it to the value of the active variable */
-   if( val == SCIP_INVALID )
-   {
-      var = SCIPvarGetProbvar(var);
-   }
-   else
+   if( validval )
    {
       SCIP_Real scalar;
       SCIP_Real constant;
@@ -4630,7 +4631,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* we should have givenvariable = scalar * activevariable + constant */
       val = (val - constant) / scalar;
    }   
-
+   else
+      var = SCIPvarGetProbvar(var);
+   
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPerrorMessage("cannot branch on fixed or multi-aggregated variable <%s>\n", SCIPvarGetName(var));
@@ -4638,7 +4641,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    }
 
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && val == SCIP_INVALID )
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
@@ -4652,7 +4655,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    /* if there was no explicit value given for branching, branch on current LP or pseudo solution value */
-   if( val == SCIP_INVALID )
+   if( !validval )
    {
       val = SCIPvarGetSol(var, tree->focusnodehaslp);
 
@@ -4695,7 +4698,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
 
-      if( !SCIPsetIsInfinity(set, lb) && !SCIPsetIsInfinity(set, ub) 
+      /* if there was no explicit value given for branching, the variable has a finite domain and the current LP/pseudo
+       * solution is one of the bounds, we branch in the center of the domain */
+      if( !validval && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) 
 	 && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
       {
          SCIP_Real center;
