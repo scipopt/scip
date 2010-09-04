@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.51 2010/09/04 19:42:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.52 2010/09/04 19:55:35 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -577,8 +577,8 @@ SCIP_Bool getNextLine(
   
    assert(fzninput != NULL);
 
-   /* if we previously detected a comment we have to parse the remaining line away */
-   if( fzninput->comment )
+   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
+   if( !fzninput->endline && fzninput->comment )
    { 
       do
       {

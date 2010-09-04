@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.52 2010/08/26 14:49:01 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.53 2010/09/04 19:55:35 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -24,8 +24,8 @@
 /* http://www.cril.univ-artois.fr/PB07/solver_req.html
  * http://www.cril.univ-artois.fr/PB10/format.pdf
  *
- * The syntax of the input file format can be described by a simple Backus-Naur
- *  form. <formula> is the start symbol of this grammar.
+ * The syntax of the input file format can be described by a simple Backus-Naur form. <formula> is the start symbol of
+ * this grammar.
  *
  *  <formula>::= <sequence_of_comments> 
  *               [<objective>] | [<softheader>]
@@ -72,8 +72,9 @@
  *  
  */
 
-/* Our parser should also be lax by handling variable names and it's possible to read doubles instead of integer and 
- * possible some more :). */
+/**@note Our parser should also be lax by handling variable names and it's possible to read doubles instead of integer
+ *       and possible some more :). 
+ */
 
 
 
@@ -145,6 +146,7 @@ struct OpbInput
    int                  linepos;
    int                  bufpos;
    SCIP_OBJSENSE        objsense;
+   SCIP_Bool            comment;
    SCIP_Bool            endline;
    SCIP_Bool            eof;
    SCIP_Bool            haserror;
@@ -383,6 +385,20 @@ SCIP_Bool getNextLine(
   
    assert(opbinput != NULL);
 
+   /* if we previously detected a comment we have to parse the remaining line away if there is something left */
+   if( !opbinput->endline && opbinput->comment )
+   { 
+      do
+      {
+         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
+         (void)SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file);
+      }
+      while( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' );
+         
+      opbinput->comment = FALSE;
+      opbinput->endline = TRUE;
+   }
+
    /* clear the line */
    BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
    opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
@@ -443,6 +459,8 @@ SCIP_Bool getNextLine(
       {
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+         opbinput->comment = TRUE;
+         break;
       }
    }
 
@@ -3063,6 +3081,7 @@ SCIP_RETCODE SCIPreadOpb(
    opbinput.bufpos = 0;
    opbinput.linepos = 0;
    opbinput.objsense = SCIP_OBJSENSE_MINIMIZE;
+   opbinput.comment = FALSE;
    opbinput.endline = FALSE;
    opbinput.eof = FALSE;
    opbinput.haserror = FALSE;

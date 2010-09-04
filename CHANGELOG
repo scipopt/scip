@@ -281,6 +281,7 @@ fixed bugs:
 - fixed bug in tree.c: if an explicit branching point is given, we may not recompute a better centering point
 - fixed bug while breaking an clique down to their impications (in SCIPcliquetableCleanup in implics.c) where the variable was not of vartype SCIP_VARTYPE_BINARY, instead of adding an implication we add a variable bound
 - fixed bug in reader_fzn.c w.r.t. comment lines 
+- fixed bug in reader_opb.c w.r.t. comment lines 
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
