@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.118 2010/08/23 21:09:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.119 2010/09/04 18:44:13 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -870,7 +870,7 @@ void SCIPhashmapFree(
    for( i = 0; i < (*hashmap)->nlists; ++i )
       hashmaplistFree(&(*hashmap)->lists[i], (*hashmap)->blkmem);
 
-   /* free main hast map data structure */
+   /* free main hash map data structure */
    BMSfreeMemoryArray(&(*hashmap)->lists);
    BMSfreeMemory(hashmap);
 }
