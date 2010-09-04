@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.18 2010/09/04 18:36:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.19 2010/09/04 19:04:30 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -776,7 +776,9 @@ SCIP_RETCODE nlrowAddQuadElement(
    assert(elem.idx1 <  nlrow->nquadvars);
    assert(elem.idx2 >= 0);
    assert(elem.idx2 <  nlrow->nquadvars);
-   assert(!SCIPsetIsZero(set, elem.coef));
+
+   if( SCIPsetIsZero(set, elem.coef) )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPnlrowEnsureQuadElementsSize(nlrow, blkmem, set, nlrow->nquadelems+1) );
    assert(nlrow->quadelems != NULL);
