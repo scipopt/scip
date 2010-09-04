@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.41 2010/09/03 19:25:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.42 2010/09/04 18:43:38 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -34,6 +34,7 @@
 #include "scip/intervalarith.h"
 #include "scip/expression.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/exprinterpret.h"
 
 
 /* constraint handler properties */
@@ -109,6 +110,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             sparsifymaxloss;/**< maximal loss in cut efficacy by sparsification */
    SCIP_Real             sparsifynzgrowth;/**< growth rate of maximal allowed nonzeros in cuts in sparsification */
    SCIP_Bool             linfeasshift;   /**< whether to try to make solutions feasible in check by shifting the variable on the right hand side */
+   char                  nlpform;        /**< formulation of SOC constraint in NLP */
 };
 
 
@@ -319,85 +321,134 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 static
 SCIP_RETCODE createNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< quadratic constraint */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOC constraint handler */
+   SCIP_CONS*            cons                /**< SOC constraint */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_EXPR* expr;
-   SCIP_EXPR* exprterm;
-   SCIP_EXPR* expr2;
-   SCIP_EXPRTREE* exprtree;
    int i;
-   SCIP_Real lincoef;
 
    assert(scip != NULL);
    assert(cons != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    if( consdata->nlrow != NULL )
    {
-      SCIPreleaseNlRow(scip, &consdata->nlrow);
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
-   /* construct expression \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} */
-
-   if( consdata->constant != 0.0 )
+   switch( conshdlrdata->nlpform )
    {
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_CONST, consdata->constant) );  /* gamma */
-   }
-   else
-   {
-      exprterm = NULL;
-   }
-
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, i) );  /* x_i */
-      if( consdata->offsets[i] != 0.0 )
+      case 's':
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->offsets[i]) );  /* beta_i */
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_PLUS, expr, expr2) );  /* x_i + beta_i */
+         /* construct expression \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} */
+
+         SCIP_EXPR* expr;
+         SCIP_EXPR* exprterm;
+         SCIP_EXPR* expr2;
+         SCIP_EXPRTREE* exprtree;
+         SCIP_Real lincoef;
+
+         if( consdata->constant != 0.0 )
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_CONST, consdata->constant) );  /* gamma */
+         }
+         else
+         {
+            exprterm = NULL;
+         }
+
+         for( i = 0; i < consdata->nvars; ++i )
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, i) );  /* x_i */
+            if( consdata->offsets[i] != 0.0 )
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->offsets[i]) );  /* beta_i */
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_PLUS, expr, expr2) );  /* x_i + beta_i */
+            }
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_SQUARE, expr) );  /* (x_i + beta_i)^2 */
+            if( consdata->coefs[i] != 1.0 )
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->coefs[i]) );  /* alpha_i */
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MUL, expr, expr2) );  /* alpha_i * (x_i + beta_i)^2 */
+            }
+            if( exprterm != NULL )
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_PLUS, exprterm, expr) );
+            }
+            else
+            {
+               exprterm = expr;
+            }
+         }
+
+         if( exprterm != NULL )
+         {
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_SQRT, exprterm) );  /* sqrt(gamma + sum_i (...)^2) */
+            SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, exprterm, consdata->nvars, 0, NULL) );
+            SCIP_CALL( SCIPexprtreeSetVars(exprtree, consdata->nvars, consdata->vars) );
+         }
+         else
+         {
+            assert(consdata->nvars == 0);
+            assert(consdata->constant == 0.0);
+            exprtree = NULL;
+         }
+
+         /* linear and constant part is -\alpha_{n+1} (x_{n+1}+\beta_{n+1}) */
+         lincoef = -consdata->rhscoeff;
+         SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+            -consdata->rhscoeff * consdata->rhsoffset,
+            1, &consdata->rhsvar, &lincoef,
+            0, NULL, 0, NULL,
+            exprtree, -SCIPinfinity(scip), 0.0) );
+
+         SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+         break;
       }
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_SQUARE, expr) );  /* (x_i + beta_i)^2 */
-      if( consdata->coefs[i] != 1.0 )
+
+      case 'q':
       {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->coefs[i]) );  /* alpha_i */
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MUL, expr, expr2) );  /* alpha_i * (x_i + beta_i)^2 */
-      }
-      if( exprterm != NULL )
-      {
-         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_PLUS, exprterm, expr) );
-      }
-      else
-      {
-         exprterm = expr;
+         /* construct quadratic form gamma + sum_{i=1}^{n} (alpha_i (x_i + beta_i))^2 <= alpha_{n+1} (x_{n+1} + beta_{n+1}) */
+         SCIP_QUADELEM sqrterm;
+         SCIP_Real lincoef;
+         SCIP_Real rhs;
+
+         /* create row with gamma, right hand side, and x_i's */
+         lincoef = -consdata->rhscoeff;
+         SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+            consdata->constant,
+            1, &consdata->rhsvar, &lincoef,
+            consdata->nvars, consdata->vars, 0, NULL,
+            NULL, -SCIPinfinity(scip), 0.0) );
+
+         /* add sum_{i=1}^{n} (alpha_i x_i)^2 + 2 alpha_i beta_i x_i + beta_i^2 */
+         rhs = consdata->rhscoeff * consdata->rhsoffset;
+         for( i = 0; i < consdata->nvars; ++i )
+         {
+            sqrterm.idx1 = i;
+            sqrterm.idx2 = i;
+            sqrterm.coef = consdata->coefs[i] * consdata->coefs[i];
+            SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, sqrterm) );
+
+            if( consdata->offsets[i] != 0.0 )
+            {
+               rhs -= consdata->offsets[i] * consdata->offsets[i];
+               SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, consdata->vars[i], 2.0 * consdata->coefs[i] * consdata->offsets[i]) );
+            }
+         }
+         SCIP_CALL( SCIPchgNlRowRhs(scip, consdata->nlrow, rhs) );
+
+         break;
       }
    }
-
-   if( exprterm != NULL )
-   {
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_SQRT, exprterm) );  /* sqrt(gamma + sum_i (...)^2) */
-      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, exprterm, consdata->nvars, 0, NULL) );
-      SCIP_CALL( SCIPexprtreeSetVars(exprtree, consdata->nvars, consdata->vars) );
-   }
-   else
-   {
-      assert(consdata->nvars == 0);
-      assert(consdata->constant == 0.0);
-      exprtree = NULL;
-   }
-
-   /* linear and constant part is -\alpha_{n+1} (x_{n+1}+\beta_{n+1}) */
-   lincoef = -consdata->rhscoeff;
-   SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
-      -consdata->rhscoeff * consdata->rhsoffset,
-      1, &consdata->rhsvar, &lincoef,
-      0, NULL, 0, NULL,
-      exprtree, -SCIPinfinity(scip), 0.0) );
-
-   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
    SCIPdebugMessage("created nonlinear row representation of SOC constraint\n");
    SCIPdebug( SCIPprintCons(scip, cons, NULL) );
@@ -2728,7 +2779,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
       
          if( consdata->nlrow == NULL )
          {
-            SCIP_CALL( createNlRow(scip, conss[c]) );
+            SCIP_CALL( createNlRow(scip, conshdlr, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
          SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
@@ -2759,6 +2810,8 @@ static
 SCIP_DECL_CONSEXITSOL(consExitsolSOC)
 {  
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   int c;
 
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -2781,6 +2834,18 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
       conshdlrdata->newsoleventfilterpos = -1;
    }
    
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* free nonlinear row representation */
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 #else
@@ -2802,6 +2867,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
    assert(consdata  != NULL);
    assert(*consdata != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert((*consdata)->nlrow == NULL); /* should have been freed in exitsol */
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -3573,6 +3639,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   char defaultnlpform;
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
@@ -3653,6 +3720,16 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
       "whether to try to make solutions feasible in check by shifting the variable on the right hand side",
       &conshdlrdata->linfeasshift,     FALSE, TRUE,          NULL, NULL) );
+
+   /* if there is no expression interpreter, the NLPI may have trouble, so we change the default to quadratic form */
+   if( strcmp(SCIPexprintGetName(), "NONE") == 0 )
+      defaultnlpform = 'q';
+   else
+      defaultnlpform = 's';
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/nlpform",
+      "which formulation to use when adding a SOC constraint to the NLP (q: nonconvex quadratic form, s: convex sqrt form)",
+      &conshdlrdata->nlpform,          FALSE, defaultnlpform, "qs", NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3801,7 +3878,7 @@ SCIP_RETCODE SCIPgetNlRowSOC(
 
    if( consdata->nlrow == NULL )
    {
-      SCIP_CALL( createNlRow(scip, cons) );
+      SCIP_CALL( createNlRow(scip, SCIPconsGetHdlr(cons), cons) );
    }
    assert(consdata->nlrow != NULL);
    *nlrow = consdata->nlrow;
