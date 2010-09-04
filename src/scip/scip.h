@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.410 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.411 2010/09/04 12:48:46 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -647,70 +647,77 @@ SCIP_RETCODE SCIPresetParams(
 extern
 SCIP_RETCODE SCIPsetEmphasisFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets heuristic parameters to aggressive values */
 extern 
 SCIP_RETCODE SCIPsetHeuristicsAggressive(
    SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
    
 /** sets heuristic parameters to fast values */
 extern 
 SCIP_RETCODE SCIPsetHeuristicsFast(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** turns off all heuristic */
 extern 
 SCIP_RETCODE SCIPsetHeuristicsOff(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets presolving parameters to aggressive values */
 extern 
 SCIP_RETCODE SCIPsetPresolvingAggressive(
    SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
    
 /** sets presolving parameters to fast values */
 extern 
 SCIP_RETCODE SCIPsetPresolvingFast(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** turns off all presolving */
 extern 
 SCIP_RETCODE SCIPsetPresolvingOff(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** resets parameters set by other SCIPsetPresolvingXxx functions to their default values */
+extern
+SCIP_RETCODE SCIPsetPresolvingDefault(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets separating parameters to aggressive values */
 extern 
 SCIP_RETCODE SCIPsetSeparatingAggressive(
    SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
    
 /** sets separating parameters to fast values */
 extern 
 SCIP_RETCODE SCIPsetSeparatingFast(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** turns off all separation */
 extern 
 SCIP_RETCODE SCIPsetSeparatingOff(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quite               /**< should the parameter be set quite (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** returns the array of all available SCIP parameters */

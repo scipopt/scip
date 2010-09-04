@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.10 2010/09/03 19:25:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.11 2010/09/04 12:48:46 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1066,31 +1066,10 @@ cleanup:
    SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
    if( tighttolerances )
    {
-      SCIP_CONSHDLR** conshdlrs;
-      char paramname[SCIP_MAXSTRLEN];
-      int nconshdlrs;
-      
       /* reset feasibility tolerance of subSCIP and reset to normal presolve */
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
-      
+      SCIP_CALL( SCIPsetPresolvingDefault(heurdata->subscip, TRUE) );
       SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
-
-      conshdlrs = SCIPgetConshdlrs(heurdata->subscip);
-      nconshdlrs = SCIPgetNConshdlrs(heurdata->subscip);
-
-      /* reset pairwise comparison of each constraint handler */
-      for( i = 0; i < nconshdlrs; ++i )
-      {
-         const char* conshdlrname;
-         conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
-
-         /* get presolpairwise parameter of constraint handler */
-         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presolpairwise", conshdlrname);
-         SCIP_CALL( SCIPresetParam(heurdata->subscip, paramname) );
-      }
-      
-      /* explicitly change parameters of knapsack constraint handler */
-      SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/knapsack/disaggregation") );
    }
    
    return SCIP_OKAY;
@@ -1678,7 +1657,8 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    if( heurdata->subscip == NULL )
       return SCIP_OKAY;
    
-   SCIPdebugMessage("consider solution candidate with violation %g and objective %g\n", violation, SCIPgetSolTransObj(scip, solcand));
+   SCIPdebugMessage("consider solution candidate with violation %g and objective %g from %s\n",
+      violation, SCIPgetSolTransObj(scip, solcand), SCIPsolGetHeur(solcand) ? SCIPheurGetName(SCIPsolGetHeur(solcand)) : "tree");
 
    /* if we have no point yet, or the new point has a lower constraint violation, or it has a better objective function value,
     * then take the new point */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.241 2010/09/02 13:59:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.242 2010/09/04 12:48:46 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1915,6 +1915,17 @@ SCIP_RETCODE SCIPsetSetPresolvingOff(
    )
 {
    SCIP_CALL( SCIPparamsetSetToPresolvingOff(set->paramset, set->scip, quiet) );
+
+   return SCIP_OKAY;
+}
+
+/** resets presolving settings made by other SCIPsetSetPresolvingXxx functions */
+SCIP_RETCODE SCIPsetSetPresolvingDefault(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToPresolvingDefault(set->paramset, set->scip, quiet) );
 
    return SCIP_OKAY;
 }

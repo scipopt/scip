@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.638 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.639 2010/09/04 12:48:46 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1724,6 +1724,19 @@ SCIP_RETCODE SCIPsetPresolvingOff(
    SCIP_CALL( checkStage(scip, "SCIPsetPresolvingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetSetPresolvingOff(scip->set, quiet) );
+
+   return SCIP_OKAY;
+}
+
+/** resets parameters set by other SCIPsetPresolvingXxx functions to their default values */
+SCIP_RETCODE SCIPsetPresolvingDefault(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingDefault", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetPresolvingDefault(scip->set, quiet) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.36 2010/08/27 21:11:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.37 2010/09/04 12:48:46 bzfviger Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -325,6 +325,14 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingFast(
 /** turns off all presolving */
 extern
 SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** resets parameters changed by SCIPparamsetSetToPresolvingXxx to their default settings */
+extern
+SCIP_RETCODE SCIPparamsetSetToPresolvingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */

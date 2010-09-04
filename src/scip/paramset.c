@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.79 2010/09/03 12:51:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.80 2010/09/04 12:48:46 bzfviger Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2403,10 +2403,13 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    
-   if( param != NULL )
+   if( param == NULL )
    {
-      SCIP_CALL( SCIPparamSetToDefault(param, scip) );
+      SCIPerrorMessage("parameter <%s> unknown\n", paramname);
+      return SCIP_PARAMETERUNKNOWN;
    }
+
+   SCIP_CALL( SCIPparamSetToDefault(param, scip) );
 
    return SCIP_OKAY;
 }
@@ -2569,15 +2572,24 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingAggressive(
    SCIP_PARAM* param;
    char paramname[SCIP_MAXSTRLEN];
    
+   /* reset previous changes on presolving parameters */
+   SCIP_CALL( SCIPparamsetSetToPresolvingDefault(paramset, scip, quiet) );
+
    /* explicitly change restart parameters */
    SCIP_CALL( paramSetReal(scip, paramset, "presolving/restartfac", 0.3, quiet) );
    SCIP_CALL( paramSetReal(scip, paramset, "presolving/restartminred", 0.06, quiet) );
 
-   /* explicitly change parameters of linear constraint handler */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/simplifyinequalities", TRUE, quiet) );
+   /* explicitly change parameters of linear constraint handler, if included */
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
+   {
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/simplifyinequalities", TRUE, quiet) );
+   }
    
-   /* explicitly change parameters of knapsack constraint handler */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/simplifyinequalities", TRUE, quiet) );
+   /* explicitly change parameters of knapsack constraint handler, if included */
+   if( SCIPfindConshdlr(scip, "knapsack") != NULL )
+   {
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/simplifyinequalities", TRUE, quiet) );
+   }
    
    /* explicitly change parameters of presolver boundshift */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/boundshift/maxrounds", -1, quiet) );
@@ -2617,14 +2629,18 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingFast(
    )
 {
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_PARAM* param;
    char paramname[SCIP_MAXSTRLEN];
    int nconshdlrs;
    int i;
 
+   /* reset previous changes on presolving parameters */
+   SCIP_CALL( SCIPparamsetSetToPresolvingDefault(paramset, scip, quiet) );
+
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
 
-   /* turn off pairwise comparison for each constraint handler */
+   /* turn off pairwise comparison for each constraint handler that has this feature */
    for( i = 0; i < nconshdlrs; ++i )
    {
       const char* conshdlrname;
@@ -2632,17 +2648,25 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingFast(
 
       /* get presolpairwise parameter of constraint handler */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presolpairwise", conshdlrname);
-      SCIP_CALL( paramSetBool(scip, paramset, paramname, FALSE, quiet) );
-   }      
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+      if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_BOOL )
+      {
+         SCIP_CALL( paramSetBool(scip, paramset, paramname, FALSE, quiet) );
+      }
+   }
 
    /* explicitly turn of restarts */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0, quiet) );
-   
-   /* explicitly change parameters of knapsack constraint handler */
-   SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/disaggregation", FALSE, quiet) );
-   
+
    /* turn off probing */
    SCIP_CALL( paramSetInt(scip, paramset, "presolving/probing/maxrounds", 0, quiet) );
+
+   /* explicitly change parameters of knapsack constraint handler, if the constraint handler is included */
+   if( SCIPfindConshdlr(scip, "knapsack") != NULL )
+   {
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/disaggregation", FALSE, quiet) );
+   }
    
    return SCIP_OKAY;
 }
@@ -2660,6 +2684,8 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
    int npresols;
    int nconshdlrs;
    int i;
+
+   /* no need to reset to default presolve settings first, since we disable all presolve's anyway, correct? */
 
    presols = SCIPgetPresols(scip);
    npresols = SCIPgetNPresols(scip);
@@ -2691,6 +2717,86 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
       SCIP_CALL( paramSetInt(scip, paramset, paramname, 0, quiet) );
    }
    
+   return SCIP_OKAY;
+}
+
+/** resets all presolving settings that SCIPparamsetSetToPresolving{Off,Fast,Aggressive} may have set */
+SCIP_RETCODE SCIPparamsetSetToPresolvingDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_PRESOL** presols;
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_PARAM* param;
+   char paramname[SCIP_MAXSTRLEN];
+   int npresols;
+   int nconshdlrs;
+   int i;
+
+   presols = SCIPgetPresols(scip);
+   npresols = SCIPgetNPresols(scip);
+
+   /* reset each individual presolver settings */
+   for( i = 0; i < npresols; ++i )
+   {
+      const char* presolname;
+      presolname = SCIPpresolGetName(presols[i]);
+
+      /* get maxrounds parameter of presolvers */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", presolname);
+
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
+   }
+
+   /* explicitely reset probing maxrounds */
+   if( SCIPfindPresol(scip, "probing") != NULL )
+   {
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/probing/maxuseless") );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/probing/maxtotaluseless") );
+   }
+
+   /* reset restarts parameter */
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/maxrestarts") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/restartfac") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/restartminred") );
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+
+   /* reset presolving settings for each individual constraint handler */
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      const char* conshdlrname;
+      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+
+      /* reset maxprerounds parameter of presolvers */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", conshdlrname);
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
+
+      /* reset presolpairwise parameter of constraint handler */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presolpairwise", conshdlrname);
+      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+      if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_BOOL )
+      {
+         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
+      }
+   }
+
+   /* explicitly reset parameters of knapsack constraint handler, if the constraint handler is included */
+   if( SCIPfindConshdlr(scip, "knapsack") != NULL )
+   {
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/disaggregation") );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/simplifyinequalities") );
+   }
+
+   /* explicitly reset parameters of linear constraint handler, if the constraint handler is included */
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
+   {
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/simplifyinequalities") );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2730,7 +2836,7 @@ SCIP_RETCODE SCIPparamsetSetToSeparatingAggressive(
          assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
          deffreq = SCIPparamGetIntDefault(param);
          
-         /* change frequnecy to at least every 20th depths */
+         /* change frequency to at least every 20th depths */
          if( deffreq == -1 || deffreq == 0 )
             newfreq = 20;
          else
