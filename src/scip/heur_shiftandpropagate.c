@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.2 2010/09/03 11:31:07 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.3 2010/09/04 07:57:37 bzfgleix Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -1144,7 +1144,7 @@ void shiftVariable(
  * Callback methods of primal heuristic
  */
 
-/** destructor of primal heuristic to free user data (called when SCIP is exiting). */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1174,11 +1174,6 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
          heurdata->nlpiters
          );
       )
-
-   /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
-   assert(heurdata == NULL);
-   SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
 }
@@ -1211,7 +1206,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 #define heurInitShiftandpropagate NULL
 #endif
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1219,6 +1214,7 @@ SCIP_DECL_HEURFREE(heurFreeShiftandpropagate)
 
    heurdata = SCIPheurGetData(heur);
 
+   /* free heuristic data */
    if( heurdata != NULL )
       SCIPfreeMemory(scip, &heurdata);
    
