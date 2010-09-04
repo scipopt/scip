@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.640 2010/09/04 14:38:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.641 2010/09/04 16:42:47 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6757,7 +6757,7 @@ SCIP_RETCODE SCIPwriteVarsList(
 /** print the given variables and coefficients as linear sum in the following form 
  *  c1 \<x1\> + c2 \<x2\>   ... + cn \<xn\>
  *  
- *  This string can be parsed by the method SCIPwriteVarsLinearsum().
+ *  This string can be parsed by the method SCIPparseVarsLinearsum().
  */
 SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6847,17 +6847,31 @@ SCIP_RETCODE SCIPparseVarName(
    /* copy input string such that it can be truncated */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int) strlen(str)+1) );
 
-   /* start truncation of thr string */
+   /* start truncation of the string */
    varname = SCIPstrtok(strcopy, ">", &saveptr);
 
+   if( varname == NULL )
+   {
+      SCIPerrorMessage("invalid variable name string given: could not find '>'\n");
+      SCIPfreeBufferArray(scip, &strcopy);
+      return SCIP_INVALIDDATA;
+   }
+
    /* cutoff all characters which do not belong to the variable name */
-   while(*varname != '<')
+   while( *varname != '<' && *varname != '\0' )
       varname++;
-      
+
+   if( *varname == '\0' )
+   {
+      SCIPerrorMessage("invalid variable name string given: could not find '<'\n");
+      SCIPfreeBufferArray(scip, &strcopy);
+      return SCIP_INVALIDDATA;
+   }
+
    /* cutoff the '<' */
    varname++;
 
-   /* check if have a negated variable */
+   /* check if we have a negated variable */
    if( *varname == '~' )
    {
       /* cutoff the '~' */
