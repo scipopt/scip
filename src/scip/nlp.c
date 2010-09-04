@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.17 2010/09/03 18:14:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.18 2010/09/04 18:36:56 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -1115,6 +1115,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          ++i;
          continue;
       }
+
       /* if one of the variable is not active, we remove the element and insert new disaggregated ones */
       SCIP_CALL( nlrowDelQuadElemPos(nlrow, set, stat, nlp, i) );
       havechange = TRUE;
@@ -1586,7 +1587,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    assert(nlinvars   == 0 || lincoefs  != NULL);
    assert(nquadvars  == 0 || quadvars  != NULL);
    assert(nquadelems == 0 || quadelems != NULL);
-   assert((nquadvars  == 0) == (nquadelems == 0));
+   assert(nquadelems == 0 || nquadvars > 0);
    assert(SCIPsetIsLE(set, lhs, rhs));
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, nlrow) );
@@ -1621,7 +1622,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    }
    else
    {
-      (*nlrow)->quadvars     = NULL;
+      (*nlrow)->quadvars = NULL;
    }
 
    /* quadratic elements */
@@ -1635,7 +1636,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    }
    else
    {
-      (*nlrow)->quadelems    = NULL;
+      (*nlrow)->quadelems       = NULL;
       (*nlrow)->quadelemssorted = TRUE;
    }
 
@@ -2036,7 +2037,7 @@ SCIP_RETCODE SCIPnlrowAddQuadVar(
    nlrow->quadvars[nlrow->nquadvars] = var;
    nlrow->nquadvars++;
 
-   if( nlrow->quadvarshash != NULL )
+   if( nlrow->quadvarshash == NULL )
    {
       SCIP_CALL( nlrowSetupQuadVarsHash(nlrow, blkmem) );
    }
