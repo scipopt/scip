@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.50 2010/08/09 10:53:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.51 2010/09/04 19:42:11 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -54,7 +54,7 @@
 #define READER_EXTENSION        "fzn"
 
 
-#define FZN_BUFFERLEN         1048576     /**< size of the line buffer for reading or writing */
+#define FZN_BUFFERLEN         65536     /**< size of the line buffer for reading or writing */
 #define FZN_MAX_PUSHEDTOKENS  1
 
 /*
@@ -128,24 +128,25 @@ typedef struct FznConstant FZNCONSTANT;
 /** FlatZinc reading data */
 struct FznInput
 {
-   SCIP_FILE*           file;
-   SCIP_HASHTABLE*      varHashtable;
-   SCIP_HASHTABLE*      constantHashtable;
-   FZNCONSTANT**        constants;
-   char                 linebuf[FZN_BUFFERLEN+1];
-   char*                token;
-   char*                pushedtokens[FZN_MAX_PUSHEDTOKENS];
-   int                  npushedtokens;
-   int                  linenumber;
-   int                  linepos;
-   int                  bufpos;
-   int                  nconstants;
-   int                  sconstants;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            hasdot;
-   SCIP_Bool            endline;
-   SCIP_Bool            haserror;
-   SCIP_Bool            valid;
+   SCIP_FILE*            file;
+   SCIP_HASHTABLE*       varHashtable;
+   SCIP_HASHTABLE*       constantHashtable;
+   FZNCONSTANT**         constants;
+   char                  linebuf[FZN_BUFFERLEN+1];
+   char*                 token;
+   char*                 pushedtokens[FZN_MAX_PUSHEDTOKENS];
+   int                   npushedtokens;
+   int                   linenumber;
+   int                   linepos;
+   int                   bufpos;
+   int                   nconstants;
+   int                   sconstants;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             hasdot;             /**< if the current token is a number, this bool tells if it contains a dot */
+   SCIP_Bool             endline;            /**< current buffer contains everything until the line ends */
+   SCIP_Bool             comment;            /**< current buffer contains everything until a comment starts */
+   SCIP_Bool             haserror;           /**< a error was detected during parsing */
+   SCIP_Bool             valid;
 };
 typedef struct FznInput FZNINPUT;
 
@@ -576,6 +577,20 @@ SCIP_Bool getNextLine(
   
    assert(fzninput != NULL);
 
+   /* if we previously detected a comment we have to parse the remaining line away */
+   if( fzninput->comment )
+   { 
+      do
+      {
+         fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
+         (void)SCIPfgets(fzninput->linebuf, sizeof(fzninput->linebuf), fzninput->file);
+      }
+      while( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' );
+         
+      fzninput->comment = FALSE;
+      fzninput->endline = TRUE;
+   }
+
    /* clear the line */
    BMSclearMemoryArray(fzninput->linebuf, FZN_BUFFERLEN);
    fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
@@ -588,7 +603,7 @@ SCIP_Bool getNextLine(
    }
    else
       fzninput->linepos += FZN_BUFFERLEN - 2;
-   
+
    if( SCIPfgets(fzninput->linebuf, sizeof(fzninput->linebuf), fzninput->file) == NULL )
       return FALSE;
    
@@ -636,6 +651,8 @@ SCIP_Bool getNextLine(
       {
          *commentstart = '\0';
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+         fzninput->comment = TRUE;
+         break;
       }
    }
    
@@ -4068,6 +4085,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.linepos = 0;
    fzninput.objsense = SCIP_OBJSENSE_MINIMIZE;
    fzninput.endline = FALSE;
+   fzninput.comment = FALSE;
    fzninput.haserror = FALSE;
    fzninput.valid = TRUE;
    
