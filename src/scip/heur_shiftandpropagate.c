@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.3 2010/09/04 07:57:37 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.4 2010/09/04 12:45:17 bzfviger Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -1581,7 +1581,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       /* case that remaining LP is empty */
 
-#ifndef NDEBUG
+#ifdef SCIP_DEBUG
       SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else
       /* in optimized mode, variable bounds, integrality and row feasibility are ensured by heuristic and
@@ -1645,7 +1645,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
           * Neither integrality nor feasibility of LP rows have to be checked, because they
           * are guaranteed by the heuristic at this stage.
           */
-#ifndef NDEBUG
+#ifdef SCIP_DEBUG
          SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else         
          /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
