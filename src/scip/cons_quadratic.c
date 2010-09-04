@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.121 2010/09/04 16:51:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.122 2010/09/04 20:02:53 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4320,6 +4320,7 @@ SCIP_RETCODE generateCut(
    )
 {
    SCIP_CONSDATA* consdata;
+   char           cutname[SCIP_MAXSTRLEN];
    SCIP_Bool      isconvex;
    SCIP_Bool      isglobal;
    SCIP_Real      coef;
@@ -4350,7 +4351,12 @@ SCIP_RETCODE generateCut(
    isconvex = (violbound == SCIP_BOUNDTYPE_LOWER) ? consdata->isconcave : consdata->isconvex;
    isglobal = SCIPconsIsGlobal(cons) && isconvex;
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "cut", -SCIPinfinity(scip), SCIPinfinity(scip), !isglobal /* locally */, FALSE /* modifiable */, TRUE /* removable */ ) );
+   if( isconvex )
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violbound, SCIPgetNLPs(scip));
+   else
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_side%d_mccormick_%d", SCIPconsGetName(cons), violbound, SCIPgetNLPs(scip));
+
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), SCIPinfinity(scip), !isglobal /* locally */, FALSE /* modifiable */, TRUE /* removable */ ) );
    bnd = (violbound == SCIP_BOUNDTYPE_LOWER) ? consdata->lhs : consdata->rhs;
    assert(!SCIPisInfinity(scip, ABS(bnd)));
 

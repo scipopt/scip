@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.43 2010/09/04 19:04:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.44 2010/09/04 20:02:53 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -622,6 +622,7 @@ SCIP_RETCODE generateCutSol(
    )
 {
    SCIP_CONSDATA* consdata;
+   char           cutname[SCIP_MAXSTRLEN];
    SCIP_Real*     rowcoeff;
    SCIP_Real      rhs = 0.0;
    SCIP_Real      val;
@@ -651,7 +652,9 @@ SCIP_RETCODE generateCutSol(
    rhs /= consdata->lhsval;
    rhs -= consdata->lhsval - consdata->rhscoeff * consdata->rhsoffset;
    
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
    
@@ -675,6 +678,7 @@ SCIP_RETCODE generateCutPoint(
    SCIP_Real      lhsval;
    SCIP_Real      val;
    int            i;
+   char           cutname[SCIP_MAXSTRLEN];
    
    assert(scip != NULL);
    assert(cons != NULL);
@@ -718,7 +722,9 @@ SCIP_RETCODE generateCutPoint(
    rhs /= lhsval;
    rhs -= lhsval - consdata->rhscoeff * consdata->rhsoffset;
    
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
    
@@ -768,6 +774,7 @@ SCIP_RETCODE generateCutProjectedPoint(
    SCIP_Real      val;
    SCIP_Real      A, lambda;
    int            i;
+   char           cutname[SCIP_MAXSTRLEN];
    
    assert(scip != NULL);
    assert(cons != NULL);
@@ -816,7 +823,9 @@ SCIP_RETCODE generateCutProjectedPoint(
    rhs /= 1.0 - lambda;
    rhs -= consdata->rhscoeff * consdata->rhsoffset;
    
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
    
