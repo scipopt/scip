@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.122 2010/09/04 12:48:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.123 2010/09/04 14:38:05 bzfviger Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -348,6 +348,12 @@ SCIP_RETCODE SCIPsetSetHeuristicsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
+/** resets heuristics settings made by other SCIPsetSetHeuristicsXxx functions */
+extern
+SCIP_RETCODE SCIPsetSetHeuristicsDefault(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** sets presolving parameters to aggressive values */
 extern
 SCIP_RETCODE SCIPsetSetPresolvingAggressive(
@@ -372,8 +378,7 @@ SCIP_RETCODE SCIPsetSetPresolvingOff(
 /** resets presolving settings made by other SCIPsetSetPresolvingXxx functions */
 extern
 SCIP_RETCODE SCIPsetSetPresolvingDefault(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** sets separating parameters to aggressive values */
@@ -395,6 +400,12 @@ extern
 SCIP_RETCODE SCIPsetSetSeparatingOff(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** resets separation settings made by other SCIPsetSetSeparatingXxx functions */
+extern
+SCIP_RETCODE SCIPsetSetSeparatingDefault(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns the array of all available SCIP parameters */

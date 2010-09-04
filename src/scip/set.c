@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.242 2010/09/04 12:48:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.243 2010/09/04 14:38:05 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1886,6 +1886,16 @@ SCIP_RETCODE SCIPsetSetHeuristicsOff(
    return SCIP_OKAY;
 }
 
+/** resets heuristics settings made by other SCIPsetSetHeuristicsXxx functions */
+SCIP_RETCODE SCIPsetSetHeuristicsDefault(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToHeuristicsDefault(set->paramset, set->scip) );
+
+   return SCIP_OKAY;
+}
+
 /** sets presolving parameters to aggressive values */
 SCIP_RETCODE SCIPsetSetPresolvingAggressive(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1921,11 +1931,10 @@ SCIP_RETCODE SCIPsetSetPresolvingOff(
 
 /** resets presolving settings made by other SCIPsetSetPresolvingXxx functions */
 SCIP_RETCODE SCIPsetSetPresolvingDefault(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToPresolvingDefault(set->paramset, set->scip, quiet) );
+   SCIP_CALL( SCIPparamsetSetToPresolvingDefault(set->paramset, set->scip) );
 
    return SCIP_OKAY;
 }
@@ -1959,6 +1968,16 @@ SCIP_RETCODE SCIPsetSetSeparatingOff(
    )
 {
    SCIP_CALL( SCIPparamsetSetToSeparatingOff(set->paramset, set->scip, quiet) );
+
+   return SCIP_OKAY;
+}
+
+/** resets separation settings made by other SCIPsetSetSeparatingXxx functions */
+SCIP_RETCODE SCIPsetSetSeparatingDefault(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSeparatingDefault(set->paramset, set->scip) );
 
    return SCIP_OKAY;
 }

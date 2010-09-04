@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.11 2010/09/04 12:48:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.12 2010/09/04 14:38:05 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1068,7 +1068,7 @@ cleanup:
    {
       /* reset feasibility tolerance of subSCIP and reset to normal presolve */
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
-      SCIP_CALL( SCIPsetPresolvingDefault(heurdata->subscip, TRUE) );
+      SCIP_CALL( SCIPsetPresolvingDefault(heurdata->subscip) );
       SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
    }
    
@@ -1330,7 +1330,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    
    assert(scip != NULL);
    assert(heur != NULL);
-   
+
    /* do not setup subSCIP if heuristic is never called by SCIP */
    if( SCIPheurGetFreq(heur) < 0 )
       return SCIP_OKAY;

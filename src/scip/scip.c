@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.639 2010/09/04 12:48:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.640 2010/09/04 14:38:05 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1689,6 +1689,18 @@ SCIP_RETCODE SCIPsetHeuristicsOff(
    return SCIP_OKAY;
 }
 
+/** resets parameters set by other SCIPsetHeuristicsXxx functions to their default values */
+SCIP_RETCODE SCIPsetHeuristicsDefault(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsDefault", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetHeuristicsDefault(scip->set) );
+
+   return SCIP_OKAY;
+}
+
 /** sets presolving parameters to aggressive values */
 SCIP_RETCODE SCIPsetPresolvingAggressive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1730,13 +1742,12 @@ SCIP_RETCODE SCIPsetPresolvingOff(
 
 /** resets parameters set by other SCIPsetPresolvingXxx functions to their default values */
 SCIP_RETCODE SCIPsetPresolvingDefault(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetPresolvingDefault", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetPresolvingDefault(scip->set, quiet) );
+   SCIP_CALL( SCIPsetSetPresolvingDefault(scip->set) );
 
    return SCIP_OKAY;
 }
@@ -1776,6 +1787,18 @@ SCIP_RETCODE SCIPsetSeparatingOff(
    SCIP_CALL( checkStage(scip, "SCIPsetSeparatingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetSetSeparatingOff(scip->set, quiet) );
+
+   return SCIP_OKAY;
+}
+
+/** resets parameters set by other SCIPsetSeparatingXxx functions to their default values */
+SCIP_RETCODE SCIPsetSeparatingDefault(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingDefault", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetSeparatingDefault(scip->set) );
 
    return SCIP_OKAY;
 }

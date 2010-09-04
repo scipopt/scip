@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.37 2010/09/04 12:48:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.38 2010/09/04 14:38:05 bzfviger Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -306,6 +306,13 @@ SCIP_RETCODE SCIPparamsetSetToHeuristicsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
+/** resets parameters changed by other SCIPparamsetSetToHeuristicsXxx functions to their default values */
+extern
+SCIP_RETCODE SCIPparamsetSetToHeuristicsDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** sets presolving to aggressive */
 extern
 SCIP_RETCODE SCIPparamsetSetToPresolvingAggressive(
@@ -334,8 +341,7 @@ SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
 extern
 SCIP_RETCODE SCIPparamsetSetToPresolvingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets separating to aggressive */
@@ -360,6 +366,13 @@ SCIP_RETCODE SCIPparamsetSetToSeparatingOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** reset parameters that may have been changed by other SCIPparamsetSetToSeparatingXxx to their default values */
+extern
+SCIP_RETCODE SCIPparamsetSetToSeparatingDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the array of parameters */

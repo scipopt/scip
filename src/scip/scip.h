@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.411 2010/09/04 12:48:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.412 2010/09/04 14:38:05 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -671,6 +671,12 @@ SCIP_RETCODE SCIPsetHeuristicsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
+/** resets parameters set by other SCIPsetHeuristicsXxx functions to their default values */
+extern
+SCIP_RETCODE SCIPsetHeuristicsDefault(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** sets presolving parameters to aggressive values */
 extern 
 SCIP_RETCODE SCIPsetPresolvingAggressive(
@@ -695,8 +701,7 @@ SCIP_RETCODE SCIPsetPresolvingOff(
 /** resets parameters set by other SCIPsetPresolvingXxx functions to their default values */
 extern
 SCIP_RETCODE SCIPsetPresolvingDefault(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets separating parameters to aggressive values */
@@ -718,6 +723,12 @@ extern
 SCIP_RETCODE SCIPsetSeparatingOff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** resets parameters set by other SCIPsetSeparatingXxx functions to their default values */
+extern
+SCIP_RETCODE SCIPsetSeparatingDefault(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the array of all available SCIP parameters */
