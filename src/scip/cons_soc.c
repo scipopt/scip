@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.42 2010/09/04 18:43:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.43 2010/09/04 19:04:18 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -416,21 +416,21 @@ SCIP_RETCODE createNlRow(
 
       case 'q':
       {
-         /* construct quadratic form gamma + sum_{i=1}^{n} (alpha_i (x_i + beta_i))^2 <= alpha_{n+1} (x_{n+1} + beta_{n+1}) */
+         /* construct quadratic form gamma + sum_{i=1}^{n} (alpha_i (x_i + beta_i))^2 <= (alpha_{n+1} (x_{n+1} + beta_{n+1})^2 */
          SCIP_QUADELEM sqrterm;
          SCIP_Real lincoef;
          SCIP_Real rhs;
 
-         /* create row with gamma, right hand side, and x_i's */
+         /* create initial empty row with left hand side variables */
          lincoef = -consdata->rhscoeff;
-         SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
-            consdata->constant,
-            1, &consdata->rhsvar, &lincoef,
+         SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+            0, NULL, NULL,
             consdata->nvars, consdata->vars, 0, NULL,
             NULL, -SCIPinfinity(scip), 0.0) );
+         SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, consdata->rhsvar) );
 
          /* add sum_{i=1}^{n} (alpha_i x_i)^2 + 2 alpha_i beta_i x_i + beta_i^2 */
-         rhs = consdata->rhscoeff * consdata->rhsoffset;
+         rhs = -consdata->constant;
          for( i = 0; i < consdata->nvars; ++i )
          {
             sqrterm.idx1 = i;
@@ -444,6 +444,19 @@ SCIP_RETCODE createNlRow(
                SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, consdata->vars[i], 2.0 * consdata->coefs[i] * consdata->offsets[i]) );
             }
          }
+
+         /* add -(alpha_{n+1} x_{n+1))^2 - 2 alpha_{n+1} beta_{n+1} x_{n+1} - beta_{n+1}^2 */
+         sqrterm.idx1 = consdata->nvars;
+         sqrterm.idx2 = consdata->nvars;
+         sqrterm.coef = -consdata->rhscoeff * consdata->rhscoeff;
+         SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, sqrterm) );
+
+         if( consdata->rhsoffset != 0.0 )
+         {
+            rhs += consdata->rhsoffset * consdata->rhsoffset;
+            SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, consdata->rhsvar, -2.0 * consdata->rhscoeff * consdata->rhsoffset) );
+         }
+
          SCIP_CALL( SCIPchgNlRowRhs(scip, consdata->nlrow, rhs) );
 
          break;
