@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.367 2010/09/03 21:04:15 bzfviger Exp $
+# $Id: Makefile,v 1.368 2010/09/05 12:21:54 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -305,16 +305,15 @@ ALLSRC		+=	$(LPILIBSRC)
 # NLP Solver Interfaces and expression interpreter 
 #-----------------------------------------------------------------------------
 
-NLPILIBCOBJ	= 	nlpi/nlpi.o \
-			nlpi/nlpioracle.o \
-			nlpi/expression.o \
-			blockmemshell/memory.o \
-			scip/misc.o \
-			scip/intervalarith.o \
-			scip/interrupt.o \
-			scip/message.o
-NLPILIBCXXOBJ	= nlpi/intervalarith.o \
-         nlpi/nlpi_ipopt.o
+NLPILIBCOBJ	= nlpi/nlpi.o \
+		  nlpi/nlpioracle.o \
+		  nlpi/expression.o \
+		  blockmemshell/memory.o \
+		  scip/misc.o \
+		  scip/intervalarith.o \
+		  scip/interrupt.o \
+		  scip/message.o
+NLPILIBCXXOBJ	= nlpi/intervalarith.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ += nlpi/exprinterpret_none.o
@@ -327,6 +326,9 @@ endif
 ifeq ($(IPOPT),true)
 NLPILIBSHORTNAME = $(NLPILIBSHORTNAME).ipopt
 NLPILIBSHORTNAMEIPOPT = .ipopt
+NLPILIBCXXOBJ	+= nlpi/nlpi_ipopt.o
+else
+NLPILIBCOBJ	+= nlpi/nlpi_ipopt.o
 endif
 
 NLPILIBSHORTNAME = nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
@@ -387,7 +389,7 @@ IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
 IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
-FLAGS			+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+FLAGS		+=	-I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
 LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
 ifeq ($(LIBEXT),$(STATICLIBEXT))
 LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
@@ -406,7 +408,7 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
-FLAGS			+=	-I$(LIBDIR) $(CPPAD_FLAGS)
+FLAGS		+=	-I$(LIBDIR) $(CPPAD_FLAGS)
 SOFTLINKS	+=	$(LIBDIR)/cppad
 LPIINSTMSG	+=	" -> \"cppad\" is a directory containing the CppAD header files, i.e., \"cppad/cppad.hpp\" should exist.\n"
 endif
@@ -877,7 +879,6 @@ depend:		lpidepend nlpidepend maindepend
 		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-		@echo `grep -l "WITH_IPOPT" $(ALLSRC)` >$(IPOPTDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)

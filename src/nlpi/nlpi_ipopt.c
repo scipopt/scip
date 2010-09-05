@@ -12,50 +12,61 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.9 2010/09/05 12:21:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.c,v 1.1 2010/09/05 12:21:54 bzfviger Exp $"
 
-/**@file    nlpi_ipopt.h
- * @brief   Ipopt NLP interface
- * @ingroup NLPINTERFACES
+/**@file    nlpi_ipopt.c
+ * @ingroup NLPIS
+ * @brief   dummy Ipopt NLP interface for the case that Ipopt is not available
  * @author  Stefan Vigerske
+ *
+ * This code has been separate from nlpi_ipopt.cpp, so the SCIP build system recognizes it as pure C code,
+ * thus the linker does not need to be changed to C++.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_NLPI_IPOPT_H__
-#define __SCIP_NLPI_IPOPT_H__
+#include "nlpi/nlpi_ipopt.h"
 
-#include "nlpi/type_nlpi.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** create solver interface for Ipopt solver
- * set *nlpi to NULL if Ipopt is not available */
-extern
+/** create solver interface for Ipopt solver */
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
-);
+)
+{
+   assert(nlpi != NULL);
+   
+   *nlpi = NULL;
+   
+   return SCIP_OKAY;
+}
 
 /** gets string that identifies Ipopt (version number) */
-extern
-const char* SCIPgetSolverNameIpopt(void);
+const char* SCIPgetSolverNameIpopt(void)
+{
+   return "";
+}
 
 /** gets string that describes Ipopt (version number) */
-extern
-const char* SCIPgetSolverDescIpopt(void);
+const char* SCIPgetSolverDescIpopt(void)
+{
+   return "";
+}
 
 /** returns whether Ipopt is available, i.e., whether it has been linked in */
-extern
-SCIP_Bool SCIPisIpoptAvailableIpopt(void);
+SCIP_Bool SCIPisIpoptAvailableIpopt(void)
+{
+   return FALSE;
+}
 
 /** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-extern
 void* SCIPgetIpoptApplicationPointerIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   );
+   )
+{
+   SCIPerrorMessage("Ipopt not available!\n");
+   SCIPABORT();
+   return NULL;
+}
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
  * It's here, because Ipopt is linked against Lapack.
@@ -65,10 +76,8 @@ SCIP_RETCODE LapackDsyev(
    int                   N,                  /**< dimension */
    SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
    SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
-   );
-
-#ifdef __cplusplus
+   )
+{
+   SCIPerrorMessage("Ipopt not available, cannot use it's Lapack link!\n");
+   return SCIP_ERROR;
 }
-#endif
-
-#endif /* __SCIP_NLPI_IPOPT_H__ */

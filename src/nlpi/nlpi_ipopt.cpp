@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.20 2010/09/03 21:33:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.21 2010/09/05 12:21:54 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -21,13 +21,15 @@
  *
  * @todo warm starts
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
+ *
+ * This file can only be compiled if Ipopt is available.
+ * Otherwise, to resolve public functions, use nlpi_ipopt.c, which also can be compiled by a C compiler.
+ * The latter is the reason why it has been moved into a separate file.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "nlpi/nlpi_ipopt.h"
-
-#ifdef WITH_IPOPT
 
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
@@ -1713,7 +1715,7 @@ const char* SCIPgetSolverDescIpopt(void)
    return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
 }
 
-/** returns whether Ipopt is available, i.e., whether WITH_IPOPT was defined at build time */
+/** returns whether Ipopt is available, i.e., whether it has been linked in */
 SCIP_Bool SCIPisIpoptAvailableIpopt(void)
 {
    return TRUE;
@@ -2308,62 +2310,3 @@ SCIP_RETCODE LapackDsyev(
 
    return SCIP_OKAY;
 }
-
-#else /* ifdef WITH_IPOPT */
-
-/** create solver interface for Ipopt solver */
-SCIP_RETCODE SCIPcreateNlpSolverIpopt(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
-)
-{
-   assert(nlpi != NULL);
-   
-   *nlpi = NULL;
-   
-   return SCIP_OKAY;
-}
-
-/** gets string that identifies Ipopt (version number) */
-const char* SCIPgetSolverNameIpopt(void)
-{
-   return "";
-}
-
-/** gets string that describes Ipopt (version number) */
-const char* SCIPgetSolverDescIpopt(void)
-{
-   return "";
-}
-
-/** returns whether Ipopt is available, i.e., whether WITH_IPOPT was defined at build time */
-SCIP_Bool SCIPisIpoptAvailableIpopt(void)
-{
-   return FALSE;
-}
-
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-void* SCIPgetIpoptApplicationPointerIpopt(
-   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   )
-{
-   SCIPerrorMessage("Ipopt not available!\n");
-   SCIPABORT();
-   return NULL;
-}
-
-/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- * It's here, because Ipopt is linked against Lapack.
- */
-SCIP_RETCODE LapackDsyev(
-   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
-   int                   N,                  /**< dimension */
-   SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
-   SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
-   )
-{
-   SCIPerrorMessage("Ipopt not available, cannot use it's Lapack link!\n");
-   return SCIP_ERROR;
-}
-
-#endif
