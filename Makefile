@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.368 2010/09/05 12:21:54 bzfviger Exp $
+# $Id: Makefile,v 1.369 2010/09/05 19:41:30 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -328,7 +328,7 @@ NLPILIBSHORTNAME = $(NLPILIBSHORTNAME).ipopt
 NLPILIBSHORTNAMEIPOPT = .ipopt
 NLPILIBCXXOBJ	+= nlpi/nlpi_ipopt.o
 else
-NLPILIBCOBJ	+= nlpi/nlpi_ipopt.o
+NLPILIBCOBJ	+= nlpi/nlpi_ipopt_dummy.o
 endif
 
 NLPILIBSHORTNAME = nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
@@ -385,8 +385,6 @@ LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIM
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a\""
 endif
 
-IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
-IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
@@ -951,7 +949,7 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(IPOPTDEP)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
@@ -964,15 +962,11 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
-ifneq ($(IPOPT),$(LAST_IPOPT))
-		@-touch $(IPOPTSRC)
-endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
-		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
