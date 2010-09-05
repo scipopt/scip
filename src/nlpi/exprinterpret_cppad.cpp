@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.12 2010/08/31 20:19:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.13 2010/09/05 13:08:17 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -491,6 +491,19 @@ SCIP_RETCODE eval(
          for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
             val *= buf[i];
          break;
+
+      case SCIP_EXPR_LINEAR:
+      {
+         SCIP_Real* coefs;
+
+         coefs = SCIPexprGetLinearCoefs(expr);
+         assert(coefs != NULL || SCIPexprGetNChildren(expr) == 0);
+
+         val = SCIPexprGetLinearConstant(expr);
+         for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
+            val += coefs[i] * buf[i];
+         break;
+      }
 
       default:
          return SCIP_ERROR;

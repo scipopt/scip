@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.17 2010/08/03 14:04:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.18 2010/09/05 13:08:17 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -653,10 +653,40 @@ SCIP_DECL_INTEVAL( SCIPexprevalProductInt )
    return SCIP_OKAY;
 }
 
-#define SCIPexprevalLinear         NULL
-#define SCIPexprevalLinearInt      NULL
-#define SCIPexprevalSignomial      NULL
-#define SCIPexprevalSignomialInt   NULL
+static
+SCIP_DECL_EVAL( SCIPexprevalLinear )
+{
+   SCIP_Real* coef;
+   int i;
+
+   assert(result  != NULL);
+   assert(argvals != NULL || nargs == 0);
+   assert(opdata.data != NULL);
+
+   coef = &((SCIP_Real*)opdata.data)[nargs];
+
+   *result = *coef;
+   for( i = nargs-1, --coef; i >= 0; --i, --coef )
+      *result += *coef * argvals[i];
+
+   assert(++coef == (SCIP_Real*)opdata.data);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
+{
+   assert(result  != NULL);
+   assert(argvals != NULL || nargs == 0);
+   assert(opdata.data != NULL);
+
+   SCIPintervalScalarProductRealsIntervals(infinity, result, nargs, argvals, (SCIP_Real*)opdata.data);
+   SCIPintervalAddScalar(infinity, result, *result, ((SCIP_Real*)opdata.data)[nargs]);
+
+   return SCIP_OKAY;
+}
+
 #define SCIPexprevalQuadratic      NULL
 #define SCIPexprevalQuadraticInt   NULL
 #define SCIPexprevalPolynom        NULL
@@ -698,7 +728,6 @@ struct SCIPexprOpTableElement SCIPexprOpTable[] =
    { "sum",              -2, SCIPexprevalSum,           SCIPexprevalSumInt           },
    { "prod",             -2, SCIPexprevalProduct,       SCIPexprevalProductInt       },
    { "linear",           -2, SCIPexprevalLinear,        SCIPexprevalLinearInt        },
-   { "signomial",        -2, SCIPexprevalSignomial,     SCIPexprevalSignomialInt     },
    { "quadratic",        -2, SCIPexprevalQuadratic,     SCIPexprevalQuadraticInt     },
    { "polynom",          -2, SCIPexprevalPolynom,       SCIPexprevalPolynomInt       }
 };
@@ -742,6 +771,7 @@ SCIP_RETCODE SCIPexprCreate(
    {
       case SCIP_EXPR_VARIDX:
       case SCIP_EXPR_PARAM:
+      {
          va_start( ap, op );
          opdata.intval = va_arg( ap, int );
          va_end( ap );
@@ -750,14 +780,17 @@ SCIP_RETCODE SCIPexprCreate(
          
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata ) );
          break;
+      }
          
       case SCIP_EXPR_CONST:
+      {
          va_start(ap, op );
          opdata.dbl = va_arg( ap, SCIP_Real );
          va_end( ap );
          
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata ) );
          break;
+      }
 
       /* operands with two children */
       case SCIP_EXPR_PLUS     :
@@ -768,6 +801,7 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_MIN      :
       case SCIP_EXPR_MAX      :
       case SCIP_EXPR_SIGNPOWER:
+      {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 2) );
          
          va_start(ap, op );
@@ -780,6 +814,7 @@ SCIP_RETCODE SCIPexprCreate(
          
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 2, children, opdata ) );
          break;
+      }
 
       /* operands with one child */
       case SCIP_EXPR_SQUARE:
@@ -791,6 +826,7 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_TAN   :
       case SCIP_EXPR_ABS   :
       case SCIP_EXPR_SIGN  :
+      {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
          
          va_start(ap, op );
@@ -801,8 +837,10 @@ SCIP_RETCODE SCIPexprCreate(
          
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 1, children, opdata ) );
          break;
+      }
          
       case SCIP_EXPR_INTPOWER:
+      {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
 
          va_start(ap, op );
@@ -813,16 +851,91 @@ SCIP_RETCODE SCIPexprCreate(
 
          SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 1, children, opdata ) );
          break;
+      }
 
       /* complex operands */
       case SCIP_EXPR_SUM      :
       case SCIP_EXPR_PRODUCT  :
+      {
+         int nchildren;
+         SCIP_EXPR** childrenarg;
+
+         opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
+
+         va_start(ap, op );
+         /* first argument should be number of children */
+         nchildren = va_arg( ap, int );
+         assert(nchildren >= 0);
+
+         /* for a sum or product of 0 terms we can finish here */
+         if( nchildren == 0 )
+         {
+            SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata) );
+            va_end( ap );
+            break;
+         }
+
+         /* next argument should be array of children expressions */
+         childrenarg = va_arg( ap, SCIP_EXPR** );
+         assert(childrenarg != NULL);
+         va_end( ap );
+
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &children, childrenarg, nchildren) );
+
+         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, nchildren, children, opdata) );
+         break;
+      }
+
       case SCIP_EXPR_LINEAR   :
-      case SCIP_EXPR_SIGNOMIAL:
-      case SCIP_EXPR_QUADRATIC:
+      {
+         int nchildren;
+         SCIP_EXPR** childrenarg;
+         SCIP_Real* coefsarg;
+         SCIP_Real  constant;
+         SCIP_Real* linearopdata;
+
+         va_start(ap, op );
+         /* first argument should be number of children */
+         nchildren = va_arg( ap, int );
+         assert(nchildren >= 0);
+
+         /* next argument should be array of children expressions */
+         childrenarg = va_arg( ap, SCIP_EXPR** );
+         assert(childrenarg != NULL || nchildren == 0);
+
+         /* next argument should be array of coefficients */
+         coefsarg = va_arg( ap, SCIP_Real* );
+         assert(coefsarg != NULL || nchildren == 0);
+
+         /* final argument should be a constant term */
+         constant = va_arg( ap, SCIP_Real );
+         va_end( ap );
+
+         if( nchildren > 0 )
+         {
+            SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &children, childrenarg, nchildren) );
+         }
+         else
+            children = NULL;
+
+         /* we store the coefficients and the constant in a single array and make this our operand data */
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &linearopdata, nchildren + 1) );
+         BMScopyMemoryArray(linearopdata, coefsarg, nchildren);
+         linearopdata[nchildren] = constant;
+
+         opdata.data = (void*)linearopdata;
+
+         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, nchildren, children, opdata) );
+         break;
+      }
+
+      /* case SCIP_EXPR_QUADRATIC: */
+
       case SCIP_EXPR_POLYNOM  :
-         return SCIP_ERROR;
-         /* @TODO implement */
+      {
+         /* @TODO */
+
+      }
          
       default:
          SCIPerrorMessage("unknown operand: %d\n", op);
@@ -890,6 +1003,22 @@ SCIP_RETCODE SCIPexprCopyDeep(
       assert((*targetexpr)->children == NULL); /* otherwise, sourceexpr->children was not NULL, which is wrong */
    }
 
+   /* copy data for more complex operands
+    * for simple operands BMSduplicate above should have done the job */
+   switch( sourceexpr->op )
+   {
+      case SCIP_EXPR_LINEAR:
+      {
+         /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
+         assert(sourceexpr->data.data != NULL);
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, (SCIP_Real**)&(*targetexpr)->data.data, (SCIP_Real*)sourceexpr->data.data, sourceexpr->nchildren + 1) );
+         break;
+      }
+
+      default: ;
+   }
+
+
    return SCIP_OKAY;
 }
 
@@ -903,6 +1032,21 @@ void SCIPexprFreeDeep(
    assert(expr   != NULL);
    assert(*expr  != NULL);
    
+   /* free data of more complex operands */
+   switch( (*expr)->op )
+   {
+      case SCIP_EXPR_LINEAR:
+      {
+         /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
+         assert((*expr)->data.data != NULL);
+         BMSfreeBlockMemoryArray(blkmem, (SCIP_Real**)&(*expr)->data.data, (*expr)->nchildren + 1);
+         break;
+      }
+
+      default: ;
+   }
+
+
    if( (*expr)->nchildren )
    {
       int i;
@@ -997,6 +1141,32 @@ int SCIPexprGetIntPowerExponent(
    assert(expr->op == SCIP_EXPR_INTPOWER);
 
    return expr->data.intval;
+}
+
+/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR operand */
+SCIP_Real* SCIPexprGetLinearCoefs(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_LINEAR);
+   assert(expr->data.data != NULL);
+
+   /* the coefficients are stored in the first nchildren elements of the array stored as expression data */
+   return (SCIP_Real*)expr->data.data;
+}
+
+/** gives constant belonging to a SCIP_EXPR_LINEAR operand */
+SCIP_Real SCIPexprGetLinearConstant(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_LINEAR);
+   assert(expr->data.data != NULL);
+
+   /* the constant is stored in the nchildren's element of the array stored as expression data */
+   return ((SCIP_Real*)expr->data.data)[expr->nchildren];
 }
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
@@ -1198,7 +1368,43 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          break;
       }
 
+      case SCIP_EXPR_SUM:
+      case SCIP_EXPR_LINEAR:
+      {
+         int i;
+
+         *maxdegree = 0;
+         for( i = 0; i < expr->nchildren && *maxdegree < 65535; ++i )
+         {
+            SCIP_CALL( SCIPexprGetMaxDegree(expr->children[i], &child1) );
+            if( child1 > *maxdegree )
+               *maxdegree = child1;
+         }
+
+         break;
+      }
+
+      case SCIP_EXPR_PRODUCT:
+      {
+         int i;
+
+         *maxdegree = 0;
+         for( i = 0; i < expr->nchildren; ++i )
+         {
+            SCIP_CALL( SCIPexprGetMaxDegree(expr->children[i], &child1) );
+            if( child1 >= 65535 )
+            {
+               *maxdegree = 65535;
+               break;
+            }
+            *maxdegree += child1;
+         }
+
+         break;
+      }
+
       default:
+         SCIPerrorMessage("unknown operand: %d\n", expr->op);
          return SCIP_ERROR;
    }
 
@@ -1449,13 +1655,6 @@ void SCIPexprPrint(
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
       case SCIP_EXPR_SIGNPOWER:
-         /* @todo implement printing for the following six */
-      case SCIP_EXPR_SUM:
-      case SCIP_EXPR_PRODUCT:
-      case SCIP_EXPR_LINEAR:
-      case SCIP_EXPR_SIGNOMIAL:
-      case SCIP_EXPR_QUADRATIC:
-      case SCIP_EXPR_POLYNOM:
       {
          int i;
          
@@ -1473,6 +1672,71 @@ void SCIPexprPrint(
          SCIPmessageFPrintInfo(file, ")");
          break;
       }
+
+      case SCIP_EXPR_SUM:
+      case SCIP_EXPR_PRODUCT:
+      {
+         switch( expr->nchildren )
+         {
+            case 0:
+               SCIPmessageFPrintInfo(file, expr->op == SCIP_EXPR_SUM ? "0" : "1");
+               break;
+            case 1:
+               SCIPexprPrint(expr->children[0], file, varnames, paramnames);
+               break;
+            default:
+            {
+               int i;
+               const char* opstr = expr->op == SCIP_EXPR_SUM ? " + " : " * ";
+
+               SCIPmessageFPrintInfo(file, "(");
+               for( i = 0; i < expr->nchildren; ++i )
+               {
+                  if( i > 0 )
+                  {
+                     SCIPmessageFPrintInfo(file, opstr);
+                  }
+                  SCIPexprPrint(expr->children[i], file, varnames, paramnames);
+               }
+               SCIPmessageFPrintInfo(file, ")");
+            }
+         }
+         break;
+      }
+
+      case SCIP_EXPR_LINEAR:
+      {
+         SCIP_Real constant;
+         int i;
+
+         constant = ((SCIP_Real*)expr->data.data)[expr->nchildren];
+
+         if( expr->nchildren == 0 )
+         {
+            SCIPmessageFPrintInfo(file, "%.20g", constant);
+            break;
+         }
+
+         SCIPmessageFPrintInfo(file, "(");
+
+         if( constant != 0.0 )
+         {
+            SCIPmessageFPrintInfo(file, "%.20g", constant);
+         }
+
+         for( i = 0; i < expr->nchildren; ++i )
+         {
+            SCIPmessageFPrintInfo(file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
+            SCIPexprPrint(expr->children[i], file, varnames, paramnames);
+         }
+
+         SCIPmessageFPrintInfo(file, ")");
+         break;
+      }
+
+      /* case SCIP_EXPR_QUADRATIC: */
+      case SCIP_EXPR_POLYNOM:
+         /* @todo */
 
       case  SCIP_EXPR_LAST:
       {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.11 2010/06/07 16:43:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.12 2010/09/05 13:08:17 bzfviger Exp $"
 
 /**@file   nlpi/expression.h
  * @brief  methods for expressions and expression trees
@@ -133,6 +133,18 @@ void* SCIPexprGetOpData(
 /** gives exponent belonging to a SCIP_EXPR_INTPOWER operand */
 extern
 int SCIPexprGetIntPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR operand */
+extern
+SCIP_Real* SCIPexprGetLinearCoefs(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** gives constant belonging to a SCIP_EXPR_LINEAR operand */
+extern
+SCIP_Real SCIPexprGetLinearConstant(
    SCIP_EXPR*            expr                /**< expression */
 );
 

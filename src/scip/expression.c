@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.7 2010/08/30 16:50:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.8 2010/09/05 13:08:17 bzfviger Exp $"
 
 /**@file   scip/expression.c
  * @brief  more methods for expressions and expression trees
@@ -386,6 +386,8 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
             ++summandssize;
          SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &summands, summandssize) );
          nsummands = 0;
+
+         /* @todo use SCIP_EXPR_LINEAR instead of SCIP_EXPR_SUM */
 
          /* linear part
           * turn each variable in SCIPvarGetMultaggrVars(var) into an active or multiaggregated one and add corresponding term to summands */
