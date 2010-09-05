@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expression.h,v 1.7 2010/09/05 19:17:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expression.h,v 1.8 2010/09/05 19:40:14 bzfviger Exp $"
 
 /**@file   type_expression.h
  * @brief  type definitions for expressions and expression trees
@@ -55,7 +55,7 @@ enum SCIP_ExprOp {
    SCIP_EXPR_COS       = 18,  /**< cosinus (1 operand) */
    SCIP_EXPR_TAN       = 19,  /**< tangent (1 operand) */
    SCIP_EXPR_ERF       = 20,  /**< gaussian error function (1 operand) */
-   SCIP_EXPR_ERFI      = 21,  /**< imaginary part of gaussian error function (1 operand) */
+   /* SCIP_EXPR_ERFI      = 21, */  /**< imaginary part of gaussian error function (1 operand) */
    SCIP_EXPR_MIN       = 22,  /**< minimum (2 operands) */
    SCIP_EXPR_MAX       = 23,  /**< maximum (2 operands) */
    SCIP_EXPR_ABS       = 24,  /**< absolute value (1 operand) */
@@ -70,8 +70,6 @@ enum SCIP_ExprOp {
    SCIP_EXPR_SUM       = 64,  /**< summation sum_{i=1}^n op_i (n operands) */
    SCIP_EXPR_PRODUCT   = 65,  /**< product prod_{i=1}^n op_i (n operands) */
    SCIP_EXPR_LINEAR    = 66,  /**< linear term sum_{i=1}^n a_i op_i (n operands) */
-
-    /* @TODO these expressions are not implemented yet! */
    /* SCIP_EXPR_QUADRATIC = 67, */  /**< quadratic term sum_{i,j=1}^n a_{i,j} op_i op_j (n operands) */
    SCIP_EXPR_POLYNOM   = 68,  /**< polynomial term sum_{I} a_{I}ops^I (I a multiindex, n operands) */
    /**@} */

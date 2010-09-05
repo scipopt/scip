@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.19 2010/09/05 19:17:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.20 2010/09/05 19:40:14 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -410,6 +410,7 @@ SCIP_DECL_EVAL( SCIPexprevalErf )
 /* @todo implement SCIPintervalErf */
 #define SCIPexprevalErfInt NULL
 
+#if 0
 static
 SCIP_DECL_EVAL( SCIPexprevalErfi )
 {
@@ -424,6 +425,7 @@ SCIP_DECL_EVAL( SCIPexprevalErfi )
 
 /* @todo implement SCIPintervalErfi */
 #define SCIPexprevalErfiInt NULL
+#endif
 
 static
 SCIP_DECL_EVAL( SCIPexprevalMin )
@@ -889,7 +891,7 @@ struct SCIPexprOpTableElement SCIPexprOpTable[] =
    { "cos",               1, SCIPexprevalCos,           SCIPexprevalCosInt           },
    { "tan",               1, SCIPexprevalTan,           SCIPexprevalTanInt           },
    { "erf",               1, SCIPexprevalErf,           SCIPexprevalErfInt           },
-   { "erfi",              1, SCIPexprevalErfi,          SCIPexprevalErfiInt          },
+   {NULL,-1,NULL,NULL}, /* { "erfi",              1, SCIPexprevalErfi,          SCIPexprevalErfiInt          }, */
    { "min",               2, SCIPexprevalMin,           SCIPexprevalMinInt           },
    { "max",               2, SCIPexprevalMax,           SCIPexprevalMaxInt           },
    { "abs",               1, SCIPexprevalAbs,           SCIPexprevalAbsInt           },
@@ -1791,7 +1793,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
       case SCIP_EXPR_COS:
       case SCIP_EXPR_TAN:
       case SCIP_EXPR_ERF:
-      case SCIP_EXPR_ERFI:
+      /* case SCIP_EXPR_ERFI: */
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
       {
@@ -2166,7 +2168,7 @@ void SCIPexprPrint(
       case SCIP_EXPR_COS:
       case SCIP_EXPR_TAN:
       case SCIP_EXPR_ERF:
-      case SCIP_EXPR_ERFI:
+      /* case SCIP_EXPR_ERFI: */
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
       case SCIP_EXPR_ABS:

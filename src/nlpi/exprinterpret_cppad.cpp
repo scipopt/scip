@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.14 2010/09/05 19:17:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.15 2010/09/05 19:40:14 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -475,10 +475,10 @@ SCIP_RETCODE eval(
       case SCIP_EXPR_ERF:
          val = erf(buf[0]);
          break;
-
+#if 0
       case SCIP_EXPR_ERFI:
          return SCIP_ERROR;
-
+#endif
       case SCIP_EXPR_MIN:
          evalMin(val, buf[0], buf[1]);
          break;
