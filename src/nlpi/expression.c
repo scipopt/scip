@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.18 2010/09/05 13:08:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.19 2010/09/05 19:17:24 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -689,8 +689,184 @@ SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
 
 #define SCIPexprevalQuadratic      NULL
 #define SCIPexprevalQuadraticInt   NULL
-#define SCIPexprevalPolynom        NULL
-#define SCIPexprevalPolynomInt     NULL
+
+static
+SCIP_DECL_EVAL( SCIPexprevalPolynom )
+{
+   SCIP_EXPRDATA_POLYNOM* polynomdata;
+   SCIP_EXPRDATA_MONOM*   monomdata;
+   SCIP_Real childval;
+   SCIP_Real exponent;
+   SCIP_Real monomval;
+   int i;
+   int j;
+
+   assert(result != NULL);
+   assert(argvals != NULL || nargs == 0);
+   assert(opdata.data != NULL);
+
+   polynomdata = (SCIP_EXPRDATA_POLYNOM*)opdata.data;
+   assert(polynomdata != NULL);
+
+   *result = polynomdata->constant;
+
+   for( i = 0; i < polynomdata->nmonoms; ++i )
+   {
+      monomdata = polynomdata->monoms[i];
+      assert(monomdata != NULL);
+
+      monomval = monomdata->coef;
+      for( j = 0; j < monomdata->nfactors; ++j )
+      {
+         assert(monomdata->childidxs[j] >= 0);
+         assert(monomdata->childidxs[j] < nargs);
+
+         childval = argvals[monomdata->childidxs[j]];
+         if( childval == 1.0 )  /* 1^anything == 1 */
+            continue;
+
+         exponent = monomdata->exponents[j];
+
+         if( childval == 0.0 )
+         {
+            if( exponent > 0.0 )
+            {
+               /* 0^positive == 0 */
+               monomval = 0.0;
+               break;
+            }
+            else if( exponent < 0.0 )
+            {
+               /* 0^negative = nan */
+               *result = 1.0/0.0;
+               return SCIP_OKAY;
+            }
+            /* 0^0 == 1 */
+            continue;
+         }
+
+         /* cover some special exponents separately to avoid calling expensive pow function */
+         if( exponent == 0.0 )
+            continue;
+         if( exponent == 1.0 )
+         {
+            monomval *= childval;
+            continue;
+         }
+         if( exponent == 2.0 )
+         {
+            monomval *= childval * childval;
+            continue;
+         }
+         if( exponent == 0.5 )
+         {
+            monomval *= sqrt(childval);
+            continue;
+         }
+         if( exponent == -1.0 )
+         {
+            monomval /= childval;
+            continue;
+         }
+         if( exponent == -2.0 )
+         {
+            monomval /= childval * childval;
+            continue;
+         }
+         monomval *= pow(childval, exponent);
+      }
+
+      *result += monomval;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_INTEVAL( SCIPexprevalPolynomInt )
+{
+   SCIP_EXPRDATA_POLYNOM* polynomdata;
+   SCIP_EXPRDATA_MONOM*   monomdata;
+   SCIP_INTERVAL childval;
+   SCIP_INTERVAL monomval;
+   SCIP_Real exponent;
+   int i;
+   int j;
+
+   assert(result != NULL);
+   assert(argvals != NULL || nargs == 0);
+   assert(opdata.data != NULL);
+
+   polynomdata = (SCIP_EXPRDATA_POLYNOM*)opdata.data;
+   assert(polynomdata != NULL);
+
+   SCIPintervalSet(result, polynomdata->constant);
+
+   for( i = 0; i < polynomdata->nmonoms; ++i )
+   {
+      monomdata = polynomdata->monoms[i];
+      assert(monomdata != NULL);
+
+      SCIPintervalSet(&monomval, monomdata->coef);
+      for( j = 0; j < monomdata->nfactors && !SCIPintervalIsEntire(infinity, monomval); ++j )
+      {
+         assert(monomdata->childidxs[j] >= 0);
+         assert(monomdata->childidxs[j] < nargs);
+
+         childval = argvals[monomdata->childidxs[j]];
+
+         exponent = monomdata->exponents[j];
+
+         /* cover some special exponents separately to avoid calling expensive pow function */
+         if( exponent == 0.0 )
+            continue;
+
+         if( exponent == 1.0 )
+         {
+            SCIPintervalMul(infinity, &monomval, monomval, childval);
+            continue;
+         }
+
+         if( exponent == 2.0 )
+         {
+            SCIPintervalSquare(infinity, &childval, childval);
+            SCIPintervalMul(infinity, &monomval, monomval, childval);
+            continue;
+         }
+
+         if( exponent == 0.5 )
+         {
+            SCIPintervalSquareRoot(infinity, &childval, childval);
+            SCIPintervalMul(infinity, &monomval, monomval, childval);
+            continue;
+         }
+         else if( exponent == -1.0 )
+         {
+            SCIPintervalDiv(infinity, &monomval, monomval, childval);
+         }
+         else if( exponent == -2.0 )
+         {
+            SCIPintervalSquare(infinity, &childval, childval);
+            SCIPintervalDiv(infinity, &monomval, monomval, childval);
+         }
+         else
+         {
+            SCIPintervalPowerScalar(infinity, &childval, childval, exponent);
+            SCIPintervalMul(infinity, &monomval, monomval, childval);
+         }
+
+         if( SCIPintervalIsEmpty(monomval) )
+         {
+            SCIPintervalSetEmpty(result);
+            return SCIP_OKAY;
+         }
+      }
+
+      SCIPintervalAdd(infinity, result, *result, monomval);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** table containing for each operand the name, the number of children, and some evaluation functions */
 struct SCIPexprOpTableElement SCIPexprOpTable[] =
@@ -752,7 +928,35 @@ int SCIPexpropGetNChildren(
    return SCIPexprOpTable[op].nargs;
 }
 
-/** creates an expression */
+/** creates an expression
+ * Note, that the expression is allocated but for the children only the pointer is copied.
+ */
+static
+SCIP_RETCODE exprCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   SCIP_EXPROP           op,                 /**< operand of expression */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children */
+   SCIP_EXPROPDATA       opdata              /**< operand data */
+)
+{
+   assert(blkmem != NULL);
+   assert(expr   != NULL);
+   assert(children != NULL || nchildren == 0);
+   assert(children == NULL || nchildren >  0);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, expr) );
+
+   (*expr)->op        = op;
+   (*expr)->nchildren = nchildren;
+   (*expr)->children  = children;
+   (*expr)->data      = opdata;
+
+   return SCIP_OKAY;
+}
+
+/** creates a simple expression */
 SCIP_RETCODE SCIPexprCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
@@ -778,7 +982,7 @@ SCIP_RETCODE SCIPexprCreate(
          
          assert( opdata.intval >= 0 );
          
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata ) );
+         SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata ) );
          break;
       }
          
@@ -788,7 +992,7 @@ SCIP_RETCODE SCIPexprCreate(
          opdata.dbl = va_arg( ap, SCIP_Real );
          va_end( ap );
          
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata ) );
+         SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata ) );
          break;
       }
 
@@ -812,7 +1016,7 @@ SCIP_RETCODE SCIPexprCreate(
          va_end( ap );
          opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
          
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 2, children, opdata ) );
+         SCIP_CALL( exprCreate( blkmem, expr, op, 2, children, opdata ) );
          break;
       }
 
@@ -835,7 +1039,7 @@ SCIP_RETCODE SCIPexprCreate(
          va_end( ap );
          opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
          
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 1, children, opdata ) );
+         SCIP_CALL( exprCreate( blkmem, expr, op, 1, children, opdata ) );
          break;
       }
          
@@ -849,13 +1053,13 @@ SCIP_RETCODE SCIPexprCreate(
          opdata.intval = va_arg( ap, int);
          va_end( ap );
 
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 1, children, opdata ) );
+         SCIP_CALL( exprCreate( blkmem, expr, op, 1, children, opdata ) );
          break;
       }
 
       /* complex operands */
-      case SCIP_EXPR_SUM      :
-      case SCIP_EXPR_PRODUCT  :
+      case SCIP_EXPR_SUM    :
+      case SCIP_EXPR_PRODUCT:
       {
          int nchildren;
          SCIP_EXPR** childrenarg;
@@ -870,7 +1074,7 @@ SCIP_RETCODE SCIPexprCreate(
          /* for a sum or product of 0 terms we can finish here */
          if( nchildren == 0 )
          {
-            SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, 0, NULL, opdata) );
+            SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata) );
             va_end( ap );
             break;
          }
@@ -882,94 +1086,113 @@ SCIP_RETCODE SCIPexprCreate(
 
          SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &children, childrenarg, nchildren) );
 
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, nchildren, children, opdata) );
+         SCIP_CALL( exprCreate( blkmem, expr, op, nchildren, children, opdata) );
          break;
       }
 
-      case SCIP_EXPR_LINEAR   :
-      {
-         int nchildren;
-         SCIP_EXPR** childrenarg;
-         SCIP_Real* coefsarg;
-         SCIP_Real  constant;
-         SCIP_Real* linearopdata;
-
-         va_start(ap, op );
-         /* first argument should be number of children */
-         nchildren = va_arg( ap, int );
-         assert(nchildren >= 0);
-
-         /* next argument should be array of children expressions */
-         childrenarg = va_arg( ap, SCIP_EXPR** );
-         assert(childrenarg != NULL || nchildren == 0);
-
-         /* next argument should be array of coefficients */
-         coefsarg = va_arg( ap, SCIP_Real* );
-         assert(coefsarg != NULL || nchildren == 0);
-
-         /* final argument should be a constant term */
-         constant = va_arg( ap, SCIP_Real );
-         va_end( ap );
-
-         if( nchildren > 0 )
-         {
-            SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &children, childrenarg, nchildren) );
-         }
-         else
-            children = NULL;
-
-         /* we store the coefficients and the constant in a single array and make this our operand data */
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &linearopdata, nchildren + 1) );
-         BMScopyMemoryArray(linearopdata, coefsarg, nchildren);
-         linearopdata[nchildren] = constant;
-
-         opdata.data = (void*)linearopdata;
-
-         SCIP_CALL( SCIPexprCreateDirect( blkmem, expr, op, nchildren, children, opdata) );
-         break;
-      }
-
+      case SCIP_EXPR_LINEAR :
       /* case SCIP_EXPR_QUADRATIC: */
-
-      case SCIP_EXPR_POLYNOM  :
+      case SCIP_EXPR_POLYNOM:
       {
-         /* @TODO */
-
+         SCIPerrorMessage("cannot create complex expression linear, quadratic, or polynom with SCIPexprCreate\n");
+         return SCIP_INVALIDDATA;
       }
-         
+
       default:
          SCIPerrorMessage("unknown operand: %d\n", op);
-         return SCIP_ERROR;
+         return SCIP_INVALIDDATA;
    }
    
    return SCIP_OKAY;
 }
 
-/** creates an expression
- * Note, that the expression is allocated but for the children only the pointer is copied.
- */
-SCIP_RETCODE SCIPexprCreateDirect(
+/** creates SCIP_EXPRDATA_POLYNOM data structure from given monoms */
+static
+SCIP_RETCODE polynomdataCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
-   SCIP_EXPROP           op,                 /**< operand of expression */
-   int                   nchildren,          /**< number of children */
-   SCIP_EXPR**           children,           /**< children */
-   SCIP_EXPROPDATA       opdata              /**< operand data */
-)
+   SCIP_EXPRDATA_POLYNOM** polynomdata,       /**< buffer to store pointer to polynom data */
+   int                   nmonoms,            /**< number of monoms */
+   SCIP_EXPRDATA_MONOM** monoms,             /**< monoms */
+   SCIP_Real             constant            /**< constant part */
+   )
 {
    assert(blkmem != NULL);
-   assert(expr   != NULL);
-   assert(children != NULL || nchildren == 0);
-   assert(children == NULL || nchildren >  0);
-   
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, expr) );
-   
-   (*expr)->op        = op;
-   (*expr)->nchildren = nchildren;
-   (*expr)->children  = children;
-   (*expr)->data      = opdata;
-   
+   assert(polynomdata != NULL);
+   assert(monoms != NULL || nmonoms == 0);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, polynomdata) );
+
+   (*polynomdata)->constant = constant;
+   (*polynomdata)->nmonoms  = nmonoms;
+   (*polynomdata)->monoms   = NULL;
+
+   if( nmonoms > 0 )
+   {
+      int i;
+
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomdata)->monoms, nmonoms) );
+
+      for( i = 0; i < nmonoms; ++i )
+      {
+         assert(monoms[i] != NULL);
+         SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &(*polynomdata)->monoms[i],
+            monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );
+      }
+   }
+
    return SCIP_OKAY;
+}
+
+/** frees a SCIP_EXPRDATA_MONOM data structure */
+static
+void monomdataFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_MONOM** monomdata           /**< pointer to monom data to free */
+   )
+{
+   assert(blkmem != NULL);
+
+   if( (*monomdata)->nfactors > 0 )
+   {
+      assert((*monomdata)->childidxs != NULL);
+      assert((*monomdata)->exponents != NULL);
+
+      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->childidxs, (*monomdata)->nfactors);
+      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->exponents, (*monomdata)->nfactors);
+   }
+   assert((*monomdata)->childidxs == NULL);
+   assert((*monomdata)->exponents == NULL);
+
+   BMSfreeBlockMemory(blkmem, monomdata);
+}
+
+/** frees a SCIP_EXPRDATA_POLYNOM data structure */
+static
+void polynomdataFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_POLYNOM** polynomdata       /**< pointer to polynom data to free */
+   )
+{
+   assert(blkmem != NULL);
+   assert(polynomdata != NULL);
+   assert(*polynomdata != NULL);
+
+   if( (*polynomdata)->nmonoms > 0 )
+   {
+      int i;
+
+      for( i = 0; i < (*polynomdata)->nmonoms; ++i )
+      {
+         assert((*polynomdata)->monoms[i] != NULL);
+         monomdataFree(blkmem, &(*polynomdata)->monoms[i]);
+         assert((*polynomdata)->monoms[i] == NULL);
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &(*polynomdata)->monoms, (*polynomdata)->nmonoms);
+   }
+   assert((*polynomdata)->monoms == NULL);
+
+   BMSfreeBlockMemory(blkmem, polynomdata);
 }
 
 /** copies an expression including its children */
@@ -1015,9 +1238,20 @@ SCIP_RETCODE SCIPexprCopyDeep(
          break;
       }
 
+      case SCIP_EXPR_POLYNOM:
+      {
+         SCIP_EXPRDATA_POLYNOM* sourcedata;
+
+         sourcedata = (SCIP_EXPRDATA_POLYNOM*)sourceexpr->data.data;
+         assert(sourcedata != NULL);
+
+         SCIP_CALL( polynomdataCreate(blkmem, (SCIP_EXPRDATA_POLYNOM**)&(*targetexpr)->data.data,
+            sourcedata->nmonoms, sourcedata->monoms, sourcedata->constant) );
+         break;
+      }
+
       default: ;
    }
-
 
    return SCIP_OKAY;
 }
@@ -1043,9 +1277,15 @@ void SCIPexprFreeDeep(
          break;
       }
 
+      case SCIP_EXPR_POLYNOM:
+      {
+         assert((*expr)->data.data != NULL);
+         polynomdataFree(blkmem, (SCIP_EXPRDATA_POLYNOM**)&(*expr)->data.data);
+         break;
+      }
+
       default: ;
    }
-
 
    if( (*expr)->nchildren )
    {
@@ -1132,7 +1372,7 @@ void* SCIPexprGetOpData(
    return expr->data.data;
 }
 
-/** gives exponent belonging to a SCIP_EXPR_INTPOWER operand */
+/** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
 int SCIPexprGetIntPowerExponent(
    SCIP_EXPR*            expr                /**< expression */
 )
@@ -1143,7 +1383,44 @@ int SCIPexprGetIntPowerExponent(
    return expr->data.intval;
 }
 
-/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR operand */
+/** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
+SCIP_RETCODE SCIPexprCreateLinear(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   SCIP_Real*            coefs,              /**< coefficients of children */
+   SCIP_Real             constant            /**< constant part */
+)
+{
+   SCIP_EXPROPDATA opdata;
+   SCIP_EXPR**     childrencopy;
+   SCIP_Real*      data;
+
+   assert(nchildren >= 0);
+   assert(children != NULL || nchildren == 0);
+   assert(coefs    != NULL || nchildren == 0);
+
+   if( nchildren > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &childrencopy, children, nchildren) );
+   }
+   else
+      childrencopy = NULL;
+
+   /* we store the coefficients and the constant in a single array and make this our operand data */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &data, nchildren + 1) );
+   BMScopyMemoryArray(data, coefs, nchildren);
+   data[nchildren] = constant;
+
+   opdata.data = (void*)data;
+
+   SCIP_CALL( exprCreate( blkmem, expr, SCIP_EXPR_LINEAR, nchildren, childrencopy, opdata) );
+
+   return SCIP_OKAY;
+}
+
+/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR expression */
 SCIP_Real* SCIPexprGetLinearCoefs(
    SCIP_EXPR*            expr                /**< expression */
 )
@@ -1156,7 +1433,7 @@ SCIP_Real* SCIPexprGetLinearCoefs(
    return (SCIP_Real*)expr->data.data;
 }
 
-/** gives constant belonging to a SCIP_EXPR_LINEAR operand */
+/** gives constant belonging to a SCIP_EXPR_LINEAR expression */
 SCIP_Real SCIPexprGetLinearConstant(
    SCIP_EXPR*            expr                /**< expression */
 )
@@ -1167,6 +1444,206 @@ SCIP_Real SCIPexprGetLinearConstant(
 
    /* the constant is stored in the nchildren's element of the array stored as expression data */
    return ((SCIP_Real*)expr->data.data)[expr->nchildren];
+}
+
+/** creates a SCIP_EXPR_POLYNOM expression from an array of monoms: constant + sum_i monom_i */
+SCIP_RETCODE SCIPexprCreatePolynom(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   int                   nmonoms,            /**< number of monoms */
+   SCIP_EXPRDATA_MONOM** monoms,             /**< monoms */
+   SCIP_Real             constant            /**< constant part */
+)
+{
+   SCIP_EXPROPDATA opdata;
+   SCIP_EXPR**     childrencopy;
+   SCIP_EXPRDATA_POLYNOM* data;
+
+   assert(nchildren >= 0);
+   assert(children != NULL || nchildren == 0);
+   assert(monoms   != NULL || nmonoms   == 0);
+
+   if( nchildren > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &childrencopy, children, nchildren) );
+   }
+   else
+      childrencopy = NULL;
+
+   SCIP_CALL( polynomdataCreate(blkmem, &data, nmonoms, monoms, constant) );
+   opdata.data = (void*)data;
+
+   SCIP_CALL( exprCreate( blkmem, expr, SCIP_EXPR_POLYNOM, nchildren, childrencopy, opdata) );
+
+   return SCIP_OKAY;
+}
+
+/** gives the monoms belonging to a SCIP_EXPR_POLYNOM expression */
+SCIP_EXPRDATA_MONOM** SCIPexprGetPolynomMonoms(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOM);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOM*)expr->data.data)->monoms;
+}
+
+/** gives the number of monoms belonging to a SCIP_EXPR_POLYNOM expression */
+int SCIPexprGetPolynomNMonoms(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOM);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOM*)expr->data.data)->nmonoms;
+}
+
+/** gives the constant belonging to a SCIP_EXPR_POLYNOM expression */
+SCIP_Real SCIPexprGetPolynomConstant(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOM);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_POLYNOM*)expr->data.data)->constant;
+}
+
+/** adds an array of monoms to a SCIP_EXPR_POLYNOM expression */
+SCIP_RETCODE SCIPexprAddPolynomMonoms(
+   BMS_BLKMEM*           blkmem,             /**< block memory of expression */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   nmonoms,            /**< number of monoms to add */
+   SCIP_EXPRDATA_MONOM** monoms              /**< the monoms to add */
+)
+{
+   SCIP_EXPRDATA_POLYNOM* data;
+   int i;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOM);
+   assert(monoms != NULL || nmonoms == 0);
+
+   if( nmonoms == 0 )
+      return SCIP_OKAY;
+
+   data = (SCIP_EXPRDATA_POLYNOM*)expr->data.data;
+   assert(data != NULL);
+
+   if( data->nmonoms > 0 )
+   {
+      assert(data->monoms != NULL);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data->monoms, data->nmonoms, data->nmonoms + nmonoms) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &data->monoms, nmonoms) );
+   }
+
+   for( i = 0; i < nmonoms; ++i )
+   {
+      assert(monoms[i] != NULL);
+      SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &data->monoms[data->nmonoms + i],
+         monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );
+   }
+   data->nmonoms += nmonoms;
+
+   return SCIP_OKAY;
+}
+
+/** changes the constant in a SCIP_EXPR_POLYNOM expression */
+void SCIPexprChgPolynomConstant(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             constant            /**< new value for constant */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOM);
+   assert(expr->data.data != NULL);
+
+   ((SCIP_EXPRDATA_POLYNOM*)expr->data.data)->constant = constant;
+}
+
+/** creates a monom */
+SCIP_RETCODE SCIPexprCreatePolynomMonom(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_MONOM** monom,              /**< buffer where to store pointer to new monom */
+   SCIP_Real             coef,               /**< coefficient of monom */
+   int                   nfactors,           /**< number of factors in monom */
+   int*                  childidxs,          /**< indices of children corresponding to factors */
+   SCIP_Real*            exponents           /**< exponent in each factor */
+)
+{
+   assert(blkmem != NULL);
+   assert(monom  != NULL);
+   assert(childidxs != NULL || nfactors == 0);
+   assert(exponents != NULL || nfactors == 0);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, monom) );
+
+   (*monom)->coef     = coef;
+   (*monom)->nfactors = nfactors;
+
+   if( nfactors > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*monom)->childidxs, childidxs, nfactors) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*monom)->exponents, exponents, nfactors) );
+   }
+   else
+   {
+      (*monom)->childidxs = NULL;
+      (*monom)->exponents = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets coefficient of a monom */
+SCIP_Real SCIPexprGetPolynomMonomCoef(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+)
+{
+   assert(monom != NULL);
+
+   return monom->coef;
+}
+
+/** gets number of factors of a monom */
+int SCIPexprGetPolynomMonomNFactors(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+)
+{
+   assert(monom != NULL);
+
+   return monom->nfactors;
+}
+
+/** gets indices of children corresponding to factors of a monom */
+int* SCIPexprGetPolynomMonomChildIndices(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+)
+{
+   assert(monom != NULL);
+
+   return monom->childidxs;
+}
+
+/** gets exponents in factors of a monom */
+SCIP_Real* SCIPexprGetPolynomMonomExponents(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+)
+{
+   assert(monom != NULL);
+
+   return monom->exponents;
 }
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
@@ -1188,7 +1665,7 @@ SCIP_Bool SCIPexprHasParam(
    return FALSE;
 }
 
-/** gets maximal degree of expression, or 65535 if not a polynom */
+/** gets maximal degree of expression, or SCIP_EXPR_DEGREEINFINITY if not a polynom */
 SCIP_RETCODE SCIPexprGetMaxDegree(
    SCIP_EXPR*            expr,               /**< expression */
    int*                  maxdegree           /**< buffer to store maximal degree */
@@ -1245,7 +1722,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          SCIP_CALL( SCIPexprGetMaxDegree(expr->children[1], &child2) );
          
          /* if not division by constant, then it is not a polynom */
-         *maxdegree = (child2 != 0) ? 65535 : child1;
+         *maxdegree = (child2 != 0) ? SCIP_EXPR_DEGREEINFINITY : child1;
          break;
       }
 
@@ -1266,7 +1743,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
          
          /* if not squareroot of constant, then no polynomial */
-         *maxdegree = (child1 != 0) ? 65535 : 0;
+         *maxdegree = (child1 != 0) ? SCIP_EXPR_DEGREEINFINITY : 0;
          break;
       }
 
@@ -1288,9 +1765,9 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          }
          
          /* non-polynomial ^ non-constant is not a polynom */
-         if( child1 >= 65535 || child2 > 0 || SCIPexprHasParam(expr->children[1]) )
+         if( child1 >= SCIP_EXPR_DEGREEINFINITY || child2 > 0 || SCIPexprHasParam(expr->children[1]) )
          {
-            *maxdegree = 65535;
+            *maxdegree = SCIP_EXPR_DEGREEINFINITY;
             break;
          }
 
@@ -1303,7 +1780,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          else if( val > 0.0 && floor(val) == val ) /* natural exponent gives polynom again */ 
             *maxdegree = child1 * (int)floor(val);
          else /* negative or nonintegral exponent does not give polynom */ 
-            *maxdegree = 65535;
+            *maxdegree = SCIP_EXPR_DEGREEINFINITY;
 
          break;
       }
@@ -1323,7 +1800,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
          
          /* if argument is not a constant, then no polynom, otherwise it is a constant */
-         *maxdegree = (child1 != 0) ? 65535 : 0;
+         *maxdegree = (child1 != 0) ? SCIP_EXPR_DEGREEINFINITY : 0;
          break;
       }
 
@@ -1338,7 +1815,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          SCIP_CALL( SCIPexprGetMaxDegree(expr->children[1], &child2) );
 
          /* if any of the operands is not constant, then it is no polynom */
-         *maxdegree = (child1 != 0 || child2 != 0) ? 65535 : 0;
+         *maxdegree = (child1 != 0 || child2 != 0) ? SCIP_EXPR_DEGREEINFINITY : 0;
          break;
       }
 
@@ -1356,9 +1833,9 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          }
 
          /* non-polynomial ^ integer  or  something ^ negative  is not a polynom */
-         if( child1 >= 65535 || expr->data.intval < 0 )
+         if( child1 >= SCIP_EXPR_DEGREEINFINITY || expr->data.intval < 0 )
          {
-            *maxdegree = 65535;
+            *maxdegree = SCIP_EXPR_DEGREEINFINITY;
             break;
          }
 
@@ -1374,7 +1851,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          int i;
 
          *maxdegree = 0;
-         for( i = 0; i < expr->nchildren && *maxdegree < 65535; ++i )
+         for( i = 0; i < expr->nchildren && *maxdegree < SCIP_EXPR_DEGREEINFINITY; ++i )
          {
             SCIP_CALL( SCIPexprGetMaxDegree(expr->children[i], &child1) );
             if( child1 > *maxdegree )
@@ -1392,12 +1869,52 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          for( i = 0; i < expr->nchildren; ++i )
          {
             SCIP_CALL( SCIPexprGetMaxDegree(expr->children[i], &child1) );
-            if( child1 >= 65535 )
+            if( child1 >= SCIP_EXPR_DEGREEINFINITY )
             {
-               *maxdegree = 65535;
+               *maxdegree = SCIP_EXPR_DEGREEINFINITY;
                break;
             }
             *maxdegree += child1;
+         }
+
+         break;
+      }
+
+      case SCIP_EXPR_POLYNOM:
+      {
+         SCIP_EXPRDATA_POLYNOM* polynomdata;
+         SCIP_EXPRDATA_MONOM* monomdata;
+         int monomdegree;
+         int i;
+         int j;
+
+         polynomdata = (SCIP_EXPRDATA_POLYNOM*)expr->data.data;
+
+         *maxdegree = 0;
+         for( i = 0; i < polynomdata->nmonoms && *maxdegree < SCIP_EXPR_DEGREEINFINITY; ++i )
+         {
+            monomdata = polynomdata->monoms[i];
+            assert(monomdata != NULL);
+
+            /* compute degree of monom = sum of degree of factors */
+            monomdegree = 0;
+            for( j = 0; j < monomdata->nfactors; ++j )
+            {
+               SCIP_CALL( SCIPexprGetMaxDegree(expr->children[monomdata->childidxs[j]], &child1) );
+
+               /* if the exponent of the factor is not a natural number and the child is not constant (degree 0),
+                * then we report that we are not really a polynom */
+               if( child1 != 0 && (int)monomdata->exponents[j] != monomdata->exponents[j] )
+               {
+                  *maxdegree = SCIP_EXPR_DEGREEINFINITY;
+                  break;
+               }
+
+               monomdegree += child1 * (int)monomdata->exponents[j];
+            }
+
+            if( monomdegree > *maxdegree )
+               *maxdegree = monomdegree;
          }
 
          break;
@@ -1735,8 +2252,46 @@ void SCIPexprPrint(
       }
 
       /* case SCIP_EXPR_QUADRATIC: */
+
       case SCIP_EXPR_POLYNOM:
-         /* @todo */
+      {
+         SCIP_EXPRDATA_POLYNOM* polynomdata;
+         SCIP_EXPRDATA_MONOM*   monomdata;
+         int i;
+         int j;
+
+         SCIPmessageFPrintInfo(file, "(");
+
+         polynomdata = (SCIP_EXPRDATA_POLYNOM*)expr->data.data;
+         assert(polynomdata != NULL);
+
+         if( polynomdata->constant != 0.0 )
+         {
+            SCIPmessageFPrintInfo(file, "%.20g", polynomdata->constant);
+         }
+
+         for( i = 0; i < polynomdata->nmonoms; ++i )
+         {
+            monomdata = polynomdata->monoms[i];
+            SCIPmessageFPrintInfo(file, " %+.20g ", monomdata->coef);
+
+            for( j = 0; j < monomdata->nfactors; ++j )
+            {
+               SCIPexprPrint(expr->children[monomdata->childidxs[j]], file, varnames, paramnames);
+               if( monomdata->exponents[j] < 0.0 )
+               {
+                  SCIPmessageFPrintInfo(file, "^(%.20g)", monomdata->exponents[j]);
+               }
+               else if( monomdata->exponents[j] != 1.0 )
+               {
+                  SCIPmessageFPrintInfo(file, "^%.20g", monomdata->exponents[j]);
+               }
+            }
+         }
+
+         SCIPmessageFPrintInfo(file, ")");
+         break;
+      }
 
       case  SCIP_EXPR_LAST:
       {
@@ -1946,7 +2501,7 @@ SCIP_Bool SCIPexprtreeHasParam(
  * If constant expression, gives 0,
  * if linear expression, gives 1,
  * if polynomial expression, gives its maximal degree,
- * otherwise (nonpolynomial nonconstant expressions) gives at least 65535.
+ * otherwise (nonpolynomial nonconstant expressions) gives at least SCIP_EXPR_DEGREEINFINITY.
  */
 SCIP_RETCODE SCIPexprtreeGetMaxDegree(
    SCIP_EXPRTREE*        tree,               /**< expression tree */

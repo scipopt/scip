@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expression.h,v 1.6 2010/09/05 13:08:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expression.h,v 1.7 2010/09/05 19:17:24 bzfviger Exp $"
 
 /**@file   type_expression.h
  * @brief  type definitions for expressions and expression trees
@@ -96,6 +96,9 @@ struct SCIP_QuadElement
 /* We have defined struct SCIP_QuadElement here (instead of type_expression.h) to allow fast access, allocation, and copying. (similar to SCIP_INTERVAL) */
 
 typedef struct SCIP_QuadElement SCIP_QUADELEM;   /**< element of a quadratic term */
+
+typedef struct SCIP_ExprData_Monom   SCIP_EXPRDATA_MONOM;   /**< a monom as part of the data in a polynom expression */
+typedef struct SCIP_ExprData_Polynom SCIP_EXPRDATA_POLYNOM; /**< the data of a polynom expression (SCIP_EXPR_POLYNOM) */
 
 #ifdef __cplusplus
 }

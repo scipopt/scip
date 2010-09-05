@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.12 2010/09/05 13:08:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.13 2010/09/05 19:17:24 bzfviger Exp $"
 
 /**@file   nlpi/expression.h
  * @brief  methods for expressions and expression trees
@@ -30,6 +30,8 @@
 #include "nlpi/type_expression.h"
 #include "nlpi/type_exprinterpret.h"
 #include "scip/intervalarith.h"
+
+#define SCIP_EXPR_DEGREEINFINITY 65535       /**< value that stands for an infinite degree of an expression (see SCIPexprGetMaxDegree) */
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,26 +59,13 @@ int SCIPexpropGetNChildren(
 /**@name Expression methods */
 /**@{ */
 
-/** creates an expression */
+/** creates a simple expression */
 extern
 SCIP_RETCODE SCIPexprCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
    SCIP_EXPROP           op,                 /**< operand of expression */
    ...                                       /**< arguments of operand */
-);
-
-/** creates an expression
- * Note, that the expression is allocated but for the children only the pointer is copied.
- */
-extern
-SCIP_RETCODE SCIPexprCreateDirect(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
-   SCIP_EXPROP           op,                 /**< operand of expression */
-   int                   nchildren,          /**< number of children */
-   SCIP_EXPR**           children,           /**< children */
-   SCIP_EXPROPDATA       opdata              /**< operand data */
 );
 
 /** copies an expression including its children */
@@ -130,22 +119,114 @@ void* SCIPexprGetOpData(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** gives exponent belonging to a SCIP_EXPR_INTPOWER operand */
+/** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
 extern
 int SCIPexprGetIntPowerExponent(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR operand */
+/** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
+extern
+SCIP_RETCODE SCIPexprCreateLinear(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   SCIP_Real*            coefs,              /**< coefficients of children */
+   SCIP_Real             constant            /**< constant part */
+);
+
+/** gives linear coefficients belonging to a SCIP_EXPR_LINEAR expression */
 extern
 SCIP_Real* SCIPexprGetLinearCoefs(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** gives constant belonging to a SCIP_EXPR_LINEAR operand */
+/** gives constant belonging to a SCIP_EXPR_LINEAR expression  */
 extern
 SCIP_Real SCIPexprGetLinearConstant(
    SCIP_EXPR*            expr                /**< expression */
+);
+
+/** creates a SCIP_EXPR_POLYNOM expression from an array of monoms: constant + sum_i monom_i */
+extern
+SCIP_RETCODE SCIPexprCreatePolynom(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   int                   nmonoms,            /**< number of monoms */
+   SCIP_EXPRDATA_MONOM** monoms,             /**< monoms */
+   SCIP_Real             constant            /**< constant part */
+);
+
+/** gives the monoms belonging to a SCIP_EXPR_POLYNOM expression */
+extern
+SCIP_EXPRDATA_MONOM** SCIPexprGetPolynomMonoms(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** gives the number of monoms belonging to a SCIP_EXPR_POLYNOM expression */
+extern
+int SCIPexprGetPolynomNMonoms(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** gives the constant belonging to a SCIP_EXPR_POLYNOM expression */
+extern
+SCIP_Real SCIPexprGetPolynomConstant(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** adds an array of monoms to a SCIP_EXPR_POLYNOM expression */
+extern
+SCIP_RETCODE SCIPexprAddPolynomMonoms(
+   BMS_BLKMEM*           blkmem,             /**< block memory of expression */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   nmonoms,            /**< number of monoms to add */
+   SCIP_EXPRDATA_MONOM** monoms              /**< the monoms to add */
+);
+
+/** changes the constant in a SCIP_EXPR_POLYNOM expression */
+extern
+void SCIPexprChgPolynomConstant(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             constant            /**< new value for constant */
+);
+
+/** creates a monom */
+extern
+SCIP_RETCODE SCIPexprCreatePolynomMonom(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_MONOM** monom,              /**< buffer where to store pointer to new monom */
+   SCIP_Real             coef,               /**< coefficient of monom */
+   int                   nfactors,           /**< number of factors in monom */
+   int*                  childidxs,          /**< indices of children corresponding to factors */
+   SCIP_Real*            exponents           /**< exponent in each factor */
+);
+
+/** gets coefficient of a monom */
+extern
+SCIP_Real SCIPexprGetPolynomMonomCoef(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+);
+
+/** gets number of factors of a monom */
+extern
+int SCIPexprGetPolynomMonomNFactors(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+);
+
+/** gets indices of children corresponding to factors of a monom */
+extern
+int* SCIPexprGetPolynomMonomChildIndices(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+);
+
+/** gets exponents in factors of a monom */
+extern
+SCIP_Real* SCIPexprGetPolynomMonomExponents(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
 );
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
@@ -154,7 +235,7 @@ SCIP_Bool SCIPexprHasParam(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** gets maximal degree of expression, or 65535 if not a polynom */
+/** gets maximal degree of expression, or SCIP_EXPR_DEGREEINFINITY if not a polynom */
 extern
 SCIP_RETCODE SCIPexprGetMaxDegree(
    SCIP_EXPR*            expr,               /**< expression */
@@ -294,7 +375,7 @@ SCIP_Bool SCIPexprtreeHasParam(
  * If constant expression, gives 0,
  * if linear expression, gives 1,
  * if polynomial expression, gives its maximal degree,
- * otherwise (nonpolynomial nonconstant expressions) gives at least 65535.
+ * otherwise (nonpolynomial nonconstant expressions) gives at least SCIP_EXPR_DEGREEINFINITY.
  */
 extern
 SCIP_RETCODE SCIPexprtreeGetMaxDegree(

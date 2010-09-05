@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.13 2010/09/05 13:08:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.14 2010/09/05 19:17:24 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -360,6 +360,29 @@ void evalSquare(
    SCIPintervalSquare(SCIPInterval::infinity, &resultant, arg);
 }
 
+
+/** template for function that sets a value to NaN
+ * default is to set it to 1.0/0.0
+ */
+template<class Type>
+void setToNaN(
+   Type&                 resultant           /**< resultant */
+   )
+{
+   resultant = 1.0/0.0;
+}
+
+/** specialization of setNaN for intervals
+ * for intervals, we set the interval to the empty interval
+ */
+template<>
+void setToNaN(
+   SCIPInterval&         resultant           /**< resultant */
+   )
+{
+   SCIPintervalSetEmpty(&resultant);
+}
+
 /** CppAD compatible evaluation of an expression for given arguments and parameters */
 template<class Type>
 SCIP_RETCODE eval(
@@ -502,6 +525,101 @@ SCIP_RETCODE eval(
          val = SCIPexprGetLinearConstant(expr);
          for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
             val += coefs[i] * buf[i];
+         break;
+      }
+
+      case SCIP_EXPR_POLYNOM:
+      {
+         SCIP_EXPRDATA_MONOM** monoms;
+         Type childval;
+         Type monomval;
+         SCIP_Real exponent;
+         int nmonoms;
+         int nfactors;
+         int* childidxs;
+         SCIP_Real* exponents;
+         int i;
+         int j;
+
+         val = SCIPexprGetPolynomConstant(expr);
+
+         nmonoms = SCIPexprGetPolynomNMonoms(expr);
+         monoms  = SCIPexprGetPolynomMonoms(expr);
+
+         for( i = 0; i < nmonoms; ++i )
+         {
+            nfactors  = SCIPexprGetPolynomMonomNFactors(monoms[i]);
+            childidxs = SCIPexprGetPolynomMonomChildIndices(monoms[i]);
+            exponents = SCIPexprGetPolynomMonomExponents(monoms[i]);
+            monomval  = SCIPexprGetPolynomMonomCoef(monoms[i]);
+
+            for( j = 0; j < nfactors; ++j )
+            {
+               assert(childidxs[j] >= 0);
+               assert(childidxs[j] <  SCIPexprGetNChildren(expr));
+
+               childval = buf[childidxs[j]];
+               if( childval == 1.0 )  /* 1^anything == 1 */
+                  continue;
+
+               exponent = exponents[j];
+
+               if( childval == 0.0 )
+               {
+                  if( exponent > 0.0 )
+                  {
+                     /* 0^positive == 0 */
+                     monomval = 0.0;
+                     break;
+                  }
+                  else if( exponent < 0.0 )
+                  {
+                     /* 0^negative = nan */
+                     setToNaN(val);
+                     return SCIP_OKAY;
+                  }
+                  /* 0^0 == 1 */
+                  continue;
+               }
+
+               /* cover some special exponents separately to avoid calling expensive pow function */
+               if( exponent == 0.0 )
+                  continue;
+               if( exponent == 1.0 )
+               {
+                  monomval *= childval;
+                  continue;
+               }
+               if( exponent == 2.0 )
+               {
+                  Type tmp;
+                  evalSquare(tmp, childval);
+                  monomval *= tmp;
+                  continue;
+               }
+               if( exponent == 0.5 )
+               {
+                  monomval *= sqrt(childval);
+                  continue;
+               }
+               if( exponent == -1.0 )
+               {
+                  monomval /= childval;
+                  continue;
+               }
+               if( exponent == -2.0 )
+               {
+                  Type tmp;
+                  evalSquare(tmp, childval);
+                  monomval /= tmp;
+                  continue;
+               }
+               monomval *= pow(childval, exponent);
+            }
+
+            val += monomval;
+         }
+
          break;
       }
 

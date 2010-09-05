@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.8 2010/09/05 13:08:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.9 2010/09/05 19:17:24 bzfviger Exp $"
 
 /**@file   scip/expression.c
  * @brief  more methods for expressions and expression trees
@@ -374,7 +374,6 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          SCIP_EXPR** summands;
          int         nsummands;
          int         summandssize;
-         SCIP_EXPROPDATA opdata;
 
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
          /* var is now multiaggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant
@@ -450,17 +449,10 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
             continue;
          }
 
-         /* shrink summands array to length nsummands */
-         if( nsummands < summandssize )
-         {
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &summands, summandssize, nsummands) );
-            summandssize = nsummands;
-         }
+         /* set replaceexprs[i] to summation over summands array */
+         SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_SUM, nsummands, summands) );
 
-         /* set replaceexprs[i] to summation over summands array
-          * note that summands is not used as array of children in replaceexprs[i], so we do not need to free this block memory array */
-         opdata.intval = 0; /* dummy operator data */
-         SCIP_CALL( SCIPexprCreateDirect(tree->blkmem, &replaceexprs[i], SCIP_EXPR_SUM, nsummands, summands, opdata) );
+         BMSfreeBlockMemoryArray(tree->blkmem, &summands, summandssize);
       }
    }
 
