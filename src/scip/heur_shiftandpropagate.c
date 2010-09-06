@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.4 2010/09/04 12:45:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.5 2010/09/06 16:02:20 bzfhende Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -512,8 +512,7 @@ SCIP_RETCODE initMatrix(
       SCIP_COL* currentcol;
       SCIP_ROW** rows;
       SCIP_Real* colvals;
-      SCIP_VAR* var;
-
+     
       int ncolnonz;
       SCIP_Bool colisintegral;
 
@@ -523,7 +522,6 @@ SCIP_RETCODE initMatrix(
 
       colvals = SCIPcolGetVals(currentcol);
       rows = SCIPcolGetRows(currentcol);
-      var = SCIPcolGetVar(currentcol);
       ncolnonz = SCIPcolGetNLPNonz(currentcol);
       colisintegral = SCIPcolIsIntegral(currentcol);
       
