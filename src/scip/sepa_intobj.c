@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.36 2010/05/15 12:12:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.37 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   sepa_intobj.c
  * @ingroup SEPARATORS
@@ -33,6 +33,7 @@
 #define SEPA_PRIORITY              -100
 #define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define EVENTHDLR_NAME         "intobj"
@@ -464,9 +465,9 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    SCIP_CALL( sepadataCreate(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyIntobj,
-         sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyIntobj, sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
          sepaInitsolIntobj, sepaExitsolIntobj, 
          sepaExeclpIntobj, sepaExecsolIntobj,
          sepadata) );

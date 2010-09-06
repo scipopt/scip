@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.11 2010/09/01 20:32:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.12 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -41,6 +41,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 
@@ -197,7 +198,7 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, 
          heurCopyTrySol,heurFreeTrySol, heurInitTrySol, heurExitTrySol,
          heurInitsolTrySol, heurExitsolTrySol, heurExecTrySol,
          heurdata) );

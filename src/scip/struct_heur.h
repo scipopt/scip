@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.26 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.27 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -56,6 +56,7 @@ struct SCIP_Heur
    int                   maxdepth;           /**< maximal depth level to call heuristic at (-1: no limit) */
    int                   delaypos;           /**< position in the delayed heuristics queue, or -1 if not delayed */
    unsigned int          timingmask;         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
    char                  dispchar;           /**< display character of primal heuristic */
 };

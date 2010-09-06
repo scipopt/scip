@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.95 2010/07/01 22:41:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.96 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -1695,7 +1695,10 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
    /* copy the varbound using the linear constraint copy method */
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, 2, vars, coefs,
          SCIPgetLhsVarbound(sourcescip, sourcecons), SCIPgetRhsVarbound(sourcescip, sourcecons), varmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global) );
+   assert(cons != NULL);
+   
+   (*success) = TRUE;
    
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);

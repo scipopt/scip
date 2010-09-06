@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.29 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.30 2010/09/06 16:10:34 bzfberth Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPincludeObjHeur(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
          objheur->scip_priority_, objheur->scip_freq_, objheur->scip_freqofs_, objheur->scip_maxdepth_,
-         objheur->scip_timingmask_,
+         objheur->scip_timingmask_, objheur->scip_usessubscip_, 
          heurCopyObj,
          heurFreeObj, heurInitObj, heurExitObj, 
          heurInitsolObj, heurExitsolObj, heurExecObj,

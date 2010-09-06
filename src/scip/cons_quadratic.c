@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.122 2010/09/04 20:02:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.123 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7481,7 +7481,7 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
          consdata->nquadvars, quadvarterms,
          consdata->nbilinterms, bilinterms,
          consdata->lhs, consdata->rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable) );
       
       /* copy information on curvature */
       targetconsdata = SCIPconsGetData(*cons);

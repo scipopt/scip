@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.76 2010/04/29 13:05:03 bzfshina Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.77 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -113,6 +113,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -143,6 +144,7 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->maxdepth = maxdepth;
    (*heur)->delaypos = -1;
    (*heur)->timingmask = timingmask;
+   (*heur)->usessubscip = usessubscip;
    (*heur)->heurcopy = heurcopy;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
@@ -509,6 +511,16 @@ void SCIPheurSetTimingmask(
    assert(heur != NULL);
 
    heur->timingmask = timingmask;
+}
+
+/** does the heuristic use a secondary SCIP instance? */
+SCIP_HEURTIMING SCIPheurUsesSubscip(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->usessubscip;
 }
 
 /** gets priority of primal heuristic */

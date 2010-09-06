@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.44 2010/09/04 20:02:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.45 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3620,13 +3620,10 @@ SCIP_DECL_CONSCOPY(consCopySOC)
       SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
          consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
          rhsvar, consdata->rhscoeff, consdata->rhsoffset,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
-      assert(stickingatnode == FALSE);
+         initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable) );
    }
    else
-   {
       *cons = NULL;
-   }
 
    SCIPfreeBufferArray(sourcescip, &vars);
 

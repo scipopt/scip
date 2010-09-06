@@ -95,6 +95,9 @@ interface:
 - new methods SCIPintervalAddInf/Sup/Vectors(), SCIPintervalMulInf/Sup() in intervalarith.c 
 - renamed SCIPintervalScalarProductRealsIntervals()/SCIPintervalScalarProduct() by SCIPintervalScalprodScalars()/SCIPintervalScalprod() and redesigned them in intervalarith.c
   including new methods SCIPintervalScalprodScalarsInf/Sup()
+- new parameter "usessubscip" for SCIPincludeHeur(), SCIPincludeSepa() and constructors ObjSepa(), ObjHeur()
+- new methods SCIPsepaUsesSubscip(), SCIPheurUsesSubscip()
+- new methods SCIPconshdlrGetEnfoConss(), SCIPconshdlrGetNEnfoConss()
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

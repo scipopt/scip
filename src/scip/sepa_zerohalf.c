@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.31 2010/09/03 12:51:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.32 2010/09/06 16:10:38 bzfberth Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -70,6 +70,7 @@
 #define SEPA_DESC              "{0,1/2}-cuts separator"
 #define SEPA_PRIORITY             -6000
 #define SEPA_FREQ                    -1 
+#define SEPA_USESSUBSCIP           TRUE
 #define SEPA_DELAY                FALSE
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
@@ -7398,7 +7399,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    sepadata->origrows = NULL;
   
    /* include separator */
-   SCIP_CALL(SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, 0.0 , SEPA_DELAY,
+   SCIP_CALL(SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, 0.0 , SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaCopyZerohalf,
          sepaFreeZerohalf, sepaInitZerohalf, sepaExitZerohalf, 
          sepaInitsolZerohalf, sepaExitsolZerohalf,

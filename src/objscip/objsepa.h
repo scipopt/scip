@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.35 2010/09/01 16:33:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.36 2010/09/06 16:10:35 bzfberth Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -58,6 +58,9 @@ public:
     */
    const SCIP_Real scip_maxbounddist_;
 
+   /** does the separator use a secondary SCIP instance? */
+   const SCIP_Bool scip_usessubscip_;
+
    /** should separator be delayed, if other separators found cuts? */
    const SCIP_Bool scip_delay_;
 
@@ -70,6 +73,7 @@ public:
       int                freq,               /**< frequency for calling separator */
       SCIP_Real          maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
+      SCIP_Bool          usessubscip,        /**< does the separator use a secondary SCIP instance? */
       SCIP_Bool          delay               /**< should separator be delayed, if other separators found cuts? */
       )
       : scip_(scip),
@@ -78,6 +82,7 @@ public:
         scip_priority_(priority),
         scip_freq_(freq),
         scip_maxbounddist_(maxbounddist),
+        scip_usessubscip_(usessubscip),
         scip_delay_(delay)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */

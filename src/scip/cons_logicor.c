@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.142 2010/08/09 12:21:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.143 2010/09/06 16:10:35 bzfberth Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2394,8 +2394,11 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
    /* copy the logic using the linear constraint copy method */
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
          1.0, SCIPinfinity(scip), varmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global) );
+   assert(cons != NULL);
    
+   (*success) = TRUE;
+
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.51 2010/08/30 16:50:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.52 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -39,6 +39,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+#define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01           /* factor by which Crossover should at least improve the incumbent     */
@@ -787,11 +788,11 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL) );
       
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw) );
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE) );
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "crossover", &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "crossover", TRUE, &success) );
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
@@ -1016,7 +1017,7 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
 
    /* include primal heuristic */ 
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyCrossover,
          heurFreeCrossover, heurInitCrossover, heurExitCrossover,
          heurInitsolCrossover, heurExitsolCrossover, heurExecCrossover,

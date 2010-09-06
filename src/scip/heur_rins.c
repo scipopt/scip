@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.45 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.46 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @ingroup PRIMALHEURISTICS
@@ -38,6 +38,7 @@
 #define HEUR_FREQOFS          5
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+#define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem                 */
@@ -568,7 +569,7 @@ SCIP_RETCODE SCIPincludeHeurRins(
 
    /* include primal heuristic */ 
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyRins,
          heurFreeRins, heurInitRins, heurExitRins,
          heurInitsolRins, heurExitsolRins, heurExecRins,

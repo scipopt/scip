@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.38 2010/09/01 16:33:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.39 2010/09/06 16:10:34 bzfberth Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -65,6 +65,9 @@ public:
    /** positions in the node solving loop where heuristic should be executed */
    const unsigned int scip_timingmask_;
 
+   /** does the heuristic use a secondary SCIP instance? */
+   const SCIP_Bool scip_usessubscip_;
+
    /** default constructor */
    ObjHeur(
       SCIP*              scip,               /**< SCIP data structure */
@@ -75,8 +78,9 @@ public:
       int                freq,               /**< frequency for calling primal heuristic */
       int                freqofs,            /**< frequency offset for calling primal heuristic */
       int                maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-      unsigned int       timingmask          /**< positions in the node solving loop where heuristic should be executed;
+      unsigned int       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
                                               *   see definition of SCIP_HeurTiming for possible values */
+      SCIP_Bool          usessubscip         /**< does the heuristic use a secondary SCIP instance? */
       )
       : scip_(scip),
         scip_name_(0),
@@ -86,7 +90,8 @@ public:
         scip_freq_(freq),
         scip_freqofs_(freqofs),
         scip_maxdepth_(maxdepth),
-        scip_timingmask_(timingmask)
+        scip_timingmask_(timingmask),
+        scip_usessubscip_(usessubscip)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.69 2010/09/03 19:25:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.70 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -55,6 +55,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MINNODES      (SCIP_Longint)500/**< minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MAXNODES      (SCIP_Longint)500/**< maximum number of nodes to regard in the subproblem                 */
@@ -1597,8 +1598,8 @@ SCIP_RETCODE createSubProblem(
 
          SCIP_CALL( SCIPcopyCons(subscip, &conscopy, NULL, conshdlr, scip, cons, varmap,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-               SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-               FALSE, &succeed) );
+               SCIPconsIsPropagated(cons), TRUE, SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               FALSE, FALSE, &succeed) );
 
          /* some constraint handlers may not have a copy constructor. Since we only need a relaxation of the problem, we can proceed */
          if( succeed )
@@ -2201,7 +2202,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyUndercover,
          heurFreeUndercover, heurInitUndercover, heurExitUndercover, 
          heurInitsolUndercover, heurExitsolUndercover, heurExecUndercover,

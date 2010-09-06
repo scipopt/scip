@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.204 2010/09/03 12:51:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.205 2010/09/06 16:10:35 bzfberth Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -7509,7 +7509,10 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
    /* copy the logic using the linear constraint copy method */
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, coefs,
          -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global) );
+   assert(cons != NULL);
+
+   (*success) = TRUE;
 
    SCIPfreeBufferArray(scip, &coefs);
 

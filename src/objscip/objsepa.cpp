@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.25 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.26 2010/09/06 16:10:34 bzfberth Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -226,10 +226,9 @@ SCIP_RETCODE SCIPincludeObjSepa(
    sepadata->deleteobject = deleteobject;
 
    /* include cut separator */
-   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
-         objsepa->scip_priority_, objsepa->scip_freq_, objsepa->scip_maxbounddist_, objsepa->scip_delay_,
-         sepaCopyObj,
-         sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
+   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, objsepa->scip_priority_, 
+         objsepa->scip_freq_, objsepa->scip_maxbounddist_, objsepa->scip_usessubscip_, objsepa->scip_delay_,
+         sepaCopyObj, sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
          sepaExeclpObj, sepaExecsolObj,
          sepadata) ); /*lint !e429*/
 

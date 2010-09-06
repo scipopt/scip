@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.94 2010/05/15 12:12:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.95 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -35,6 +35,7 @@
 #define SEPA_PRIORITY             -3000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
@@ -1541,9 +1542,9 @@ SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyCmir,
-         sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyCmir, sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
          sepaInitsolCmir, sepaExitsolCmir, 
          sepaExeclpCmir, sepaExecsolCmir,
          sepadata) );

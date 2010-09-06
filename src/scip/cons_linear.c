@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.373 2010/09/03 12:51:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.374 2010/09/06 16:10:35 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9551,7 +9551,10 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
 
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
          SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global) );
+   assert(cons != NULL);
+
+   (*success) = TRUE;
 
    return SCIP_OKAY;
 }   
@@ -10357,12 +10360,11 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool             global              /**< create a global or a local copy? */
    )
 {
    SCIP_VAR** vars;
@@ -10371,13 +10373,11 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Real constant;
    int requiredsize;
    int v;
-
-   (*success) = TRUE;
    
    if( nvars == 0 )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
       return SCIP_OKAY;
    }
    
@@ -10410,7 +10410,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
          
          SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert( requiredsize <= nvars );
+         assert(requiredsize <= nvars);
       }
    }
    else
@@ -10421,33 +10421,28 @@ SCIP_RETCODE SCIPcopyConsLinear(
       }
    }
    
-   (*success) = TRUE;
-
    /* map variables of the source constraint to variables of the target SCIP */
-   for( v = 0; v < nvars && *success; ++v )
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       var = vars[v];
       
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, success) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, global) );
    }
 
-   if( *success )
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
-         lhs -= constant;
-
-      if( !SCIPisInfinity(scip, rhs) )
-         rhs -= constant;
+   if( !SCIPisInfinity(scip, -lhs) )
+      lhs -= constant;
+   
+   if( !SCIPisInfinity(scip, rhs) )
+      rhs -= constant;
       
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   }
-
+   SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
+         initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+   
    /* free buffer array */
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
-
+   
    return SCIP_OKAY;
 }
 

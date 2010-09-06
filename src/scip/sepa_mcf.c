@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.127 2010/06/08 15:00:39 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.128 2010/09/06 16:10:38 bzfberth Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -61,6 +61,7 @@
 #define SEPA_PRIORITY                    -10000
 #define SEPA_FREQ                             0
 #define SEPA_MAXBOUNDDIST                   0.0
+#define SEPA_USESSUBSCIP                  FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                        FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 /* changeable parameters*/
@@ -6798,9 +6799,9 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    sepadata->effortlevel = MCFEFFORTLEVEL_OFF;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyMcf,
-         sepaFreeMcf, sepaInitMcf, sepaExitMcf,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyMcf, sepaFreeMcf, sepaInitMcf, sepaExitMcf,
          sepaInitsolMcf, sepaExitsolMcf,
          sepaExeclpMcf, sepaExecsolMcf,
          sepadata) );

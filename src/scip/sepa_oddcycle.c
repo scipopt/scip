@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.2 2010/08/24 09:12:59 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.3 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   sepa_oddcycle.c
  * @brief  oddcycle separator
@@ -39,6 +39,7 @@
 #define SEPA_PRIORITY            -15000
 #define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           1.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE      /**< should separation method be delayed, if other separators found cuts? */
 
 /* default values for separator settings */
@@ -3885,9 +3886,10 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyOddcycle, sepaFreeOddcycle, sepaInitOddcycle, sepaExitOddcycle, sepaInitsolOddcycle, sepaExitsolOddcycle,
-         sepaExeclpOddcycle, sepaExecsolOddcycle, sepadata) );
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyOddcycle, sepaFreeOddcycle, sepaInitOddcycle, sepaExitOddcycle, sepaInitsolOddcycle, 
+         sepaExitsolOddcycle, sepaExeclpOddcycle, sepaExecsolOddcycle, sepadata) );
    
    /* add oddcycle separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/useclassical", 

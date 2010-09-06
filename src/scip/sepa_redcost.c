@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.13 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.14 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   sepa_redcost.c
  * @ingroup SEPARATORS
@@ -33,6 +33,7 @@
 #define SEPA_PRIORITY         +10000000
 #define SEPA_FREQ                     1
 #define SEPA_MAXBOUNDDIST           1.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_CONTINUOUS        FALSE /**< should reduced cost fixing be also applied to continuous variables? */
@@ -291,8 +292,8 @@ SCIP_RETCODE SCIPincludeSepaRedcost(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyRedcost,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY, sepaCopyRedcost,
          sepaFreeRedcost, sepaInitRedcost, sepaExitRedcost, 
          sepaInitsolRedcost, sepaExitsolRedcost,
          sepaExeclpRedcost, sepaExecsolRedcost,

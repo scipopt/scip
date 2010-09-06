@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.33 2010/08/10 13:22:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.34 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -35,6 +35,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_FMAX          100       /**< {0,1}-points to be checked */
 #define DEFAULT_FFIRST        10        /**< {0,1}-points to be generated at first */     
@@ -1020,7 +1021,7 @@ SCIP_RETCODE SCIPincludeHeurOctane(
    
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyOctane,
          heurFreeOctane, heurInitOctane, heurExitOctane, 
          heurInitsolOctane, heurExitsolOctane, heurExecOctane,

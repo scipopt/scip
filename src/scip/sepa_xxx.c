@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.24 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.25 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   sepa_xxx.c
  * @ingroup SEPARATORS
@@ -32,6 +32,7 @@
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 
@@ -204,11 +205,10 @@ SCIP_RETCODE SCIPincludeSepaXxx(
    /* TODO: (optional) create separator specific data here */
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyXxx,
-         sepaFreeXxx, sepaInitXxx, sepaExitXxx, 
-         sepaInitsolXxx, sepaExitsolXxx,
-         sepaExeclpXxx, sepaExecsolXxx,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyXxx, sepaFreeXxx, sepaInitXxx, sepaExitXxx, 
+         sepaInitsolXxx, sepaExitsolXxx, sepaExeclpXxx, sepaExecsolXxx,
          sepadata) );
 
    /* add xxx separator parameters */

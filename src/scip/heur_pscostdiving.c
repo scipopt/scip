@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.60 2010/06/09 13:37:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.61 2010/09/06 16:10:36 bzfberth Exp $"
 
 /**@file   heur_pscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -36,6 +36,7 @@
 #define HEUR_FREQOFS          2
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 
@@ -651,7 +652,7 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyPscostdiving,
          heurFreePscostdiving, heurInitPscostdiving, heurExitPscostdiving, 
          heurInitsolPscostdiving, heurExitsolPscostdiving, heurExecPscostdiving,

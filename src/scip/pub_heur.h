@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.23 2010/04/29 13:05:03 bzfshina Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.24 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   pub_heur.h
  * @ingroup PUBLICMETHODS
@@ -80,6 +80,12 @@ extern
 void SCIPheurSetTimingmask(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_HEURTIMING       timingmask          /**< new timing mask of heuristic */
+   );
+
+/** does the heuristic use a secondary SCIP instance? */
+extern
+SCIP_Bool SCIPheurUsesSubscip(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets priority of primal heuristic */

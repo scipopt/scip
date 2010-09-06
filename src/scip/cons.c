@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.204 2010/08/31 17:44:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.205 2010/09/06 16:10:35 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3381,6 +3381,16 @@ SCIP_CONS** SCIPconshdlrGetConss(
    return conshdlr->conss;
 }
 
+/** gets array with enforced constraints of constraint handler; this is local information */
+SCIP_CONS** SCIPconshdlrGetEnfoConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->enfoconss;
+}
+
 /** gets total number of existing transformed constraints of constraint handler */
 int SCIPconshdlrGetNConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -3389,6 +3399,16 @@ int SCIPconshdlrGetNConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nconss;
+}
+
+/** gets number of enforced constraints of constraint handler; this is local information */
+int SCIPconshdlrGetNEnfoConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nenfoconss;
 }
 
 /** gets number of active constraints of constraint handler */
@@ -4544,11 +4564,11 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
@@ -4561,7 +4581,7 @@ SCIP_RETCODE SCIPconsCopy(
    if( conshdlr->conscopy != NULL )
    {
       SCIP_CALL( conshdlr->conscopy(set->scip, conshdlr, cons, name, sourcescip, sourcecons, varmap,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+            initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global, success) );
    }
 #if 0
    else
@@ -4575,9 +4595,9 @@ SCIP_RETCODE SCIPconsCopy(
 }
 
 
-/** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
- *  created and captured, and inserted it into the conss array of its constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+/** parses constrint information (in cip format) out of a string; if the parsing process was successful a constraint is
+ *  created and capture, and inserted into the conss array of its constraint handler.
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.

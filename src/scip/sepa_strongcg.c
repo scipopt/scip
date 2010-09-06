@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.43 2010/05/15 12:12:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.44 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -35,6 +35,7 @@
 #define SEPA_PRIORITY             -2000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of strong CG separation rounds per node (-1: unlimited) */
@@ -598,9 +599,9 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    sepadata->lastncutsfound = 0;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyStrongcg,
-         sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyStrongcg, sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
          sepaInitsolStrongcg, sepaExitsolStrongcg, 
          sepaExeclpStrongcg, sepaExecsolStrongcg,
          sepadata) );

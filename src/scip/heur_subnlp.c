@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.12 2010/09/04 14:38:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.13 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -43,6 +43,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 /*
  * Data structures
@@ -163,10 +164,10 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip) );
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip, FALSE) );
    /* copy as many constraints as possible */
    success = TRUE;
-   SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, heurdata->var_scip2subscip, NULL, &success) );
+   SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, heurdata->var_scip2subscip, NULL, FALSE, &success) );
    if( !success )
    {
       SCIPwarningMessage("failed to copy some constraints to subSCIP, continue anyway\n");
@@ -1536,7 +1537,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, 
          heurCopySubNlp,
          heurFreeSubNlp, heurInitSubNlp, heurExitSubNlp, heurInitsolSubNlp, heurExitsolSubNlp, heurExecSubNlp,
          heurdata) );

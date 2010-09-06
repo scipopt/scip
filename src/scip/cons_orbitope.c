@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.12 2010/08/29 10:41:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.13 2010/09/06 16:10:35 bzfberth Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1945,38 +1945,34 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    SCIPdebugMessage("Copying method for orbitope constraint handler.\n");
 
    sourcedata = SCIPconsGetData(sourcecons);
-   assert( sourcedata != NULL );
-   assert( sourcedata->nspcons > 0 );
-   assert( sourcedata->nblocks > 0 );
-   assert( sourcedata->vars != NULL );
+   assert(sourcedata != NULL);
+   assert(sourcedata->nspcons > 0);
+   assert(sourcedata->nblocks > 0);
+   assert(sourcedata->vars != NULL);
 
    nspcons = sourcedata->nspcons;
    nblocks = sourcedata->nblocks;
    sourcevars = sourcedata->vars;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nspcons) );
-   for (i = 0; i < nspcons && *success; ++i)
+   for (i = 0; i < nspcons; ++i)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), nblocks) );
 
-      for (j = 0; j < nblocks && *success; ++j)
+      for (j = 0; j < nblocks; ++j)
       {
-	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, success) );
-	 assert( vars[i][j] != 0 );
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, global) );
+	 assert(vars[i][j] != NULL);
       }
    }
-
-   if ( *success )
-   {
-      /* create copied constraint */
-      if ( name == 0 )
-	 name = SCIPconsGetName(sourcecons);
-      
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
-	    vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
-	    initial, separate, enforce, check, propagate, local, dynamic, modifiable, removable, stickingatnode) );
-   }
-
+   /* create copied constraint */
+   if ( name == 0 )
+      name = SCIPconsGetName(sourcecons);
+   
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
+         vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
+         initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+   
    for (i = 0; i < nspcons; ++i)
       SCIPfreeBufferArray(scip, &vars[i]);
    SCIPfreeBufferArray(scip, &vars);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.82 2010/08/03 17:59:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.83 2010/09/06 16:10:35 bzfberth Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -1888,7 +1888,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    if( *success )
    {
       SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
    }
       
    /* free buffer array */

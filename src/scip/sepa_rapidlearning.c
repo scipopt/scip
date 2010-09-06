@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.19 2010/08/30 16:50:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.20 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -36,6 +36,7 @@
 #define SEPA_PRIORITY          -1200000
 #define SEPA_FREQ                    -1 
 #define SEPA_MAXBOUNDDIST           1.0
+#define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_APPLYCONFLICTS     TRUE /**< should the found conflicts be applied in the original SCIP?                 */
@@ -226,6 +227,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( ndiscvars != SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
+   /* do not run if pricers are present */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
    /* if the separator should be exclusive to the root node, this prevents multiple calls due to restarts */
    if(  SCIPsepaGetFreq(sepa) == 0 && SCIPsepaGetNCalls(sepa) > 0)
       return SCIP_OKAY;
@@ -266,7 +271,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    success = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", &success) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, &success) );
    
    for( i = 0; i < nvars; i++ )
       subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -513,8 +518,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                success = FALSE;
                SCIP_CALL( SCIPcopyCons(scip, &conscopy, NULL, conshdlrs[i], subscip, cons, varmapbw,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                     SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
-                     SCIPconsIsRemovable(cons), FALSE, &success) );
+                     SCIPconsIsPropagated(cons), TRUE, SCIPconsIsDynamic(cons),
+                     SCIPconsIsRemovable(cons), FALSE, TRUE, &success) );
 
                if( success )
                {
@@ -636,9 +641,9 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyRapidlearning,
-         sepaFreeRapidlearning, sepaInitRapidlearning, sepaExitRapidlearning, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyRapidlearning, sepaFreeRapidlearning, sepaInitRapidlearning, sepaExitRapidlearning, 
          sepaInitsolRapidlearning, sepaExitsolRapidlearning,
          sepaExeclpRapidlearning, sepaExecsolRapidlearning,
          sepadata) );

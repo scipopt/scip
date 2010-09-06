@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.25 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.26 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -60,6 +60,7 @@ struct SCIP_Sepa
    int                   freq;               /**< frequency for calling separator */
    int                   ncallsatnode;       /**< number of times, this separator was called at the current node */
    int                   ncutsfoundatnode;   /**< number of cutting planes found at the current node */
+   SCIP_Bool             usessubscip;        /**< does the separator use a secondary SCIP instance? */
    SCIP_Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
    SCIP_Bool             lpwasdelayed;       /**< was the LP separation delayed at the last call? */
    SCIP_Bool             solwasdelayed;      /**< was the solution separation delayed at the last call? */

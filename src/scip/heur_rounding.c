@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.62 2010/05/17 12:53:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.63 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   heur_rounding.c
  * @ingroup PRIMALHEURISTICS
@@ -36,6 +36,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 
@@ -714,7 +715,7 @@ SCIP_RETCODE SCIPincludeHeurRounding(
 {
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyRounding,
          heurFreeRounding, heurInitRounding, heurExitRounding, 
          heurInitsolRounding, heurExitsolRounding, heurExecRounding,

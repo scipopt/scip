@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.84 2010/08/30 16:50:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.85 2010/09/06 16:10:35 bzfberth Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3781,14 +3781,14 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    SCIP_CONS* targetlincons;
    const char* consname;
 
-   assert( scip != NULL );
-   assert( sourcescip != NULL );
-   assert( sourcecons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0);
 
    *success = TRUE;
 
-   if ( name != NULL )
+   if( name != NULL )
       consname = name;
    else
       consname = SCIPconsGetName(sourcecons);
@@ -3796,10 +3796,10 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    SCIPdebugMessage("Copying indicator constraint <%s> ...\n", consname);
 
    sourceconsdata = SCIPconsGetData(sourcecons);
-   assert( sourceconsdata != NULL );
+   assert(sourceconsdata != NULL);
 
    /* if the linear constraint is disabled or not active -> do not copy (may happen due to (multi-)aggregation) */
-   if ( ! SCIPconsIsEnabled(sourceconsdata->lincons) )
+   if( !SCIPconsIsEnabled(sourceconsdata->lincons) )
    {
       SCIPdebugMessage("Linear constraint <%s> disabled! Do not copy indicator constraint <%s>.\n",
          SCIPconsGetName(sourceconsdata->lincons), SCIPconsGetName(sourcecons));
@@ -3812,30 +3812,26 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    sourceslackvar = sourceconsdata->slackvar;
 
    /* find corresponding copied variables */
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, success) );
-   if ( *success )
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, global) );
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, global) );
+   
+   /* @warning We require that the linear constraints are copied before the indicator constraints! */
+   /* construct linear constraint name */
+   (void) SCIPsnprintf(linconsname, SCIP_MAXSTRLEN, "indlin_%s", SCIPconsGetName(sourcecons)+2);
+
+   /* find copied linear constraint */
+   targetlincons = SCIPfindCons(scip, linconsname);
+
+   if( targetlincons == NULL )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, success) );
-      if ( *success )
-      {
-         /* @warning We require that the linear constraints are copied before the indicator constraints! */
-         /* construct linear constraint name */
-         (void) SCIPsnprintf(linconsname, SCIP_MAXSTRLEN, "indlin_%s", SCIPconsGetName(sourcecons)+2);
-
-         /* find copied linear constraint */
-         targetlincons = SCIPfindCons(scip, linconsname);
-         if ( targetlincons == NULL )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown linear constraint <%s>\n", linconsname);
-            *success = FALSE;
-            return SCIP_OKAY;
-         }
-
-         /* create indicator constraint */
-         SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
-               initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-      }
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown linear constraint <%s>\n", linconsname);
+      *success = FALSE;
+      return SCIP_OKAY;
    }
+   
+   /* create indicator constraint */
+   SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
+         initial, separate, enforce, check, propagate, local, dynamic, FALSE, stickingatnode) );
 
    return SCIP_OKAY;
 }

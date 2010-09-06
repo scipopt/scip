@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.641 2010/09/04 16:42:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.642 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -75,6 +75,12 @@
 #include "nlpi/nlpi.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/debug.h"
+
+/* We include the linear constraint handler to be able to copy a (multi)aggregation of variables (to a linear constraint).
+ * The better way would be to handle the distinction between original and transformed variables via a flag 'isoriginal' 
+ * in the variable data structure. This would allow to have (multi)aggregated variables in the original problem.
+ */ 
+#include "scip/cons_linear.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -966,16 +972,23 @@ SCIP_RETCODE copyVar(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_VAR*             sourcevar,          /**< source variable */
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
-   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    )
 {
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(targetscip, "SCIPcopyVar", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /** @todo copy hole lists */
+   assert(global || SCIPvarGetHolelistLocal(sourcevar) == NULL);
+   assert(!global || SCIPvarGetHolelistGlobal(sourcevar) == NULL);
+
    /* create the variable in the target SCIP */
-   SCIP_CALL( SCIPcreateVar(targetscip, targetvar, SCIPvarGetName(sourcevar), SCIPvarGetLbGlobal(sourcevar),
-         SCIPvarGetUbGlobal(sourcevar), SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
+   SCIP_CALL( SCIPcreateVar(targetscip, targetvar, SCIPvarGetName(sourcevar), 
+         global ? SCIPvarGetLbGlobal(sourcevar) : SCIPvarGetLbLocal(sourcevar),
+         global ? SCIPvarGetUbGlobal(sourcevar) : SCIPvarGetUbLocal(sourcevar), 
+         SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
          SCIPvarIsInitial(sourcevar), SCIPvarIsRemovable(sourcevar), NULL, NULL, NULL, NULL) );       
    SCIP_CALL( SCIPaddVar(targetscip, *targetvar) );
    
@@ -998,7 +1011,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables */
-   SCIP_Bool*            success             /**< pointer to store whether copy of variable was successfully retrieved */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    )
 {
    /* check stages for both, the source and the target SCIP data structure */
@@ -1009,69 +1022,130 @@ SCIP_RETCODE SCIPgetVarCopy(
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
    assert(varmap != NULL);
-   assert(success != NULL);
    
-   *success = TRUE;
-
    /* try to retrieve copied variable from hashmap */
    *targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
-   
+   if( *targetvar != NULL )
+      return SCIP_OKAY;
+
    /* if variable does not exists yet in target SCIP, create it */
-   if( *targetvar == NULL )
+   switch( SCIPvarGetStatus(sourcevar) )
    {
-      switch( SCIPvarGetStatus(sourcevar) )
-      {
-      case SCIP_VARSTATUS_ORIGINAL:
-      case SCIP_VARSTATUS_COLUMN:
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_FIXED:
-         SCIP_CALL( copyVar(targetscip, sourcevar, targetvar, varmap) );
-         return SCIP_OKAY;        
-
-      case SCIP_VARSTATUS_AGGREGATED:
-      {
-         *success = FALSE;
-         SCIPwarningMessage("Copying of aggregated variables not implemented yet\n");
-         return SCIP_OKAY;                  
-      }
-      case SCIP_VARSTATUS_MULTAGGR:
-      {
-         *success = FALSE;
-         SCIPwarningMessage("Copying of multiaggregated variables not implemented yet\n");
-         return SCIP_OKAY;                  
-      }
-      case SCIP_VARSTATUS_NEGATED:
-      {
-         SCIP_VAR* sourcenegatedvar;
-         SCIP_VAR* targetnegatedvar;
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+      SCIP_CALL( copyVar(targetscip, sourcevar, targetvar, varmap, global) );
+      break;
+      
+   case SCIP_VARSTATUS_AGGREGATED:
+   {
+      SCIP_CONS* cons;
+      char name[SCIP_MAXSTRLEN];
          
-         /* get negated source variable */
-         SCIP_CALL( SCIPgetNegatedVar(sourcescip, sourcevar, &sourcenegatedvar) );
-         assert(sourcenegatedvar != NULL);
-         assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
+      SCIP_VAR* sourceaggrvar;
+      SCIP_VAR* targetaggrvar;
+      SCIP_Real aggrcoef;
+      SCIP_Real constant;
 
-         /* get copy of negated source variable */         
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap, success) );
-         assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
+      /* get aggregation data */
+      sourceaggrvar = SCIPvarGetAggrVar(sourcevar);
+      aggrcoef = SCIPvarGetAggrScalar(sourcevar);
+      constant = SCIPvarGetAggrConstant(sourcevar);
 
-	 if ( *success )
-	 {
-	    /* get negation of copied negated source variable, this is the target variable */
-	    SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
-	    assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
+      /* get copy of the aggregation variable */
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, varmap, global) );      
 
-	    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *targetvar) );
-	 }
+      /* create copy of the aggregated variable */
+      SCIP_CALL( copyVar(targetscip, sourcevar, targetvar, varmap, global) );
 
-         return SCIP_OKAY;         
-      }
-      default:
-         SCIPerrorMessage("unknown variable status\n");
-         SCIPABORT();
-         return SCIP_OKAY; /*lint !e527*/
-      }
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_aggr", SCIPvarGetName(sourcevar));
+         
+      /* add aggregation x = a*y + c as linear constraint x - a*y = c */
+      SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, 0, NULL, NULL, constant,
+            constant, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, *targetvar, 1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, targetaggrvar, -aggrcoef) );
+
+      SCIP_CALL( SCIPaddCons(targetscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );               
+         
+      break;
    }
+   case SCIP_VARSTATUS_MULTAGGR:
+   {
+      SCIP_CONS* cons;
+      char name[SCIP_MAXSTRLEN];
+         
+      SCIP_VAR** sourceaggrvars;
+      SCIP_VAR** targetaggrvars;
+      SCIP_Real* aggrcoefs;
+      SCIP_Real constant;
+         
+      int naggrvars;
+      int i;
+        
+      /* get the active representation */
+      SCIP_CALL( SCIPflattenVarAggregationGraph(sourcescip, sourcevar) );
+    
+      /* get multiaggregation data */
+      naggrvars = SCIPvarGetMultaggrNVars(sourcevar);
+      sourceaggrvars = SCIPvarGetMultaggrVars(sourcevar);
+      aggrcoefs = SCIPvarGetMultaggrScalars(sourcevar);
+      constant = SCIPvarGetMultaggrConstant(sourcevar);
+   
+      SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetaggrvars, naggrvars) );
+            
+      /* get copies of the active variables of the multiaggregation */
+      for( i = 0; i < naggrvars; i++ )
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], varmap, global) );
+      }
+         
+      /* create copy of the multiaggregated variable */
+      SCIP_CALL( copyVar(targetscip, sourcevar, targetvar, varmap, global) );
+                     
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_multaggr", SCIPvarGetName(sourcevar));
+         
+      /* add multiaggregation x = a^T y + c as linear constraint a^T y - x = -c */
+      SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, naggrvars, targetaggrvars, aggrcoefs, -constant,
+            -constant, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, *targetvar, -1.0) );
+      SCIP_CALL( SCIPaddCons(targetscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );               
 
+      SCIPfreeBufferArray(sourcescip, targetaggrvars);
+            
+      break;
+   }
+   case SCIP_VARSTATUS_NEGATED:
+   {
+      SCIP_VAR* sourcenegatedvar;
+      SCIP_VAR* targetnegatedvar;
+         
+      /* get negated source variable */
+      SCIP_CALL( SCIPgetNegatedVar(sourcescip, sourcevar, &sourcenegatedvar) );
+      assert(sourcenegatedvar != NULL);
+      assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
+
+      /* get copy of negated source variable */         
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap, global) );
+      assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
+
+      /* get negation of copied negated source variable, this is the target variable */
+      SCIP_CALL( SCIPgetNegatedVar(targetscip, targetnegatedvar, targetvar) );
+      assert(SCIPvarGetStatus(*targetvar) == SCIP_VARSTATUS_NEGATED);
+         
+      SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *targetvar) );
+	 
+      break;
+   }
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      break;
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -1080,8 +1154,9 @@ SCIP_RETCODE SCIPgetVarCopy(
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables corresponding
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    )
 {
    SCIP_VAR** sourcevars;                          /* source scip variables                    */
@@ -1103,7 +1178,7 @@ SCIP_RETCODE SCIPcopyVars(
    for( i = 0; i < nvars; i++ )
    {          
       SCIP_VAR* targetvar;
-      SCIP_CALL( copyVar(targetscip, sourcevars[i], &targetvar, varmap) );
+      SCIP_CALL( copyVar(targetscip, sourcevars[i], &targetvar, varmap, global) );
       assert(targetvar != NULL);
    }
 
@@ -1124,6 +1199,7 @@ SCIP_RETCODE SCIPcopyConss(
                                               *   variables of the target SCIP, must not be NULL! */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
    )
 {
@@ -1131,11 +1207,7 @@ SCIP_RETCODE SCIPcopyConss(
 
    int nconshdlrs;   
    int i;
-#ifndef NDEBUG
-   int nskipped;
-   int nlocal;
-#endif
-  
+
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(varmap != NULL);
@@ -1143,11 +1215,7 @@ SCIP_RETCODE SCIPcopyConss(
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   
-#ifndef NDEBUG
-   nskipped = 0;
-   nlocal = 0;
-#endif
+
    nconshdlrs = SCIPgetNConshdlrs(sourcescip);
    conshdlrs = SCIPgetConshdlrs(sourcescip);
    assert(nconshdlrs == 0 || conshdlrs != NULL);
@@ -1164,9 +1232,22 @@ SCIP_RETCODE SCIPcopyConss(
       SCIP_Bool succeed;
    
       assert(conshdlrs[i] != NULL);
-      nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
-      conss = SCIPconshdlrGetConss(conshdlrs[i]);
-      assert(nconshdlrs == 0 || conshdlrs != NULL);
+
+      /* for a global copy, copy all constraints that are globally active,
+       * for a local copy, copy all constraints that are locally enforced, 
+       * in order to also get local constraints, e.g. from branching */
+      if( global )
+      {      
+         nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+         conss = SCIPconshdlrGetConss(conshdlrs[i]);
+      }
+      else
+      {
+         nconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+         conss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
+      }
+
+      assert(nconss == 0 || conss != NULL);
       
       if( nconss > 0 )
       {
@@ -1177,27 +1258,15 @@ SCIP_RETCODE SCIPcopyConss(
       for( c = 0; c < nconss; ++c )
       {
          assert(conss[c] != NULL);
+         assert(SCIPconsIsActive(conss[c]));
+         assert(!SCIPconsIsDeleted(conss[c]));
+         assert(!global || !SCIPconsIsLocal(conss[c]));
+         assert(global || SCIPconsIsEnforced(conss[c]));
 
-         if ( SCIPconsIsDeleted(conss[c]) )
-            continue;
-
-#ifndef NDEBUG
-         if ( SCIPconsIsLocal(conss[c]) )
-            ++nlocal;
-#endif
-
-         if( !SCIPconsIsEnabled(conss[c]) )
-         {
-#ifndef NDEBUG
-            ++nskipped;
-#endif
-            continue;
-         }
-         /* use the copy constructor of each constraint handler to create subSCIP */
+         /* use the copy constructor of each constraint handler */
          SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, conshdlrs[i], sourcescip, conss[c], varmap,
                SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]), SCIPconsIsChecked(conss[c]),
-               SCIPconsIsPropagated(conss[c]), SCIPconsIsLocal(conss[c]), SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), 
-               SCIPconsIsRemovable(conss[c]), SCIPconsIsStickingAtNode(conss[c]), &succeed) );
+               SCIPconsIsPropagated(conss[c]), FALSE, SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]), FALSE, global, &succeed) );
             
          /* add the copied constraint to subSCIP, print a warning if conshdlr does not support copying */
          if( succeed )
@@ -1219,19 +1288,16 @@ SCIP_RETCODE SCIPcopyConss(
          }
          else
          {
-#ifndef NDEBUG
-            ++nskipped;
-#endif
             *success = FALSE;
             SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(conss[c]));
          }
       }
    }
-   assert(!(*success) || SCIPgetNConss(sourcescip) + nlocal == SCIPgetNConss(targetscip) + nskipped );
   
    return SCIP_OKAY;
 }
 
+#define HASHTABLESIZE_FACTOR 5
 /** copies sourcescip to targetscip */
 SCIP_RETCODE SCIPcopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -1241,6 +1307,7 @@ SCIP_RETCODE SCIPcopy(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    const char*           suffix,             /**< suffix which will be added to the names of the source SCIP, might be empty string */          
+   SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
@@ -1256,7 +1323,7 @@ SCIP_RETCODE SCIPcopy(
    *success = TRUE;   
 
    /* copy all plugins and settings */
-   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, success) );
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
@@ -1269,12 +1336,12 @@ SCIP_RETCODE SCIPcopy(
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(5 * SCIPgetNVars(sourcescip))) );
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
    }
 
    /* copy all variables and constraints */
-   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap) );
-   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, success) );
+   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap, global) );
+   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, success) );
 
    if( uselocalvarmap )
    {
@@ -2398,6 +2465,7 @@ SCIP_RETCODE SCIPincludeSepa(
    int                   freq,               /**< frequency for calling separator */
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
+   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
@@ -2422,7 +2490,7 @@ SCIP_RETCODE SCIPincludeSepa(
    }
 
    SCIP_CALL( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
-         name, desc, priority, freq, maxbounddist, delay,
+         name, desc, priority, freq, maxbounddist, usessubscip, delay,
          sepacopy,
          sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
    SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepa) );
@@ -2578,6 +2646,7 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -2600,9 +2669,8 @@ SCIP_RETCODE SCIPincludeHeur(
    }
 
    SCIP_CALL( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
-         name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask,
-         heurcopy,
-         heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
+         name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask, usessubscip, 
+         heurcopy, heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
    SCIP_CALL( SCIPsetIncludeHeur(scip->set, heur) );
 
    return SCIP_OKAY;
@@ -11342,11 +11410,11 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
@@ -11356,7 +11424,7 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP_CALL( checkStage(scip, "SCIPcopyCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
    
    SCIP_CALL( SCIPconsCopy(cons, scip->set, name, conshdlr, sourcescip, sourcecons, varmap, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global, success) );
 
    return SCIP_OKAY;
 }

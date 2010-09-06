@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.58 2010/07/05 11:02:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.59 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -638,18 +638,19 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - check           : should the constraint be checked for feasibility?
  *  - propagate       : should the constraint be propagated during node processing?
  *  - local           : is constraint only valid locally?
- *  - modifiable      : is constraint modifiable (subject to column generation)?
  *  - dynamic         : is constraint subject to aging?
  *  - removable       : should the relaxation be removed from the LP due to aging or cleanup?
  *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
  *                      if it may be moved to a more global node?
+ *  - global          : should a global or a local copy be created?
+ *
  *  output:
  *  - success         : pointer to store whether the copying was successful or not 
  */
 #define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, const char* name, \
       SCIP* sourcescip, SCIP_CONS* sourcecons,  SCIP_HASHMAP* varmap, \
-      SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
-      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* success)
+      SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, \
+      SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool global, SCIP_Bool* success)
 
 /** constraint parsing method of constraint handler
  *

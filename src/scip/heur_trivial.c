@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.15 2010/08/10 13:22:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.16 2010/09/06 16:10:37 bzfberth Exp $"
 
 
 /**@file   heur_trivial.c
@@ -37,6 +37,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING            SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 /*
  * Local methods
@@ -231,7 +232,7 @@ SCIP_RETCODE SCIPincludeHeurTrivial(
 {
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyTrivial,
          heurFreeTrivial, heurInitTrivial, heurExitTrivial, 
          heurInitsolTrivial, heurExitsolTrivial, heurExecTrivial,

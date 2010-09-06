@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.29 2010/09/03 12:51:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.30 2010/09/06 16:10:38 bzfberth Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -35,6 +35,7 @@
 #define SEPA_PRIORITY               -50
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 
@@ -428,9 +429,9 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    sepadata = NULL;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyImpliedbounds,
-         sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyImpliedbounds, sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
          sepaInitsolImpliedbounds, sepaExitsolImpliedbounds, 
          sepaExeclpImpliedbounds, sepaExecsolImpliedbounds,
          sepadata) );

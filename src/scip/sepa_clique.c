@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.46 2010/09/03 12:51:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.47 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -36,6 +36,7 @@
 #define SEPA_PRIORITY             -5000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
@@ -1421,9 +1422,9 @@ SCIP_RETCODE SCIPincludeSepaClique(
    sepadata->tcliquegraphloaded = FALSE;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaCopyClique,
-         sepaFreeClique, sepaInitClique, sepaExitClique,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, 
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyClique, sepaFreeClique, sepaInitClique, sepaExitClique,
          sepaInitsolClique, sepaExitsolClique,
          sepaExeclpClique, sepaExecsolClique,
          sepadata) );

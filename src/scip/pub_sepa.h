@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.22 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.23 2010/09/06 16:10:37 bzfberth Exp $"
 
 /**@file   pub_sepa.h
  * @ingroup PUBLICMETHODS
@@ -78,6 +78,12 @@ int SCIPsepaGetFreq(
 /** get maximal bound distance at which the separator is called */
 extern
 SCIP_Real SCIPsepaGetMaxbounddist(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/**< does the separator use a secondary SCIP instance? */
+extern
+SCIP_Bool SCIPsepaUsesSubscip(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
