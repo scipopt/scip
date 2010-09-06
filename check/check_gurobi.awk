@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gurobi.awk,v 1.12 2010/09/06 12:40:30 bzfwanie Exp $
+# $Id: check_gurobi.awk,v 1.13 2010/09/06 14:08:38 bzfwanie Exp $
 #
 #@file    check_gurobi.awk
 #@brief   GUROBI Check Report Generator
@@ -158,6 +158,13 @@ BEGIN {
 }
 /^Optimal solution found/ {
    aborted = 0;
+}
+/^Solved in/ {
+   aborted = 0;
+}
+/^Optimal objective/ {
+   pb = $3;
+   db = $3;
 }
 /^Best objective/ {
    if ( feasible == 1 ) {

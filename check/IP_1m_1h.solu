@@ -1,9 +1,9 @@
-=inf= 2-FullIns_4_inf.col                      1e+20
+=inf= 2-FullIns_4_inf.col
 =opt= 30:30:4.5:0.95:100                           2
 =opt= 30:70:4.5:0.95:98                           12
 =opt= 4-FullIns_3.col                              7
 =opt= 4-FullIns_5.stab                          2071
-=inf= 5cnf_4000_4000_50f7.shuffled             1e+20
+=inf= 5cnf_4000_4000_50f7.shuffled
 =opt= 5cnf_4000_4000_60t5.shuffled                26
 =opt= DSJC125.1.col                                5
 =opt= DSJR500.1c.stab                             13
@@ -15,10 +15,10 @@
 =opt= acc-5                                        0
 =opt= aflow40b                                  1168
 =opt= air04                                    56137
-=inf= alu7_7                                   1e+20
-=inf= alu7_8                                   1e+20
-=inf= alu8_8                                   1e+20
-=inf= ash608GPIA_inf.col                       1e+20
+=inf= alu7_7
+=inf= alu7_8
+=inf= alu8_8
+=inf= ash608GPIA_inf.col
 =opt= bc1                                 3.33836255
 =opt= bienst2                                   54.6
 =opt= binkar10_1                          6742.20002
@@ -49,18 +49,18 @@
 =opt= fast0507                                   174
 =opt= gwin7_nos_cost_nonp                       1100
 =opt= gwin7_nos_load                       3.3992143
-=inf= hfo5.008.0                               1e+20
+=inf= hfo5.008.0
 =opt= hfo5.022.1                                  35
-=inf= hfo7.015.0                               1e+20
+=inf= hfo7.015.0
 =opt= hfo7.016.1                                  17
 =opt= hfo8.035.1                                  15
-=inf= hfo8.036.0                               1e+20
+=inf= hfo8.036.0
 =opt= homer.col                                   13
 =opt= ilp_bol1                                  2412
 =opt= keller4.clq                                 11
 =opt= le450_5d.stab                               90
 =opt= markshare4_0                                 1
-=inf= markshare_4_5                            1e+20
+=inf= markshare_4_5
 =opt= mas74                               11801.1857
 =opt= mas76                               40005.0541
 =opt= mcsched                                 211913
@@ -102,7 +102,7 @@
 =opt= nug08                                      214
 =opt= nw04                                     16862
 =opt= nw05                                    132878
-=inf= oa77247                                  1e+20
+=inf= oa77247
 =opt= p57                                      26039
 =opt= p58                                      37239
 =opt= pedabox-2-m                                390
@@ -117,8 +117,8 @@
 =opt= ran12x21                                  3664
 =opt= ran16x16                                  3823
 =opt= rat575                                    6685
-=inf= seq12_146_relaxed                        1e+20
-=inf= seq13_155                                1e+20
+=inf= seq12_146_relaxed
+=inf= seq13_155
 =opt= seq9_179_relaxed                        128701
 =opt= seymour1                            410.763701
 =opt= sp98ir                               219676790
@@ -139,9 +139,9 @@
 =opt= sanr200_0.7.clq                             18
 =opt= cpa_ilpi_mip.72                       40533463
 =opt= ca57245                                     82
-=inf= hfo5.005.0                               1e+20
+=inf= hfo5.005.0
 =opt= hfo5.006.1                                  30
-=inf= hfo6.004.0                               1e+20
+=inf= hfo6.004.0
 =opt= hfo6.005.1                                  19
 =opt= DSJC250.5.stab                              12
 =opt= le450_25d.stab                              43
@@ -156,13 +156,13 @@
 =opt= neos-633273                      6.9968411e+09
 =opt= nsa                                        120
 =opt= pg5_34                             -14339.3534
-=opt= brock200_1.clq                              21      
-=opt= cpa_ilpi_mip.29                       23655131      
-=opt= cpa_ilpi_mip.37                       21635545      
-=opt= N_x_plit_28_20                       153183.89      
-=opt= ns60-pr3                                 26310      
-=opt= enlight13                                   71      
-=opt= net-5-3-7b                               14.44     
+=opt= brock200_1.clq                              21
+=opt= cpa_ilpi_mip.29                       23655131
+=opt= cpa_ilpi_mip.37                       21635545
+=opt= N_x_plit_28_20                       153183.89
+=opt= ns60-pr3                                 26310
+=opt= enlight13                                   71
+=opt= net-5-3-7b                               14.44
 =opt= neos-578379                                  0
 =opt= bs-2006-03-24-17-15-01       -7.0000000000e+01
 =opt= t0415pre                               5339422
