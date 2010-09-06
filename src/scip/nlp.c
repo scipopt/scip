@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.19 2010/09/04 19:04:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.20 2010/09/06 17:38:49 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -5534,6 +5534,16 @@ SCIP_NLPIPROBLEM* SCIPnlpGetNLPIProblem(
    assert(nlp != NULL);
 
    return nlp->problem;
+}
+
+/** indicates whether NLP is currently in diving mode */
+SCIP_Bool SCIPnlpIsDiving(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(nlp != NULL);
+
+   return nlp->indiving;
 }
 
 /** gets solution status of current NLP */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.6 2010/09/03 18:14:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.7 2010/09/06 17:38:49 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -213,6 +213,12 @@ SCIP_NLPI* SCIPnlpGetNLPI(
 /** gets the NLP problem in the solver interface */
 extern
 SCIP_NLPIPROBLEM* SCIPnlpGetNLPIProblem(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
+/** indicates whether NLP is currently in diving mode */
+extern
+SCIP_Bool SCIPnlpIsDiving(
    SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
