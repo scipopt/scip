@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.45 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.46 2010/09/06 17:52:10 bzfheinz Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3583,13 +3583,13 @@ SCIP_DECL_CONSCOPY(consCopySOC)
    SCIP_VAR*      rhsvar;
    int            i;
    
-   assert(scip       != NULL);
-   assert(conshdlr   != NULL);
-   assert(cons       != NULL);
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(sourcescip != NULL);
+   assert(sourceconshdlr != NULL);
    assert(sourcecons != NULL);
-   assert(varmap     != NULL);
-   assert(success    != NULL);
+   assert(varmap != NULL);
+   assert(success != NULL);
 
    consdata = SCIPconsGetData(sourcecons);
    assert(consdata != NULL);

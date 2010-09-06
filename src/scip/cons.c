@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.205 2010/09/06 16:10:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.206 2010/09/06 17:52:10 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4553,8 +4553,8 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
    SCIP_SET*             set,                /**< global SCIP settings of the target SCIP */
    const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint handler for this constraint */
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
@@ -4573,20 +4573,20 @@ SCIP_RETCODE SCIPconsCopy(
    )
 {
    assert(cons != NULL);
-   assert(conshdlr != NULL);
+   assert(sourceconshdlr != NULL);
 
    /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
    (*success) = FALSE;
    
-   if( conshdlr->conscopy != NULL )
+   if( sourceconshdlr->conscopy != NULL )
    {
-      SCIP_CALL( conshdlr->conscopy(set->scip, conshdlr, cons, name, sourcescip, sourcecons, varmap,
+      SCIP_CALL( sourceconshdlr->conscopy(set->scip, cons, name, sourcescip, sourceconshdlr, sourcecons, varmap,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global, success) );
    }
 #if 0
    else
    {
-      SCIPwarningMessage("constraint handler <%s> doesn't support copying constraints\n", conshdlr->name);
+      SCIPwarningMessage("constraint handler <%s> doesn't support copying constraints\n", sourceconshdlr->name);
    }
 #endif
    return SCIP_OKAY;

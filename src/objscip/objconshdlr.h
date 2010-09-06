@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.64 2010/09/01 16:33:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.65 2010/09/06 17:52:09 bzfheinz Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -735,10 +735,10 @@ public:
     */
    virtual SCIP_RETCODE scip_copy(
       SCIP*              scip,               /**< target SCIP data structure */
-      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler of the source SCIP itself */
       SCIP_CONS**        cons,               /**< pointer to store the created target constraint */
       const char*        name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
       SCIP*              sourcescip,         /**< source SCIP data structure */
+      SCIP_CONSHDLR*     sourceconshdlr,     /**< source constraint handler of the source SCIP */
       SCIP_CONS*         sourcecons,         /**< source constraint of the source SCIP */
       SCIP_HASHMAP*      varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.642 2010/09/06 16:10:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.643 2010/09/06 17:52:10 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1203,9 +1203,9 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
    )
 {
-   SCIP_CONSHDLR** conshdlrs;
+   SCIP_CONSHDLR** sourceconshdlrs;
 
-   int nconshdlrs;   
+   int nsourceconshdlrs;   
    int i;
 
    assert(sourcescip != NULL);
@@ -1216,57 +1216,59 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   nconshdlrs = SCIPgetNConshdlrs(sourcescip);
-   conshdlrs = SCIPgetConshdlrs(sourcescip);
-   assert(nconshdlrs == 0 || conshdlrs != NULL);
+   nsourceconshdlrs = SCIPgetNConshdlrs(sourcescip);
+   sourceconshdlrs = SCIPgetConshdlrs(sourcescip);
+   assert(nsourceconshdlrs == 0 || sourceconshdlrs != NULL);
    assert(SCIPisTransformed(sourcescip));
 
    /* copy problem: loop through all constraint handlers */  
-   for( i = 0; i < nconshdlrs; ++i )
+   for( i = 0; i < nsourceconshdlrs; ++i )
    {
-      SCIP_CONS** conss;
+      SCIP_CONS** sourceconss;
       SCIP_CONS* targetcons;
       
-      int nconss;
+      int nsourceconss;
       int c;         
       SCIP_Bool succeed;
    
-      assert(conshdlrs[i] != NULL);
+      assert(sourceconshdlrs[i] != NULL);
 
       /* for a global copy, copy all constraints that are globally active,
        * for a local copy, copy all constraints that are locally enforced, 
        * in order to also get local constraints, e.g. from branching */
       if( global )
       {      
-         nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
-         conss = SCIPconshdlrGetConss(conshdlrs[i]);
+         nsourceconss = SCIPconshdlrGetNConss(sourceconshdlrs[i]);
+         sourceconss = SCIPconshdlrGetConss(sourceconshdlrs[i]);
       }
       else
       {
-         nconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
-         conss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
+         nsourceconss = SCIPconshdlrGetNEnfoConss(sourceconshdlrs[i]);
+         sourceconss = SCIPconshdlrGetEnfoConss(sourceconshdlrs[i]);
       }
 
-      assert(nconss == 0 || conss != NULL);
+      assert(nsourceconss == 0 || sourceconss != NULL);
       
-      if( nconss > 0 )
+      if( nsourceconss > 0 )
       {
-         SCIPdebugMessage("Attempting to copy %d %s constraints\n", nconss, SCIPconshdlrGetName(conshdlrs[i]));
+         SCIPdebugMessage("Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
       }
       
       /* copy problem: loop through all constraints of one type */  
-      for( c = 0; c < nconss; ++c )
+      for( c = 0; c < nsourceconss; ++c )
       {
-         assert(conss[c] != NULL);
-         assert(SCIPconsIsActive(conss[c]));
-         assert(!SCIPconsIsDeleted(conss[c]));
-         assert(!global || !SCIPconsIsLocal(conss[c]));
-         assert(global || SCIPconsIsEnforced(conss[c]));
+         assert(sourceconss[c] != NULL);
+         assert(SCIPconsIsActive(sourceconss[c]));
+         assert(!SCIPconsIsDeleted(sourceconss[c]));
+         assert(!global || !SCIPconsIsLocal(sourceconss[c]));
+         assert(global || SCIPconsIsEnforced(sourceconss[c]));
 
          /* use the copy constructor of each constraint handler */
-         SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, conshdlrs[i], sourcescip, conss[c], varmap,
-               SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]), SCIPconsIsChecked(conss[c]),
-               SCIPconsIsPropagated(conss[c]), FALSE, SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]), FALSE, global, &succeed) );
+         SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, sourcescip, sourceconshdlrs[i], sourceconss[c], varmap,
+               SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]),
+               SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
+               SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsDynamic(sourceconss[c]), 
+               SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
             
          /* add the copied constraint to subSCIP, print a warning if conshdlr does not support copying */
          if( succeed )
@@ -1278,7 +1280,7 @@ SCIP_RETCODE SCIPcopyConss(
             /* insert constraint into mapping between source SCIP and the target SCIP */
             if( consmap != NULL )
             {
-               SCIP_CALL( SCIPhashmapInsert(consmap, conss[c], targetcons) );
+               SCIP_CALL( SCIPhashmapInsert(consmap, sourceconss[c], targetcons) );
             }
             else 
             {
@@ -1289,7 +1291,7 @@ SCIP_RETCODE SCIPcopyConss(
          else
          {
             *success = FALSE;
-            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(conss[c]));
+            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
          }
       }
    }
@@ -11399,8 +11401,8 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP*                 scip,               /**< target SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
    const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint handler for this constraint */
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
@@ -11419,11 +11421,11 @@ SCIP_RETCODE SCIPcopyCons(
    )
 {
    assert(cons != NULL);
-   assert(conshdlr != NULL);
+   assert(sourceconshdlr != NULL);
    
    SCIP_CALL( checkStage(scip, "SCIPcopyCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
    
-   SCIP_CALL( SCIPconsCopy(cons, scip->set, name, conshdlr, sourcescip, sourcecons, varmap, 
+   SCIP_CALL( SCIPconsCopy(cons, scip->set, name, sourcescip, sourceconshdlr, sourcecons, varmap, 
          initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global, success) );
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.60 2010/09/06 17:03:40 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.61 2010/09/06 17:52:10 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -626,10 +626,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *
  *  input:
  *  - scip            : target SCIP data structure
- *  - conshdlr        : the constraint handler of the source SCIP itself
  *  - cons            : pointer to store the created target constraint
  *  - name            : name of constraint, or NULL if the name of the source constraint should be used
  *  - sourcescip      : source SCIP data structure
+ *  - sourceconshdlr  : source constraint handler of the source SCIP
  *  - sourcecons      : source constraint of the source SCIP
  *  - varmap          : a SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP
  *  - initial         : should the LP relaxation of constraint be in the initial LP?
@@ -647,8 +647,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  output:
  *  - success         : pointer to store whether the copying was successful or not 
  */
-#define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, const char* name, \
-      SCIP* sourcescip, SCIP_CONS* sourcecons,  SCIP_HASHMAP* varmap, \
+#define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS** cons, const char* name, \
+      SCIP* sourcescip, SCIP_CONSHDLR* sourceconshdlr, SCIP_CONS* sourcecons,  SCIP_HASHMAP* varmap, \
       SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, \
       SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool global, SCIP_Bool* success)
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.123 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.124 2010/09/06 17:52:10 bzfheinz Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7392,9 +7392,9 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
    int               k;
    
    assert(scip != NULL);
-   assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(sourcescip != NULL);
+   assert(sourceconshdlr != NULL);
    assert(sourcecons != NULL);
    assert(varmap != NULL);
    assert(success != NULL);

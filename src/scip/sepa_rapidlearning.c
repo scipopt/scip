@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.20 2010/09/06 16:10:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.21 2010/09/06 17:52:10 bzfheinz Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -516,7 +516,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                assert(cons != NULL);        
 
                success = FALSE;
-               SCIP_CALL( SCIPcopyCons(scip, &conscopy, NULL, conshdlrs[i], subscip, cons, varmapbw,
+               SCIP_CALL( SCIPcopyCons(scip, &conscopy, NULL, subscip, conshdlrs[i], cons, varmapbw,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      SCIPconsIsPropagated(cons), TRUE, SCIPconsIsDynamic(cons),
                      SCIPconsIsRemovable(cons), FALSE, TRUE, &success) );

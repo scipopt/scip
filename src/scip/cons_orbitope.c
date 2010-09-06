@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.13 2010/09/06 16:10:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.14 2010/09/06 17:52:10 bzfheinz Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1933,10 +1933,10 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    int nblocks;
 
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
    assert( sourcescip != NULL );
+   assert( sourceconshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
    assert( sourcecons != NULL );
    assert( varmap != NULL );
 
