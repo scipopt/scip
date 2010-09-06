@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.131 2010/09/06 16:48:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.132 2010/09/06 17:26:01 bzfviger Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -49,6 +49,7 @@
 #include "scip/cons_sos2.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_soc.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "mpsreader"
@@ -108,7 +109,6 @@ struct MpsInput
    char                 objname [MPS_MAX_NAMELEN];
    SCIP_Bool            isinteger;
    SCIP_Bool            isnewformat;
-   SCIP_Bool            semicontwarning;
 };
 typedef struct MpsInput MPSINPUT;
 
@@ -143,7 +143,6 @@ SCIP_RETCODE mpsinputCreate(
    (*mpsi)->haserror    = FALSE;
    (*mpsi)->isinteger   = FALSE;
    (*mpsi)->isnewformat = FALSE;
-   (*mpsi)->semicontwarning = FALSE;
    (*mpsi)->buf     [0] = '\0';
    (*mpsi)->probname[0] = '\0';
    (*mpsi)->objname [0] = '\0';
@@ -1226,6 +1225,14 @@ SCIP_RETCODE readBounds(
    SCIP_VAR*   var;
    SCIP_Real   val;
    SCIP_Bool   shifted;
+   
+   SCIP_VAR** semicont;
+   int nsemicont;
+   int semicontsize;
+   
+   semicont = NULL;
+   nsemicont = 0;
+   semicontsize = 0;  
 
    SCIPdebugMessage("read bounds\n");
 
@@ -1247,7 +1254,7 @@ SCIP_RETCODE readBounds(
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
             break;
-         return SCIP_OKAY;
+         goto READBOUNDS_FINISH;
       }
       
       shifted = FALSE;
@@ -1258,18 +1265,12 @@ SCIP_RETCODE readBounds(
          || !strcmp(mpsinputField1(mpsi), "FX")  /* fixed value given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "LI")  /* CPLEX extension: lower bound of integer variable given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "UI")  /* CPLEX extension: upper bound of integer variable given in field 4 */
-         || !strcmp(mpsinputField1(mpsi), "SC") )/* CPLEX extension: semi continuous variable */
+         || !strcmp(mpsinputField1(mpsi), "SC") )/* CPLEX extension: semi continuous variable, upper bound given in field 4 */
       {
          if( mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL )
          {
             mpsinputInsertName(mpsi, "_BND_", TRUE);
             shifted = TRUE;
-         }
-         if( !mpsi->semicontwarning && !strcmp(mpsinputField1(mpsi), "SC") )
-         {
-            mpsinputEntryIgnored(scip, mpsi, "not supported semi continuous declaration", mpsinputField1(mpsi),
-               "variable", mpsinputField3(mpsi), SCIP_VERBLEVEL_NORMAL);
-            mpsi->semicontwarning = TRUE;
          }
       }
       else if( !strcmp(mpsinputField1(mpsi), "FR") /* free variable */
@@ -1355,6 +1356,26 @@ SCIP_RETCODE readBounds(
                }
                SCIP_CALL( SCIPchgVarUb(scip, var, val) );
                break;
+            case 'S':
+               assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semicontinuous) */
+               /* remember that variable is semicontinuous */
+               if( semicontsize <= nsemicont )
+               {
+                  semicontsize = SCIPcalcMemGrowSize(scip, nsemicont+1);
+                  if( semicont == NULL )
+                  {
+                     SCIP_CALL( SCIPallocBufferArray(scip, &semicont, semicontsize) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPreallocBufferArray(scip, &semicont, semicontsize) );
+                  }
+               }
+               semicont[nsemicont] = var;
+               ++nsemicont;
+               
+               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+               break;
             case 'F':
                if( mpsinputField1(mpsi)[1] == 'X' )
                {
@@ -1398,6 +1419,61 @@ SCIP_RETCODE readBounds(
       }
    }
    mpsinputSyntaxerror(mpsi);
+   
+   
+READBOUNDS_FINISH:
+   if( nsemicont > 0 )
+   {
+      int i;
+      SCIP_Real oldlb;
+      char name[SCIP_MAXSTRLEN];
+      SCIP_CONS* cons;
+      SCIP_Bool dynamicconss;
+      SCIP_Bool dynamiccols;
+      
+      SCIP_VAR* vars[2];
+      SCIP_BOUNDTYPE boundtypes[2];
+      SCIP_Real bounds[2];
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
+      
+      /* add bound disjunction constraints for semicontinuous variables */
+      for( i = 0; i < nsemicont; ++i )
+      {
+         var = semicont[i];
+         
+         oldlb = SCIPvarGetLbGlobal(var);
+         /* if no bound was specified (which we assume if we see lower bound 0.0),
+          * then the default lower bound for a semicontinuous variable is 1.0 */
+         if( oldlb == 0.0 )
+            oldlb = 1.0;
+         
+         /* change the lower bound to 0.0 */
+         SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+
+         /* add a bound disjunction constraint to say var <= 0.0 or var >= oldlb */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semicont_%s", SCIPvarGetName(var));
+         
+         vars[0] = var;
+         vars[1] = var;
+         boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
+         boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
+         bounds[0] = 0.0;
+         bounds[1] = oldlb;
+         
+         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
+            !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         
+         SCIPdebugMessage("add bound disjunction constraint for semicontinuity of <%s>:\n\t", SCIPvarGetName(var));
+         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
+   }
+   
+   SCIPfreeBufferArrayNull(scip, &semicont);
 
    return SCIP_OKAY;
 }

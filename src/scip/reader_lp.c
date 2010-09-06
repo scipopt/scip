@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.96 2010/09/06 16:48:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.97 2010/09/06 17:26:01 bzfviger Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -1825,14 +1825,14 @@ SCIP_RETCODE readSemicontinuous(
    SCIP_VAR* var;
    SCIP_Bool created;
    SCIP_Bool dynamicconss;
-   SCIP_Bool dynamicrows;
+   SCIP_Bool dynamiccols;
    
    SCIP_VAR* vars[2];
    SCIP_BOUNDTYPE boundtypes[2];
    SCIP_Real bounds[2];
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
 
    /* if section is titles "semi-continuous", then the parser breaks this into parts */
    if( strcasecmp(lpinput->token, "SEMI") == 0 )
@@ -1893,7 +1893,7 @@ SCIP_RETCODE readSemicontinuous(
       bounds[1] = oldlb;
       
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
-         !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+         !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       
       SCIPdebugMessage("add bound disjunction constraint for semicontinuity of <%s>:\n\t", SCIPvarGetName(var));
