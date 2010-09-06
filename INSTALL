@@ -425,27 +425,27 @@ make[1]: Leaving directory `/sw/scip'
 Remarks on Installing under Windows using MinGW
 -----------------------------------------------
 
-To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS from mingw.org .
+To build your own Windows binaries under Windows, we recommend using the MinGW-Compiler with MSYS from mingw.org
 
 First install MSYS, then MinGW to the mingw folder inside the msys folder.
 Now you need to install the following packages to the mingw folder:
-- zlib (or use ZLIB=false)
-- pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
+- zlib (or use ZLIB=false ZIMPL=false since zlib is needed for ZIMPL and ZIMPL-support in SCIP)
+- pcre (or use ZIMPL=false since pcre is needed for ZIMPL and ZIMPL-support in SCIP)
+- gmplib (or use ZIMPL=false since gmplib is needed for ZIMPL and ZIMPL-support in SCIP)
 
 (After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
 
-You can download these additional packages from
-http://gnuwin32.sourceforge.net/packages.html
-or compile the source on your own from their homepages.
-
-Second you need to copy the file sh.exe to bash.exe otherwise various scripts (including makefiles) will not work.
-Normally the unistd.h covers also the getopt-options, but for mingw you need to add the entry
-#include <getopt.h>
-into the /mingw/include/unistd.h after the other include-entries (if not present).
-
-At last there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in SCIP (otherwise use ZIMPL=false as parameter with the make-call):
-the gmplib from gmplib.org
-The command "./configure --prefix=/mingw ; make ; make install" should succeed without problems and installs the gmplib to the mingw folder.
+You can download these additional packages as precompiled binaries for example from:
+http://gnuwin32.sourceforge.net/packages.html (zlib&pcre)
+http://cs.nyu.edu/exact/core/gmp/ (gmplib)
+or compile the source on your own from the project homepages:
+http://www.zlib.net/
+http://www.pcre.org/
+http://www.gmplib.org/
+(The command "./configure --prefix=/mingw ; make ; make install" should succeed without problems and installs the packages into the mingw folder.)
 
 Now "make READLINE=false" should be compiling without errors.
-Please note that we do NOT support creating the doxygen documentation and readline-usage under windows.
+Please note that we do NOT support creating the doxygen documentation or readline-usage under Windows.
+
+Since there are no real symlinks in MSYS, the include and library files of SoPlex and ZIMPL are actually copied into the SCIP-lib-folder.
+When you recompile the ZIMPL or SoPlex after compiling SCIP you have to copy the libraries manually into the SCIP-lib-folder and recompile SCIP afterwards.
