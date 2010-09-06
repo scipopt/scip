@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.3 2010/09/06 16:57:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.4 2010/09/06 16:59:16 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -641,7 +641,7 @@ SCIP_RETCODE getVariable(
       SCIP_Bool initial;
       SCIP_Bool removable;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamiccols", &dynamiccols) );
       initial = !dynamiccols;
       removable = dynamiccols;
 
@@ -1444,8 +1444,8 @@ SCIP_RETCODE readConstraints(
    }
 
    /* create and add the linear constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
    initial = !dynamicrows;
    separate = TRUE;
    enforce = TRUE;
