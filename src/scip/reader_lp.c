@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.94 2010/09/01 20:36:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.95 2010/09/06 16:36:37 bzfviger Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -47,6 +47,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_soc.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "lpreader"
@@ -1817,17 +1818,88 @@ SCIP_RETCODE readSemicontinuous(
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
+   SCIP_Real oldlb;
    assert(lpinput != NULL);
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONS* cons;
+   SCIP_VAR* var;
+   SCIP_Bool created;
+   SCIP_Bool dynamicconss;
+   SCIP_Bool dynamicrows;
+   
+   SCIP_VAR* vars[2];
+   SCIP_BOUNDTYPE boundtypes[2];
+   SCIP_Real bounds[2];
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
+
+   /* if section is titles "semi-continuous", then the parser breaks this into parts */
+   if( strcasecmp(lpinput->token, "SEMI") == 0 )
+   {
+      if( !getNextToken(lpinput) )
+      {
+         syntaxError(scip, lpinput, "unexpected end");
+         return SCIP_OKAY;
+      }
+      
+      if( strcasecmp(lpinput->token, "-") == 0 )
+      {
+         if( !getNextToken(lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
+         {
+            syntaxError(scip, lpinput, "expected 'CONTINUOUS' after 'SEMI-'");
+            return SCIP_OKAY;
+         }
+      }
+      else
+      {
+         pushToken(lpinput);
+      }
+   }
+   
    while( getNextToken(lpinput) )
    {
       /* check if we reached a new section */
       if( isNewSection(lpinput) )
          return SCIP_OKAY;
 
-      /* semi-continuous variables are not yet supported by SCIP */
-      syntaxError(scip, lpinput, "semi-continuous variables not yet supported by SCIP");
-      return SCIP_OKAY;
+      /* the token must be the name of an existing variable */
+      SCIP_CALL( getVariable(scip, lpinput->token, &var, &created) );
+      if( created )
+      {
+         syntaxError(scip, lpinput, "unknown variable in semi-continuous section");
+         return SCIP_OKAY;
+      }
+      
+      if( SCIPvarGetLbGlobal(var) <= 0.0 )
+      {
+         SCIPdebugMessage("ignore semicontinuity of variable <%s> with negative lower bound %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
+         continue;
+      }
+      
+      oldlb = SCIPvarGetLbGlobal(var);
+      
+      /* change the lower bound to 0.0 */
+      SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+
+      /* add a bound disjunction constraint to say var <= 0.0 or var >= oldlb */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semicont_%s", SCIPvarGetName(var));
+      
+      vars[0] = var;
+      vars[1] = var;
+      boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
+      boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
+      bounds[0] = 0.0;
+      bounds[1] = oldlb;
+      
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
+         !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      
+      SCIPdebugMessage("add bound disjunction constraint for semicontinuity of <%s>:\n\t", SCIPvarGetName(var));
+      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    return SCIP_OKAY;
