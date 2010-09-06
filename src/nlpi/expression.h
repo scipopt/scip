@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.13 2010/09/05 19:17:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.h,v 1.14 2010/09/06 10:51:24 bzfviger Exp $"
 
 /**@file   nlpi/expression.h
  * @brief  methods for expressions and expression trees
@@ -145,6 +145,29 @@ SCIP_Real* SCIPexprGetLinearCoefs(
 /** gives constant belonging to a SCIP_EXPR_LINEAR expression  */
 extern
 SCIP_Real SCIPexprGetLinearConstant(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** creates a SCIP_EXPR_QUADRATIC expression: sum_i coef_i child1_i child2_i */
+extern
+SCIP_RETCODE SCIPexprCreateQuadratic(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   int                   nquadelems,         /**< number of quadratic elements */
+   SCIP_QUADELEM*        quadelems           /**< quadratic elements specifying coefficients and child indices */
+);
+
+/** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+extern
+SCIP_QUADELEM* SCIPexprGetQuadElements(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+extern
+int SCIPexprGetNQuadElements(
    SCIP_EXPR*            expr                /**< expression */
 );
 

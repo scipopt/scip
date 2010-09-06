@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.20 2010/09/05 19:40:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.21 2010/09/06 10:51:24 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -689,8 +689,62 @@ SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
    return SCIP_OKAY;
 }
 
-#define SCIPexprevalQuadratic      NULL
-#define SCIPexprevalQuadraticInt   NULL
+static
+SCIP_DECL_EVAL( SCIPexprevalQuadratic )
+{
+   SCIP_QUADELEM* quadelems;
+   int nquadelems;
+   int i;
+
+   assert(result  != NULL);
+   assert(argvals != NULL || nargs == 0);
+   assert(opdata.data != NULL);
+
+   nquadelems = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->nquadelems;
+   quadelems  = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->quadelems;
+   
+   assert(quadelems != NULL || nquadelems == 0);
+   
+   *result = 0.0;
+   for( i = nquadelems; i > 0 ; --i, ++quadelems )
+      *result += quadelems->coef * argvals[quadelems->idx1] * argvals[quadelems->idx2];
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_INTEVAL( SCIPexprevalQuadraticInt )
+{
+   SCIP_QUADELEM* quadelems;
+   int nquadelems;
+   int i;
+   SCIP_INTERVAL tmp;
+
+   assert(result  != NULL);
+   assert(argvals != NULL || nargs == 0);
+   assert(opdata.data != NULL);
+
+   nquadelems = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->nquadelems;
+   quadelems  = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->quadelems;
+   
+   assert(quadelems != NULL || nquadelems == 0);
+   
+   SCIPintervalSet(result, 0.0);
+   for( i = nquadelems; i > 0 ; --i, ++quadelems )
+   {
+      if( quadelems->idx1 == quadelems->idx2 )
+         SCIPintervalSquare(infinity, &tmp, argvals[quadelems->idx1]);
+      else
+         SCIPintervalMul(infinity, &tmp, argvals[quadelems->idx1], argvals[quadelems->idx2]);
+      
+      if( quadelems->coef != 1.0 )
+         SCIPintervalMulScalar(infinity, &tmp, tmp, quadelems->coef);
+      
+      SCIPintervalAdd(infinity, result, *result, tmp);
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_EVAL( SCIPexprevalPolynom )
@@ -1093,7 +1147,7 @@ SCIP_RETCODE SCIPexprCreate(
       }
 
       case SCIP_EXPR_LINEAR :
-      /* case SCIP_EXPR_QUADRATIC: */
+      case SCIP_EXPR_QUADRATIC:
       case SCIP_EXPR_POLYNOM:
       {
          SCIPerrorMessage("cannot create complex expression linear, quadratic, or polynom with SCIPexprCreate\n");
@@ -1105,6 +1159,54 @@ SCIP_RETCODE SCIPexprCreate(
          return SCIP_INVALIDDATA;
    }
    
+   return SCIP_OKAY;
+}
+
+/** creates SCIP_EXPRDATA_QUADRATIC data structure from given quadratic elements */
+static
+SCIP_RETCODE quadraticdataCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_QUADRATIC** quadraticdata,  /**< buffer to store pointer to quadratic data */
+   int                   nquadelems,         /**< number of quadratic elements */
+   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
+   )
+{
+   assert(blkmem != NULL);
+   assert(quadraticdata != NULL);
+   assert(quadelems != NULL || nquadelems == 0);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, quadraticdata) );
+
+   (*quadraticdata)->nquadelems = nquadelems;
+   (*quadraticdata)->quadelems  = NULL;
+
+   if( nquadelems > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*quadraticdata)->quadelems, quadelems, nquadelems) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees SCIP_EXPRDATA_QUADRATIC data structure */
+static
+SCIP_RETCODE quadraticdataFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_QUADRATIC** quadraticdata   /**< buffer to store pointer to quadratic data */
+   )
+{
+   assert(blkmem != NULL);
+   assert(quadraticdata != NULL);
+   assert(*quadraticdata != NULL);
+
+   if( (*quadraticdata)->nquadelems > 0 )
+   {
+      assert((*quadraticdata)->quadelems != NULL);
+      BMSfreeBlockMemoryArray(blkmem, &(*quadraticdata)->quadelems, (*quadraticdata)->nquadelems);
+   }
+
+   BMSfreeBlockMemory(blkmem, quadraticdata);
+
    return SCIP_OKAY;
 }
 
@@ -1239,6 +1341,18 @@ SCIP_RETCODE SCIPexprCopyDeep(
          SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, (SCIP_Real**)&(*targetexpr)->data.data, (SCIP_Real*)sourceexpr->data.data, sourceexpr->nchildren + 1) );
          break;
       }
+      
+      case SCIP_EXPR_QUADRATIC:
+      {
+         SCIP_EXPRDATA_QUADRATIC* sourcedata;
+         
+         sourcedata = (SCIP_EXPRDATA_QUADRATIC*)sourceexpr->data.data;
+         assert(sourcedata != NULL);
+         
+         SCIP_CALL( quadraticdataCreate(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&(*targetexpr)->data.data,
+            sourcedata->nquadelems, sourcedata->quadelems) );
+         break;
+      }
 
       case SCIP_EXPR_POLYNOM:
       {
@@ -1276,6 +1390,13 @@ void SCIPexprFreeDeep(
          /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
          assert((*expr)->data.data != NULL);
          BMSfreeBlockMemoryArray(blkmem, (SCIP_Real**)&(*expr)->data.data, (*expr)->nchildren + 1);
+         break;
+      }
+      
+      case SCIP_EXPR_QUADRATIC:
+      {
+         assert((*expr)->data.data != NULL);
+         quadraticdataFree(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&(*expr)->data.data);
          break;
       }
 
@@ -1446,6 +1567,64 @@ SCIP_Real SCIPexprGetLinearConstant(
 
    /* the constant is stored in the nchildren's element of the array stored as expression data */
    return ((SCIP_Real*)expr->data.data)[expr->nchildren];
+}
+
+/** creates a SCIP_EXPR_QUADRATIC expression: sum_i coef_i child1_i child2_i */
+SCIP_RETCODE SCIPexprCreateQuadratic(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   int                   nquadelems,         /**< number of quadratic elements */
+   SCIP_QUADELEM*        quadelems           /**< quadratic elements specifying coefficients and child indices */
+)
+{
+   SCIP_EXPROPDATA opdata;
+   SCIP_EXPR**     childrencopy;
+   SCIP_EXPRDATA_QUADRATIC* data;
+
+   assert(nchildren >= 0);
+   assert(children  != NULL || nchildren == 0);
+   assert(quadelems != NULL || nquadelems == 0);
+
+   if( nchildren > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &childrencopy, children, nchildren) );
+   }
+   else
+      childrencopy = NULL;
+
+   SCIP_CALL( quadraticdataCreate(blkmem, &data, nquadelems, quadelems) );
+
+   opdata.data = (void*)data;
+
+   SCIP_CALL( exprCreate( blkmem, expr, SCIP_EXPR_QUADRATIC, nchildren, childrencopy, opdata) );
+
+   return SCIP_OKAY;
+}
+
+/** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+SCIP_QUADELEM* SCIPexprGetQuadElements(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->quadelems;
+}
+
+/** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
+int SCIPexprGetNQuadElements(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->nquadelems;
 }
 
 /** creates a SCIP_EXPR_POLYNOM expression from an array of monoms: constant + sum_i monom_i */
@@ -1881,6 +2060,41 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
          break;
       }
+      
+      case SCIP_EXPR_QUADRATIC:
+      {
+         SCIP_EXPRDATA_QUADRATIC* quadraticdata;
+         int i;
+         
+         quadraticdata = (SCIP_EXPRDATA_QUADRATIC*)expr->data.data;
+
+         *maxdegree = 0;
+         for( i = 0; i < quadraticdata->nquadelems; ++i )
+         {
+            /* compute degree of both children */
+            SCIP_CALL( SCIPexprGetMaxDegree(expr->children[quadraticdata->quadelems[i].idx1], &child1) );
+            if( quadraticdata->quadelems[i].idx1 != quadraticdata->quadelems[i].idx2 )
+            {
+               SCIP_CALL( SCIPexprGetMaxDegree(expr->children[quadraticdata->quadelems[i].idx1], &child2) );
+            }
+            else
+            {
+               child2 = child1;
+            }
+            
+            if( child1 == SCIP_EXPR_DEGREEINFINITY || child2 == SCIP_EXPR_DEGREEINFINITY )
+            {
+               *maxdegree = SCIP_EXPR_DEGREEINFINITY;
+               break;
+            }
+            
+            /* degree of term is sum of degrees of children */
+            if( child1 + child2 > *maxdegree )
+               *maxdegree = child1 + child2;
+         }
+
+         break;
+      }
 
       case SCIP_EXPR_POLYNOM:
       {
@@ -2253,7 +2467,34 @@ void SCIPexprPrint(
          break;
       }
 
-      /* case SCIP_EXPR_QUADRATIC: */
+      case SCIP_EXPR_QUADRATIC:
+      {
+         SCIP_EXPRDATA_QUADRATIC* quadraticdata;
+         int i;
+         
+         quadraticdata = (SCIP_EXPRDATA_QUADRATIC*)expr->data.data;
+         assert(quadraticdata != NULL);
+
+         SCIPmessageFPrintInfo(file, "(");
+
+         for( i = 0; i < quadraticdata->nquadelems; ++i )
+         {
+            SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->quadelems[i].coef);
+            SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], file, varnames, paramnames);
+            if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
+            {
+               SCIPmessageFPrintInfo(file, "^2");
+            }
+            else
+            {
+               SCIPmessageFPrintInfo(file, " * ");
+               SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx2], file, varnames, paramnames);
+            }
+         }
+
+         SCIPmessageFPrintInfo(file, ")");
+         break;         
+      }
 
       case SCIP_EXPR_POLYNOM:
       {

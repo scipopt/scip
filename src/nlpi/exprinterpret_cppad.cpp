@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.15 2010/09/05 19:40:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.16 2010/09/06 10:51:24 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -525,6 +525,33 @@ SCIP_RETCODE eval(
          val = SCIPexprGetLinearConstant(expr);
          for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
             val += coefs[i] * buf[i];
+         break;
+      }
+      
+      case SCIP_EXPR_QUADRATIC:
+      {
+         SCIP_QUADELEM* quadelems;
+         int nquadelems;
+         
+         nquadelems = SCIPexprGetNQuadElements(expr);
+         quadelems  = SCIPexprGetQuadElements(expr);
+         assert(quadelems != NULL || nquadelems == 0);
+         
+         val = 0.0;
+         for (int i = nquadelems; i > 0; --i, ++quadelems)
+         {
+            if( quadelems->idx1 == quadelems->idx2 )
+            {
+               Type tmp;
+               evalSquare(tmp, buf[quadelems->idx1]);
+               val += quadelems->coef * tmp;
+            }
+            else
+            {
+               val += quadelems->coef * buf[quadelems->idx1] * buf[quadelems->idx2];
+            }
+         }
+         
          break;
       }
 
