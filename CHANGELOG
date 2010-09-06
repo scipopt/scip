@@ -298,6 +298,7 @@ plugins:
 - added interface to CppAD (nlpi/exprinterpret_cppad.cpp)
 - new separator oddcycle (sepa_oddcycle.{c,h}) separates oddcycle inequalities using the implication/conflict graph and dijkstra-algorithm based on binary heaps (dijkstra/dijkstra_bh.{c,h})
 - added new NLP heuristic (heur_subnlp.{c,h}) which solves the sub-NLP that is obtained by fixing all discrete variables in the CIP and applying SCIP's presolving   
+- added new reader for polynomial mixed-integer programs (reader_pip.{c,h}) as used in the POLIP
 
 parameters: 
 - added parameter <misc/usesmalltables> which results in using smaller tables for names, cliques and cuts and improves the
