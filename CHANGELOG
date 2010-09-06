@@ -208,6 +208,7 @@ performance improvements:
 - added a dual reduction step in cons_knapsack.c
 - avoided restarting if LP solution is feasible
 - fasten check for common cliques in SCIPcliquelistsHaveCommonClique
+- SCIP with CPLEX as LP solver now uses quickstart steepest edge pricing as default instead of steepest edge pricing
 
 fixed bugs:
 - fixed bug in lpi_clp.cpp: SCIPlpiChgBounds checks if the column status exists in Clp before using it
