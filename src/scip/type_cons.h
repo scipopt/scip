@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.59 2010/09/06 16:10:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.60 2010/09/06 17:03:40 bzfberth Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -628,7 +628,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - scip            : target SCIP data structure
  *  - conshdlr        : the constraint handler of the source SCIP itself
  *  - cons            : pointer to store the created target constraint
-    - name            : name of constraint, or NULL if the name of the source constraint should be used
+ *  - name            : name of constraint, or NULL if the name of the source constraint should be used
  *  - sourcescip      : source SCIP data structure
  *  - sourcecons      : source constraint of the source SCIP
  *  - varmap          : a SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP
