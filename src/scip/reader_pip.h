@@ -12,10 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.h,v 1.1 2010/09/06 15:58:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.h,v 1.2 2010/09/06 16:19:33 bzfheinz Exp $"
 
-/**@file   reader_lp.h
- * @brief  PIP file reader
+/**@file   reader_pip.h
+ * @ingroup FILEREADERS 
+ * @brief  file reader for polynomial mixed-integer programs in PIP format
  * @author Stefan Vigerske
  */
 

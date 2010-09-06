@@ -12,14 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.1 2010/09/06 15:58:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.2 2010/09/06 16:19:33 bzfheinz Exp $"
 
-/**@file   reader_lp.c
+/**@file   reader_pip.c
  * @ingroup FILEREADERS 
- * @brief  PIP file reader
- * @author Tobias Achterberg
- * @author Marc Pfetsch
- * @author Stefan Heinz
+ * @brief  file reader for polynomial mixed-integer programs in PIP format
  * @author Stefan Vigerske
  *
  * @todo Test for uniqueness of variable names (after cutting down).
