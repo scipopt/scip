@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.130 2010/08/30 19:34:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.131 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -2691,45 +2691,37 @@ SCIP_RETCODE checkVarnames(
 static
 SCIP_RETCODE checkConsnames(
    SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONS**        origconss,          /**< array of all constraints */
-   int                norigconss,         /**< number of all constraints */
-   SCIP_CONS***       conss,              /**< array to store only relevant constraints */
-   int*               nconss,             /**< number of relevant constraints */
+   SCIP_CONS**        conss,              /**< array of all constraints */
+   int                nconss,             /**< number of all constraints */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    unsigned int*      maxnamelen,         /**< pointer to store rhe maximum name lenght */
    const char***      consnames,          /**< pointer to array of constraint names */
    SCIP_Bool*         error               /**< pointer to store whether all constraintnames exist */
    )
 {
-   int c, i;
-   int faulty;
    SCIP_CONS* cons;
    char* consname;
-
-   assert( scip != NULL );
-   assert( conss != NULL );
-   assert( maxnamelen != NULL );
+   int faulty;
+   int i;
+   
+   assert(scip != NULL);
+   assert(maxnamelen != NULL);
 
    faulty = 0;
    *error = FALSE;
-
+   
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, conss, norigconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, consnames, norigconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, consnames, nconss) );
 
-   for( i = 0, c = 0; i < norigconss; ++i )
+   for( i = 0; i < nconss; ++i )
    {
       size_t l;
 
-      cons = origconss[i];
+      cons = conss[i];
       assert( cons != NULL );
 
-      /* in case the transformed probelms is written only constraint are
-       * posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
-      
-      (*conss)[c] = cons;
+      /* in case the transformed probelms is written only constraint are posted which are enabled in the current node */
+      assert(!transformed || SCIPconsIsEnabled(cons));
       
       if( strlen(SCIPconsGetName(cons)) >= MPS_MAX_NAMELEN )
       {
@@ -2743,13 +2735,12 @@ SCIP_RETCODE checkConsnames(
       {
          SCIPwarningMessage("At least one name of a constraint is empty, so file will be written with generic names.\n");
          
-         --c;
-         for( ; c >= 0; --c)
+         --i;
+         for( ; i >= 0; --i)
          {
-            SCIPfreeBufferArray(scip, &((*consnames)[c]));
+            SCIPfreeBufferArray(scip, &((*consnames)[i]));
          }
          SCIPfreeBufferArray(scip, &consnames);
-         SCIPfreeBufferArray(scip, &conss);
          
          *error = TRUE;
 
@@ -2761,8 +2752,7 @@ SCIP_RETCODE checkConsnames(
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
       (void) SCIPsnprintf(consname, (int)(*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
       
-      (*consnames)[c] = consname;
-      c++;
+      (*consnames)[i] = consname;
    }
    
    if( faulty > 0 )
@@ -2770,8 +2760,6 @@ SCIP_RETCODE checkConsnames(
       SCIPwarningMessage("there are %d constraint names which have to be cut down to %d characters; LP might be corrupted\n", 
          faulty, MPS_MAX_NAMELEN - 1);
    }
-   
-   (*nconss) = c;
    
    return SCIP_OKAY;
 }
@@ -2889,11 +2877,10 @@ void printRhsSection(
       if( SCIPisInfinity(scip, rhss[c]) )
          continue;
          
-         /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
-      assert( !transformed || SCIPconsIsEnabled(cons) );
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints 
+       */
+      assert(!transformed || SCIPconsIsEnabled(cons));
       
       assert( conss[c] != NULL );
       assert( consnames[c] != NULL );
@@ -2940,10 +2927,9 @@ void printRangeSection(
       cons = conss[c];
       assert( cons != NULL);
 
-      /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints
+       */
       assert( !transformed || SCIPconsIsEnabled(cons) );
 
       assert( consnames[c] != NULL );
@@ -3229,9 +3215,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    int c, v, i;
    char* namestr;
 
-   SCIP_CONS** relconss;
-   int nrelconss;
-
    SCIP_CONS* cons = NULL;
    const char* consname;
    const char** consnames;
@@ -3287,7 +3270,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    
    needRANGES = FALSE;
    maxnamelen = 0;
-   nrelconss = -1;
    nConsSOS1 = 0;
    nConsSOS2 = 0;
    nConsQuadratic = 0;
@@ -3295,7 +3277,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    nConsIndicator = 0;
 
    /* check if the constraint names are too long and build the constraint names */
-   SCIP_CALL( checkConsnames(scip, conss, nconss, &relconss, &nrelconss, transformed, &maxnamelen, &consnames, &error) );
+   SCIP_CALL( checkConsnames(scip, conss, nconss, transformed, &maxnamelen, &consnames, &error) );
    if( error )
    {
       /* todo call writing with generic names */
@@ -3314,13 +3296,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       return SCIP_OKAY;
    }
    
-   assert(nrelconss >= 0);
-
    /* check if the variable names are not too long and build the "variable" -> "variable name" hash map */
    SCIP_CALL( checkVarnames(scip, vars, nvars, &maxnamelen, &varnames, &varnameHashmap) );
-
-   conss = relconss;
-   nconss = nrelconss;
 
    /* collect SOS, quadratic, and indicator constraints in array for later output */
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
@@ -3389,10 +3366,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       cons = conss[c];
       assert( cons != NULL);
 
-      /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints
+       */
       assert( !transformed || SCIPconsIsEnabled(cons) );
 
       conshdlr = SCIPconsGetHdlr(cons);
@@ -4074,10 +4050,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    for( c = 0; c < nconss + naggvars; ++c )
    {
-      /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints
+       */
       assert( !transformed || SCIPconsIsEnabled(cons) );
       
       SCIPfreeBufferArray(scip, &consnames[c]);
@@ -4092,7 +4067,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    SCIPfreeBufferArray(scip, &aggvars);
    SCIPfreeBufferArray(scip, &rhss);
-   SCIPfreeBufferArray(scip, &relconss);
 
    /* free buffer arrays for SOS1, SOS2, and quadratic */
    SCIPfreeBufferArray(scip, &consIndicator);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.23 2010/09/06 13:35:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.24 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -549,7 +549,6 @@ SCIP_DECL_READERREAD(readerReadCip)
 static
 SCIP_DECL_READERWRITE(readerWriteCip)
 {  /*lint --e{715}*/
-
    int i;
 
    SCIPinfoMessage(scip, file, "STATISTICS\n");
@@ -590,8 +589,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
       for( i = 0; i < nconss; ++i )
       {
          /* in case the transformed is written only constraint are posted which are enabled in the current node */
-         if( transformed && !SCIPconsIsEnabled(conss[i]) )
-            continue;
+         assert(!transformed || SCIPconsIsEnabled(conss[i]));
          
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
       }

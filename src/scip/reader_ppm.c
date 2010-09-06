@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.26 2010/07/30 10:17:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.27 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader_ppm.c
  * @ingroup FILEREADERS 
@@ -577,8 +577,7 @@ SCIP_RETCODE SCIPwritePpm(
 	assert( cons != NULL);
 
 	/* in case the transformed is written only constraint are posted which are enabled in the current node */
-	if( transformed && !SCIPconsIsEnabled(cons) )
-	   continue;
+        assert(!transformed || SCIPconsIsEnabled(cons));
 
 	conshdlr = SCIPconsGetHdlr(cons);
 	assert( conshdlr != NULL );

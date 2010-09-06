@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.52 2010/09/04 19:55:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.53 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -3740,8 +3740,7 @@ SCIP_RETCODE writeFzn(
       assert( cons != NULL);
       
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
+      assert(!transformed || SCIPconsIsEnabled(cons));
       
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );

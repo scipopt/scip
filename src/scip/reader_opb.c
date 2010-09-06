@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.53 2010/09/04 19:55:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.54 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -2663,10 +2663,9 @@ SCIP_RETCODE writeOpbConstraints(
 
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
-
+      
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
+      assert(!transformed || SCIPconsIsEnabled(cons));
 
       if( strcmp(conshdlrname, "linear") == 0 )
       {

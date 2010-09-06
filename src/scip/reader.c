@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.55 2010/08/06 16:29:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.56 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -200,46 +200,87 @@ SCIP_RETCODE SCIPreaderWrite(
    )
 {
    SCIP_RETCODE retcode;
-   int i;
-   
-   SCIP_VAR** vars;
-   int nvars;
-   SCIP_VAR** fixedvars;
-   int nfixedvars;
-   SCIP_CONS** conss;
-   int nconss;
-
-   SCIP_VAR* var;
-   SCIP_CONS* cons;
-
-   int size;
-   char* name;
-   const char* consname;
-   const char** varnames;
-   const char** fixedvarnames;
-   const char** consnames;
    
    assert(reader != NULL);
    assert(set != NULL);
    assert(extension != NULL);
    assert(result != NULL);
-
-   vars = prob->vars;
-   nvars = prob->nvars;
-   fixedvars = prob->fixedvars;
-   nfixedvars = prob->nfixedvars;
-   conss = prob->conss;
-   nconss = prob->nconss;
    
-   varnames = NULL;
-   fixedvarnames = NULL; 
-   consnames = NULL;
-
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
    {
+      SCIP_VAR** vars;
+      int nvars;
+      SCIP_VAR** fixedvars;
+      int nfixedvars;
+      SCIP_CONS** conss;
+      int nconss;
+      int i;
+
+      SCIP_CONS* cons;
+      
+      char* name;
+      const char* consname;
+      const char** varnames;
+      const char** fixedvarnames;
+      const char** consnames;
+      
+      varnames = NULL;
+      fixedvarnames = NULL; 
+      consnames = NULL;
+      
+      vars = prob->vars;
+      nvars = prob->nvars;
+      fixedvars = prob->fixedvars;
+      nfixedvars = prob->nfixedvars;
+
+      /* case of the transformed problem, we want to write currently valid problem */
+      if( prob->transformed )
+      {
+         SCIP_CONSHDLR** conshdlrs;
+         int nconshdlrs;
+         
+         conshdlrs = set->conshdlrs;
+         nconshdlrs = set->nconshdlrs;
+         
+         /* collect number of constraints which have to be enforced; these are the constraints which currency (locally)
+          * enabled; these also includes the local constraints 
+          */
+         nconss = 0;
+         for( i = 0; i < nconshdlrs; ++i )
+            nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+         
+         SCIP_ALLOC( BMSallocMemoryArray(&conss, nconss) );
+
+         /* copy the constraints */
+         nconss = 0;
+         for( i = 0; i < nconshdlrs; ++i )
+         {
+            SCIP_CONS** conshdlrconss;
+            int nconshdlrconss;
+            int c;
+            
+            conshdlrconss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
+            nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+            
+            for( c = 0; c < nconshdlrconss; ++c )
+            {
+               conss[nconss] = conshdlrconss[c];
+               nconss++;
+            }
+         }
+      }
+      else
+      {
+         conss = prob->conss;
+         nconss = prob->nconss;
+      }
+      
       if( genericnames )
       {
+         SCIP_VAR* var;
+         int size;
+
          /* save variable and constraint names and replace these names by generic names */
 
          /* allocate memory for saving the original variable and constraint names */
@@ -250,7 +291,8 @@ SCIP_RETCODE SCIPreaderWrite(
          /* compute length of the generic variable names:
 	  * - nvars + 1 to avoid log of zero
 	  * - +3 (zero at end + 'x' + 1 because we round down)
-	  * Example: 10 -> need 4 chars ("x10\0") */
+	  * Example: 10 -> need 4 chars ("x10\0") 
+          */
          size = (int) log10(nvars+1.0) + 3;
 
          for( i = 0; i < nvars; ++i )
@@ -326,6 +368,12 @@ SCIP_RETCODE SCIPreaderWrite(
          BMSfreeMemoryArray(&varnames);
          BMSfreeMemoryArray(&fixedvarnames);
          BMSfreeMemoryArray(&consnames);
+      }
+      
+      if( prob->transformed )
+      {
+         /* free memory */
+         BMSfreeMemoryArray(&conss);
       }
    }
    else

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.42 2010/08/30 18:57:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.43 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1149,8 +1149,7 @@ SCIP_RETCODE checkConsnames(
       assert( cons != NULL );
 
       /* in case the transformed is written, only constraints are posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
+      assert(!transformed || SCIPconsIsEnabled(cons));
 
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
@@ -1593,9 +1592,8 @@ SCIP_RETCODE SCIPwriteGms(
       assert( cons != NULL );
 
       /* in case the transformed is written, only constraints are posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
-
+      assert(!transformed || SCIPconsIsEnabled(cons));
+      
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
 

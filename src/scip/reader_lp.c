@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.95 2010/09/06 16:36:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.96 2010/09/06 16:48:42 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2941,8 +2941,7 @@ void checkConsnames(
       assert(cons != NULL );
 
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
+      assert(!transformed || SCIPconsIsEnabled(cons));
 
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
@@ -3111,7 +3110,7 @@ SCIP_RETCODE SCIPreadLp(
 }
 
 
-/* writes problem to file */
+/** writes problem to file */
 SCIP_RETCODE SCIPwriteLp(
    SCIP*              scip,               /**< SCIP data structure */
    FILE*              file,               /**< output file, or NULL if standard output should be used */
@@ -3132,7 +3131,8 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    )
 {
-   int c,v;
+   int c;
+   int v;
 
    int linecnt;
    char linebuffer[LP_MAX_PRINTLEN];
@@ -3286,9 +3286,8 @@ SCIP_RETCODE SCIPwriteLp(
       assert( cons != NULL);
 
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
-
+      assert(!transformed || SCIPconsIsEnabled(cons));
+      
       /* skip marked constraints in connection with indicator constraints */
       if ( conshdlrInd != NULL && SCIPhashmapExists(consHidden, (void*) cons) )
       {
