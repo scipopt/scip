@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.21 2010/09/06 10:51:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.22 2010/09/06 14:59:44 bzfwolte Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -683,7 +683,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
    assert(argvals != NULL || nargs == 0);
    assert(opdata.data != NULL);
 
-   SCIPintervalScalarProductRealsIntervals(infinity, result, nargs, argvals, (SCIP_Real*)opdata.data);
+   SCIPintervalScalprodScalars(infinity, result, nargs, argvals, (SCIP_Real*)opdata.data);
    SCIPintervalAddScalar(infinity, result, *result, ((SCIP_Real*)opdata.data)[nargs]);
 
    return SCIP_OKAY;
