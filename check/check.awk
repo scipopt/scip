@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.97 2010/09/06 10:17:46 bzfwanie Exp $
+# $Id: check.awk,v 1.98 2010/09/06 12:40:24 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -114,7 +114,7 @@ BEGIN {
    else
       shortprob = prob;
 
-# Escape _ for TeX
+   # Escape _ for TeX
    n = split(prob, a, "_");
    pprob = a[1];
    for( i = 2; i <= n; i++ )
@@ -165,10 +165,10 @@ BEGIN {
 /@04/ { endtime = $2; }
 
 /^SCIP version/ {
-# get SCIP version 
+   # get SCIP version 
    scipversion = $3; 
 
-# get name of LP solver
+   # get name of LP solver
    if( $13 == "SoPlex" )
       lpsname = "spx";
    else if( $13 == "CPLEX" )
@@ -188,7 +188,7 @@ BEGIN {
 #   else if( $13 == "???" )
 #      lpsname = "qso";
 
-# get LP solver version 
+    # get LP solver version 
    if( NF >= 14 ) {
       split($14, v, "]");
       lpsversion = v[1];
@@ -327,11 +327,11 @@ BEGIN {
 #
 /^=ready=/ {
 
-#since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
+   #since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
    if( !headerprinted ) {
       ntexcolumns = 8 + (2 * printsoltimes);
       
-#print header of tex file table
+      #print header of tex file table
       printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
       printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
       printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
@@ -357,7 +357,7 @@ BEGIN {
          printf("rr") > TEXFILE;
       printf("@{}}\n") > TEXFILE;
       
-#print header of table when this regular expression is matched for the first time
+      #print header of table when this regular expression is matched for the first time
       tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
       tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
       tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
@@ -382,13 +382,13 @@ BEGIN {
    if( (!onlyinsolufile || solstatus[prob] != "") &&
        (!onlyintestfile || intestfile[filename]) ) {
 
-#avoid problems when comparing floats and integer (make everything float)
+      #avoid problems when comparing floats and integer (make everything float)
       temp = pb;
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
       
-#firstpb and rootdb are used to detect the direction of optimization (min or max)
+      #firstpb and rootdb are used to detect the direction of optimization (min or max)
       if( timetofirst < 0.0 )
          temp = pb;
       else
@@ -668,17 +668,17 @@ BEGIN {
 
       if( writesolufile ) {
          if( pb == +infty && db == +infty )
-            printf("=inf= %s\n",prob)>NEWSOLUFILE;
+            printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
          else if( pb == db )
-            printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+            printf("=opt= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
          else if( pb < +infty )
-            printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+            printf("=best= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
          else
-            printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
+            printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
          #=feas= cannot happen since the problem is reported with an objective value
       }
 
-#write output to both the tex file and the console depending on whether printsoltimes is activated or not
+      #write output to both the tex file and the console depending on whether printsoltimes is activated or not
       if( !onlypresolvereductions || origcons > cons || origvars > vars ) {
          printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
                 pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
@@ -693,7 +693,7 @@ BEGIN {
          printf("%s\n", status);
       }
 
-#PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
+      #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
       if( solstatus[prob] == "opt" || solstatus[prob] == "feas" )
          modelstat = 1;
       else if( solstatus[prob] == "inf" )

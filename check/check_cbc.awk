@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.18 2010/09/06 10:17:47 bzfwanie Exp $
+# $Id: check_cbc.awk,v 1.19 2010/09/06 12:40:29 bzfwanie Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
@@ -514,13 +514,13 @@ BEGIN {
 
       if( writesolufile ) {
          if( pb == +infty && db == +infty )
-            printf("=inf= %s\n",prob)>NEWSOLUFILE;
+            printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
          else if( pb == db )
-            printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+            printf("=opt= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
          else if( pb < +infty )
-            printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+            printf("=best= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
          else
-            printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
+            printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
       }
    
       sbab     += bbnodes;
