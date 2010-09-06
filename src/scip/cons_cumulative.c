@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.2 2010/09/01 17:07:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.3 2010/09/06 13:15:37 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -195,7 +195,7 @@ INFERINFO getInferInfo(
 
    inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
    inferinfo.val.asbits.est = est; /*lint !e732*/
-   inferinfo.val.asbits.lct = lct; /*lint !e732*/  /*@todo: ??? */
+   inferinfo.val.asbits.lct = lct; /*lint !e732*/
 
    return inferinfo;
 }
@@ -439,20 +439,46 @@ SCIP_RETCODE freeThetaTreeNode(
 {
    assert(scip != NULL);
    assert(node != NULL);
+   assert(*node != NULL);
 
-   if( (*node)->left != NULL )
+   if( (*node)->left != NULL || (*node)->right != NULL )
    {
-      SCIP_CALL( freeThetaTreeNode(scip, &((*node)->left) ) );
+      
+      if( (*node)->left != NULL )
+      {
+         SCIP_CALL( freeThetaTreeNode(scip, &((*node)->left) ) );
+      }
+      
+      if( (*node)->right != NULL )
+      {
+         SCIP_CALL( freeThetaTreeNode(scip, &((*node)->right) ) );
+      }
+      
+      
+      (*node)->left = NULL;
+      (*node)->right = NULL;
+      (*node)->parent = NULL;
+      (*node)->var = NULL;
+      SCIPfreeMemory(scip, node);
    }
 
-   if( (*node)->right != NULL )
-   {
-      SCIP_CALL( freeThetaTreeNode(scip, &((*node)->right) ) );
-   }
-  
-   (*node)->left = NULL;
-   (*node)->right = NULL;
-   (*node)->parent = NULL;
+   return SCIP_OKAY;
+}
+
+/** frees the theta tree node datastructure */
+static
+SCIP_RETCODE freeThetaTreeLeaf(
+   SCIP*                 scip,               /**< SCIP data structure */
+   THETATREENODE**       node                /**< node to be freed */
+   )
+{
+   assert(scip != NULL);
+   assert(node != NULL);
+   assert(*node != NULL);
+
+   assert((*node)->left == NULL);
+   assert((*node)->right == NULL);
+   
    (*node)->var = NULL;
 
    SCIPfreeMemory(scip, node);
@@ -560,7 +586,7 @@ struct TLTreeNode
 /** Theta lambda tree structure */
 struct TLTree
 {
-   TLTREENODE*               superroot;          /**< pointer to the dummy super root node; root is left child */
+   TLTREENODE*           superroot;          /**< pointer to the dummy super root node; root is left child */
 };
 typedef struct TLTree TLTREE;
 
@@ -592,7 +618,7 @@ SCIP_Bool tltreeIsRoot(
 /** returns whether the tree is empty */
 static
 SCIP_Bool tltreeIsEmpty(
-   TLTREE*            tree                /**< tree to be evaluated */
+   TLTREE*               tree                /**< tree to be evaluated */
    )
 {
    assert(tree != NULL);
@@ -604,7 +630,7 @@ SCIP_Bool tltreeIsEmpty(
 /** returns whether the node is a left child */
 static
 SCIP_Bool tltreeIsLeftChild(
-   TLTREENODE*        node                /**< node to be evaluated */
+   TLTREENODE*           node                /**< node to be evaluated */
    )
 {
    assert(node != NULL);
@@ -615,7 +641,7 @@ SCIP_Bool tltreeIsLeftChild(
 /** returns whether the node is a right child */
 static
 SCIP_Bool tltreeIsRightChild(
-   TLTREENODE*        node                /**< node to be evaluated */
+   TLTREENODE*           node                /**< node to be evaluated */
    )
 {
    assert(node != NULL);
@@ -626,7 +652,7 @@ SCIP_Bool tltreeIsRightChild(
 /** returns the sibling of the node */
 static
 TLTREENODE* tltreeGetSibling(
-   TLTREENODE*        node                /**< node to be evaluated */
+   TLTREENODE*           node                /**< node to be evaluated */
    )
 {
    assert(node != NULL);
@@ -805,7 +831,7 @@ SCIP_RETCODE tltreeSplitLeaf(
 static
 SCIP_RETCODE tltreeCreateThetaLeaf(
    SCIP*                 scip,               /**< SCIP data structure */
-   TLTREENODE**       node,               /**< node to be created */
+   TLTREENODE**          node,               /**< node to be created */
    SCIP_VAR*             var,                /**< variable to be stored */
    SCIP_Real             value,              /**< value to be stored */
    int                   energy,             /**< sum of energies from the leaves in this subtree */
@@ -858,8 +884,8 @@ SCIP_RETCODE createTltree(
 static
 SCIP_RETCODE tltreeInsertLeaf(
    SCIP*                 scip,               /**< SCIP data structure */
-   TLTREE*            tree,               /**< tree in which the node is inserted */
-   TLTREENODE*        node,               /**< node to be inserted */
+   TLTREE*               tree,               /**< tree in which the node is inserted */
+   TLTREENODE*           node,               /**< node to be inserted */
    SCIP_Bool*            inserted            /**< pointer to store whether the node could be inserted */
    )
 {
@@ -932,7 +958,7 @@ SCIP_RETCODE tltreeCreateTree(
    return SCIP_OKAY;
 }
 
-/** frees the theta lambda tree node datastructure */
+/** frees the theta lambda tree node datastructure, all leaves have to be freed on their own */
 static
 SCIP_RETCODE freeTltreeNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -945,22 +971,25 @@ SCIP_RETCODE freeTltreeNode(
    if( tltreeIsLeaf(*node) )
       return SCIP_OKAY;
 
-   if( (*node)->left != NULL )
+   if( (*node)->left != NULL || (*node)->right != NULL )
    {
-      SCIP_CALL( freeTltreeNode(scip, &((*node)->left) ) );
+      if( (*node)->left != NULL )
+      {
+         SCIP_CALL( freeTltreeNode(scip, &((*node)->left) ) );
+      }
+      
+      if( (*node)->right != NULL )
+      {
+         SCIP_CALL( freeTltreeNode(scip, &((*node)->right) ) );
+      }
+      
+      (*node)->left = NULL;
+      (*node)->right = NULL;
+      (*node)->parent = NULL;
+      (*node)->var = NULL;
+      
+      SCIPfreeMemory(scip, node);
    }
-
-   if( (*node)->right != NULL )
-   {
-      SCIP_CALL( freeTltreeNode(scip, &((*node)->right) ) );
-   }
-  
-   (*node)->left = NULL;
-   (*node)->right = NULL;
-   (*node)->parent = NULL;
-   (*node)->var = NULL;
-
-   SCIPfreeMemory(scip, node);
 
    return SCIP_OKAY;
 }
@@ -985,11 +1014,11 @@ SCIP_RETCODE freeTltreeLeaf(
    return SCIP_OKAY;
 }
 
-/** frees the theta tree datastructure */
+/** frees the theta tree datastructure, BUT: all leaves have to be freed on their own */
 static
 SCIP_RETCODE freeTltree(
    SCIP*                 scip,               /**< SCIP data structure */
-   TLTREE**           tree                /**< tree to be freed */
+   TLTREE**              tree                /**< tree to be freed */
    )
 {
    assert(scip != NULL);
@@ -1065,7 +1094,7 @@ SCIP_RETCODE tltreeDeleteLeaf(
 /** return the envelop(theta,lambda) */
 static
 int tltreeGetEnvelopTL(
-   TLTREE*            tree                /**< tree of which the envelop is returned */   
+   TLTREE*               tree                /**< tree of which the envelop is returned */   
    )
 {
    assert(tree != NULL);
@@ -3666,7 +3695,8 @@ SCIP_RETCODE analyzeConflictEnergeticReasoning(
    assert(cons != NULL);
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
    
-   SCIPdebugMessage("repropagate energetic reasoning for constraint <%s> and variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(infervar));
+   SCIPdebugMessage("repropagate energetic reasoning for constraint <%s> and variable <%s>\n", 
+      SCIPconsGetName(cons), infervar == NULL ? "null" : SCIPvarGetName(infervar));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4070,7 +4100,7 @@ SCIP_RETCODE performEnergeticReasoning(
                /* check if problem is already infeasible (energy overload)*/
                if( lst_k + consdata->durations[pos_k] < est )
                {
-                  SCIPinfoMessage(scip, NULL, "energetic reasoning detected overload in [%d,%d]\n", est, lct);
+                  SCIPdebugMessage("energetic reasoning detected overload in [%d,%d]\n", est, lct);
                   inferinfo = getInferInfo(PROPRULE_4_ENERGETICREASONING, est, lct);
                   SCIP_CALL( initializeConflictAnalysisEnergeticReasoning(scip, cons, NULL, inferinfo) );
                   infeasible = TRUE;
@@ -4079,7 +4109,7 @@ SCIP_RETCODE performEnergeticReasoning(
                { 
                   inferinfo = getInferInfo(PROPRULE_4_ENERGETICREASONING, est, lct);
                   
-                  SCIPinfoMessage(scip, NULL, "energetic reasoning updates var <%s>[dur=%d, dem=%d] ub from %g to %d in interval [%d,%d]\n", 
+                  SCIPdebugMessage("energetic reasoning updates var <%s>[dur=%d, dem=%d] ub from %g to %d in interval [%d,%d]\n", 
                      SCIPvarGetName(var_k), consdata->durations[pos_k], demand_k, 
                      SCIPvarGetUbLocal(var_k), lst_k, est, lct);
                   SCIP_CALL( SCIPinferVarUbCons(scip, var_k, (SCIP_Real)lst_k, cons, 
@@ -4090,7 +4120,7 @@ SCIP_RETCODE performEnergeticReasoning(
                   
                   if( infeasible )
                   {
-                     SCIPinfoMessage(scip, NULL, "energetic reasoning detected infeasibility: ub-update\n");
+                     SCIPdebugMessage("energetic reasoning detected infeasibility: ub-update\n");
                      SCIP_CALL( initializeConflictAnalysisEnergeticReasoning(scip, cons, var_k, inferinfo) );
                   }
                }
@@ -4137,7 +4167,7 @@ SCIP_RETCODE performEnergeticReasoning(
 
                if( est_k > lct )
                {
-                  SCIPinfoMessage(scip, NULL, "energetic reasoning detected overload in [%d,%d]\n", est, lct);
+                  SCIPdebugMessage("energetic reasoning detected overload in [%d,%d]\n", est, lct);
                   inferinfo = getInferInfo(PROPRULE_4_ENERGETICREASONING, est, lct);
                   SCIP_CALL( initializeConflictAnalysisEnergeticReasoning(scip, cons, NULL, inferinfo) );
                   infeasible = TRUE;
@@ -4145,7 +4175,7 @@ SCIP_RETCODE performEnergeticReasoning(
                else  /* problem seems feasible --> update bound */
                { 
                   inferinfo = getInferInfo(PROPRULE_4_ENERGETICREASONING, est, lct);
-                  SCIPinfoMessage(scip, NULL, "energetic reasoning updates var <%s>[dur=%d, dem=%d] lb from %g to %d in interval [%d,%d]\n", 
+                  SCIPdebugMessage("energetic reasoning updates var <%s>[dur=%d, dem=%d] lb from %g to %d in interval [%d,%d]\n", 
                      SCIPvarGetName(var_k),  consdata->durations[pos_k], demand_k, 
                      SCIPvarGetLbLocal(var_k), est_k, est, lct);
                   SCIP_CALL( SCIPinferVarLbCons(scip, var_k, (SCIP_Real)est_k, cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
@@ -4155,7 +4185,7 @@ SCIP_RETCODE performEnergeticReasoning(
                   
                   if( infeasible )
                   {
-                     SCIPinfoMessage(scip, NULL, "energetic reasoning detected infeasibility in Node %d: lb-update\n",
+                     SCIPdebugMessage("energetic reasoning detected infeasibility in Node %lld: lb-update\n",
                         SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
                      
                      SCIP_CALL( initializeConflictAnalysisEnergeticReasoning(scip, cons, var_k, inferinfo) ); 
@@ -4488,9 +4518,6 @@ int computeNewLstOmegaset(
       {
          newest = (int)SCIPfeasCeil(scip, (energy - (consdata->capacity - demand_pos) * (*lct_omega - *est_omega)) / (SCIP_Real)demand_pos);
          newest += *est_omega;
-
-         /*@todo: maybe this should hold and be added to the if condition */
-         assert(energy + demand_pos*duration_pos > consdata->capacity * (*lct_omega - *est_omega));
       }
 
       assert(energy+demand_pos*duration_pos > consdata->capacity * (*lct_omega - *est_omega));
@@ -4646,8 +4673,9 @@ SCIP_RETCODE performEdgeFindingDetection(
       int energy;
 
       var = consdata->vars[j];
-
+      assert(var != NULL);
       assert(!SCIPhashmapExists(varhashmap, var));
+
       SCIP_CALL( SCIPhashmapInsert(varhashmap, var, (void*)(size_t)j) );
 
       if( forward )
@@ -4860,7 +4888,7 @@ SCIP_RETCODE checkOverload(
       if( thetaTreeGetEnvelop(thetatree) > capacity * lcts[j] )
       {
          /*@todo: start conflict analysis, compute conflicting set */
-         SCIPinfoMessage(scip, NULL, "Overload detected! Node can be cut off @todo: starte Konfliktanalyse\n");
+         SCIPdebugMessage("Overload detected! Node can be cut off @todo: start conflict analysis\n");
          *cutoff = TRUE;
       }
    }
@@ -4872,7 +4900,7 @@ SCIP_RETCODE checkOverload(
    {
       if( nodes[j] != NULL )
       {
-         SCIP_CALL( freeThetaTreeNode(scip, &(nodes[j])) );
+         SCIP_CALL( freeThetaTreeLeaf(scip, &(nodes[j])) );
       }
    }
    
@@ -5783,7 +5811,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPinfoMessage(scip, NULL, "separating %d/%d cumulative constraints\n", nusefulconss, nconss);
+   SCIPdebugMessage("separating %d/%d cumulative constraints\n", nusefulconss, nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -6127,7 +6155,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
    if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER )
    {
       /* get duration and demand of inference variable */
-      /*@todo hashmap for variables an durations would speed this up */
+      /*@todo hashmap for variables and durations would speed this up */
       inferdemand = 0;
       inferduration = 0;
 
