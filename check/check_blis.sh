@@ -90,50 +90,51 @@ for i in `cat $TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
+        LASTPROB=""
+        if test -f $i
+        then
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
+            echo @05 TIMELIMIT: $TIMELIMIT
             if test $SETNAME != "default"
             then
                cp $SETTINGS $TMPFILE
             else
                echo > $TMPFILE
             fi
-	    if test $FEASTOL != "default"
-	    then
+            if test $FEASTOL != "default"
+            then
                 echo "integerTol $FEASTOL"            >> $TMPFILE
-	    fi
-	    if test $MIPGAP != "default"
-	    then
+            fi
+            if test $MIPGAP != "default"
+            then
                echo "optimalRelGap $MIPGAP"           >> $TMPFILE
-	    fi
+            fi
             echo Alps_timeLimit $TIMELIMIT            >> $TMPFILE
             echo Alps_nodeLimit $NODELIMIT            >> $TMPFILE
 #$MEMLIMIT not supported (version 0.91)
 #$THREADS not supported (version 0.91)
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $BLISBIN -Alps_instance $i -param $TMPFILE" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $BLISBIN -Alps_instance $i -param $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE

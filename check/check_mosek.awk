@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_mosek.awk,v 1.10 2010/09/01 20:59:45 bzfwanie Exp $
+# $Id: check_mosek.awk,v 1.11 2010/09/06 10:17:47 bzfwanie Exp $
 #
 #@file    check_mosek.awk
 #@brief   MOSEK Check Report Generator
@@ -59,7 +59,10 @@ BEGIN {
    timeouts = 0;
    settings = "default";
    version  = "?";
-#   timelimit  = 0.0;
+   threads = 1;
+   starttime = 0.0;
+   endtime = 0.0;
+   timelimit  = 0.0;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
@@ -112,6 +115,16 @@ BEGIN {
    aborted    = 1;
    logging    = 0;
 }
+
+/@03/ { starttime = $2; }
+/@04/ { endtime = $2; }
+/^@05 TIMELIMIT:/ {
+   timelimit = $3;
+}
+/^@05 THREADS:/ {
+   threads = $3;
+}
+
 /^MOSEK Version/ { version = $3; }
 
 #
@@ -256,21 +269,21 @@ BEGIN {
       else
          gapstr = " Large";
 
-#      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
-#	 timeout = 1;
-#	 aborted = 0;
-#	 tottime = endtime - starttime;
-#      }
-#      if( aborted && tottime == 0.0 )
-#	 tottime = timelimit;
-#      if( timelimit > 0.0 )
-#	 tottime = min(tottime, timelimit);
+      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
+         timeout = 1;
+         aborted = 0;
+         tottime = endtime - starttime;
+      }
+      if( aborted && tottime == 0.0 )
+         tottime = timelimit;
+      if( timelimit > 0.0 )
+         tottime = min(tottime, timelimit);
 
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
       printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
-         shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime); #TODO: %6d zu %7d für cons&vars
+         shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
          printf("abort\n");
@@ -309,14 +322,14 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-	 if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol) || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
+         if( ( pb-db > max(abstol,reltol) && db-sol[prob] > reltol) || ( db-pb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
             printf("fail\n");
             failtime += tottime;
             fail++;
          }
          else {
             if (timeout) {
-	       if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
+               if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
                   printf("better\n");
                   timeouttime += tottime;
                   timeouts++;
@@ -366,40 +379,40 @@ BEGIN {
          }
       }
       else if( solstatus[prob] == "inf" ) {
-	 if( !feasible ) {
-	    if( timeout ) {
-	       status = "timeout";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       status = "ok";
-	       pass++;
-	    }
-	 }
-	 else {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
+         if( !feasible ) {
+            printf("ok\n");
+            pass++;
+         }
+         else {
+            if( timeout ) {
+               printf("timeout\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               printf("fail\n");
+               failtime += tottime;
+               fail++;
+            }
+         }
       }
       else if( solstatus[prob] == "feas" ) {
-	 if( feasible ) {
-	    if( timeout ) {
-	       status = "timeout";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       status = "ok";
-	       pass++;
-	    }
-	 }
-	 else {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
+         if( feasible ) {
+            if( timeout ) {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               status = "ok";
+               pass++;
+            }
+         }
+         else {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
       }
       else {
          reltol = 1e-5 * max(abs(pb),1.0);
@@ -419,14 +432,14 @@ BEGIN {
       }
    
       if( writesolufile ) {
-	 if( pb == +infty && db == +infty )
-	    printf("=inf= %s\n",prob)>NEWSOLUFILE;
-	 else if( pb == db )
-	    printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else if( pb < +infty )
-	    printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else
-	    printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
+         if( pb == +infty && db == +infty )
+            printf("=inf= %s\n",prob)>NEWSOLUFILE;
+         else if( pb == db )
+            printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else if( pb < +infty )
+            printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else
+            printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
       }
    
       sbab     += bbnodes;
@@ -467,7 +480,7 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
-   #   printf("@02 threads: %g\n", threads);
-   #   printf("@02 timelimit: %g\n", timelimit);
+   printf("@02 threads: %g\n", threads);  #threads are only used for interior point method, not in b&b tree (version 6)
+   printf("@02 timelimit: %g\n", timelimit);
    printf("@01 MOSEK(%s):%s\n", version, settings);
 }

@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.49 2010/09/03 15:04:05 bzfwanie Exp $
+# $Id: check_cplex.awk,v 1.50 2010/09/06 10:17:47 bzfwanie Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -60,6 +60,8 @@ BEGIN {
    settings = "default";
    version = "?";
    threads = 1;
+   starttime = 0.0;
+   endtime = 0.0;
    timelimit  = 0.0;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
@@ -89,6 +91,8 @@ BEGIN {
    pprob = a[1];
    for( i = 2; i <= n; i++ )
       pprob = pprob "\\_" a[i];
+   origvars   = 0;
+   origcons   = 0;
    vars       = 0;
    cons       = 0;
    timeout    = 0;
@@ -110,6 +114,9 @@ BEGIN {
    tottime    = 0.0;
    aborted    = 1;
 }
+
+/@03/ { starttime = $2; }
+/@04/ { endtime = $2; }
 
 /^Welcome to IBM/ { version = $8; }
 /^Welcome to CPLEX/ { version = $6; }
@@ -190,6 +197,12 @@ BEGIN {
 # solution
 #
 /^CPLEX Error  1001: Out of memory./ { timeout = 1; }
+/^Dual simplex - Optimal:/ {
+   db = $NF;
+   pb = $NF;
+   absgap = 0.0;
+   feasible = 1;
+}
 /^Integer / {
    if ($2 == "infeasible." || $2 == "infeasible") {
       db = +infty;
@@ -492,20 +505,20 @@ BEGIN {
       }
       else if( solstatus[prob] == "inf" ) {
          if( !feasible ) {
+            printf("ok\n");
+            pass++;
+         }
+         else {
             if( timeout ) {
-               status = "timeout";
+               printf("timeout\n");
                timeouttime += tottime;
                timeouts++;
             }
             else {
-               status = "ok";
-               pass++;
+               printf("fail\n");
+               failtime += tottime;
+               fail++;
             }
-         }
-         else {
-            status = "fail";
-            failtime += tottime;
-            fail++;
          }
       }
       else if( solstatus[prob] == "feas" ) {
@@ -544,14 +557,14 @@ BEGIN {
       }
      
       if( writesolufile ) {
-	 if( pb == +infty && db == +infty )
-	    printf("=inf= %s\n",prob)>NEWSOLUFILE;
-	 else if( pb == db )
-	    printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else if( pb < +infty )
-	    printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else
-	    printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
+         if( pb == +infty && db == +infty )
+            printf("=inf= %s\n",prob)>NEWSOLUFILE;
+         else if( pb == db )
+            printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else if( pb < +infty )
+            printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else
+            printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
       }
    
       sbab     += bbnodes;

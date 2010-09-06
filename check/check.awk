@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.96 2010/09/01 20:59:45 bzfwanie Exp $
+# $Id: check.awk,v 1.97 2010/09/06 10:17:46 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -86,7 +86,6 @@ BEGIN {
    scipversion = "?";
    conftottime = 0.0;
    overheadtottime = 0.0;
-   timelimit = 0.0;
 }
 /^IP\// {  # TEMPORARY HACK to parse .test files
    intestfile[$1] = 1;
@@ -115,7 +114,7 @@ BEGIN {
    else
       shortprob = prob;
 
-   # Escape _ for TeX
+# Escape _ for TeX
    n = split(prob, a, "_");
    pprob = a[1];
    for( i = 2; i <= n; i++ )
@@ -156,18 +155,20 @@ BEGIN {
    gapreached = 0;
    sollimitreached = 0;
    memlimitreached = 0;
-   timelimit = 0.0;
    starttime = 0.0;
    endtime = 0.0;
+   timelimit = 0.0;
    inoriginalprob = 1;
 }
+
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
+
 /^SCIP version/ {
-   # get SCIP version 
+# get SCIP version 
    scipversion = $3; 
 
-   # get name of LP solver
+# get name of LP solver
    if( $13 == "SoPlex" )
       lpsname = "spx";
    else if( $13 == "CPLEX" )
@@ -182,12 +183,12 @@ BEGIN {
       lpsname = "grb";
    else if( $13 == "NONE" )
       lpsname = "none";
-   #   else if( $13 == "???" )
-   #      lpsname = "xprs";
-   #   else if( $13 == "???" )
-   #      lpsname = "qso";
+#   else if( $13 == "???" )
+#      lpsname = "xprs";
+#   else if( $13 == "???" )
+#      lpsname = "qso";
 
-   # get LP solver version 
+# get LP solver version 
    if( NF >= 14 ) {
       split($14, v, "]");
       lpsversion = v[1];
@@ -197,6 +198,7 @@ BEGIN {
 /^SCIP> / { $0 = substr($0, 7, length($0)-6); }
 /^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
+/^limits\/time =/ { timelimit = $3; }
 #
 # conflict analysis
 #
@@ -325,11 +327,11 @@ BEGIN {
 #
 /^=ready=/ {
 
-   #since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
+#since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
    if( !headerprinted ) {
       ntexcolumns = 8 + (2 * printsoltimes);
       
-      #print header of tex file table
+#print header of tex file table
       printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
       printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
       printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
@@ -355,7 +357,7 @@ BEGIN {
          printf("rr") > TEXFILE;
       printf("@{}}\n") > TEXFILE;
       
-      #print header of table when this regular expression is matched for the first time
+#print header of table when this regular expression is matched for the first time
       tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
       tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
       tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
@@ -378,19 +380,19 @@ BEGIN {
    }
 
    if( (!onlyinsolufile || solstatus[prob] != "") &&
-      (!onlyintestfile || intestfile[filename]) ) {
+       (!onlyintestfile || intestfile[filename]) ) {
 
-      #avoid problems when comparing floats and integer (make everything float)
+#avoid problems when comparing floats and integer (make everything float)
       temp = pb;
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
       
-      #firstpb and rootdb are used to detect the direction of optimization (min or max)
+#firstpb and rootdb are used to detect the direction of optimization (min or max)
       if( timetofirst < 0.0 )
-	 temp = pb;
+         temp = pb;
       else
-	 temp = firstpb;
+         temp = firstpb;
       firstpb = 1.0*temp;
       temp = rootdb;
       rootdb = 1.0*temp;
@@ -400,59 +402,59 @@ BEGIN {
       optimal = 0;
       markersym = "\\g";
       if( abs(pb - db) < 1e-06 && pb < infty ) {
-	 gap = 0.0;
-	 optimal = 1;
-	 markersym = "  ";
+         gap = 0.0;
+         optimal = 1;
+         markersym = "  ";
       }
       else if( abs(db) < 1e-06 )
-	 gap = -1.0;
+         gap = -1.0;
       else if( pb*db < 0.0 )
-	 gap = -1.0;
+         gap = -1.0;
       else if( abs(db) >= +infty )
-	 gap = -1.0;
+         gap = -1.0;
       else if( abs(pb) >= +infty )
-	 gap = -1.0;
+         gap = -1.0;
       else
-	 gap = 100.0*abs((pb-db)/db);
+         gap = 100.0*abs((pb-db)/db);
       if( gap < 0.0 )
-	 gapstr = "  --  ";
+         gapstr = "  --  ";
       else if( gap < 1e+04 )
-	 gapstr = sprintf("%6.1f", gap);
+         gapstr = sprintf("%6.1f", gap);
       else
-	 gapstr = " Large";
+         gapstr = " Large";
 
       if( vars == 0 )
-	 probtype = "--";
+         probtype = "--";
       else if( binvars == 0 && intvars == 0 )
-	 probtype = "LP";
+         probtype = "LP";
       else if( contvars == 0 ) {
-	 if( intvars == 0 && implvars == 0 )
-	    probtype = "BP";
-	 else
-	    probtype = "IP";
+         if( intvars == 0 && implvars == 0 )
+            probtype = "BP";
+         else
+            probtype = "IP";
       }
       else {
-	 if( intvars == 0 )
-	    probtype = "MBP";
-	 else
-	    probtype = "MIP";
+         if( intvars == 0 )
+            probtype = "MBP";
+         else
+            probtype = "MIP";
       }
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
-	 timeout = 1;
-	 aborted = 0;
-	 tottime = endtime - starttime;
+         timeout = 1;
+         aborted = 0;
+         tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached )
-	 timeout = 0;
+         timeout = 0;
       if( aborted && tottime == 0.0 )
-	 tottime = timelimit;
+         tottime = timelimit;
       if( timelimit > 0.0 )
-	 tottime = min(tottime, timelimit);
+         tottime = min(tottime, timelimit);
 
       if( aborted || timetobest < 0.0 ) {
-	 timetofirst = tottime;
-	 timetobest = tottime;
+         timetofirst = tottime;
+         timetobest = tottime;
       }
 
       lps = primlps + duallps;
@@ -489,226 +491,226 @@ BEGIN {
 
       status = "";
       if( readerror ) {
-	 status = "readerror";
-	 failtime += tottime;
-	 fail++;
+         status = "readerror";
+         failtime += tottime;
+         fail++;
       }
       else if( aborted ) {
-	 status = "abort";
-	 failtime += tottime;
-	 fail++;
+         status = "abort";
+         failtime += tottime;
+         fail++;
       }
       else if( solstatus[prob] == "opt" ) {
-	 reltol = 1e-5 * max(abs(pb),1.0);
-	 abstol = 1e-4;
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
 
-	 if( ( firstpb-rootdb > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( rootdb-firstpb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
-	 else {
-	    if( timeout || gapreached || sollimitreached ) {
-	       if( timeout )
-		  status = "timeout";
-	       else if( gapreached )
-		  status = "gaplimit";
-	       else if( sollimitreached )
-		  status = "sollimit";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol ) {
-		  status = "ok";
-		  pass++;
-	       }
-	       else {
-		  status = "fail";
-		  failtime += tottime;
-		  fail++;
-	       }
-	    }
-	 }
+         if( ( firstpb-rootdb > max(abstol,reltol) && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( rootdb-firstpb > max(reltol,abstol) && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
+         else {
+            if( timeout || gapreached || sollimitreached ) {
+               if( timeout )
+                  status = "timeout";
+               else if( gapreached )
+                  status = "gaplimit";
+               else if( sollimitreached )
+                  status = "sollimit";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol ) {
+                  status = "ok";
+                  pass++;
+               }
+               else {
+                  status = "fail";
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
       }
       else if( solstatus[prob] == "best" ) {
-	 reltol = 1e-5 * max(abs(pb),1.0);
-	 abstol = 1e-4;
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
 
-	 if( ( firstpb-rootdb > max(abstol,reltol) && db-sol[prob] > reltol) || ( rootdb-firstpb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
-	 else {
-	    if( timeout || gapreached || sollimitreached ) {
-	       if( (firstpb-rootdb > max(abstol,reltol) && sol[prob]-pb > reltol) || (rootdb-firstpb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
-		  status = "better";
-		  timeouttime += tottime;
-		  timeouts++;
-	       }
-	       else {
-		  if( timeout )
-		     status = "timeout";
-		  else if( gapreached )
-		     status = "gaplimit";
-		  else if( sollimitreached )
-		     status = "sollimit";
-		  timeouttime += tottime;
-		  timeouts++;
-	       }
-	    }
-	    else {
-	       if( abs(pb - db) <= max(abstol, reltol) ) {
-		  if( abs(firstpb - rootdb) <= max(abstol,reltol) )
-		     status = "solved not verified";
-		  else
-		     status = "solved";
-		  pass++;
-	       }
-	       else {
-		  status = "fail";
-		  failtime += tottime;
-		  fail++;
-	       }
-	    }
-	 }
+         if( ( firstpb-rootdb > max(abstol,reltol) && db-sol[prob] > reltol) || ( rootdb-firstpb > max(reltol,abstol) && sol[prob]-db > reltol) ) {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
+         else {
+            if( timeout || gapreached || sollimitreached ) {
+               if( (firstpb-rootdb > max(abstol,reltol) && sol[prob]-pb > reltol) || (rootdb-firstpb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
+                  status = "better";
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else {
+                  if( timeout )
+                     status = "timeout";
+                  else if( gapreached )
+                     status = "gaplimit";
+                  else if( sollimitreached )
+                     status = "sollimit";
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+            }
+            else {
+               if( abs(pb - db) <= max(abstol, reltol) ) {
+                  if( abs(firstpb - rootdb) <= max(abstol,reltol) )
+                     status = "solved not verified";
+                  else
+                     status = "solved";
+                  pass++;
+               }
+               else {
+                  status = "fail";
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
       }
       else if( solstatus[prob] == "unkn" ) {
-	 reltol = 1e-5 * max(abs(pb),1.0);
-	 abstol = 1e-4;
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
          
-	 if( abs(pb - db) <= max(abstol, reltol) ) {
-	    status = "solved not verified";
-	    pass++;
-	 }
-	 else {
-	    if( abs(pb) < infty ) {
-	       status = "better";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       if( timeout || gapreached || sollimitreached ) {
-		  if( timeout )
-		     status = "timeout";
-		  else if( gapreached )
-		     status = "gaplimit";
-		  else if( sollimitreached )
-		     status = "sollimit";
-		  timeouttime += tottime;
-		  timeouts++;
-	       }
-	       else 
-		  status = "unknown";
-	    }
-	 }
+         if( abs(pb - db) <= max(abstol, reltol) ) {
+            status = "solved not verified";
+            pass++;
+         }
+         else {
+            if( abs(pb) < infty ) {
+               status = "better";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               if( timeout || gapreached || sollimitreached ) {
+                  if( timeout )
+                     status = "timeout";
+                  else if( gapreached )
+                     status = "gaplimit";
+                  else if( sollimitreached )
+                     status = "sollimit";
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else 
+                  status = "unknown";
+            }
+         }
       }
       else if( solstatus[prob] == "inf" ) {
-	 if( !feasible ) {
-	    if( timeout ) {
-	       status = "timeout";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       status = "ok";
-	       pass++;
-	    }
-	 }
-	 else {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
+         if( !feasible ) {
+            if( timeout ) {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               status = "ok";
+               pass++;
+            }
+         }
+         else {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
       }
       else if( solstatus[prob] == "feas" ) {
-	 if( feasible ) {
-	    if( timeout ) {
-	       status = "timeout";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else {
-	       status = "ok";
-	       pass++;
-	    }
-	 }
-	 else {
-	    status = "fail";
-	    failtime += tottime;
-	    fail++;
-	 }
+         if( feasible ) {
+            if( timeout ) {
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else {
+               status = "ok";
+               pass++;
+            }
+         }
+         else {
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
       }
       else {
-	 reltol = 1e-5 * max(abs(pb),1.0);
-	 abstol = 1e-4;
+         reltol = 1e-5 * max(abs(pb),1.0);
+         abstol = 1e-4;
 
-	 if( abs(pb - db) < max(abstol,reltol) ) {
-	    status = "solved not verified";
-	    pass++;
-	 }
-	 else {
-	    if( timeout || gapreached || sollimitreached ) {
-	       if( timeout )
-		  status = "timeout";
-	       else if( gapreached )
-		  status = "gaplimit";
-	       else if( sollimitreached )
-		  status = "sollimit";
-	       timeouttime += tottime;
-	       timeouts++;
-	    }
-	    else
-	       status = "unknown";
-	 }
+         if( abs(pb - db) < max(abstol,reltol) ) {
+            status = "solved not verified";
+            pass++;
+         }
+         else {
+            if( timeout || gapreached || sollimitreached ) {
+               if( timeout )
+                  status = "timeout";
+               else if( gapreached )
+                  status = "gaplimit";
+               else if( sollimitreached )
+                  status = "sollimit";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+               status = "unknown";
+         }
       }
 
       if( writesolufile ) {
-	 if( pb == +infty && db == +infty )
-	    printf("=inf= %s\n",prob)>NEWSOLUFILE;
-	 else if( pb == db )
-	    printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else if( pb < +infty )
-	    printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
-	 else
-	    printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
-	 #=feas= cannot happen since the problem is reported with an objective value
+         if( pb == +infty && db == +infty )
+            printf("=inf= %s\n",prob)>NEWSOLUFILE;
+         else if( pb == db )
+            printf("=opt= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else if( pb < +infty )
+            printf("=best= %s %16.9g\n",prob,pb)>NEWSOLUFILE;
+         else
+            printf("=unkn= %s ?\n",prob)>NEWSOLUFILE;
+         #=feas= cannot happen since the problem is reported with an objective value
       }
 
-      #write output to both the tex file and the console depending on whether printsoltimes is activated or not
+#write output to both the tex file and the console depending on whether printsoltimes is activated or not
       if( !onlypresolvereductions || origcons > cons || origvars > vars ) {
-	 printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
-            pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
-	 if( printsoltimes )
-	    printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
-	 printf("\\\\\n") > TEXFILE;
+         printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
+                pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
+         if( printsoltimes )
+            printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
+         printf("\\\\\n") > TEXFILE;
 
-	 printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
-            shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
-	 if( printsoltimes )
-	    printf(" %9.1f %9.1f ", timetofirst, timetobest);
-	 printf("%s\n", status);
+         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+                shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
+         if( printsoltimes )
+            printf(" %9.1f %9.1f ", timetofirst, timetobest);
+         printf("%s\n", status);
       }
 
-      #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
+#PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
       if( solstatus[prob] == "opt" || solstatus[prob] == "feas" )
-	 modelstat = 1;
+         modelstat = 1;
       else if( solstatus[prob] == "inf" )
-	 modelstat = 1;
+         modelstat = 1;
       else if( solstatus[prob] == "best" )
-	 modelstat = 8;
+         modelstat = 8;
       else
-	 modelstat = 1;
+         modelstat = 1;
       if( status == "ok" || status == "unknown" )
-	 solverstat = 1;
+         solverstat = 1;
       else if( status == "timeout" )
-	 solverstat = 3;
+         solverstat = 3;
       else
-	 solverstat = 10;
+         solverstat = 10;
       pavprob = prob;
       if( length(pavprob) > 25 )
-	 pavprob = substr(pavprob, length(pavprob)-24,25);
+         pavprob = substr(pavprob, length(pavprob)-24,25);
       printf("%s,MIP,SCIP_%s,0,%d,%d,%g,%g\n", pavprob, settings, modelstat, solverstat, pb, tottime+pavshift) > PAVFILE;
    }
 }
@@ -724,17 +726,17 @@ END {
 
    printf("\\midrule\n")                                                 >TEXFILE;
    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f",
-      "Total", nprobs, sbab, stottime) >TEXFILE;
+          "Total", nprobs, sbab, stottime) >TEXFILE;
    if( printsoltimes )
       printf(" & %8.1f & %8.1f", stimetofirst, stimetobest) > TEXFILE;
    printf("\\\\\n") > TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f",
-      "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+          "Geom. Mean", nodegeom, timegeom) >TEXFILE;
    if( printsoltimes )
       printf(" & %8.1f & %8.1f", timetofirstgeom, timetobestgeom) > TEXFILE;
    printf("\\\\\n") > TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f ",
-      "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+          "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
    if( printsoltimes )
       printf(" & %8.1f & %8.1f", shiftedtimetofirstgeom, shiftedtimetobestgeom) > TEXFILE;
    printf("\\\\\n") > TEXFILE;
@@ -761,13 +763,13 @@ END {
    printf(tablebottom3);
    
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
-      nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+          nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
    if( printsoltimes )
       printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeom);
    
    printf("\n");
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f ",
-      nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+          nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    if( printsoltimes )
       printf("          %9.1f           %9.1f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
    printf("\n");

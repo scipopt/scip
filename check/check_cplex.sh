@@ -94,62 +94,62 @@ for i in `cat $TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    rm -f $SETFILE
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
-	    if test $SETNAME != "default"
-	    then
-#	        echo read $SETTINGS                  > $TMPFILE
-		cp $SETTINGS $TMPFILE
-	    else
-		echo ""                              > $TMPFILE
-	    fi
-	    if test $FEASTOL != "default"
-	    then
-		echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
-		echo set mip tolerances integrality $FEASTOL >> $TMPFILE
-	    fi
-	    echo set timelimit $TIMELIMIT           >> $TMPFILE
-	    echo set clocktype 0                    >> $TMPFILE
-	    echo set mip display 3                  >> $TMPFILE
-	    echo set mip interval 10000             >> $TMPFILE
-	    if test $MIPGAP != "default"
-	    then
-		echo set mip tolerances mipgap $MIPGAP >> $TMPFILE
-	    fi
-	    echo set mip limits nodes $NODELIMIT    >> $TMPFILE
-	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
-	    echo set threads $THREADS               >> $TMPFILE
-	    echo set parallel 1                     >> $TMPFILE
-	    echo write $SETFILE                     >> $TMPFILE
-	    echo read $i                            >> $TMPFILE
-	    echo display problem stats              >> $TMPFILE
-	    echo optimize                           >> $TMPFILE
-	    echo quit                               >> $TMPFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CPLEXBIN < $TMPFILE" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+        LASTPROB=""
+        if test -f $i
+        then
+            rm -f $SETFILE
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
+            if test $SETNAME != "default"
+            then
+#                echo read $SETTINGS                  > $TMPFILE
+                cp $SETTINGS $TMPFILE
+            else
+                echo ""                              > $TMPFILE
+            fi
+            if test $FEASTOL != "default"
+            then
+                echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
+                echo set mip tolerances integrality $FEASTOL >> $TMPFILE
+            fi
+            echo set timelimit $TIMELIMIT           >> $TMPFILE
+            echo set clocktype 0                    >> $TMPFILE
+            echo set mip display 3                  >> $TMPFILE
+            echo set mip interval 10000             >> $TMPFILE
+            if test $MIPGAP != "default"
+            then
+                echo set mip tolerances mipgap $MIPGAP >> $TMPFILE
+            fi
+            echo set mip limits nodes $NODELIMIT    >> $TMPFILE
+            echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+            echo set threads $THREADS               >> $TMPFILE
+            echo set parallel 1                     >> $TMPFILE
+            echo write $SETFILE                     >> $TMPFILE
+            echo read $i                            >> $TMPFILE
+            echo display problem stats              >> $TMPFILE
+            echo optimize                           >> $TMPFILE
+            echo quit                               >> $TMPFILE
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CPLEXBIN < $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE

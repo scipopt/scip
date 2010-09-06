@@ -92,47 +92,49 @@ for i in `cat $TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    echo @01 $i ===========
-	    echo @01 $i ===========                     >> $ERRFILE
+        LASTPROB=""
+        if test -f $i
+        then
+            echo @01 $i ===========
+            echo @01 $i ===========                     >> $ERRFILE
+            echo @05 TIMELIMIT: $TIMELIMIT
+            echo @05 THREADS: $THREADS
 
-	    ENVPARAM=""
-	    ENVPARAM="$ENVPARAM -d MSK_IPAR_LOG_MIO_FREQ $DISPFREQ" 
-	    ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_MAX_TIME $TIMELIMIT"
-	    ENVPARAM="$ENVPARAM -d MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"
-	    ENVPARAM="$ENVPARAM -d MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"
-#	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
-#THREADS only used for interior point method, not in solution tree (version 6)
-	    ENVPARAM="$ENVPARAM -d MSK_IPAR_INTPNT_NUM_THREADS $THREADS"
+            ENVPARAM=""
+            ENVPARAM="$ENVPARAM -d MSK_IPAR_LOG_MIO_FREQ $DISPFREQ" 
+            ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_MAX_TIME $TIMELIMIT"
+            ENVPARAM="$ENVPARAM -d MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"
+            ENVPARAM="$ENVPARAM -d MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"
+#            echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+#threads are only used for interior point method, not in b&b tree (version 6)
+            ENVPARAM="$ENVPARAM -d MSK_IPAR_INTPNT_NUM_THREADS $THREADS"
  
-	    if test $FEASTOL != "default"
-	    then
-		ENVPARAM="$ENVPARAM -d  MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"
-	    fi
-	    ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_NEAR_TOL_REL_GAP $MIPGAP"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $MOSEKBIN $ENVPARAM -pari $SETTINGS -paro $SETFILE $i" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            if test $FEASTOL != "default"
+            then
+                ENVPARAM="$ENVPARAM -d  MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"
+            fi
+            ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_NEAR_TOL_REL_GAP $MIPGAP"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $MOSEKBIN $ENVPARAM -pari $SETTINGS -paro $SETFILE $i" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE

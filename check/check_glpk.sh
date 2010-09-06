@@ -88,49 +88,54 @@ for i in `cat $TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
+        LASTPROB=""
+        if test -f $i
+        then
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
 # reading of settings not available (version 4.39)
 #           if test $SETNAME != "default"
 #           then
 #            
 # parameter $FEASTOL not available (version 4.39)
-#	    if test $FEASTOL != "default"
-#	    then
-#		echo "FeasibilityTol $FEASTOL"        >> $TMPFILE
-#		echo "IntFeasTol $FEASTOL"            >> $TMPFILE
-#	    fi
-	    PARAMETERS="--fpump --cuts --tmlim $TIMELIMIT --memlim $MEMLIMIT"
+#            if test $FEASTOL != "default"
+#            then
+#                echo "FeasibilityTol $FEASTOL"        >> $TMPFILE
+#                echo "IntFeasTol $FEASTOL"            >> $TMPFILE
+#            fi
+            PARAMETERS="--fpump --cuts --tmlim $TIMELIMIT --memlim $MEMLIMIT"
 # $THREADS not supported (version 4.43)
-	    if test $MIPGAP != "default"
-	    then
-		PARAMETERS=$PARAMETERS" --mipgap $MIPGAP"
-	    fi
+            if test $MIPGAP != "default"
+            then
+                PARAMETERS=$PARAMETERS" --mipgap $MIPGAP"
+            fi
 # $NODELIMIT not supported (version 4.43)
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GLPKBIN $PARAMETERS $i" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            LP=`echo $i | grep "\.lp"`
+            if test $LP
+            then
+                PARAMETERS=$PARAMETERS" --lp"
+            fi
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GLPKBIN $PARAMETERS $i" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE

@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cplex.sh,v 1.1 2010/06/22 07:47:05 bzfheinz Exp $
+# $Id: check_cluster_cplex.sh,v 1.2 2010/09/06 10:17:47 bzfwanie Exp $
 #
 # Call with "make testcluster"
 #
@@ -78,8 +78,8 @@ if test $SETNAME != "default"
 then
     if test ! -e $SETTINGS
     then
-	echo skipping test due to not existes of the settings file $SETTINGS
-	exit
+        echo skipping test due to not existes of the settings file $SETTINGS
+        exit
     fi
 fi
 
@@ -87,8 +87,8 @@ if test "$LOCK" = "true"
 then
     if test -e $LOCKFILE
     then
-	echo skipping test due to existing lock file $LOCKFILE
-	exit
+        echo skipping test due to existing lock file $LOCKFILE
+        exit
     fi
     date > $LOCKFILE
 fi

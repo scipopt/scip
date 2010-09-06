@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_blis.awk,v 1.10 2010/09/03 15:04:05 bzfwanie Exp $
+# $Id: check_blis.awk,v 1.11 2010/09/06 10:17:46 bzfwanie Exp $
 #
 #@file    check_blis.awk
 #@brief   BLIS Check Report Generator
@@ -59,6 +59,8 @@ BEGIN {
    timeouts = 0;
    settings = "default";
    version = "?";
+   starttime = 0.0;
+   endtime = 0.0;
    timelimit = 0.0;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
@@ -83,7 +85,7 @@ BEGIN {
    else
       shortprob = prob;
 
-# Escape _ for TeX
+   # Escape _ for TeX
    n = split(prob, a, "_");
    pprob = a[1];
    for( i = 2; i <= n; i++ )
@@ -110,6 +112,13 @@ BEGIN {
    aborted    = 1;
    logging    = 0;
 }
+
+/@03/ { starttime = $2; }
+/@04/ { endtime = $2; }
+/^@05 TIMELIMIT:/ {
+   timelimit = $3;
+}
+
 /^Blis0001I BLIS version/ { version = $4; }
 #
 # problem size
@@ -166,7 +175,7 @@ BEGIN {
 /Alps0260I Quality of the best solution found: / { pb = $8; }
 /Alps0264I No solution found/ { 
    if ( feasible == 1 ) 
-      pb = +infty; 
+      pb = +infty;
 }
 /Blis0057I Relative optimality gap is infinity because no solution was found/ { 
    if ( feasible == 1 ) 
@@ -266,21 +275,21 @@ BEGIN {
       else
          gapstr = " Large";
 
-#      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
-#         timeout = 1;
-#         aborted = 0;
-#         tottime = endtime - starttime;
-#      }
-#      if( aborted && tottime == 0.0 )
-#         tottime = timelimit;
-#      if( timelimit > 0.0 )
-#         tottime = min(tottime, timelimit);
+      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
+         timeout = 1;
+         aborted = 0;
+         tottime = endtime - starttime;
+      }
+      if( aborted && tottime == 0.0 )
+         tottime = timelimit;
+      if( timelimit > 0.0 )
+         tottime = min(tottime, timelimit);
 
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-             pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+         pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
       printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
-             shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+         shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
          printf("abort\n");
@@ -377,36 +386,36 @@ BEGIN {
       }
       else if( solstatus[prob] == "inf" ) {
          if( !feasible ) {
+            printf("ok\n");
+            pass++;
+         }
+         else {
             if( timeout ) {
-               status = "timeout";
+               printf("timeout\n");
                timeouttime += tottime;
                timeouts++;
             }
             else {
-               status = "ok";
-               pass++;
+               printf("fail\n");
+               failtime += tottime;
+               fail++;
             }
-         }
-         else {
-            status = "fail";
-            failtime += tottime;
-            fail++;
          }
       }
       else if( solstatus[prob] == "feas" ) {
          if( feasible ) {
             if( timeout ) {
-               status = "timeout";
+               printf("timeout\n");
                timeouttime += tottime;
                timeouts++;
             }
             else {
-               status = "ok";
+               printf("ok\n");
                pass++;
             }
          }
          else {
-            status = "fail";
+            printf("fail\n");
             failtime += tottime;
             fail++;
          }
@@ -416,16 +425,16 @@ BEGIN {
          abstol = 1e-4;
 
          if( abs(pb - db) < max(abstol,reltol) ) {
-            status = "solved not verified";
+            printf("solved not verified\n");
             pass++;
          }
          else if( timeout ) {
-            status = "timeout";
+            printf("timeout\n");
             timeouttime += tottime;
             timeouts++;
          }
          else
-            status = "unknown";
+            printf("unknown\n");
       }
    
       if( writesolufile ) {
@@ -454,11 +463,11 @@ END {
 
    printf("\\midrule\n")                                                 >TEXFILE;
    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
-          "Total", nprobs, sbab, stottime) >TEXFILE;
+      "Total", nprobs, sbab, stottime) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-          "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+      "Geom. Mean", nodegeom, timegeom) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-          "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+      "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{supertabular*}\n")                                      >TEXFILE;
    printf("\\end{center}\n")                                             >TEXFILE;
@@ -471,11 +480,11 @@ END {
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
    printf("----------------------------------------------------------------\n");
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
-          nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+      nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f\n",
-          nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+      nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
-#   printf("@02 timelimit: %g\n", timelimit);
+   printf("@02 timelimit: %g\n", timelimit);
    printf("@01 BLIS(%s):%s\n", version, settings);
 }

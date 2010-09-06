@@ -100,65 +100,65 @@ for i in `cat $TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    rm -f $SETFILE
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
+        LASTPROB=""
+        if test -f $i
+        then
+            rm -f $SETFILE
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
             echo "from gurobipy import *" > $TMPFILE
-	    echo "print 'Gurobi Interactive Shell, Version %s' % '.'.join(str(x) for x in gurobi.version())" >> $TMPFILE
+            echo "print 'Gurobi Interactive Shell, Version %s' % '.'.join(str(x) for x in gurobi.version())" >> $TMPFILE
 #equivalent formulation from gurobi.py
 #echo "version = str(gurobi.version()[0]) + '.' + str(gurobi.version()[1]) + '.' + str(gurobi.version()[2])" >> $TMPFILE
 #echo "print('\nGurobi Interactive Shell, Version ' + version)" >> $TMPFILE
 #echo "print('Copyright (c) 2009, Gurobi Optimization, Inc.')" >> $TMPFILE
             if test $SETNAME != "default"
             then
-	        echo "readParams("$SETTINGS")"        >> $TMPFILE
+                echo "readParams("$SETTINGS")"        >> $TMPFILE
             fi
-	    if test $FEASTOL != "default"
-	    then
-		echo "setParam(\"FeasibilityTol\",$FEASTOL)" >> $TMPFILE
-		echo "setParam(\"IntFeasTol\",$FEASTOL)"     >> $TMPFILE
-	    fi
-	    echo "setParam(\"TimeLimit\",$TIMELIMIT)" >> $TMPFILE
-	    echo "setParam(\"DisplayInterval\",100)"  >> $TMPFILE
-	    if test $MIPGAP != "default"
-	    then
-		echo "setParam(\"MIPGap\",$MIPGAP)"   >> $TMPFILE
-	    fi
-	    echo "setParam(\"NodeLimit\",$NODELIMIT)" >> $TMPFILE
-	    echo "setParam(\"NodefileStart\",$GRBMEMLIMIT)" >> $TMPFILE
+            if test $FEASTOL != "default"
+            then
+                echo "setParam(\"FeasibilityTol\",$FEASTOL)" >> $TMPFILE
+                echo "setParam(\"IntFeasTol\",$FEASTOL)"     >> $TMPFILE
+            fi
+            echo "setParam(\"TimeLimit\",$TIMELIMIT)" >> $TMPFILE
+            echo "setParam(\"DisplayInterval\",100)"  >> $TMPFILE
+            if test $MIPGAP != "default"
+            then
+                echo "setParam(\"MIPGap\",$MIPGAP)"   >> $TMPFILE
+            fi
+            echo "setParam(\"NodeLimit\",$NODELIMIT)" >> $TMPFILE
+            echo "setParam(\"NodefileStart\",$GRBMEMLIMIT)" >> $TMPFILE
             rm -fr $GRBNODEFILEDIR
             mkdir $GRBNODEFILEDIR
             echo "setParam(\"NodefileDir\",\"$GRBNODEFILEDIR\")" >> $TMPFILE
-	    echo "setParam(\"Threads\",$THREADS)"     >> $TMPFILE
-	    echo "writeParams(\"$SETFILE\")"          >> $TMPFILE
-	    echo "problem=read(\"$i\")"               >> $TMPFILE
-	    echo "problem.printStats()"               >> $TMPFILE
-	    echo "problem.optimize()"                 >> $TMPFILE
-	    echo "quit()"                             >> $TMPFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GUROBIBIN < $TMPFILE" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            echo "setParam(\"Threads\",$THREADS)"     >> $TMPFILE
+            echo "writeParams(\"$SETFILE\")"          >> $TMPFILE
+            echo "problem=read(\"$i\")"               >> $TMPFILE
+            echo "problem.printStats()"               >> $TMPFILE
+            echo "problem.optimize()"                 >> $TMPFILE
+            echo "quit()"                             >> $TMPFILE
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GUROBIBIN < $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE

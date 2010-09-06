@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.sh,v 1.9 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: checkcount.sh,v 1.10 2010/09/06 10:17:47 bzfwanie Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -56,18 +56,18 @@ if test "$LOCK" = "true"
 then
     if test -e $DONEFILE
     then
-	echo skipping test due to existing done file $DONEFILE
-	exit
+        echo skipping test due to existing done file $DONEFILE
+        exit
     fi
     if test -e $LOCKFILE
     then
-	if test -e $RUNFILE
+        if test -e $RUNFILE
         then
-	    echo continuing aborted run with run file $RUNFILE
-	else
-	    echo skipping test due to existing lock file $LOCKFILE
-	    exit
-	fi
+            echo continuing aborted run with run file $RUNFILE
+        else
+            echo skipping test due to existing lock file $LOCKFILE
+            exit
+        fi
     fi
     date > $LOCKFILE
     date > $RUNFILE
@@ -125,71 +125,71 @@ for i in `cat $TSTNAME.test` DONE
 do
     if test "$i" = "DONE"
     then
-	date > $DONEFILE
-	break
+        date > $DONEFILE
+        break
     fi
 
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    echo @01 $i ===========
-	    echo @01 $i ===========                >> $ERRFILE
-	    echo > $TMPFILE
-	    if test $SETTINGS != "default"
-	    then
-		echo set load $SETTINGS                >>  $TMPFILE
-	    fi
-	    if test $FEASTOL != "default"
-	    then
-		echo set numerics feastol $FEASTOL    >> $TMPFILE
-	    fi
-	    echo set limits time $TIMELIMIT        >> $TMPFILE
-	    echo set limits nodes $NODELIMIT       >> $TMPFILE
-	    echo set limits memory $MEMLIMIT       >> $TMPFILE
-	    echo set timing clocktype 1            >> $TMPFILE
-	    echo set display verblevel 4           >> $TMPFILE
-	    echo set display freq $DISPFREQ        >> $TMPFILE
-	    echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-	    if test "$LPS" == "none"      
-	    then
-		echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
+        LASTPROB=""
+        if test -f $i
+        then
+            echo @01 $i ===========
+            echo @01 $i ===========                >> $ERRFILE
+            echo > $TMPFILE
+            if test $SETTINGS != "default"
+            then
+                echo set load $SETTINGS                >>  $TMPFILE
+            fi
+            if test $FEASTOL != "default"
+            then
+                echo set numerics feastol $FEASTOL    >> $TMPFILE
+            fi
+            echo set limits time $TIMELIMIT        >> $TMPFILE
+            echo set limits nodes $NODELIMIT       >> $TMPFILE
+            echo set limits memory $MEMLIMIT       >> $TMPFILE
+            echo set timing clocktype 1            >> $TMPFILE
+            echo set display verblevel 4           >> $TMPFILE
+            echo set display freq $DISPFREQ        >> $TMPFILE
+            echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+            if test "$LPS" == "none"      
+            then
+                echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
 
-	    fi
-	    echo set save $SETFILE                 >> $TMPFILE
-	    echo read $i                           >> $TMPFILE
-	    echo count                             >> $TMPFILE
-	    echo display statistics                >> $TMPFILE
-	    echo quit                              >> $TMPFILE
+            fi
+            echo set save $SETFILE                 >> $TMPFILE
+            echo read $i                           >> $TMPFILE
+            echo count                             >> $TMPFILE
+            echo display statistics                >> $TMPFILE
+            echo quit                              >> $TMPFILE
 
-#	    if test "$LPS" == "cpx"      
-#	    then
-#		waitcplex.sh # ??????????????????
-#	    fi
+#            if test "$LPS" == "cpx"      
+#            then
+#                waitcplex.sh # ??????????????????
+#            fi
 
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 200000; ../$BINNAME < $TMPFILE" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 200000; ../$BINNAME < $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE
@@ -205,6 +205,6 @@ then
 
     if test "$LOCK" = "true"
     then
-	rm -f $RUNFILE
+        rm -f $RUNFILE
     fi
 fi

@@ -94,63 +94,63 @@ for i in `cat $TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    rm -f $SETFILE
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
-	    echo @03 SETTINGS: $SETNAME
-	    if test $SETNAME != "default"
-	    then
-		cp $SETTINGS $TMPFILE
-	    else
-		echo ""                              > $TMPFILE
-	    fi
-	    if test $FEASTOL != "default"
-	    then
-		echo primalTolerance $FEASTOL       >> $TMPFILE
-		echo integerTolerance $FEASTOL      >> $TMPFILE
-	    fi
-#workaround since CBC only looks at cpu-time
-TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
-	    echo seconds $TIMELIMIT                 >> $TMPFILE
+        LASTPROB=""
+        if test -f $i
+        then
+            rm -f $SETFILE
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
+            echo @05 SETTINGS: $SETNAME
+            if test $SETNAME != "default"
+            then
+                cp $SETTINGS $TMPFILE
+            else
+                echo ""                              > $TMPFILE
+            fi
+            if test $FEASTOL != "default"
+            then
+                echo primalTolerance $FEASTOL       >> $TMPFILE
+                echo integerTolerance $FEASTOL      >> $TMPFILE
+            fi
+#workaround: since CBC only looks at cpu-time, we multiply the timelimit with the number of threads
+            TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
+            echo seconds $TIMELIMIT                 >> $TMPFILE
 #$MEMLIMIT not supported (version 2.4)
-	    echo threads $THREADS                 >> $TMPFILE
-	    if test $MIPGAP != "default"
-	    then
-		echo ratioGap $MIPGAP               >> $TMPFILE
-	    fi
-	    echo maxNodes $NODELIMIT                >> $TMPFILE
-	    echo import $i                          >> $TMPFILE
-	    echo ratioGap                           >> $TMPFILE
-	    echo allowableGap                       >> $TMPFILE
-	    echo seconds                            >> $TMPFILE
-	    echo stat                               >> $TMPFILE
-	    echo solve                              >> $TMPFILE
-	    echo quit                               >> $TMPFILE
-	    cp $TMPFILE $SETFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CBCBIN < $TMPFILE" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            echo threads $THREADS                 >> $TMPFILE
+            if test $MIPGAP != "default"
+            then
+                echo ratioGap $MIPGAP               >> $TMPFILE
+            fi
+            echo maxNodes $NODELIMIT                >> $TMPFILE
+            echo import $i                          >> $TMPFILE
+            echo ratioGap                           >> $TMPFILE
+            echo allowableGap                       >> $TMPFILE
+            echo seconds                            >> $TMPFILE
+            echo stat                               >> $TMPFILE
+            echo solve                              >> $TMPFILE
+            echo quit                               >> $TMPFILE
+            cp $TMPFILE $SETFILE
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CBCBIN < $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE
