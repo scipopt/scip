@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.2 2010/09/06 16:19:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.3 2010/09/06 16:57:11 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -935,6 +935,7 @@ SCIP_RETCODE readPolynom(
       SCIP_Bool isnewsection;
       SCIP_Real exponent;
       
+      issign = FALSE; /* fix wrong compiler warning */
       if( (isnewsection = isNewSection(pipinput)) || 
           (issense = isSense(pipinput, NULL))     ||
           (nfactors > 0 && (issign = isSign(pipinput, &nextcoefsign))) )
