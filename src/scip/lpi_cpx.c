@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.137 2010/08/31 15:52:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.138 2010/09/06 15:14:15 bzfgamra Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -3582,11 +3582,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_PARTIAL);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_AUTO);
          break;
-      case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_STEEP:
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_STEEP);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEP);
 	 break;
+      case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_STEEPQSTART:
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_STEEPQSTART);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEPQSTART);
