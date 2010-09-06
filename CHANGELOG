@@ -119,7 +119,7 @@ features:
   the quadratic part of a quadratic constraint by a QCMATRIX
 - the MPS reader can now write quadratic and SOC constraints
 - the GAMS reader can now write SOC constraints
-- new undercover heuristic for MIQCPs: fixes variables such as to obtain a MIP and solves this
+- new undercover heuristic for MINLPs: fixes variables such as to obtain a linear or convex subproblem and solves this
 - modified implementation of separation algorithms in cons_knapsack.c according to results of diploma thesis; including super-additive lifting (disabled) 
 - added support for bool_gt, bool_lt, bool_ge, bool_le, bool_ne, bool_not, int_times, int_minus, int_plus, int_negate, 
   float_times, float_minus, float_plus, float_negate constraints to flatzinc reader
