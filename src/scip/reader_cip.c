@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.22 2010/09/03 20:53:37 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.23 2010/09/06 13:35:31 bzfwinkm Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -95,11 +95,16 @@ SCIP_RETCODE getInputString(
    {
       int pos;
 
+      /* we refil the buffer from the '\n' character */
       if( endline == NULL )
          pos = cipinput->len - 1;
       else
          pos = endline - cipinput->strbuf;
  
+      /* don't erase the '\n' from all buffers for constraints */ 
+      if( cipinput->section == CIP_CONSTRAINTS )
+         pos++;
+
       /* if necessary reallocate memory */
       if( pos + cipinput->readingsize >= cipinput->len )
       {
@@ -114,7 +119,7 @@ SCIP_RETCODE getInputString(
          return SCIP_OKAY;
 
       cipinput->linenumber++;
-      endline = strchr(cipinput->strbuf, '\n');
+      endline = strrchr(cipinput->strbuf, '\n');
       endcharacter = strchr(cipinput->strbuf, ';'); 
    }
    assert(endline != NULL);
