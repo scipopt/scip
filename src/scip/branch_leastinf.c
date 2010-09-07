@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.c,v 1.35 2010/06/18 11:14:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.c,v 1.36 2010/09/07 21:37:36 bzfviger Exp $"
 
 /**@file   branch_leastinf.c
  * @ingroup BRANCHINGRULES
@@ -229,11 +229,11 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelLeastinf)
    bestscore = SCIPinfinity(scip);
    bestobj  = 0.0;
    bestcand = NULL;
+   bestsol = SCIP_INVALID;
    for( i = 0; i < nrelaxcands; ++i )
    {
       updateBestCandidate(scip, &bestcand, &bestscore, &bestobj, &bestsol, relaxcands[i], relaxcandsscore[i], relaxcandssol[i]);
    }
-   assert(bestcand != NULL);
 
    if( bestcand == NULL )
    {

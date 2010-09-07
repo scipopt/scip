@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.93 2010/08/30 09:57:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.94 2010/09/07 21:37:36 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1930,9 +1930,9 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    }
    else
    {
-      /* if not point is suggested, try the LP or pseudo LP solution, projected into the bounds */
+      /* if no point is suggested, try the LP or pseudo LP solution, projected into the bounds */
       branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
-      branchpoint = MAX(lb, MIN(suggestion, ub));
+      branchpoint = MAX(lb, MIN(branchpoint, ub));
    }
    
    /* if value is at +/- infty, then choose some value a bit off from bounds or 0.0 */
@@ -1983,14 +1983,14 @@ SCIP_Real SCIPbranchGetBranchingPoint(
              * - SCIPsetEpsilon(set) above the lower bound - in absolute value
              */
             minbrpoint = (1.0 - set->branch_clamp) * lb + set->branch_clamp * ub;
-            minbrpoint = MAX(lb + 1.01*SCIPsetEpsilon(set), minbrpoint);
+            minbrpoint = MAX(lb + 1.01*SCIPsetEpsilon(set), minbrpoint);  /*lint --e{666}*/
 
             /* the maximal branching point should be
              * - set->clamp away from the upper bound - relative to the local domain size
              * - SCIPsetEpsilon(set) below the upper bound - in absolute value
              */
             maxbrpoint = set->branch_clamp * lb + (1.0 - set->branch_clamp) * ub;
-            maxbrpoint = MIN(ub - 1.01*SCIPsetEpsilon(set), maxbrpoint);
+            maxbrpoint = MIN(ub - 1.01*SCIPsetEpsilon(set), maxbrpoint);  /*lint --e{666}*/
 
             /* project branchpoint into [minbrpoint, maxbrpoint] */
             branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
@@ -2006,13 +2006,13 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       {
          /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound */
          assert(SCIPsetIsInfinity(set,  ub));
-         branchpoint = lb + MAX(0.5*REALABS(lb), 1000);
+         branchpoint = lb + MAX(0.5*REALABS(lb), 1000);  /*lint --e{666}*/
       }
       else if( !SCIPsetIsGT(set, ub, branchpoint) )
       { 
          /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound */
          assert(SCIPsetIsInfinity(set, -lb));
-         branchpoint = ub - MAX(0.5*REALABS(ub), 1000);
+         branchpoint = ub - MAX(0.5*REALABS(ub), 1000);  /*lint --e{666}*/
       }
 
       return branchpoint;
@@ -2043,9 +2043,9 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       }
    }
    
-   SCIPerrorMessage("you should not be here, this should not happen\n");
-   SCIPABORT();
-   return SCIP_INVALID;
+   SCIPerrorMessage("you should not be here, this should not happen\n");  /*lint --e{527}*/
+   SCIPABORT();  /*lint --e{527}*/
+   return SCIP_INVALID;  /*lint --e{527}*/
 }
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
@@ -2231,7 +2231,7 @@ SCIP_RETCODE SCIPbranchExecRelax(
          priority = SCIPvarGetBranchPriority(branchcand->relaxcands[i]);
          factor = SCIPvarGetBranchFactor(branchcand->relaxcands[i]);
          domain = (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(branchcand->relaxcands[i])) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(branchcand->relaxcands[i]))) ? SCIPsetInfinity(set) : SCIPvarGetUbLocal(branchcand->relaxcands[i])-SCIPvarGetLbLocal(branchcand->relaxcands[i]);
-         if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) || (priority == bestpriority && factor == bestfactor && domain > bestdomain) )
+         if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) || (priority == bestpriority && factor == bestfactor && domain > bestdomain) ) /*lint --e{777}*/
          {
             bestcand = i;
             bestpriority = priority;

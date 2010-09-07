@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.20 2010/06/18 19:37:43 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.21 2010/09/07 21:37:36 bzfviger Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -247,7 +247,6 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
     * a higher probability to be chosen for branching
     */
    getRandomVariable(scip, relaxcands, relaxcandssol, npriorelaxcands, &bestcand, &bestcandsol, &branchruledata->seed);
-   assert(bestcand != NULL);
 
    if( bestcand == NULL )
    {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.32 2010/06/18 11:14:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.33 2010/09/07 21:37:36 bzfviger Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -154,7 +154,7 @@ void updateBestCandidate(
    default :
       SCIPerrorMessage("branching strategy %c unknown\n", branchruledata->strategy);
       exit(1);
-      return;
+      return;  /*lint !e527*/
    }
 
    if( SCIPisInfinity(scip, deltaminus) || SCIPisInfinity(scip, deltaplus) )
@@ -288,7 +288,7 @@ SCIP_RETCODE selectBranchVar(
             candsol = candssol[candsorigidx[j]];
       }
       /* set i to last occurence of cand in candssorted (instead of first one as before), so in next round we look at another variable */
-      i = j-1;
+      i = j-1; /*lint !e850*/ 
       assert(candssorted[i] == cand);
       
       /* check if new candidate is better than previous candidate (if any) */
