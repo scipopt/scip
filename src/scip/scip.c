@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.643 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.644 2010/09/07 21:52:46 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1264,6 +1264,7 @@ SCIP_RETCODE SCIPcopyConss(
          assert(global || SCIPconsIsEnforced(sourceconss[c]));
 
          /* use the copy constructor of each constraint handler */
+         targetcons = NULL;
          SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, sourcescip, sourceconshdlrs[i], sourceconss[c], varmap,
                SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]),
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
@@ -7900,7 +7901,8 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
 
    /* set up data */
    cols = NULL;
-   SCIP_CALL( SCIPallocBufferArray(scip, cols, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cols, nvars) );
+   assert(cols != NULL);
    for (j = 0; j < nvars; ++j)
    {
       SCIP_VAR* var;
@@ -7981,6 +7983,8 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
                if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
                   || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
                {
+                  assert(downconflict != NULL);
+                  assert(upconflict   != NULL);
                   SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->tree, scip->lp, col, &(downconflict[j]), &(upconflict[j])) );
                }
@@ -8026,7 +8030,8 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
 
    /* set up data */
    cols = NULL;
-   SCIP_CALL( SCIPallocBufferArray(scip, cols, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cols, nvars) );
+   assert(cols != NULL);
    for (j = 0; j < nvars; ++j)
    {
       SCIP_VAR* var;
@@ -8107,6 +8112,8 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
                if( (downcutoff && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
                   || (upcutoff && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
                {
+                  assert(downconflict != NULL);
+                  assert(upconflict   != NULL);
                   SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->tree, scip->lp, col, &(downconflict[j]), &(upconflict[j])) );
                }
@@ -13247,7 +13254,6 @@ SCIP_Bool SCIPhasNonlinearitiesPresent(
 
 /** returns whether some plugin requires an NLP
  * @see SCIPmarkRequireNLP */ 
-extern
 SCIP_Bool SCIPisNLPRequired(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -16866,7 +16872,6 @@ SCIP_RETCODE SCIPdropVarEvent(
 }
 
 /** catches an row coefficient, constant, or side change event on the given row */
-extern
 SCIP_RETCODE SCIPcatchRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to catch event for */
@@ -16890,7 +16895,6 @@ SCIP_RETCODE SCIPcatchRowEvent(
 }
 
 /** drops an row coefficient, constant, or side change event (stops to track event) on the given row */
-extern
 SCIP_RETCODE SCIPdropRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to drop event for */
