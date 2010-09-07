@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.113 2010/08/31 15:50:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.114 2010/09/07 21:46:33 bzfviger Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -2335,6 +2335,9 @@ SCIP_RETCODE lpiStrongbranch(
 
    *downvalid = FALSE;
    *upvalid = FALSE;
+   
+   if( iter != NULL )
+      *iter = 0;
 
    /* set the algorithm type to use dual simplex */
    lpi->spx->setType( lpi->spx->rep() == SPxSolver::ROW ? SPxSolver::ENTER : SPxSolver::LEAVE);
