@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.33 2010/09/06 16:10:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.34 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1784,7 +1784,7 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    /* create new copied constraint in target SCIP */
    if ( *success )
    {
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons,  SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name ? name : SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
             bounds, initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );      
    }
 

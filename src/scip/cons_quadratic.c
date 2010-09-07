@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.124 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.125 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2014,7 +2014,7 @@ SCIP_RETCODE replaceQuadVarTermPos(
       consdata->quadvarssorted = FALSE;
       consdata->quadvarsmerged = FALSE;
    }
-   consdata->bilinmerged &= (quadvarterm->nadjbilin == 0);
+   consdata->bilinmerged &= (quadvarterm->nadjbilin == 0);  /*lint !e514*/
    
    consdata->ispropagated  = FALSE;
    consdata->ispresolved   = FALSE;
@@ -2242,7 +2242,7 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
    while( i < consdata->nquadvars )
    {
       /* make sure quad var terms are sorted (do this in every round, since we may move variables around) */
-      consdataSortQuadVarTerms(scip, consdata);
+      SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
       
       quadvarterm = &consdata->quadvarterms[i];
       
@@ -2255,7 +2255,7 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
          {
             /* move adjacency information from j to i */
             SCIP_CALL( consdataEnsureAdjBilinSize(scip, quadvarterm, quadvarterm->nadjbilin + consdata->quadvarterms[j].nadjbilin) );
-            BMScopyMemoryArray(&quadvarterm->adjbilin[quadvarterm->nadjbilin], consdata->quadvarterms[j].adjbilin, consdata->quadvarterms[j].nadjbilin);
+            BMScopyMemoryArray(&quadvarterm->adjbilin[quadvarterm->nadjbilin], consdata->quadvarterms[j].adjbilin, consdata->quadvarterms[j].nadjbilin);  /*lint !e866*/
             quadvarterm->nadjbilin += consdata->quadvarterms[j].nadjbilin;
             consdata->quadvarterms[j].nadjbilin = 0;
          }
@@ -2411,7 +2411,7 @@ SCIP_RETCODE mergeAndCleanBilinearTerms(
    SCIP_CALL( SCIPallocBufferArray(scip, &todelete, consdata->nbilinterms) );
 
    /* make sure bilinear terms are sorted */
-   consdataSortBilinTerms(scip, consdata);
+   SCIP_CALL( consdataSortBilinTerms(scip, consdata) );
 
    i = 0;
    while( i < consdata->nbilinterms )
@@ -2973,8 +2973,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    )
 {  /*lint --e{666} */
    SCIP_CONSDATA*     consdata;
-   SCIP_VAR**         xvars  = NULL;
-   SCIP_Real*         xcoef = NULL;
+   SCIP_VAR**         xvars;
+   SCIP_Real*         xcoef;
    SCIP_INTERVAL      xbnds;
    SCIP_INTERVAL      tmp;
    int                nxvars;
@@ -3561,8 +3561,8 @@ SCIP_RETCODE checkCurvature(
       }
       else
       {
-         consdata->isconvex &= !SCIPisNegative(scip, alleigval[0]);
-         consdata->isconcave &= !SCIPisPositive(scip, alleigval[n-1]);
+         consdata->isconvex  &= !SCIPisNegative(scip, alleigval[0]);   /*lint !e514*/
+         consdata->isconcave &= !SCIPisPositive(scip, alleigval[n-1]); /*lint !e514*/
          consdata->iscurvchecked = TRUE;
       }
       SCIPfreeBufferArray(scip, &alleigval);
@@ -3940,8 +3940,8 @@ void consdataGetQuadVarTermActivity(
    quadvarterm = &consdata->quadvarterms[termindex];
 
    SCIPintervalSetBounds(&xrng,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(quadvarterm->var), SCIPvarGetUbLocal(quadvarterm->var))),
-       infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(quadvarterm->var), SCIPvarGetUbLocal(quadvarterm->var))));
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(quadvarterm->var), SCIPvarGetUbLocal(quadvarterm->var))),  /*lint !e666*/
+       infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(quadvarterm->var), SCIPvarGetUbLocal(quadvarterm->var)))); /*lint !e666*/
    
    SCIPintervalSet(&lincoef, quadvarterm->lincoef);
    for( j = 0; j < quadvarterm->nadjbilin; ++j )
@@ -3951,8 +3951,8 @@ void consdataGetQuadVarTermActivity(
          continue; /* this term is handled in another quadvarterm later */
       
       SCIPintervalSetBounds(&tmp, 
-         -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),
-          infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
+         -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),  /*lint !e666*/
+          infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2)))); /*lint !e666*/
       SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
       SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
    }
@@ -4971,7 +4971,6 @@ SCIP_RETCODE registerVariableInfeasibilities(
 static
 SCIP_RETCODE registerLargeLPValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_VAR**            brvar               /**< buffer to store branching variable */
@@ -5619,7 +5618,7 @@ SCIP_RETCODE propagateBounds(
    if( SCIPintervalIsEmpty(consdata->quadactivitybounds) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &quadactcontr, consdata->nquadvars) );
-      propagateBoundsGetQuadActivity(  scip, consdata, intervalinfty, &minquadactivity, &maxquadactivity, &quadminactinf, &quadmaxactinf, quadactcontr);
+      propagateBoundsGetQuadActivity(scip, consdata, intervalinfty, &minquadactivity, &maxquadactivity, &quadminactinf, &quadmaxactinf, quadactcontr);
       assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
    }
 
@@ -5883,7 +5882,7 @@ SCIP_RETCODE propagateBounds(
                   if( quadminactinf == 0 || (quadminactinf == 1 && SCIPintervalGetInf(quadactcontr[i]) <= -intervalinfty) )
                   {
                      /* the residual quad min activity w.r.t. quad var term i is finite */
-                     assert(!SCIPisInfinity(scip, -minquadactivity));
+                     assert(!SCIPisInfinity(scip, -minquadactivity));  /*lint !e644*/
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeUpwards();
                      rhs2.sup = rhs.sup - minquadactivity;
@@ -5912,7 +5911,7 @@ SCIP_RETCODE propagateBounds(
                   if( quadmaxactinf == 0 || (quadmaxactinf == 1 && SCIPintervalGetSup(quadactcontr[i]) >= intervalinfty) )
                   {
                      /* the residual quad max activity w.r.t. quad var term i is finite and nonzero, so add it to right hand side */
-                     assert(!SCIPisInfinity(scip, maxquadactivity));
+                     assert(!SCIPisInfinity(scip, maxquadactivity));  /*lint !e644*/
                      roundmode = SCIPintervalGetRoundingMode();
                      SCIPintervalSetRoundingModeDownwards();
                      rhs2.inf = rhs.inf - maxquadactivity;
@@ -6011,19 +6010,19 @@ SCIP_RETCODE proposeFeasibleSolution(
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       /* recompute violation of solution in case solution has changed
        * get absolution violation and sign */
       if( SCIPisFeasPositive(scip, consdata->lhsviol) )
       {
-         SCIP_CALL( computeViolation(scip, conss[c], newsol, TRUE) );
+         SCIP_CALL( computeViolation(scip, conss[c], newsol, TRUE) );  /*lint !e613*/
          viol = consdata->lhs - consdata->activity;
       }
       else if( SCIPisFeasPositive(scip, consdata->rhsviol) )
       {
-         SCIP_CALL( computeViolation(scip, conss[c], newsol, TRUE) );
+         SCIP_CALL( computeViolation(scip, conss[c], newsol, TRUE) );  /*lint !e613*/
          viol = consdata->rhs - consdata->activity;
       }
       else
@@ -6094,7 +6093,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
       /* still here... so maybe we could not make constraint feasible due to variable bounds
        * check if we are feasible w.r.t. (relative) feasibility tolerance */
-      norm = getGradientNorm(scip, conss[c], newsol);
+      norm = getGradientNorm(scip, conss[c], newsol);  /*lint !e613*/
       if( norm > 1.0 )
          viol /= norm;
       /* if still violated, we give up */
@@ -6260,7 +6259,7 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       /* reset linvar_may{in,de}crease to -1 in case some values are still set from a previous solve round */
@@ -6465,7 +6464,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       /* free nonlinear row representation */
@@ -6727,7 +6726,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    { /* fallback: separation probably failed because of numerical difficulties with a convex constraint;
         if noone declared solution infeasible yet, try to resolve by branching */ 
       SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conshdlr, conss, nconss, &brvar) );
+      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
          SCIPwarningMessage("Could not find any branching variable candidate. Cutting off node.\n");
@@ -6878,8 +6877,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          /* add the upgraded constraints to the problem and forget them */
          for( i = 0; i < mynupgdconss; ++i )
          {
-            SCIP_CALL( SCIPaddCons(scip, myupgdconss[i]) );
-            SCIP_CALL( SCIPreleaseCons(scip, &myupgdconss[i]) );
+            SCIP_CALL( SCIPaddCons(scip, myupgdconss[i]) );      /*lint !e613*/
+            SCIP_CALL( SCIPreleaseCons(scip, &myupgdconss[i]) ); /*lint !e613*/
          }
 
          (*nupgdconss)++;
@@ -7345,7 +7344,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
                 * if there is no such var, then we cannot get feasible */
                if( !(consdata->linvar_mayincrease >= 0 && consdata->lincoefs[consdata->linvar_mayincrease] > 0.0) &&
                    !(consdata->linvar_maydecrease >= 0 && consdata->lincoefs[consdata->linvar_maydecrease] < 0.0) )
-               maypropfeasible = FALSE;
+                  maypropfeasible = FALSE;
             }
             else
             {
@@ -7354,7 +7353,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
                 * if there is no such var, then we cannot get feasible */
                if( !(consdata->linvar_mayincrease >= 0 && consdata->lincoefs[consdata->linvar_mayincrease] < 0.0) &&
                    !(consdata->linvar_maydecrease >= 0 && consdata->lincoefs[consdata->linvar_maydecrease] > 0.0) )
-               maypropfeasible = FALSE;
+                  maypropfeasible = FALSE;
             }
          }
       }
@@ -7705,7 +7704,7 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
                lhs = coefsign * coef;
                rhs = coefsign * coef;
                break;
-            default:
+            default:  /*lint !e788*/
                SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected unknown sense <%d>)\n", sense);
                (*success) = FALSE;
             }
@@ -8488,7 +8487,7 @@ SCIP_Bool SCIPisConcaveQuadratic(
    assert(SCIPconsGetData(cons) != NULL);
 
    /* with FALSE, one should never get an error, since there is no memory allocated */
-   SCIP_CALL( checkCurvature(scip, cons, FALSE) );
+   SCIP_CALL_ABORT( checkCurvature(scip, cons, FALSE) );
 
    return SCIPconsGetData(cons)->isconcave;
 }
@@ -8595,6 +8594,8 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
       idx1 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpivar, consdata->quadvarterms[j].var);
       if( consdata->quadvarterms[j].lincoef != 0.0 )
       {
+         assert(lininds != NULL);
+         assert(linvals != NULL);
          lininds[lincnt] = idx1;
          linvals[lincnt] = consdata->quadvarterms[j].lincoef;
          ++lincnt;
@@ -8603,6 +8604,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
       if( consdata->quadvarterms[j].sqrcoef != 0.0 )
       {
          assert(quadcnt < nquadelems);
+         assert(quadelems != NULL);
          quadelems[quadcnt].idx1 = idx1;
          quadelems[quadcnt].idx2 = idx1;
          quadelems[quadcnt].coef = consdata->quadvarterms[j].sqrcoef;
@@ -8617,6 +8619,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
             continue;
 
          assert(quadcnt < nquadelems);
+         assert(quadelems != NULL);
          assert(SCIPhashmapExists(scipvar2nlpivar, othervar));
          idx2 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpivar, othervar);
          quadelems[quadcnt].idx1 = MIN(idx1, idx2);

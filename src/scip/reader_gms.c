@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.43 2010/09/06 16:48:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.44 2010/09/07 21:45:40 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -773,9 +773,6 @@ SCIP_Bool isGAMSprintableSOC(
       return FALSE;
 
    if( !SCIPvarIsActive(rhsvar) )
-      return FALSE;
-
-   if( rhsoffset != 0.0 )
       return FALSE;
 
    if( lhsconstant != 0.0 )

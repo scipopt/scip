@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.4 2010/09/06 16:59:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.5 2010/09/07 21:45:40 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -54,9 +54,6 @@
 #define PIP_INIT_VARSSIZE     256
 #define PIP_INIT_MONOMSSIZE   128
 #define PIP_INIT_FACTORSSIZE  16
-#define PIP_MAX_PRINTLEN      561       /**< the maximum length of any line is 560 + '\\0' = 561*/
-#define PIP_MAX_NAMELEN       256       /**< the maximum length for any name is 255 + '\\0' = 256 */
-#define PIP_PRINTLEN          100
 
 /** Section in PIP File */
 enum PipSection
@@ -807,9 +804,10 @@ SCIP_RETCODE getVariableIndex(
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, *varssize) );
       }
    }
+   assert(*vars != NULL);
    
    (*vars)[*nvars] = var;
-   SCIPhashmapInsert(varhash, (void*)var, (void*)(size_t)*nvars);
+   SCIP_CALL( SCIPhashmapInsert(varhash, (void*)var, (void*)(size_t)*nvars) );
    *varidx = *nvars;
    
    ++*nvars;
@@ -935,10 +933,11 @@ SCIP_RETCODE readPolynom(
       SCIP_Bool isnewsection;
       SCIP_Real exponent;
       
-      issign = FALSE; /* fix wrong compiler warning */
-      if( (isnewsection = isNewSection(pipinput)) || 
-          (issense = isSense(pipinput, NULL))     ||
-          (nfactors > 0 && (issign = isSign(pipinput, &nextcoefsign))) )
+      issign = FALSE;   /* fix compiler warning */
+      issense = FALSE;  /* fix lint warning */
+      if( (isnewsection = isNewSection(pipinput)) ||  /*lint !e820*/ 
+          (issense = isSense(pipinput, NULL))     ||  /*lint !e820*/
+          (nfactors > 0 && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
       {
          /* finish the current monom */
          SCIP_CALL( ensureMonomsSize(scip, &monoms, &monomssize, nmonoms + 1) );
@@ -1017,8 +1016,7 @@ SCIP_RETCODE readPolynom(
       /* check if we are at an exponent for the last variable */
       if( strcmp(pipinput->token, "^") == 0 )
       {
-         getNextToken(pipinput);
-         if( !isValue(scip, pipinput, &exponent) )
+         if( !getNextToken(pipinput) || !isValue(scip, pipinput, &exponent) )
          {
             syntaxError(scip, pipinput, "expected exponent value after '^'");
             goto TERMINATE_READPOLYNOM;
@@ -1917,7 +1915,7 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.tokenbuf[0] = '\0';
    for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(pipinput.pushedtokens[i]), PIP_MAX_LINELEN) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.pushedtokens[i], PIP_MAX_LINELEN) );
    }
 
    pipinput.npushedtokens = 0;

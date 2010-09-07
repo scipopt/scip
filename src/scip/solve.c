@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.311 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.312 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -197,6 +197,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
    }
    else
    {
+      assert(tree != NULL); /* for lint */
       depth = SCIPtreeGetFocusDepth(tree);
       lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
       

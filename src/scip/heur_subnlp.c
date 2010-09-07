@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.13 2010/09/06 16:10:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.14 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -149,7 +149,7 @@ SCIP_RETCODE createSubSCIP(
    if( SCIPgetNNlpis(heurdata->subscip) <= 0 )
    {
       SCIPdebugMessage("some NLPIs from main SCIP did not copy into subSCIP, give up heuristic.\n");
-      SCIPfree(&heurdata->subscip);
+      SCIP_CALL( SCIPfree(&heurdata->subscip) );
       SCIPhashmapFree(&heurdata->var_scip2subscip);
       
       return SCIP_OKAY;
@@ -577,6 +577,10 @@ SCIP_RETCODE addSetppcConstraints(
             lhs = 1.0;
             rhs = SCIPinfinity(scip);
             break;
+            
+         default:
+            SCIPerrorMessage("unexpected setppc type\n");
+            return SCIP_ERROR;
       }
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
@@ -617,6 +621,7 @@ SCIP_RETCODE addKnapsackConstraints(
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
+   assert(conss != NULL);
 
    coefs = NULL;
    coefssize = 0;
@@ -643,7 +648,7 @@ SCIP_RETCODE addKnapsackConstraints(
       }
       
       for( j = 0; j < nvars; ++j )
-         coefs[j] = (SCIP_Real)SCIPgetWeightsKnapsack(scip, conss[i])[j];
+         coefs[j] = (SCIP_Real)SCIPgetWeightsKnapsack(scip, conss[i])[j];  /*lint !e613*/
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
          nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
@@ -748,7 +753,7 @@ SCIP_RETCODE createSolFromNLP(
       subvar = SCIPvarGetTransVar(subvar);
       
       SCIP_CALL( SCIPnlpGetVarSolVal(nlp, subvar, &val) );
-      assert(val != SCIP_INVALID);
+      assert(val != SCIP_INVALID);  /*lint !e777*/
 
       SCIP_CALL( SCIPsetSolVal(scip, *sol, var, val) );
    }
@@ -830,7 +835,7 @@ SCIP_RETCODE solveSubNLP(
 
    /* presolve subSCIP */
    /* set node limit to 1 so that presolve can go */
-   SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1) );
+   SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", (long long)1) );
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
    if( SCIPpressedCtrlC(heurdata->subscip) )
    {
@@ -851,14 +856,14 @@ SCIP_RETCODE solveSubNLP(
       SCIPmarkRequireNLP(heurdata->subscip);
 
       /* do init solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
-      SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0) );
+      SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", (long long)0) );
       SCIP_CALL( SCIPsolve(heurdata->subscip) );
       
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
        * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem. */
       if( !SCIPisNLPConstructed(heurdata->subscip) )
       {
-         SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1) );
+         SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", (long long)1) );
          SCIP_CALL( SCIPsolve(heurdata->subscip) );
       }
    }
@@ -916,7 +921,7 @@ SCIP_RETCODE solveSubNLP(
       case SCIP_STATUS_UNBOUNDED:
       case SCIP_STATUS_INFORUNBD:
          goto cleanup;
-      default:
+      default: /*lint !e788*/
          SCIPerrorMessage("unexpected status of subSCIP: <%d>\n", SCIPgetStatus(heurdata->subscip));
          return SCIP_ERROR;
    }
@@ -942,7 +947,7 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPvarGetOrigvarSum(&subvar, &scalar, &constant) );
       if( subvar == NULL )
       {
-         startpoint[i] = MIN(MAX(0.0, SCIPvarGetLbGlobal(subvar)), SCIPvarGetUbGlobal(subvar));
+         startpoint[i] = MIN(MAX(0.0, SCIPvarGetLbGlobal(subvar)), SCIPvarGetUbGlobal(subvar));  /*lint !e666*/
          continue;
       }
 
@@ -950,7 +955,7 @@ SCIP_RETCODE solveSubNLP(
       assert(SCIPvarGetProbindex(subvar) <  heurdata->nsubvars);
       var = heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)];
       if( var == NULL || REALABS(SCIPgetSolVal(scip, refpoint, var)) > 1.0e+12 )
-         startpoint[i] = MIN(MAX(0.0, SCIPvarGetLbGlobal(subvar)), SCIPvarGetUbGlobal(subvar));
+         startpoint[i] = MIN(MAX(0.0, SCIPvarGetLbGlobal(subvar)), SCIPvarGetUbGlobal(subvar));  /*lint !e666*/
       else
          /* scalar*subvar+constant corresponds to nlpvar[i], so nlpvar[i] gets value scalar*varval+constant */
          startpoint[i] = scalar * SCIPgetSolVal(scip, refpoint, var) + constant;
@@ -1051,8 +1056,7 @@ SCIP_RETCODE solveSubNLP(
          SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip));
 
          /* free transformed problem */
-         SCIPfreeTransform(heurdata->subscip);
-         nlp = NULL;
+         SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
          
          SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE) );
       }
@@ -1092,7 +1096,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
    int            i;
-   SCIP_Real      cutoff;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1147,8 +1150,8 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          }
          
          /* at this point, variables in subscip and in our scip should have same bounds */
-         assert(SCIPvarGetLbGlobal(subvar) == SCIPvarGetLbGlobal(var));
-         assert(SCIPvarGetUbGlobal(subvar) == SCIPvarGetUbGlobal(var));
+         assert(SCIPvarGetLbGlobal(subvar) == SCIPvarGetLbGlobal(var));  /*lint !e777*/
+         assert(SCIPvarGetUbGlobal(subvar) == SCIPvarGetUbGlobal(var));  /*lint !e777*/
 
          fixval = SCIPgetSolVal(scip, refpoint, var);
 
@@ -1171,8 +1174,8 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          fixval = SCIPfloor(scip, fixval + 0.5);
 
          /* adjust value to the global bounds of the corresponding SCIP variable */
-         fixval = MAX(fixval, SCIPvarGetLbGlobal(var));
-         fixval = MIN(fixval, SCIPvarGetUbGlobal(var));
+         fixval = MAX(fixval, SCIPvarGetLbGlobal(var));  /*lint !e666*/
+         fixval = MIN(fixval, SCIPvarGetUbGlobal(var));  /*lint !e666*/
          
          /* SCIPdebugMessage("fix variable <%s> to %g\n", SCIPvarGetName(var), fixval); */
          SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, fixval) );
@@ -1184,6 +1187,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real upperbound;
+      SCIP_Real cutoff;
       
       cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
@@ -1203,10 +1207,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       }
       cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
-   }
-   else
-   {
-      cutoff = SCIPinfinity(scip);
    }
 
    /* solve the subNLP and try to add solution to SCIP */

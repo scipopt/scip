@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.354 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.355 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1148,7 +1148,6 @@ SCIP_RETCODE colDelCoefPos(
    )
 {
    SCIP_ROW* row;
-   SCIP_Real oldval;
 
    assert(col != NULL);
    assert(col->var != NULL);
@@ -1160,8 +1159,6 @@ SCIP_RETCODE colDelCoefPos(
 
    row = col->rows[pos];
    assert((row->lppos >= 0) == (pos < col->nlprows));
-   
-   oldval = col->vals[pos];
 
    /*debugMessage("deleting coefficient %g * <%s> at position %d from column <%s>\n", 
      col->vals[pos], row->name, pos, SCIPvarGetName(col->var));*/
@@ -1212,10 +1209,6 @@ SCIP_RETCODE colChgCoefPos(
    }
    else if( !SCIPsetIsEQ(set, col->vals[pos], val) )
    {
-      SCIP_Real oldval;
-      
-      oldval = col->vals[pos];
-      
       /* change existing coefficient */
       col->vals[pos] = val;
       coefChanged(col->rows[pos], col, lp);
@@ -2217,7 +2210,7 @@ SCIP_RETCODE lpSetRowrepswitch(
 
    SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_ROWREPSWITCH, lp->lpirowrepswitch) );
 
-   if( rowrepswitch != lp->lpirowrepswitch )
+   if( rowrepswitch != lp->lpirowrepswitch )  /*lint --e{777}*/
    {
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_ROWREPSWITCH, rowrepswitch, success) );
       if( *success )
@@ -4164,7 +4157,7 @@ SCIP_RETCODE rowScale(
          if( oldlen != row->len ) 
          {  
             assert(row->len == oldlen - 1);
-            c--;
+            c--;  /*lint --e{850}*/
             oldlen = row->len;
          }
 
@@ -7969,7 +7962,7 @@ void sumMIRRow(
          /* remove row from sparsity pattern */
          rowinds[i] = rowinds[(*nrowinds)-1];
          (*nrowinds)--;
-         i--;
+         i--;  /*lint --e{850}*/
 #ifndef NDEBUG
          slacksign[r] = 0;
 #endif
@@ -8042,7 +8035,7 @@ void cleanupMIRRow(
          varused[v] = FALSE;
          varinds[i] = varinds[(*nvarinds)-1];
          (*nvarinds)--;
-         i--;
+         i--;  /*lint --e{850}*/
       }
    }
    if( rhsinf )
@@ -9434,7 +9427,7 @@ void sumStrongCGRow(
          /* remove row from sparsity pattern */
          rowinds[i] = rowinds[(*nrowinds)-1];
          (*nrowinds)--;
-         i--;
+         i--;  /*lint --e{850}*/
 #ifndef NDEBUG
          slacksign[r] = 0;
 #endif
@@ -12047,7 +12040,7 @@ SCIP_RETCODE checkLazyBounds(
       {
          lp->nlazycols--;
          lp->lazycols[c] = lp->lazycols[lp->nlazycols];
-         c--;
+         c--;  /*lint --e{850}*/
       }
    }
 
@@ -12768,7 +12761,7 @@ SCIP_RETCODE lpUpdateVar(
    assert(lp->pseudoobjvalinf >= 0);
    assert(lp->looseobjvalinf >= 0);
 
-   if( REALABS(newobj) != REALABS(oldobj) )
+   if( REALABS(newobj) != REALABS(oldobj) )   /*lint --e{777}*/
    {
       if( !lp->objsqrnormunreliable )
       {
@@ -15567,7 +15560,7 @@ void SCIPlpRecalculateObjSqrNorm(
       
       for( c = lp->ncols - 1; c >= 0; --c )
       {
-         lp->objsqrnorm += SQR(cols[c]->obj);
+         lp->objsqrnorm += SQR(cols[c]->obj);  /*lint --e{613}*/
       }
       assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
 

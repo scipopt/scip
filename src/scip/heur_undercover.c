@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.71 2010/09/06 17:27:49 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.72 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1188,7 +1188,7 @@ SCIP_RETCODE getFixingValue(
 
                lb = bdtypes[i] == SCIP_BOUNDTYPE_UPPER ? oldbounds[i] : oldbounds[i-1];
                ub = bdtypes[i] == SCIP_BOUNDTYPE_UPPER ? oldbounds[i-1] : oldbounds[i];
-               i--;
+               i--;  /*lint !e850*/
             }
             /* lower bound was tightened */            
             else if( bdtypes[i] == SCIP_BOUNDTYPE_UPPER )

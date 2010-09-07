@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.38 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.39 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS
@@ -797,7 +797,7 @@ SCIP_RETCODE enforceSOS2(
          continue;
 
       assert( !SCIPisFeasZero(scip, weight2) );
-      w = weight1/weight2;
+      w = weight1/weight2;  /*lint !e795*/
 
       ind = (int) SCIPfeasFloor(scip, w);
       assert( 0 <= ind && ind < nVars-1 );

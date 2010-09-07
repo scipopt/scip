@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.59 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.60 2010/09/07 21:45:40 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -183,7 +183,7 @@ Bool xlp_addcon_term(
    case CON_EQUAL:
       sciplhs = (SCIP_Real)numb_todbl(lhs);
       sciprhs = (SCIP_Real)numb_todbl(rhs);
-      assert(sciplhs == sciprhs);
+      assert(sciplhs == sciprhs);  /*lint !e777*/
       break;
    default:
       SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
@@ -256,7 +256,7 @@ Bool xlp_addcon_term(
                if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
                {
                   scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
-                  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
+                  SCIP_CALL_ABORT( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
                }
                else
                {
@@ -290,7 +290,7 @@ Bool xlp_addcon_term(
                if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
                {
                   scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
-                  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
+                  SCIP_CALL_ABORT( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
                }
                else
                {
@@ -335,11 +335,11 @@ Bool xlp_addcon_term(
       SCIP_Real* quadcoeff;
       Mono*      monom;
   	  
-      SCIP_CALL( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
   	  
       for (i = 0; i < term_get_elements(term); ++i)
       {
@@ -1238,7 +1238,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
          NULL, FALSE, "-", NULL, NULL) );
 
-   (void) SCIPsnprintf(extcodename, sizeof(extcodename), "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
+   (void) SCIPsnprintf(extcodename, sizeof(extcodename), "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);  /*lint !e845*/
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #endif
 

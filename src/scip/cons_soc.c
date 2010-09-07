@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.46 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.47 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -418,11 +418,9 @@ SCIP_RETCODE createNlRow(
       {
          /* construct quadratic form gamma + sum_{i=1}^{n} (alpha_i (x_i + beta_i))^2 <= (alpha_{n+1} (x_{n+1} + beta_{n+1})^2 */
          SCIP_QUADELEM sqrterm;
-         SCIP_Real lincoef;
          SCIP_Real rhs;
 
          /* create initial empty row with left hand side variables */
-         lincoef = -consdata->rhscoeff;
          SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
             0, NULL, NULL,
             consdata->nvars, consdata->vars, 0, NULL,
@@ -461,6 +459,10 @@ SCIP_RETCODE createNlRow(
 
          break;
       }
+      
+      default:
+         SCIPerrorMessage("unknown value for nlp formulation parameter\n");
+         return SCIP_ERROR;
    }
 
    SCIPdebugMessage("created nonlinear row representation of SOC constraint\n");
@@ -492,7 +494,7 @@ SCIP_RETCODE evalLhs(
    
    for( i = 0; i < consdata->nvars; ++i )
    {
-      assert(!SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->vars[i]))));
+      assert(!SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->vars[i]))));  /*lint !e666*/
       
       val = consdata->coefs[i] * (SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i]);
       consdata->lhsval += val * val;      
@@ -523,7 +525,7 @@ SCIP_Real getGradientNorm(
    g = 0.0;
    for( i = 0; i < consdata->nvars; ++i )
    {
-      assert(!SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->vars[i]))));
+      assert(!SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->vars[i]))));  /*lint !e666*/
       
       h = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
       h *= consdata->coefs[i] * consdata->coefs[i];
@@ -596,15 +598,15 @@ SCIP_RETCODE computeViolations(
    
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], sol, doscaling) );
+      SCIP_CALL( computeViolation(scip, conss[c], sol, doscaling) );  /*lint !e613*/
       if( maxviolcons != NULL )
       {
-         consdata = SCIPconsGetData(conss[c]);
+         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
          if( consdata->violation > maxviol && SCIPisFeasPositive(scip, consdata->violation) )
          {
             maxviol      = consdata->violation;
-            *maxviolcons = conss[c];
+            *maxviolcons = conss[c];  /*lint !e613*/
          }
       }
    }
@@ -928,7 +930,7 @@ SCIP_RETCODE generateSparseCut(
          x[ind[i]] = SCIPgetSolVal(scip, sol, consdata->vars[ind[i]]);
       
       maxnz = nextmaxnz;
-   } while( TRUE );
+   } while( TRUE );  /*lint !e931*/
    
    SCIPfreeBufferArray(scip, &x);
    SCIPfreeBufferArray(scip, &dist);
@@ -969,7 +971,7 @@ SCIP_RETCODE separatePoint(
    
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
       if( SCIPisFeasPositive(scip, consdata->violation) )
@@ -977,17 +979,17 @@ SCIP_RETCODE separatePoint(
          /* generate cut */
          if( conshdlrdata->sparsify )
          {
-            SCIP_CALL( generateSparseCut(scip, conss[c], sol, &row, minefficacy, conshdlrdata->sparsifymaxloss, conshdlrdata->sparsifynzgrowth) );
+            SCIP_CALL( generateSparseCut(scip, conss[c], sol, &row, minefficacy, conshdlrdata->sparsifymaxloss, conshdlrdata->sparsifynzgrowth) );  /*lint !e613*/
          }  
          else if( conshdlrdata->projectpoint )
          {
-            SCIP_CALL( generateCutProjectedPoint(scip, conss[c], sol, &row) );
+            SCIP_CALL( generateCutProjectedPoint(scip, conss[c], sol, &row) );  /*lint !e613*/
             if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
          else
          {
-            SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );
+            SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );  /*lint !e613*/
             if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -997,7 +999,7 @@ SCIP_RETCODE separatePoint(
 
          /* cut cuts off solution and efficient enough */
          SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
          *success = TRUE;
          SCIPdebugMessage("added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
 
@@ -1032,7 +1034,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
 
-   assert((SCIPeventGetType(event) | SCIP_EVENTTYPE_SOLFOUND) != 0);
+   assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_SOLFOUND) != 0);
 
    conshdlr = (SCIP_CONSHDLR*)eventdata;
 
@@ -1545,11 +1547,11 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    /* create additional variables; we do not use avars[0] and bvars[0] */
    for( i = 1; i <= N; ++i )
    {
-      SCIPsnprintf(varname, 255, "soc#%s_a%d", basename, i);
+      (void) SCIPsnprintf(varname, 255, "soc#%s_a%d", basename, i);
       SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, avars[i]) );
 
-      SCIPsnprintf(varname, 255, "soc#%s_b%d", basename, i);
+      (void) SCIPsnprintf(varname, 255, "soc#%s_b%d", basename, i);
       SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, bvars[i]) );
    }
@@ -1566,7 +1568,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    vars[1] = avars[1];
    vals[1] = -1.0;
 
-   SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, 0);
+   (void) SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, 0);
    SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, alpha1*offset1, alpha1*offset1,
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
       SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1584,7 +1586,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vars[1] = bvars[1];
       vals[1] = -1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, 0);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, 0);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, -SCIPinfinity(scip), -alpha2*offset2,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
          SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1600,7 +1602,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vars[1] = bvars[1];
       vals[1] = 1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, 0);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, 0);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, -alpha2*offset2, SCIPinfinity(scip),
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
          SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1635,7 +1637,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vars[2] = avars[i+1];
       vals[2] = -1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, i);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, i);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 3, vars, vals, 0.0, 0.0,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
          SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1653,7 +1655,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vars[2] = bvars[i+1];
       vals[2] = -1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, i);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, i);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 3, vars, vals, -SCIPinfinity(scip), 0.0,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
          SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1671,7 +1673,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       vars[2] = bvars[i+1];
       vals[2] = 1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, i);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, i);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 3, vars, vals, 0.0, SCIPinfinity(scip),
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
          SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1692,7 +1694,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    vars[2] = x3;
    vals[2] = alpha3;
 
-   SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, N);
+   (void) SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, N);
    SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 3, vars, vals, -alpha3*offset3, -alpha3*offset3,
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
       SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1779,7 +1781,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    vars[1] = x1;
    vals[1] = -alpha1;
 
-   SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, 0);
+   (void) SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, 0);
    SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, alpha1 * offset1, SCIPinfinity(scip),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
       SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1794,7 +1796,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    vars[1] = x1;
    vals[1] = alpha1;
 
-   SCIPsnprintf(linname, 255, "soc#%s#A%d", basename, 0);
+   (void) SCIPsnprintf(linname, 255, "soc#%s#A%d", basename, 0);
    SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, -alpha1 * offset1, SCIPinfinity(scip),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
       SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1811,7 +1813,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       vars[1] = x2;
       vals[1] = -alpha2;
 
-      SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, 0);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, 0);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, alpha2 * offset2, SCIPinfinity(scip),
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
          SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1826,7 +1828,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       vars[1] = x2;
       vals[1] = alpha2;
 
-      SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, 0);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, 0);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, -alpha2 * offset2, SCIPinfinity(scip),
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
          SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1862,7 +1864,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       vars[2] = avars[i];
       vals[2] = -1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, i);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, i);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 3, vars, vals, 0.0, 0.0,
           SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
           SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1879,7 +1881,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       vars[2] = bvars[i];
       vals[2] = 1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, i);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, i);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 3, vars, vals, 0.0, SCIPinfinity(scip),
           SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
           SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1896,7 +1898,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
       vars[2] = bvars[i];
       vals[2] = 1.0;
 
-      SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, i);
+      (void) SCIPsnprintf(linname, 255, "soc#%s#B%d", basename, i);
       SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 3, vars, vals, 0.0, SCIPinfinity(scip),
           SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
           SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1913,7 +1915,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    vars[1] = avars[N];
    vals[1] = -1.0;
 
-   SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, N);
+   (void) SCIPsnprintf(linname, 255, "soc#%s#a%d", basename, N);
    SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, -alpha3 * offset3, SCIPinfinity(scip),
        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
        SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -1928,7 +1930,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    vars[1] = bvars[N];
    vals[1] = -1.0;
 
-   SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, i);
+   (void) SCIPsnprintf(linname, 255, "soc#%s#b%d", basename, i);
    SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, linname, 2, vars, vals, 0.0, SCIPinfinity(scip),
        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
        SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -2047,7 +2049,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
    if( nlhsvars == 3 || (nlhsvars == 2 && !SCIPisZero(scip, constant)) )
    { /* a bit special case too */
       /* for first two variables on lhs, create a new aux.var and a new SOC3 */
-      SCIPsnprintf(name, 255, "%s#z1", basename);
+      (void) SCIPsnprintf(name, 255, "%s#z1", basename);
       SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar1) );
 
@@ -2058,7 +2060,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
          lhsoffsets[0], lhsoffsets[1], 0.0,
          soc3_nr_auxvars, glineur, name) );
 
-      SCIPsnprintf(name, 255, "%s_soc3", basename);
+      (void) SCIPsnprintf(name, 255, "%s_soc3", basename);
       if( nlhsvars == 3 )
       { /* create new constraint alpha_2 (x_2+beta2)^2 + auxvar^2 <= (rhscoeff * (rhsvar+rhsoffset))^2 */
          SCIP_CALL( presolveCreateOuterApproxDim3(scip, origcons,
@@ -2083,7 +2085,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
    
    /* nlhsvars >= 4 */
    
-   SCIPsnprintf(name, 255, "%s#z1", basename);
+   (void) SCIPsnprintf(name, 255, "%s#z1", basename);
    SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar1) );
 
@@ -2093,7 +2095,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
       auxvar1, 1.0, 0.0,
       constant, name, origcons, soc3_nr_auxvars, glineur) );
 
-   SCIPsnprintf(name, 255, "%s#z2", basename);
+   (void) SCIPsnprintf(name, 255, "%s#z2", basename);
    SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar2) );
 
@@ -2104,7 +2106,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
       0.0, name, origcons, soc3_nr_auxvars, glineur) );
 
    /* SOC constraint binding both auxvar's */
-   SCIPsnprintf(name, 255, "%s_soc3", basename);
+   (void)SCIPsnprintf(name, 255, "%s_soc3", basename);
    SCIP_CALL( presolveCreateOuterApproxDim3(scip, origcons,
       auxvar1, auxvar2, rhsvar,
       1.0,     1.0,     rhscoeff,
@@ -2121,7 +2123,6 @@ SCIP_RETCODE presolveCreateOuterApprox(
 static
 SCIP_RETCODE propagateBounds(
    SCIP*           scip,      /**< SCIP data structure */
-   SCIP_CONSHDLR*  conshdlr,  /**< constraint handler */
    SCIP_CONS*      cons,      /**< constraint */
    SCIP_RESULT*    result,    /**< buffer to store result of propagation */
    int*            nchgbds    /**< buffer where to add number of tightened bounds */
@@ -2165,8 +2166,8 @@ SCIP_RETCODE propagateBounds(
    for( i = 0; i < consdata->nvars; ++i )
    {
       SCIPintervalSetBounds(&lhsranges[i],
-         MIN(SCIPvarGetLbLocal(consdata->vars[i]), SCIPvarGetUbLocal(consdata->vars[i])),
-         MAX(SCIPvarGetLbLocal(consdata->vars[i]), SCIPvarGetUbLocal(consdata->vars[i])) );
+         MIN(SCIPvarGetLbLocal(consdata->vars[i]), SCIPvarGetUbLocal(consdata->vars[i])),    /*lint !e666*/
+         MAX(SCIPvarGetLbLocal(consdata->vars[i]), SCIPvarGetUbLocal(consdata->vars[i])) );  /*lint !e666*/
       if( consdata->offsets[i] != 0.0 )
          SCIPintervalAddScalar(SCIPinfinity(scip), &lhsranges[i], lhsranges[i], consdata->offsets[i]);
       if( consdata->coefs[i]   != 1.0 )
@@ -2200,8 +2201,8 @@ SCIP_RETCODE propagateBounds(
    if( *result != SCIP_CUTOFF )
    {
       SCIPintervalSetBounds(&rhsrange,
-         MIN(SCIPvarGetLbLocal(consdata->rhsvar), SCIPvarGetUbLocal(consdata->rhsvar)),
-         MAX(SCIPvarGetLbLocal(consdata->rhsvar), SCIPvarGetUbLocal(consdata->rhsvar)) );
+         MIN(SCIPvarGetLbLocal(consdata->rhsvar), SCIPvarGetUbLocal(consdata->rhsvar)),    /*lint !e666*/
+         MAX(SCIPvarGetLbLocal(consdata->rhsvar), SCIPvarGetUbLocal(consdata->rhsvar)) );  /*lint !e666*/
       if( consdata->rhsoffset != 0.0 )
          SCIPintervalAddScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhsoffset);
       if( consdata->rhscoeff  != 1.0 )
@@ -2389,7 +2390,7 @@ SCIP_RETCODE polishSolution(
  */
 static
 SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{
+{ /*lint !e715*/
    int            nquadvars;
    SCIP_QUADVARTERM* term;
    SCIP_VAR**     lhsvars;
@@ -2741,7 +2742,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( presolveRemoveFixedVariables(scip, conshdlr, conss[c], &dummy, &dummy, &dummy, &dummy, &iscutoff, &isdeleted) );
+      SCIP_CALL( presolveRemoveFixedVariables(scip, conshdlr, conss[c], &dummy, &dummy, &dummy, &dummy, &iscutoff, &isdeleted) ); /*lint !e613*/
       if( iscutoff )
       {
          *result = SCIP_CUTOFF;
@@ -2756,7 +2757,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
       SCIPmarkNonlinearitiesPresent(scip);
       if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
       {
-         consdata = SCIPconsGetData(conss[c]);
+         consdata = SCIPconsGetData(conss[c]); /*lint !e613*/
          assert(consdata != NULL);
 
          for( i = 0; i < consdata->nvars; ++i )
@@ -2830,7 +2831,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
 #if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSOC)
-{  
+{ /*lint !e715*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -3089,7 +3090,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSOC)
-{
+{ /*lint !e715*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_CONS*         maxviolcons;
@@ -3126,12 +3127,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    /* try propagation */
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       if( !SCIPisFeasPositive(scip, consdata->violation) )
          continue;
       
       nbndchg = 0;
-      SCIP_CALL( propagateBounds(scip, conshdlr, conss[c], result, &nbndchg) );
+      SCIP_CALL( propagateBounds(scip, conss[c], result, &nbndchg) );  /*lint !e613*/
       if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
       {
          SCIPdebugMessage("enforced by %s\n", *result == SCIP_CUTOFF ? "cutting off node" : "reducing domain");
@@ -3149,7 +3150,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSOC)
-{
+{ /*lint !e715*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcons;
    
@@ -3175,7 +3176,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOC)
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckSOC)
-{  
+{ /*lint !e715*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Real          maxviol;
@@ -3200,9 +3201,9 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
    
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], sol, conshdlrdata->doscaling) );
+      SCIP_CALL( computeViolation(scip, conss[c], sol, conshdlrdata->doscaling) );  /*lint !e613*/
       
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
       
       /* if feasible, just constinue */
@@ -3221,7 +3222,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
          unscaledviol  = consdata->lhsval;
          unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
 
-         SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );            
+         SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
          SCIPinfoMessage(scip, NULL, "\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
       }
 
@@ -3245,7 +3246,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
                }
                SCIP_CALL( SCIPunlinkSol(scip, polishedsol) );
             }
-            SCIP_CALL( polishSolution(scip, conshdlr, conss[c], polishedsol, &success) );
+            SCIP_CALL( polishSolution(scip, conshdlr, conss[c], polishedsol, &success) );  /*lint !e613*/
 
             /* disable solution polishing if we failed for this constraint */
             dolinfeasshift = success;
@@ -3287,7 +3288,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 #if 1
 static
 SCIP_DECL_CONSPROP(consPropSOC)
-{  
+{  /*lint !e715*/
    SCIP_RESULT propresult;
    int         c;
    int         nchgbds;
@@ -3301,7 +3302,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
 
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
    {
-      SCIP_CALL( propagateBounds(scip, conshdlr, conss[c], &propresult, &nchgbds) );
+      SCIP_CALL( propagateBounds(scip, conss[c], &propresult, &nchgbds) );  /*lint !e613*/
       if (propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN)
          *result = propresult;
    }
@@ -3317,7 +3318,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
 #if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolSOC)
-{
+{ /*lint !e715*/
    SCIP_CONSHDLRDATA*  conshdlrdata;
    SCIP_CONSDATA*      consdata;
    int                 c;
@@ -3337,10 +3338,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
    
    for( c = 0; c < nconss; ++c )
    {
-      consdata = SCIPconsGetData(conss[c]);
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
       
-      SCIP_CALL( presolveRemoveFixedVariables(scip, conshdlr, conss[c], ndelconss, nupgdconss, nchgbds, nfixedvars, &iscutoff, &isdeleted) );
+      SCIP_CALL( presolveRemoveFixedVariables(scip, conshdlr, conss[c], ndelconss, nupgdconss, nchgbds, nfixedvars, &iscutoff, &isdeleted) );  /*lint !e613*/
       if( iscutoff )
       {
          *result = SCIP_CUTOFF;
@@ -3354,11 +3355,11 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
 
       if( conshdlrdata->nauxvars > 0 && !consdata->isapproxadded )
       {
-         SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur) );
+         SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur) );  /*lint !e613*/
          consdata->isapproxadded = TRUE;
       }
       
-      SCIP_CALL( propagateBounds(scip, conshdlr, conss[c], &propresult, nchgbds) );
+      SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
       switch( propresult )
       {
          case SCIP_DIDNOTRUN:
@@ -3369,9 +3370,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
             break;
          case SCIP_CUTOFF:
             *result = SCIP_CUTOFF;
-            SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));
+            SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
             break;
-         default:
+         default:  /*lint !e788*/
             SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
             return SCIP_ERROR;
       }
@@ -3722,7 +3723,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",
       "minimal efficacy of a cut to be added to LP in separation",
-      &conshdlrdata->minefficacy,      FALSE, 0.0001, 0, SCIPinfinity(scip), NULL, NULL) );
+      &conshdlrdata->minefficacy,      FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",
       "whether to sparsify cuts",
@@ -4071,6 +4072,8 @@ SCIP_RETCODE SCIPaddToNlpiProblemSOC(
 
       if( consdata->offsets[j] != 0.0 )
       {
+         assert(lininds != NULL);
+         assert(linvals != NULL);
          lininds[lincnt] = quadelems[j].idx1;
          linvals[lincnt] = 2 * quadelems[j].coef * consdata->offsets[j];
          ++lincnt;

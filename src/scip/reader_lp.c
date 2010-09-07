@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.97 2010/09/06 17:26:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.98 2010/09/07 21:45:40 bzfviger Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2909,7 +2909,7 @@ void checkVarnames(
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
    {
-      if( strlen(SCIPvarGetName(vars[v])) > LP_MAX_NAMELEN )
+      if( strlen(SCIPvarGetName(vars[v])) > LP_MAX_NAMELEN )  /*lint !e613*/
       {
          SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
             LP_MAX_NAMELEN - 1);

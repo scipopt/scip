@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.132 2010/09/06 17:26:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.133 2010/09/07 21:45:40 bzfviger Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1371,6 +1371,7 @@ SCIP_RETCODE readBounds(
                      SCIP_CALL( SCIPreallocBufferArray(scip, &semicont, semicontsize) );
                   }
                }
+               assert(semicont != NULL);
                semicont[nsemicont] = var;
                ++nsemicont;
                
@@ -1434,6 +1435,8 @@ READBOUNDS_FINISH:
       SCIP_VAR* vars[2];
       SCIP_BOUNDTYPE boundtypes[2];
       SCIP_Real bounds[2];
+      
+      assert(semicont != NULL);
 
       SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
       SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
@@ -2811,8 +2814,8 @@ SCIP_RETCODE checkConsnames(
       {
          SCIPwarningMessage("At least one name of a constraint is empty, so file will be written with generic names.\n");
          
-         --i;
-         for( ; i >= 0; --i)
+         --i;  /*lint !e445*/
+         for( ; i >= 0; --i)  /*lint !e445*/
          {
             SCIPfreeBufferArray(scip, &((*consnames)[i]));
          }
@@ -2867,7 +2870,7 @@ void printColumnSection(
 
    intSection = FALSE;
    
-   for( v = 0; v < matrix->nentries; ++v )
+   for( v = 0; v < matrix->nentries; )
    {
       var = matrix->columns[v];
       assert( var != NULL );
@@ -2913,8 +2916,6 @@ void printColumnSection(
          
       if( recordcnt == 1 )
          SCIPinfoMessage(scip, file, "\n");
-         
-      v--;
    }
 }
 

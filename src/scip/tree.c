@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.244 2010/09/03 15:15:12 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.245 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4608,7 +4608,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       *upchild = NULL;
 
    /* store whether a valid value was given for branching */
-   validval = (val != SCIP_INVALID);
+   validval = (val != SCIP_INVALID);  /*lint !e777 */
 
    /* get the corresponding active problem variable
     * if branching value is given, then transform it to the value of the active variable */

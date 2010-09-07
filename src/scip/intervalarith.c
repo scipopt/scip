@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.51 2010/09/06 14:59:45 bzfwolte Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.52 2010/09/07 21:45:39 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -554,7 +554,7 @@ void SCIPintervalSub(
    /* [a,b] - [+inf,+inf] = [-inf,-inf] */
    else if( operand1.sup <= -infinity || operand2.inf >= infinity )
    {
-      assert(resultant->inf == -infinity);  /* should be set above, since operand1.inf <= operand1.sup <= -infinity */
+      assert(resultant->inf == -infinity);  /* should be set above, since operand1.inf <= operand1.sup <= -infinity */  /*lint --e{777}*/
       resultant->sup = -infinity;
    }
    else
