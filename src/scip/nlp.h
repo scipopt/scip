@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.h,v 1.8 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.h,v 1.9 2010/09/07 21:51:04 bzfviger Exp $"
 
 /**@file   nlp.h
  * @brief  internal methods for NLP management
@@ -95,8 +95,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
 extern
 SCIP_RETCODE SCIPnlrowFree(
    SCIP_NLROW**          nlrow,              /**< pointer to NLP row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** increases usage counter of NLP nonlinear row */
