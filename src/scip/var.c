@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.294 2010/09/03 14:50:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.295 2010/09/07 21:47:59 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -145,11 +145,11 @@ SCIP_RETCODE domAddHole(
       insertpos = &(*insertpos)->next;
 
    /* check if new hole already exists in the hole list or is a sub hole of an existing one */
-   if( *insertpos != NULL && (*insertpos)->hole.left == left && (*insertpos)->hole.right >= right )
+   if( *insertpos != NULL && (*insertpos)->hole.left == left && (*insertpos)->hole.right >= right )  /*lint !e777 */
    {
       SCIPdebugMessage("new hole (%.15g,%.15g) is redundant through known hole (%.15g,%.15g)\n",
          left, right, (*insertpos)->hole.left, (*insertpos)->hole.right);
-      added = FALSE;
+      *added = FALSE;
       return SCIP_OKAY;
    }
 
@@ -1613,7 +1613,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
          {
             SCIP_Real vbound;
 
-            vbound = MAX(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];
+            vbound = MAX(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];  /*lint !e666*/
             if( SCIPsetIsFeasGT(set, vbound, lb) )
             {
                /* the variable bound is not redundant: keep it */
@@ -1686,7 +1686,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
          {
             SCIP_Real vbound;
 
-            vbound = MIN(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];
+            vbound = MIN(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];  /*lint !e666*/
             if( SCIPsetIsFeasLT(set, vbound, ub) )
             {
                /* the variable bound is not redundant: keep it */
@@ -3408,13 +3408,13 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       case SCIP_VARSTATUS_MULTAGGR:
          /* x = a_1*y_1 + ... + a_n*y_n + c */
-	 nmultvars = var->data.multaggr.nvars;
+         nmultvars = var->data.multaggr.nvars;
          multvars = var->data.multaggr.vars;
          multscalars = var->data.multaggr.scalars;
 
          if( nmultvars + ntmpvars > tmpvarssize )
          {
-	    while( nmultvars + ntmpvars > tmpvarssize )
+            while( nmultvars + ntmpvars > tmpvarssize )
                tmpvarssize *= 2;
             SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
             SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpscalars, tmpvarssize) );
@@ -3423,7 +3423,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
          if( nmultvars > tmpvarssize2 )
          {
-	    while( nmultvars > tmpvarssize2 )
+            while( nmultvars > tmpvarssize2 )
                tmpvarssize2 *= 2;
             SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars2, tmpvarssize2) );
             SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpscalars2, tmpvarssize2) );
@@ -3451,8 +3451,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
            
             if( SCIPsortedvecFindPtr((void**)tmpvars, SCIPvarComp, multvar, ntmpvars, &pos) )
             {
-	       assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
-	       tmpscalars[pos] += scalar * multscalar;
+               assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
+               tmpscalars[pos] += scalar * multscalar;
             }
             else
             {
@@ -3481,7 +3481,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          {
             tmpvars[ntmpvars] = tmpvars2[v];
             tmpscalars[ntmpvars] = tmpscalars2[v];
-            ++(ntmpvars);
+            ++(ntmpvars);  /*lint !e850*/
             assert(ntmpvars <= tmpvarssize);
          }
          SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
@@ -3524,7 +3524,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                activevars[v] = activevars[nactivevars];
                activescalars[v] = activescalars[nactivevars];
                --nactivevars;
-               --v;
+               --v;  /*lint !e850*/
                activevars[v] = activevars[nactivevars];
                activescalars[v] = activescalars[nactivevars];
             }
@@ -7155,7 +7155,7 @@ SCIP_RETCODE varAddVbound(
       }
       else
       {
-         assert(vbtype = SCIP_BOUNDTYPE_UPPER);
+         assert(vbtype == SCIP_BOUNDTYPE_UPPER);
          if( vbcoef > 0.0 )
          {
             assert(SCIPsetIsLE(set, lb,  lb * vbcoef + vbconstant) );
@@ -7547,7 +7547,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
                varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs, &added) );
          assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
          nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
-         i = MIN(i, nimpls); /* some elements from the array could have been removed */
+         i = MIN(i, nimpls); /* some elements from the array could have been removed */  /*lint !e850*/
       }
    }
 
@@ -7675,7 +7675,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
-               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */
+               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */  /*lint !e850*/
             }
          }
       }
@@ -7740,7 +7740,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
-               i = MIN(i, nvubvars); /* some elements from the array could have been removed */
+               i = MIN(i, nvubvars); /* some elements from the array could have been removed */  /*lint !e850*/
             }
          }
       }
@@ -9180,9 +9180,9 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
          case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
             assert((*var)->data.aggregate.var != NULL);
             assert(SCIPvarIsBinary((*var)->data.aggregate.var));
-            assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
+            assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));  /*lint !e835*/
             assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
-            assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
+            assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));    /*lint !e835*/
             *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
             *var = (*var)->data.aggregate.var;
             break;
@@ -9245,9 +9245,9 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert((*var)->data.aggregate.var != NULL);
          assert(SCIPvarIsBinary((*var)->data.aggregate.var));
-         assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
+         assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));  /*lint !e835*/
          assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
-         assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
+         assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));    /*lint !e835*/
          *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
          *var = (*var)->data.aggregate.var;
          break;
@@ -10129,9 +10129,9 @@ SCIP_Real SCIPvarGetRelaxSol(
          return var->relaxsol;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var));
-      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var));
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var));
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var));  /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var));    /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var));   /*lint !e777*/
       return SCIPvarGetLbGlobal(var);
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -12790,7 +12790,7 @@ SCIP_Bool SCIPvarIsBinary(
 {
    assert(var != NULL);
 
-   return (var->vartype == SCIP_VARTYPE_BINARY || 
+   return (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || 
       (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && MAX(var->glbdom.lb, var->lazylb) >= 0.0 && MIN(var->glbdom.ub, var->lazyub) <= 1.0));
 }
 
