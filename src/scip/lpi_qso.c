@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.12 2010/08/31 15:50:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.13 2010/09/08 11:14:35 bzfpfets Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -649,26 +649,45 @@ SCIP_RETCODE SCIPlpiAddRows(
    SCIPdebugMessage("adding %d rows with %d nonzeros to QSopt\n", nrows, nnonz);
 
    /* add rows with no matrix, and then the columns, first ensure space */
-   SCIP_CALL( ensureRowMem (lpi, nrows) );
+   SCIP_CALL( ensureRowMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs) );
 
    /* compute row count */
-   for (i = 0 ; i < nrows -1 ; i++)
+   if ( nnonz > 0 )
    {
-      lpi->ircnt[i] = beg[i+1] - beg[i];
-      assert( lpi->ircnt[i] >= 0 );
-   }
-   if ( nrows > 0 )
-   {
-      lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
-      assert( lpi->ircnt[nrows-1] >= 0 );
-   }
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
 
-   /* now we add the rows */
-   rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
-   QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
+      for (i = 0 ; i < nrows -1 ; i++)
+      {
+         lpi->ircnt[i] = beg[i+1] - beg[i];
+         assert( lpi->ircnt[i] >= 0 );
+      }
+      if ( nrows > 0 )
+      {
+         lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
+         assert( lpi->ircnt[nrows-1] >= 0 );
+      }
+
+      /* now we add the rows */
+      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+      QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
+   }
+   else
+   {
+      for (i = 0; i < nrows -1; ++i)
+      {
+         lpi->ircnt[i] = 0;
+         lpi->irbeg[i] = 0;
+      }
+
+      /* now we add the rows */
+      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+      QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
+   }
 
    return SCIP_OKAY;
 }
