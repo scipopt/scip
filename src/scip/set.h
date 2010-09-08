@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.123 2010/09/04 14:38:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.124 2010/09/08 01:19:34 bzfwinkm Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -88,7 +88,7 @@ extern
 SCIP_RETCODE SCIPsetCopyParams(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
    SCIP_SET*             targetset           /**< target SCIP_SET data structure */
-			       );
+   );
 
 /** creates global SCIP settings */
 extern
