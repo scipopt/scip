@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.73 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.74 2010/09/08 05:27:08 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -2245,6 +2245,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    }
 
    /* we must remain in nlp diving mode until here to be able to retrieve nlp solution values easily */
+   assert(heurdata->nlpsolved == SCIPnlpIsDiving(SCIPgetNLP(scip)));
    if( heurdata->nlpsolved )
    {
       SCIP_CALL( SCIPendDiveNLP(scip) );
