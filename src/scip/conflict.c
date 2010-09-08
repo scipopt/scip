@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.156 2010/07/08 13:51:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.157 2010/09/08 14:14:09 bzfviger Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1250,9 +1250,9 @@ SCIP_RETCODE conflictAddConflictCons(
                assert(stat != NULL);               
                branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
                
-               SCIP_CALL( SCIPvarIncNActiveConflicts(var, branchdir, conflictlength) );
-               SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, conflictlength);
-               SCIPhistoryIncNActiveConflicts(stat->glbhistorycrun, branchdir, conflictlength);
+               SCIP_CALL( SCIPvarIncNActiveConflicts(var, branchdir, (SCIP_Real)conflictlength) );
+               SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, (SCIP_Real)conflictlength);
+               SCIPhistoryIncNActiveConflicts(stat->glbhistorycrun, branchdir, (SCIP_Real)conflictlength);
             }
             conflict->nappliedglbconss++;
             conflict->nappliedglbliterals += conflictset->nbdchginfos;

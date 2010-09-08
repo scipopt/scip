@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.15 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.16 2010/09/08 14:14:09 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -921,10 +921,10 @@ SCIP_RETCODE solveSubNLP(
       case SCIP_STATUS_UNBOUNDED:
       case SCIP_STATUS_INFORUNBD:
          goto cleanup;
-      default: /*lint !e788*/
+      default:
          SCIPerrorMessage("unexpected status of subSCIP: <%d>\n", SCIPgetStatus(heurdata->subscip));
          return SCIP_ERROR;
-   }
+   } /*lint !e788*/
 
    nlp = SCIPgetNLP(heurdata->subscip);
    assert(nlp != NULL);

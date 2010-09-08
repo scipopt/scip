@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.52 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.53 2010/09/08 14:14:09 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -207,13 +207,6 @@ void SCIPintervalSetRoundingModeUpwards(
 {
    SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
 }
-
-
-/** sign of a value (-1 or +1)
- * 
- * 0.0 has sign +1
- */
-#define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
 static SCIP_Bool warned_unsafe_pow = FALSE;
 static SCIP_Bool warned_unsafe_exp = FALSE;
@@ -554,7 +547,7 @@ void SCIPintervalSub(
    /* [a,b] - [+inf,+inf] = [-inf,-inf] */
    else if( operand1.sup <= -infinity || operand2.inf >= infinity )
    {
-      assert(resultant->inf == -infinity);  /* should be set above, since operand1.inf <= operand1.sup <= -infinity */  /*lint --e{777}*/
+      assert(resultant->inf == -infinity);  /* should be set above, since operand1.inf <= operand1.sup <= -infinity */  /*lint !e777*/
       resultant->sup = -infinity;
    }
    else

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.21 2010/09/07 21:51:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.22 2010/09/08 14:14:09 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -992,7 +992,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
    SCIP_CALL( nlrowLinearCoefChanged(nlrow, set, stat, var, 0.0, nlp) );
 
    /* notify nlrow that constant of row has changed */
-   if( oldconstant != nlrow->constant )  /*lint --e{777}*/
+   if( oldconstant != nlrow->constant )  /*lint !e777*/
       SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
 
    if( SCIPvarIsActive(nlrow->linvars[pos]) )
@@ -1184,8 +1184,8 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          int j, k;
 
          assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_MULTAGGR);
-         assert(coef1 == coef2);  /*lint --e{777}*/
-         assert(constant1 == constant2);  /*lint --e{777}*/
+         assert(coef1 == coef2);  /*lint !e777*/
+         assert(constant1 == constant2);  /*lint !e777*/
          /* square term which variable is multiaggregated
           * elem.coef * x^2 -> elem.coef * (coef1 * (multaggrconstant + sum_i multaggrscalar_i*multaggrvar_i) + constant1)^2
           *    = elem.coef * ( (coef1 * multaggrconstant + constant1)^2 +
@@ -1851,7 +1851,7 @@ SCIP_RETCODE SCIPnlrowRelease(
    *nlrow = NULL;
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** ensures, that linear coefficient array of nonlinear row can store at least num entries */
 SCIP_RETCODE SCIPnlrowEnsureLinearSize(
@@ -4293,10 +4293,10 @@ SCIP_RETCODE nlpSolve(
          }
          break;
       }
-      default:  /*lint !e788*/
+      default:
          nlp->primalsolobjval = SCIP_INVALID;
          break;
-   }
+   } /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -4362,7 +4362,7 @@ SCIP_RETCODE SCIPnlpInclude(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
 )
-{  /*lint !e715*/
+{
    SCIP_EVENTHDLR* eventhdlr;
 
    assert(set != NULL);
@@ -4380,7 +4380,7 @@ SCIP_RETCODE SCIPnlpInclude(
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** construct a new empty NLP */
 SCIP_RETCODE SCIPnlpCreate(
@@ -4593,9 +4593,9 @@ SCIP_RETCODE SCIPnlpReset(
 SCIP_Bool SCIPnlpHasCurrentNodeNLP(
    SCIP_NLP*             nlp                 /**< NLP data */
 )
-{  /*lint !e715*/
+{
    return TRUE;
-}
+} /*lint !e715*/
 
 /** ensures, that variables array of NLP can store at least num entries */
 SCIP_RETCODE SCIPnlpEnsureVarsSize(

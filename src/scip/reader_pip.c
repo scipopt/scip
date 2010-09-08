@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.6 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.7 2010/09/08 14:14:09 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -804,9 +804,9 @@ SCIP_RETCODE getVariableIndex(
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, *varssize) );
       }
    }
-   assert(*vars != NULL);
+   assert(*vars != NULL);  /*lint !e613*/
    
-   (*vars)[*nvars] = var;
+   (*vars)[*nvars] = var;  /*lint !e613*/
    SCIP_CALL( SCIPhashmapInsert(varhash, (void*)var, (void*)(size_t)*nvars) );
    *varidx = *nvars;
    

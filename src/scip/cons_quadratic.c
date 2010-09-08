@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.125 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.126 2010/09/08 14:14:09 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7381,7 +7381,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
 /** constraint copying method of constraint handler */
 static
 SCIP_DECL_CONSCOPY(consCopyQuadratic)
-{  
+{
    SCIP_CONSDATA*    consdata;
    SCIP_VAR**        linvars;
    SCIP_QUADVARTERM* quadvarterms;
@@ -7704,10 +7704,10 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
                lhs = coefsign * coef;
                rhs = coefsign * coef;
                break;
-            default:  /*lint !e788*/
+            default:
                SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected unknown sense <%d>)\n", sense);
                (*success) = FALSE;
-            }
+            } /*lint !e788*/
             sense = CIP_SENSE_NOTHING;
             havevalue = FALSE;
          }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.47 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.48 2010/09/08 14:14:09 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -930,7 +930,7 @@ SCIP_RETCODE generateSparseCut(
          x[ind[i]] = SCIPgetSolVal(scip, sol, consdata->vars[ind[i]]);
       
       maxnz = nextmaxnz;
-   } while( TRUE );  /*lint !e931*/
+   } while( TRUE );  /*lint !e506*/
    
    SCIPfreeBufferArray(scip, &x);
    SCIPfreeBufferArray(scip, &dist);
@@ -1625,7 +1625,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    }
 
    /* create intermediate linear constraints */
-   val = M_PI; /* @todo do not have M_PI on windows */
+   val = M_PI; /* @todo does one have M_PI also on windows? */
    for( i = 1; i < N; ++i )
    {
       val /= 2.0;
@@ -1766,11 +1766,11 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    /* create additional variables */
    for( i = 0; i <= N; ++i )
    {
-      SCIPsnprintf(varname, 255, "soc#%s_a%d", basename, i);
+      (void) SCIPsnprintf(varname, 255, "soc#%s_a%d", basename, i);
       SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsLocal(cons), TRUE, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, avars[i]) );
 
-      SCIPsnprintf(varname, 255, "soc#%s_b%d", basename, i);
+      (void) SCIPsnprintf(varname, 255, "soc#%s_b%d", basename, i);
       SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsLocal(cons), TRUE, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, bvars[i]) );
    }
@@ -2390,7 +2390,7 @@ SCIP_RETCODE polishSolution(
  */
 static
 SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{ /*lint !e715*/
+{
    int            nquadvars;
    SCIP_QUADVARTERM* term;
    SCIP_VAR**     lhsvars;
@@ -2611,7 +2611,7 @@ cleanup:
    SCIPfreeBufferArray(scip, &lhsoffsets);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 #endif
 
 /*
@@ -2831,7 +2831,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
 #if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSOC)
-{ /*lint !e715*/
+{
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
@@ -2870,7 +2870,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 #else
 #define consExitsolSOC NULL
 #endif
@@ -3090,7 +3090,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSOC)
-{ /*lint !e715*/
+{
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_CONS*         maxviolcons;
@@ -3144,13 +3144,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSOC)
-{ /*lint !e715*/
+{
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcons;
    
@@ -3170,13 +3170,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOC)
    *result = SCIP_INFEASIBLE;
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckSOC)
-{ /*lint !e715*/
+{
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Real          maxviol;
@@ -3281,14 +3281,14 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
    }
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 
 /** domain propagation method of constraint handler */
 #if 1
 static
 SCIP_DECL_CONSPROP(consPropSOC)
-{  /*lint !e715*/
+{
    SCIP_RESULT propresult;
    int         c;
    int         nchgbds;
@@ -3308,7 +3308,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 #else
 #define consPropSOC NULL
 #endif
@@ -3318,7 +3318,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
 #if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolSOC)
-{ /*lint !e715*/
+{
    SCIP_CONSHDLRDATA*  conshdlrdata;
    SCIP_CONSDATA*      consdata;
    int                 c;
@@ -3372,14 +3372,14 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
             *result = SCIP_CUTOFF;
             SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
             break;
-         default:  /*lint !e788*/
+         default:
             SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
             return SCIP_ERROR;
-      }
+      } /*lint !e788*/
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 #else
 #define consPresolSOC NULL
 #endif
@@ -3591,6 +3591,7 @@ SCIP_DECL_CONSCOPY(consCopySOC)
    assert(sourcecons != NULL);
    assert(varmap != NULL);
    assert(success != NULL);
+   assert(stickingatnode == FALSE);
 
    consdata = SCIPconsGetData(sourcecons);
    assert(consdata != NULL);
