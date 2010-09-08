@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.45 2010/09/08 15:05:41 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.46 2010/09/08 15:41:34 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -357,25 +357,23 @@ SCIP_RETCODE SCIPapplyRens(
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-#if 1
-   /* use best estimate node selection */
-   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
-
-   /* disable cut separation in sub problem */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
-
-   /* use inference branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
+   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
+
+   /* use best estimate node selection */
+   if( SCIPfindNodesel(scip, "estimate") != NULL )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
+   }
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(scip, "inference") != NULL )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+   }
 
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
@@ -383,7 +381,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-#endif
+
 
 #ifdef SCIP_DEBUG
    /* for debugging RENS, enable MIP output */
