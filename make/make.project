@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.21 2010/09/03 21:04:15 bzfviger Exp $
+# $Id: make.project,v 1.22 2010/09/08 11:14:14 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -173,6 +173,11 @@ endif
 
 ifeq ($(LPS),spx132)
 LPSLDFLAGS	=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),grb)
+LPSLDFLAGS	=	$(LINKCXX_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+                        $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),clp)
