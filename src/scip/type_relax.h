@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.22 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.23 2010/09/08 19:14:57 bzfhende Exp $"
 
 /**@file   type_relax.h
  * @ingroup TYPEDEFINITIONS
@@ -44,8 +44,9 @@ typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator
  *  input:
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
+ *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_RELAXCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax)
+#define SCIP_DECL_RELAXCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax, SCIP_Bool* valid)
 
 /** destructor of relaxator to free user data (called when SCIP is exiting)
  *

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objcloneable.h,v 1.2 2010/03/24 19:11:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objcloneable.h,v 1.3 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   objcloneable.h
  * @author Michael Winkler
@@ -31,7 +31,7 @@ namespace scip
 {
    struct ObjCloneable {
       virtual ~ObjCloneable() {}
-      virtual ObjCloneable* clone(SCIP* scip) const { return 0; }
+      virtual ObjCloneable* clone(SCIP* scip, SCIP_Bool* valid) const { return 0; }
       virtual SCIP_Bool iscloneable() const { return false; }
    };
 }

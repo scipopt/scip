@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.37 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.38 2010/09/08 19:14:55 bzfhende Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -41,7 +41,8 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPpresolCopyInclude(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
 /** creates a presolver */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.h,v 1.24 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: dialog.h,v 1.25 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   dialog.h
  * @brief  internal methods for user interface dialog
@@ -43,7 +43,8 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPdialogCopyInclude(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
 /** creates a dialog handler */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.6 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.7 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -162,13 +162,15 @@ SCIP_RETCODE SCIPnlpiCreate(
 /** copies an NLPI */
 SCIP_RETCODE SCIPnlpiCopy(
    SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
-   SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
+   SCIP_NLPI**           targetnlpi,         /**< buffer to store pointer to copied NLPI data structure */
+   SCIP_Bool*            valid               /**< was the copying process successful? */
 )
 {
    assert(sourcenlpi != NULL);
    assert(targetnlpi != NULL);
+   assert(valid != NULL);
 
-   SCIP_CALL( (*sourcenlpi->nlpicopy)(sourcenlpi, targetnlpi) );
+   SCIP_CALL( (*sourcenlpi->nlpicopy)(sourcenlpi, targetnlpi, valid) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.14 2010/09/03 12:51:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.15 2010/09/08 19:14:55 bzfhende Exp $"
 
 /**@file   presol_implics.c
  * @ingroup PRESOLVERS
@@ -52,6 +52,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplics)
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolImplics(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

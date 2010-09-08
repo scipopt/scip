@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.129 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.130 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -58,7 +58,8 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPconshdlrCopyInclude(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
 /** creates a constraint handler */

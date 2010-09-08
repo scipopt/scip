@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.4 2010/09/06 16:10:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.5 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -5561,6 +5561,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCumulative)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrCumulative(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

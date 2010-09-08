@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.10 2010/09/06 16:10:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.11 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -1605,6 +1605,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinking)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLinking(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.41 2010/05/19 12:38:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.42 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_conjunction.c
  * @ingroup CONSHDLRS 
@@ -262,6 +262,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

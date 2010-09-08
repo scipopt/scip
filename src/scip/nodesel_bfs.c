@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.56 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.57 2010/09/08 19:14:55 bzfhende Exp $"
 
 /**@file   nodesel_bfs.c
  * @ingroup NODESELECTORS
@@ -74,6 +74,8 @@ SCIP_DECL_NODESELCOPY(nodeselCopyBfs)
 
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
+
+   *valid = TRUE;
  
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.96 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.97 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -1147,6 +1147,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyVarbound)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

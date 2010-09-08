@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.6 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.7 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -82,7 +82,8 @@ SCIP_RETCODE SCIPnlpiCreate(
 extern
 SCIP_RETCODE SCIPnlpiCopy(
    SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
-   SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
+   SCIP_NLPI**           targetnlpi,         /**< buffer to store pointer to copied NLPI data structure */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
 );
 
 /** frees NLPI user data */

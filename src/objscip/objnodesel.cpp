@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.23 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.24 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -65,7 +65,7 @@ SCIP_DECL_NODESELCOPY(nodeselCopyObj)
    if( nodeseldata->objnodesel->iscloneable() )
    {
       scip::ObjNodesel* newobjnodesel;
-      newobjnodesel = (scip::ObjNodesel*) nodeseldata->objnodesel->clone(scip);
+      newobjnodesel = (scip::ObjNodesel*) nodeseldata->objnodesel->clone(scip, valid);
 
       /* call include method of node selector object */
       SCIP_CALL( SCIPincludeObjNodesel(scip, newobjnodesel, TRUE) );

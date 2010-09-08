@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.55 2010/09/03 12:51:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.56 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -62,6 +62,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIntegral)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

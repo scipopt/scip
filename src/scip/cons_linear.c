@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.375 2010/09/08 01:15:50 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.376 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -8416,6 +8416,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinear)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -10047,6 +10049,21 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
  * Callback methods of conflict handler
  */
 
+/** copy method for conflict handlers (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONFLICTCOPY(conflictCopyLinear)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conflicthdlr != NULL);
+   assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
+   
+   /* The conflict handler should be created in a previous call of the constraint handler's copy callback.
+    * If we find a conflict handler with the correct name, we declare the copy to be correct */
+   *valid = (SCIPfindConflicthdlr(scip, CONFLICTHDLR_NAME) != NULL);
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 {  /*lint --e{715}*/
@@ -10152,7 +10169,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* create conflict handler for linear constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL,
+         conflictCopyLinear,
          NULL, NULL, NULL, NULL, NULL, conflictExecLinear,
          NULL) );
 

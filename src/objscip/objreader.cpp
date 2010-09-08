@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.22 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.23 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -65,7 +65,7 @@ SCIP_DECL_READERCOPY(readerCopyObj)
    if( readerdata->objreader->iscloneable() )
    {
       scip::ObjReader* newobjreader;
-      newobjreader = (scip::ObjReader*) readerdata->objreader->clone(scip);
+      newobjreader = (scip::ObjReader*) readerdata->objreader->clone(scip, valid);
 
       /* call include method of reader object */
       SCIP_CALL( SCIPincludeObjReader(scip, newobjreader, TRUE) );

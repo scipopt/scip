@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.85 2010/09/06 16:10:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.86 2010/09/08 19:14:56 bzfhende Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS
@@ -207,6 +207,8 @@ SCIP_DECL_SEPACOPY(sepaCopyGomory)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.31 2010/08/30 18:51:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.32 2010/09/08 19:14:55 bzfhende Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -68,17 +68,19 @@ SCIP_DECL_PARAMCHGD(paramChgdPricerPriority)
 /** copies the given pricer to a new scip */
 SCIP_RETCODE SCIPpricerCopyInclude(
    SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
    assert(pricer != NULL);
    assert(set != NULL);
+   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( pricer->pricercopy != NULL )
    {
       SCIPdebugMessage("including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), set->scip);
-      SCIP_CALL( pricer->pricercopy(set->scip, pricer) );
+      SCIP_CALL( pricer->pricercopy(set->scip, pricer, valid) );
    }
    return SCIP_OKAY;
 }

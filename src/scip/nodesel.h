@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.53 2010/07/01 17:39:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.54 2010/09/08 19:14:55 bzfhende Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -178,7 +178,8 @@ SCIP_RETCODE SCIPnodepqBound(
 extern
 SCIP_RETCODE SCIPnodeselCopyInclude(
    SCIP_NODESEL*         nodesel,            /**< node selector */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
 /** creates a node selector */

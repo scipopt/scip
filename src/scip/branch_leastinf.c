@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.c,v 1.36 2010/09/07 21:37:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.c,v 1.37 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   branch_leastinf.c
  * @ingroup BRANCHINGRULES
@@ -113,6 +113,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyLeastinf)
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
+
+   *valid = TRUE;
    
    return SCIP_OKAY;
 }

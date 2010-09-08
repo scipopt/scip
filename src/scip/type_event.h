@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.33 2010/09/03 14:50:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.34 2010/09/08 19:14:57 bzfhende Exp $"
 
 /**@file   type_event.h
  * @ingroup TYPEDEFINITIONS
@@ -146,8 +146,9 @@ typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache even
  *  input:
  *    scip            : SCIP main data structure
  *    eventhdlr       : the event handler itself
+ *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_EVENTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
+#define SCIP_DECL_EVENTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr, SCIP_Bool* valid)
 
 /** destructor of event handler to free user data (called when SCIP is exiting)
  *

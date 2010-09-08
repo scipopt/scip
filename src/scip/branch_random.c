@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.21 2010/09/07 21:37:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.22 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -127,6 +127,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyRandom)
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
+
+   *valid = TRUE;
  
    return SCIP_OKAY;
 }

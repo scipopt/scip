@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.21 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.22 2010/09/08 19:14:56 bzfhende Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -130,6 +130,8 @@ SCIP_DECL_SEPACOPY(sepaCopyRapidlearning)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

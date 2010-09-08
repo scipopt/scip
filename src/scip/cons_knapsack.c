@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.205 2010/09/06 16:10:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.206 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -6657,6 +6657,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

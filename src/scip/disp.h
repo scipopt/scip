@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.38 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.39 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics
@@ -47,7 +47,8 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispActive);
 extern
 SCIP_RETCODE SCIPdispCopyInclude(
    SCIP_DISP*            disp,               /**< display column */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
 /** creates a display column */

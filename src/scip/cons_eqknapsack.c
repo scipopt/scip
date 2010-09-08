@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.47 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.48 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_eqknapsack.c
  * @ingroup CONSHDLRS 
@@ -74,6 +74,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyEqknapsack)
    SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 #else

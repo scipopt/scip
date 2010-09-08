@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.151 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.152 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -2427,6 +2427,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySetppc)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -3868,6 +3870,21 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
  * Callback methods of conflict handler
  */
 
+/** copy method for conflict handlers (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONFLICTCOPY(conflictCopySetppc)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conflicthdlr != NULL);
+   assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
+   
+  /* The conflict handler should be created in a previous call of the constraint handler's copy callback.
+    * If we find a conflict handler with the correct name, we declare the copy to be correct */
+   *valid = (SCIPfindConflicthdlr(scip, CONFLICTHDLR_NAME) != NULL);
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
 {  /*lint --e{715}*/
@@ -3950,7 +3967,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 
    /* create conflict handler for setppc constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL,
+         conflictCopySetppc,
          NULL, NULL, NULL, NULL, NULL, conflictExecSetppc,
          NULL) );
 

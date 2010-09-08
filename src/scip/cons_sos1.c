@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.38 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.39 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS
@@ -912,6 +912,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySOS1)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
+
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }

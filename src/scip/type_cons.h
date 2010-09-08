@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.61 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.62 2010/09/08 19:14:57 bzfhende Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -47,8 +47,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
+ *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_CONSHDLRCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr)
+#define SCIP_DECL_CONSHDLRCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_Bool* valid)
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting)
  *

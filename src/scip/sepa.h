@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.52 2010/09/06 16:10:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.53 2010/09/08 19:14:56 bzfhende Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -43,7 +43,8 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPsepaCopyInclude(
    SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
 /** creates a separator */

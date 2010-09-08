@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.25 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.26 2010/09/08 19:14:57 bzfhende Exp $"
 
 /**@file   type_sepa.h
  * @ingroup TYPEDEFINITIONS
@@ -44,8 +44,9 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  input:
  *  - scip            : SCIP main data structure
  *  - sepa            : the separator itself
+ *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_SEPACOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
+#define SCIP_DECL_SEPACOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_Bool* valid)
 
 /** destructor of separator to free user data (called when SCIP is exiting)
  *

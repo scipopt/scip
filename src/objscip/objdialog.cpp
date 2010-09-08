@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.cpp,v 1.11 2010/09/01 16:33:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objdialog.cpp,v 1.12 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   objdialog.cpp
  * @brief  C++ wrapper for dialogs
@@ -65,7 +65,7 @@ SCIP_DECL_DIALOGCOPY(dialogCopyObj)
    if( dialogdata->objdialog->iscloneable() )
    {
       scip::ObjDialog*  newobjdialog;
-      newobjdialog = (scip::ObjDialog*) dialogdata->objdialog->clone(scip);
+      newobjdialog = (scip::ObjDialog*) dialogdata->objdialog->clone(scip, valid);
 
       /* call include method of dialog object */
       SCIP_CALL( SCIPincludeObjDialog(scip, newobjdialog, TRUE) );

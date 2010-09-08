@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.157 2010/09/08 14:14:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.158 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -367,17 +367,19 @@ SCIP_DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
 /** copies the given conflict handler to a new scip */
 SCIP_RETCODE SCIPconflicthdlrCopyInclude(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
    assert(conflicthdlr != NULL);
    assert(set != NULL);
+   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( conflicthdlr->conflictcopy != NULL )
    {
       SCIPdebugMessage("including conflict handler %s in subscip %p\n", SCIPconflicthdlrGetName(conflicthdlr), set->scip);
-      SCIP_CALL( conflicthdlr->conflictcopy(set->scip, conflicthdlr) );
+      SCIP_CALL( conflicthdlr->conflictcopy(set->scip, conflicthdlr, valid) );
    }
 
    return SCIP_OKAY;

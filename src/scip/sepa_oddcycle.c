@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.3 2010/09/06 16:10:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.4 2010/09/08 19:14:56 bzfhende Exp $"
 
 /**@file   sepa_oddcycle.c
  * @brief  oddcycle separator
@@ -3737,6 +3737,8 @@ SCIP_DECL_SEPACOPY(sepaCopyOddcycle)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

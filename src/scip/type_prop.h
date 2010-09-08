@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.19 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.20 2010/09/08 19:14:57 bzfhende Exp $"
 
 /**@file   type_prop.h
  * @ingroup TYPEDEFINITIONS
@@ -43,8 +43,9 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  input:
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
+ *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_PROPCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
+#define SCIP_DECL_PROPCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_Bool* valid)
 
 /** destructor of propagator to free user data (called when SCIP is exiting)
  *

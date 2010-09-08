@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.49 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.50 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -273,6 +273,8 @@ SCIP_DECL_HEURCOPY(heurCopyLocalbranching)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

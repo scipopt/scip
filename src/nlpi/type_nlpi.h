@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.7 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.8 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -88,8 +88,9 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  * input:
  *  - sourcenlpi the NLP interface to copy
  *  - targetnlpi buffer to store pointer to copy of NLP interface
+ *  - valid      was the copying process valid?
  */
-#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (SCIP_NLPI* sourcenlpi, SCIP_NLPI** targetnlpi)
+#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (SCIP_NLPI* sourcenlpi, SCIP_NLPI** targetnlpi, SCIP_Bool* valid)
 
 /** destructor of NLP interface to free nlpi data
  * 

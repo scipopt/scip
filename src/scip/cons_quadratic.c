@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.126 2010/09/08 14:14:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.127 2010/09/08 19:14:53 bzfhende Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -6141,6 +6141,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyQuadratic)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

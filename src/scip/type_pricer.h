@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.28 2010/03/12 14:54:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.29 2010/09/08 19:14:57 bzfhende Exp $"
 
 /**@file   type_pricer.h
  * @ingroup TYPEDEFINITIONS
@@ -42,8 +42,9 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  input:
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
+ *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_PRICERCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
+#define SCIP_DECL_PRICERCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Bool* valid)
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting)
  *

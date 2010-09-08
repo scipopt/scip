@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.40 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.41 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -276,6 +276,8 @@ SCIP_DECL_HEURCOPY(heurCopyMutation)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

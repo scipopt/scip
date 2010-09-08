@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.95 2010/09/06 16:10:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.96 2010/09/08 19:14:56 bzfhende Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -1452,6 +1452,8 @@ SCIP_DECL_SEPACOPY(sepaCopyCmir)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

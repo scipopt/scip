@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.16 2010/08/06 16:29:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.17 2010/09/08 19:14:56 bzfhende Exp $"
 
 /**@file   reader_fix.c
  * @ingroup FILEREADERS 
@@ -177,6 +177,8 @@ SCIP_DECL_READERCOPY(readerCopyFix)
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderFix(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 

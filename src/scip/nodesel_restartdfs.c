@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.35 2010/05/03 15:01:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.36 2010/09/08 19:14:55 bzfhende Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @ingroup NODESELECTORS
@@ -69,6 +69,8 @@ SCIP_DECL_NODESELCOPY(nodeselCopyRestartdfs)
 
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
+
+   *valid = TRUE;
  
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.128 2010/09/06 16:10:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.129 2010/09/08 19:14:56 bzfhende Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -6638,6 +6638,8 @@ SCIP_DECL_SEPACOPY(sepaCopyMcf)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
+
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }

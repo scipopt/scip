@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.48 2010/09/06 17:52:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.49 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -65,7 +65,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyObj)
    if( conshdlrdata->objconshdlr->iscloneable() )
    {
       scip::ObjConshdlr* newobjconshdlr;
-      newobjconshdlr = (scip::ObjConshdlr*) conshdlrdata->objconshdlr->clone(scip);
+      newobjconshdlr = (scip::ObjConshdlr*) conshdlrdata->objconshdlr->clone(scip, valid);
 
       /* call include method of constraint handler object */
       SCIP_CALL( SCIPincludeObjConshdlr(scip, newobjconshdlr, TRUE) );

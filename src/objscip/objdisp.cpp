@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.cpp,v 1.7 2010/03/24 20:15:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objdisp.cpp,v 1.8 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   objdisp.cpp
  * @brief  C++ wrapper for display column
@@ -65,7 +65,7 @@ SCIP_DECL_DISPCOPY(dispCopyObj)
    if( dispdata->objdisp->iscloneable() )
    {
       scip::ObjDisp*  newobjdisp;
-      newobjdisp = (scip::ObjDisp*) dispdata->objdisp->clone(scip);
+      newobjdisp = (scip::ObjDisp*) dispdata->objdisp->clone(scip, valid);
 
       /* call include method of display column object */
       SCIP_CALL( SCIPincludeObjDisp(scip, newobjdisp, TRUE) );

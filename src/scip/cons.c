@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.206 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.207 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1711,17 +1711,19 @@ SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)
 /** copies the given constraint handler to a new scip */
 SCIP_RETCODE SCIPconshdlrCopyInclude(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( conshdlr->conshdlrcopy != NULL )
    {
       SCIPdebugMessage("including constraint handler %s in subscip %p\n", SCIPconshdlrGetName(conshdlr), set->scip);
-      SCIP_CALL( conshdlr->conshdlrcopy(set->scip, conshdlr) );
+      SCIP_CALL( conshdlr->conshdlrcopy(set->scip, conshdlr, valid) );
    }
 
    return SCIP_OKAY;

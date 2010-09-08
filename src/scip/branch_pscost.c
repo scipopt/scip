@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.33 2010/09/07 21:37:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.34 2010/09/08 19:14:52 bzfhende Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -317,6 +317,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyPscost)
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
+
+   *valid = TRUE;
  
    return SCIP_OKAY;
 }

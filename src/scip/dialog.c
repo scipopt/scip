@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.56 2010/07/30 16:10:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.57 2010/09/08 19:14:54 bzfhende Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -281,17 +281,19 @@ SCIP_RETCODE readInputLine(
 /** copies the given dialog to a new scip */
 SCIP_RETCODE SCIPdialogCopyInclude(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
    assert(dialog != NULL);
    assert(set != NULL);
+   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( dialog->dialogcopy != NULL )
    {
       SCIPdebugMessage("including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), set->scip);
-      SCIP_CALL( dialog->dialogcopy(set->scip, dialog) );
+      SCIP_CALL( dialog->dialogcopy(set->scip, dialog, valid) );
    }
    return SCIP_OKAY;
 }
