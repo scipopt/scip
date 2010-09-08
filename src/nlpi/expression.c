@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.22 2010/09/06 14:59:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.23 2010/09/08 16:05:35 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -81,7 +81,7 @@ SCIP_DECL_EVAL( SCIPexprevalPushVar )
    *result = varvals[opdata.intval];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalPushVarInt )
@@ -92,7 +92,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPushVarInt )
    *result = varvals[opdata.intval];
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalPushValue )
@@ -102,7 +102,7 @@ SCIP_DECL_EVAL( SCIPexprevalPushValue )
    *result = opdata.dbl;
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalPushValueInt )
@@ -112,7 +112,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPushValueInt )
    SCIPintervalSet(result, opdata.dbl);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalPushParameter )
@@ -123,7 +123,7 @@ SCIP_DECL_EVAL( SCIPexprevalPushParameter )
    *result = paramvals[opdata.intval];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalPushParameterInt )
@@ -134,7 +134,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPushParameterInt )
    SCIPintervalSet(result, paramvals[opdata.intval]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalPlus )
@@ -145,7 +145,7 @@ SCIP_DECL_EVAL( SCIPexprevalPlus )
    *result = argvals[0] + argvals[1];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalPlusInt )
@@ -156,7 +156,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPlusInt )
    SCIPintervalAdd(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalMinus )
@@ -167,7 +167,7 @@ SCIP_DECL_EVAL( SCIPexprevalMinus )
    *result = argvals[0] - argvals[1];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalMinusInt )
@@ -178,7 +178,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMinusInt )
    SCIPintervalSub(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalMult )
@@ -189,7 +189,7 @@ SCIP_DECL_EVAL( SCIPexprevalMult )
    *result = argvals[0] * argvals[1];
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalMultInt )
@@ -200,7 +200,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMultInt )
    SCIPintervalMul(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalDiv )
@@ -211,7 +211,7 @@ SCIP_DECL_EVAL( SCIPexprevalDiv )
    *result = argvals[0] / argvals[1];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalDivInt )
@@ -222,7 +222,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalDivInt )
    SCIPintervalDiv(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalSqr )
@@ -233,7 +233,7 @@ SCIP_DECL_EVAL( SCIPexprevalSqr )
    *result = argvals[0] * argvals[0];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalSqrInt )
@@ -244,7 +244,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSqrInt )
    SCIPintervalSquare(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalSqrt )
@@ -255,7 +255,7 @@ SCIP_DECL_EVAL( SCIPexprevalSqrt )
    *result = sqrt(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalSqrtInt )
@@ -266,7 +266,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSqrtInt )
    SCIPintervalSquareRoot(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalPower )
@@ -277,7 +277,7 @@ SCIP_DECL_EVAL( SCIPexprevalPower )
    *result = pow(argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalPowerInt )
@@ -288,7 +288,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPowerInt )
    SCIPintervalPower(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalExp )
@@ -299,7 +299,7 @@ SCIP_DECL_EVAL( SCIPexprevalExp )
    *result = exp(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalExpInt )
@@ -310,7 +310,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalExpInt )
    SCIPintervalExp(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalLog )
@@ -321,7 +321,7 @@ SCIP_DECL_EVAL( SCIPexprevalLog )
    *result = log(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalLogInt )
@@ -332,7 +332,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalLogInt )
    SCIPintervalLog(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalSin )
@@ -343,7 +343,7 @@ SCIP_DECL_EVAL( SCIPexprevalSin )
    *result = sin(argvals[0]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalSinInt )
@@ -356,7 +356,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSinInt )
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalCos )
@@ -367,7 +367,7 @@ SCIP_DECL_EVAL( SCIPexprevalCos )
    *result = cos(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalCosInt )
@@ -380,7 +380,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalCosInt )
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalTan )
@@ -391,7 +391,7 @@ SCIP_DECL_EVAL( SCIPexprevalTan )
    *result = tan(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /* @todo implement SCIPintervalTan */
 #define SCIPexprevalTanInt NULL
@@ -405,7 +405,7 @@ SCIP_DECL_EVAL( SCIPexprevalErf )
    *result = erf(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /* @todo implement SCIPintervalErf */
 #define SCIPexprevalErfInt NULL
@@ -421,7 +421,7 @@ SCIP_DECL_EVAL( SCIPexprevalErfi )
    SCIPerrorMessage("erfi not implemented");
    
    return SCIP_ERROR;
-}
+} /*lint !e715*/
 
 /* @todo implement SCIPintervalErfi */
 #define SCIPexprevalErfiInt NULL
@@ -436,7 +436,7 @@ SCIP_DECL_EVAL( SCIPexprevalMin )
    *result = MIN(argvals[0], argvals[1]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalMinInt )
@@ -447,7 +447,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMinInt )
    SCIPintervalMin(result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalMax )
@@ -458,7 +458,7 @@ SCIP_DECL_EVAL( SCIPexprevalMax )
    *result = MAX(argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalMaxInt )
@@ -469,7 +469,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalMaxInt )
    SCIPintervalMax(result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalAbs )
@@ -480,7 +480,7 @@ SCIP_DECL_EVAL( SCIPexprevalAbs )
    *result = ABS(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalAbsInt )
@@ -491,7 +491,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalAbsInt )
    SCIPintervalAbs(result, argvals[0]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalSign )
@@ -502,7 +502,7 @@ SCIP_DECL_EVAL( SCIPexprevalSign )
    *result = SIGN(argvals[0]);
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalSignInt )
@@ -513,7 +513,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSignInt )
    SCIPintervalSign(result, argvals[0]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalSignPower )
@@ -527,9 +527,9 @@ SCIP_DECL_EVAL( SCIPexprevalSignPower )
      *result = -pow(-argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
-/* @todo implement SCIPintervalSignPower
+#if 0 /* @todo implement SCIPintervalSignPower */
 static
 SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
 {
@@ -539,8 +539,8 @@ SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
    SCIPintervalSignPowerScalar(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
-}
-*/
+} /*lint !e715*/
+#endif
 
 #define SCIPexprevalSignPowerInt NULL
 
@@ -580,7 +580,7 @@ SCIP_DECL_EVAL( SCIPexprevalIntPower )
    *result = SIGN(argvals[0]) / pow(ABS(argvals[0]), -n);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalIntPowerInt )
@@ -591,7 +591,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalIntPowerInt )
    SCIPintervalPowerScalar(infinity, result, argvals[0], (SCIP_Real)opdata.intval);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalSum )
@@ -606,7 +606,7 @@ SCIP_DECL_EVAL( SCIPexprevalSum )
       *result += argvals[i];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalSumInt )
@@ -622,7 +622,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalSumInt )
       SCIPintervalAdd(infinity, result, *result, argvals[i]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalProduct )
@@ -637,7 +637,7 @@ SCIP_DECL_EVAL( SCIPexprevalProduct )
       *result *= argvals[i];
    
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalProductInt )
@@ -653,7 +653,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalProductInt )
       SCIPintervalMul(infinity, result, *result, argvals[i]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalLinear )
@@ -674,7 +674,7 @@ SCIP_DECL_EVAL( SCIPexprevalLinear )
    assert(++coef == (SCIP_Real*)opdata.data);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
@@ -687,7 +687,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
    SCIPintervalAddScalar(infinity, result, *result, ((SCIP_Real*)opdata.data)[nargs]);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalQuadratic )
@@ -704,13 +704,14 @@ SCIP_DECL_EVAL( SCIPexprevalQuadratic )
    quadelems  = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->quadelems;
    
    assert(quadelems != NULL || nquadelems == 0);
+   assert(argvals != NULL   || nquadelems == 0);
    
    *result = 0.0;
-   for( i = nquadelems; i > 0 ; --i, ++quadelems )
-      *result += quadelems->coef * argvals[quadelems->idx1] * argvals[quadelems->idx2];
+   for( i = nquadelems; i > 0 ; --i, ++quadelems )  /*lint !e613*/
+      *result += quadelems->coef * argvals[quadelems->idx1] * argvals[quadelems->idx2];  /*lint !e613*/
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalQuadraticInt )
@@ -728,23 +729,24 @@ SCIP_DECL_INTEVAL( SCIPexprevalQuadraticInt )
    quadelems  = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->quadelems;
    
    assert(quadelems != NULL || nquadelems == 0);
+   assert(argvals   != NULL || nquadelems == 0);
    
    SCIPintervalSet(result, 0.0);
-   for( i = nquadelems; i > 0 ; --i, ++quadelems )
+   for( i = nquadelems; i > 0 ; --i, ++quadelems )  /*lint !e613*/
    {
       if( quadelems->idx1 == quadelems->idx2 )
-         SCIPintervalSquare(infinity, &tmp, argvals[quadelems->idx1]);
+         SCIPintervalSquare(infinity, &tmp, argvals[quadelems->idx1]);  /*lint !e613*/
       else
-         SCIPintervalMul(infinity, &tmp, argvals[quadelems->idx1], argvals[quadelems->idx2]);
+         SCIPintervalMul(infinity, &tmp, argvals[quadelems->idx1], argvals[quadelems->idx2]);  /*lint !e613*/
       
       if( quadelems->coef != 1.0 )
-         SCIPintervalMulScalar(infinity, &tmp, tmp, quadelems->coef);
+         SCIPintervalMulScalar(infinity, &tmp, tmp, quadelems->coef);  /*lint !e613*/
       
       SCIPintervalAdd(infinity, result, *result, tmp);
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_EVAL( SCIPexprevalPolynom )
@@ -836,7 +838,7 @@ SCIP_DECL_EVAL( SCIPexprevalPolynom )
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 static
 SCIP_DECL_INTEVAL( SCIPexprevalPolynomInt )
@@ -922,7 +924,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPolynomInt )
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** table containing for each operand the name, the number of children, and some evaluation functions */
 struct SCIPexprOpTableElement SCIPexprOpTable[] =
