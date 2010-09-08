@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.25 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.26 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -43,6 +43,7 @@ struct SCIP_Prob
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objlim;             /**< objective limit as external value */
    char*                 name;               /**< problem name */
+   SCIP_DECL_PROBCOPY    ((*probcopy));      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig));   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans));     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans));  /**< frees user data of transformed problem */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.39 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.40 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -112,7 +112,7 @@ SCIP_RETCODE createSubproblem(
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_mutationsub", SCIPgetProbName(scip));
 
    /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    if( minfixingrate > 0.5 )
    {

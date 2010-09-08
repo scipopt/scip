@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.644 2010/09/07 21:52:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.645 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -936,7 +936,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    assert(targetscip->set != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
@@ -958,7 +958,7 @@ SCIP_RETCODE SCIPcopyParamSettings(
    assert(targetscip->set != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyParamSettings", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyParamSettings", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyParamSettings", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsetCopyParams(sourcescip->set, targetscip->set) );
@@ -1015,7 +1015,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    )
 {
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(targetscip != NULL);
@@ -1168,7 +1168,7 @@ SCIP_RETCODE SCIPcopyVars(
    assert(targetscip != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
   
    /* get active variables of the source SCIP */
@@ -1213,7 +1213,7 @@ SCIP_RETCODE SCIPcopyConss(
    assert(varmap != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    nsourceconshdlrs = SCIPgetNConshdlrs(sourcescip);
@@ -1300,6 +1300,35 @@ SCIP_RETCODE SCIPcopyConss(
    return SCIP_OKAY;
 }
 
+/** copies probdata from sourcescip to targetscip */
+SCIP_RETCODE SCIPcopyProbData(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   )
+{
+   SCIP_PROB* copyprob;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(success != NULL);
+
+   /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyProbData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyProbData", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   
+   if( SCIPisTransformed(sourcescip) )
+      copyprob = sourcescip->transprob;
+   else
+      copyprob = sourcescip->origprob;
+
+   assert(copyprob != NULL);
+
+   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, success) );
+   
+   return SCIP_OKAY;
+}
+
 #define HASHTABLESIZE_FACTOR 5
 /** copies sourcescip to targetscip */
 SCIP_RETCODE SCIPcopy(
@@ -1314,14 +1343,17 @@ SCIP_RETCODE SCIPcopy(
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
+   SCIP_PROB* copyprob;
    SCIP_Bool uselocalvarmap;
    char probname[SCIP_MAXSTRLEN];
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
+   assert(suffix != NULL);
+   assert(success != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    *success = TRUE;   
 
@@ -1330,10 +1362,20 @@ SCIP_RETCODE SCIPcopy(
          TRUE, TRUE, TRUE, TRUE, success) );
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
+   if( SCIPisTransformed(sourcescip) )
+      copyprob = sourcescip->transprob;
+   else
+      copyprob = sourcescip->origprob;
+
+   assert(copyprob != NULL);
+
    /* create problem in the target SCIP */
    /* get name of the original problem and add the suffix string */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
-   SCIP_CALL( SCIPcreateProb(targetscip, probname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(targetscip, probname, copyprob->probcopy ,copyprob->probdelorig, copyprob->probtrans, copyprob->probdeltrans, copyprob->probinitsol, copyprob->probexitsol, NULL) );
+
+   /** copies probdata from sourcescip to targetscip */
+   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, success) );
 
    uselocalvarmap = (varmap == NULL);
    if( uselocalvarmap )
@@ -3446,6 +3488,7 @@ SCIP_RETCODE SCIPstartInteraction(
 SCIP_RETCODE SCIPcreateProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
@@ -3464,7 +3507,7 @@ SCIP_RETCODE SCIPcreateProb(
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
    SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
-   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
+   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name, probcopy,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probdata, FALSE) );
 
    return SCIP_OKAY;

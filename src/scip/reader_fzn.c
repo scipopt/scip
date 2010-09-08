@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.53 2010/09/06 16:48:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.54 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -3073,7 +3073,7 @@ SCIP_RETCODE readFZNFile(
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    
    /* create two auxiliary variable for true and false values */
    SCIP_CALL( createVariable(scip, fzninput, NULL, "true", 1.0, 1.0, FZN_BOOL) );
@@ -3190,7 +3190,7 @@ SCIP_RETCODE readFZNFile(
       SCIP_CALL( SCIPfreeProb(scip) );
 
       /* create empty problem */
-      SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    }
    else
    {

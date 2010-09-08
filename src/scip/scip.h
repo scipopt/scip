@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.414 2010/09/06 17:52:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.415 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -320,6 +320,14 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   );
+
+/** copies probdata from sourcescip to targetscip */
+extern
+SCIP_RETCODE SCIPcopyProbData(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
    );
 
@@ -1606,6 +1614,7 @@ extern
 SCIP_RETCODE SCIPcreateProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */

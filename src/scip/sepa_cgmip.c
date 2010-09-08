@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.27 2010/09/06 16:10:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.28 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -812,7 +812,7 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPincludeConshdlrViolatedCut(subscip, mipdata) );
    }
 
-   SCIP_CALL( SCIPcreateProb(subscip, "sepa_cgmip separating MIP", NULL , NULL , NULL , NULL , NULL , NULL) );
+   SCIP_CALL( SCIPcreateProb(subscip, "sepa_cgmip separating MIP", NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
    /* alloc memory for subscipdata elements */

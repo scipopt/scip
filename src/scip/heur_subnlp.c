@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.14 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.15 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -161,7 +161,7 @@ SCIP_RETCODE createSubSCIP(
    /* create problem in subSCIP */
    /* get name of the original problem and add "subnlp" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subnlp", SCIPgetProbName(scip));
-   SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* copy all variables */
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip, FALSE) );

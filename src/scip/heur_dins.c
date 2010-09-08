@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.25 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.26 2010/09/08 01:36:22 bzfwinkm Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -575,7 +575,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
    
    SCIP_CALL( SCIPallocBufferArray( scip, &subvars, nvars ) ); 
-   SCIP_CALL( SCIPcreateProb( subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL ) );
+   SCIP_CALL( SCIPcreateProb( subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL ) );
    
    /* create variables and rebound them if their bounds differ by more than 0.5 */
    SCIP_CALL( createReboundedVariables(scip, subscip, vars, subvars, &nvars, &nbinvars, &nintvars) );

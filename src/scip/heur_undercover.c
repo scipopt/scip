@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.72 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.73 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -370,7 +370,7 @@ SCIP_RETCODE createCoveringProblem(
 
    /* create problem data structure */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPgetProbName(scip));
-   SCIP_CALL( SCIPcreateProb(coveringscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(coveringscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* allocate and initialize to zero counter arrays for weighted objectives */
    SCIP_CALL( SCIPallocBufferArray(scip, &consmarker, nvars) );

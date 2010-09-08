@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.16 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.17 2010/09/08 01:36:22 bzfwinkm Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -48,6 +48,37 @@ struct SCIP_ProbData
 
 extern "C"
 {
+
+/** copies user data if you want to copy it to a subscip, or NULL */
+static
+SCIP_DECL_PROBCOPY(probcopy)
+{
+  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourceprobdata != NULL);
+   assert(targetprobdata != NULL);
+   assert(success != NULL);
+   assert(sourceprobdata->objprobdata != NULL);
+
+   *success = FALSE;
+
+   /* call virtual method of probdata object */
+   if( sourceprobdata->objprobdata->iscloneable() )
+   {
+      scip::ObjProbData* newobjprobdata;
+      newobjprobdata = (scip::ObjProbData*) sourceprobdata->objprobdata->clone(sourcescip);
+
+      *targetprobdata = new SCIP_PROBDATA;
+      (*targetprobdata)->objprobdata = newobjprobdata; /*lint !e40*/
+      (*targetprobdata)->deleteobject = TRUE;
+
+      *success = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** frees user data of original problem (called when the original problem is freed) */
 static
 SCIP_DECL_PROBDELORIG(probDelorigObj)
@@ -172,7 +203,7 @@ SCIP_RETCODE SCIPcreateObjProb(
    probdata->deleteobject = deleteobject;
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, 
+   SCIP_CALL( SCIPcreateProb(scip, name, probcopy, probDelorigObj, probTransObj, probDeltransObj, 
          probInitsolObj, probExitsolObj, probdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

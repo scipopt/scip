@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.20 2010/01/07 11:50:15 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.21 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   type_prob.h
  * @ingroup TYPEDEFINITIONS
@@ -43,6 +43,22 @@ typedef enum SCIP_Objsense SCIP_OBJSENSE;
 
 typedef struct SCIP_Prob SCIP_PROB;               /**< main problem to solve */
 typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by the reader */
+
+
+/** copies user data of source scip to target scip
+ *
+ *  This method should free the user data of the original problem.
+ *
+ *  input:
+ *  - scip            : target SCIP data structure
+ *  - sourcescip      : source SCIP main data structure
+ *  - sourceprobdata  : source user problem data
+ *  - targetprobdata  : pointer to the target user problem data to create
+ *
+ *  output:
+ *  - success         : pointer to store whether the copying was successful or not 
+ */
+#define SCIP_DECL_PROBCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_PROBDATA* sourceprobdata, SCIP_PROBDATA** targetprobdata, SCIP_Bool* success)
 
 
 /** frees user data of original problem (called when the original problem is freed)

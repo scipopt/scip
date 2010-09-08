@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.5 2010/09/07 21:45:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.6 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -1774,7 +1774,7 @@ SCIP_RETCODE readPIPFile(
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* parse the file */
    pipinput->section = PIP_START;

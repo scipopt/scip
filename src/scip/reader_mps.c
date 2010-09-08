@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.133 2010/09/07 21:45:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.134 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -2251,7 +2251,7 @@ SCIP_RETCODE readMps(
 
    SCIP_CALL( readName(mpsi) );
 
-   SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    if( mpsinputSection(mpsi) == MPS_OBJSEN )
    {

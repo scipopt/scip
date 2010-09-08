@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.115 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.116 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -177,6 +177,30 @@ SCIP_Bool varHasName(
  * problem creation
  */
 
+/** copies probdata from sourcescip to targetscip */
+SCIP_RETCODE SCIPprobCopyProbData(
+   SCIP_SET*             sourceset,          /**< source SCIP settings */
+   SCIP_SET*             targetset,          /**< target SCIP settings */
+   SCIP_PROB*            sourceprob,         /**< source problem structure */
+   SCIP_PROB*            targetprob,         /**< target problem structure */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   )
+{
+   assert(sourceset != NULL);
+   assert(targetset != NULL);
+   assert(sourceprob != NULL);
+   assert(targetprob != NULL);
+   assert(success != NULL);
+   
+   /* call user data transformation */
+   if( sourceprob->probcopy != NULL )
+   {
+      SCIP_CALL( sourceprob->probcopy(targetset->scip, sourceset->scip, sourceprob->probdata, &(targetprob->probdata), success) );
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** creates problem data structure
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
@@ -186,6 +210,7 @@ SCIP_RETCODE SCIPprobCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< problem name */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
@@ -201,6 +226,7 @@ SCIP_RETCODE SCIPprobCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*prob)->name, name, strlen(name)+1) );
 
    (*prob)->probdata = probdata;
+   (*prob)->probcopy = probcopy;
    (*prob)->probdelorig = probdelorig;
    (*prob)->probtrans = probtrans;
    (*prob)->probdeltrans = probdeltrans;
@@ -374,7 +400,7 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
-   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, NULL, NULL, source->probdeltrans, 
+   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probcopy, NULL, NULL, source->probdeltrans, 
                   source->probinitsol, source->probexitsol, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);
 

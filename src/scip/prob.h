@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.68 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.69 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -50,6 +50,16 @@ extern "C" {
  * problem creation
  */
 
+/** copies probdata from sourcescip to targetscip */
+extern
+SCIP_RETCODE SCIPprobCopyProbData(
+   SCIP_SET*             sourceset,          /**< source SCIP settings */
+   SCIP_SET*             targetset,          /**< target SCIP settings */
+   SCIP_PROB*            sourceprob,         /**< source problem structure */
+   SCIP_PROB*            targetprob,         /**< target problem structure */
+   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   );
+
 /** creates problem data structure
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
@@ -60,6 +70,7 @@ SCIP_RETCODE SCIPprobCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< problem name */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */

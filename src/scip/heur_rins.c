@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.46 2010/09/06 16:10:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.47 2010/09/08 01:36:23 bzfwinkm Exp $"
 
 /**@file   heur_rins.c
  * @ingroup PRIMALHEURISTICS
@@ -101,7 +101,7 @@ SCIP_RETCODE createSubproblem(
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_rinssub", SCIPgetProbName(scip));
 
    /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    fixingcounter = 0;
 
    /* create the variables of the subproblem */
