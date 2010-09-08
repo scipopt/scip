@@ -100,6 +100,7 @@ interface:
 - new methods SCIPconshdlrGetEnfoConss(), SCIPconshdlrGetNEnfoConss()
 - new method SCIPcopyProbData and SCIPprobCopyProbData() which copies the probdata from a sourcescip to a targetscip
 - new method SCIPsetSubscipsOff() which disables all plugins that uses subscips
+- new method SCIPsepaSetFreq() to set the calling frequency of a separator
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

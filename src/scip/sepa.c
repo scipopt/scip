@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.73 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.74 2010/09/08 19:30:28 bzfberth Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -572,6 +572,17 @@ int SCIPsepaGetFreq(
    assert(sepa != NULL);
 
    return sepa->freq;
+}
+
+/** sets frequency of separator */
+void SCIPsepaSetFreq(
+   SCIP_SEPA*            sepa,               /**< separator */
+   int                   freq                /**< new frequency of separator */
+   )
+{
+   assert(sepa != NULL);
+   
+   sepa->freq = freq;
 }
 
 /** get maximal bound distance at which the separator is called */

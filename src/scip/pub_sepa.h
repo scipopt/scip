@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.23 2010/09/06 16:10:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.24 2010/09/08 19:30:28 bzfberth Exp $"
 
 /**@file   pub_sepa.h
  * @ingroup PUBLICMETHODS
@@ -73,6 +73,13 @@ int SCIPsepaGetPriority(
 extern
 int SCIPsepaGetFreq(
    SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** sets frequency of separator */
+extern
+void SCIPsepaSetFreq(
+   SCIP_SEPA*            sepa,               /**< separator */
+   int                   freq                /**< new frequency of separator */
    );
 
 /** get maximal bound distance at which the separator is called */
