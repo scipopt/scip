@@ -37,12 +37,9 @@ interface:
   return SCIP_Real values instead of SCIP_Longint
 - new method SCIPinitVarBranchStats() to initialize the branching statistics (such as pseudo costs, VSIDS, inference values) 
   of a variable
-- new methods SCIPsetHeuristicsAggressive() SCIPsetHeuristicsFast(), SCIPsetHeuristicsOff(), and SCIPsetHeuristicsDefault() which set the 
-  heuristics to aggressive, fast, off, or default settings, respectively
-- new methods SCIPsetSeparatingAggressive() SCIPsetSeparatingFast(), SCIPsetSeparatingOff(), and SCIPsetSeparatingDefault() which sets
-  separation to aggressive, fast, off, or default settings, respectively
-- new methods SCIPsetPresolvingAggressive() SCIPsetPresolvingFast(), SCIPsetPresolvingOff(), and SCIPsetPresolvingDefault() which sets
-  presolving to aggressive, fast, off, or default settings, respectively
+- new methods SCIPsetHeuristics() which set the heuristics to aggressive, fast, off, or default settings, depending on the SCIP_PARAMSET parameter
+- new methods SCIPsetSeparating() which sets separation to aggressive, fast, off, or default settings, depending on the SCIP_PARAMSET parameter
+- new methods SCIPsetPresolving() which sets presolving to aggressive, fast, off, or default settings, depending on the SCIP_PARAMSET parameter
 - new method for heuristics SCIPheurSetFreq() to change the frequency of the heuristic (pub_heur.h, heur.c)
 - new method SCIPselectBranchVarPscost() in branch_pscost.{c,h}; this method selects from a given candidate array a branching variable 
   w.r.t. pseudo cost branching for relax candidates

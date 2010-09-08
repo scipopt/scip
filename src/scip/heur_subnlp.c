@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.18 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.19 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -832,7 +832,7 @@ SCIP_RETCODE solveSubNLP(
    {
       /* reduce feasibility tolerance of subSCIP and do less aggressive presolve */
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", heurdata->resolvetolfactor*SCIPfeastol(scip)) );
-      SCIP_CALL( SCIPsetPresolvingFast(heurdata->subscip, TRUE) );
+      SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_FAST, TRUE) );
       SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "constraints/linear/aggregatevariables", FALSE) );
    }
    
@@ -846,13 +846,13 @@ SCIP_RETCODE solveSubNLP(
    if( SCIPpressedCtrlC(heurdata->subscip) )
    {
       SCIPdebugMessage("SCIP presolve interrupted by user\n");
-      goto cleanup;
+      goto CLEANUP;
    }
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED )
    {
       /* presolve probably found the subproblem infeasible */
       SCIPdebugMessage("SCIP returned from presolve in stage solved with status %d\n", SCIPgetStatus(heurdata->subscip));
-      goto cleanup;
+      goto CLEANUP;
    }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
@@ -907,7 +907,7 @@ SCIP_RETCODE solveSubNLP(
    /* @todo if subscip is infeasible here, one should use this information to cutoff current fixation in main scip */
    
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED || !SCIPisNLPConstructed(heurdata->subscip) )
-      goto cleanup;
+      goto CLEANUP;
 
    /* in most cases, the status should be nodelimit
     * in some cases, if the subSCIP is very easy, it may report optimal, so we do not need invoke an NLP solver
@@ -917,19 +917,19 @@ SCIP_RETCODE solveSubNLP(
     */
    switch( SCIPgetStatus(heurdata->subscip) )
    {
-      case SCIP_STATUS_NODELIMIT:
-         break; /* this is the status that is most likely happening */
-      case SCIP_STATUS_OPTIMAL: 
-      case SCIP_STATUS_INFEASIBLE: 
-      case SCIP_STATUS_USERINTERRUPT:
-      case SCIP_STATUS_TIMELIMIT:
-      case SCIP_STATUS_MEMLIMIT:
-      case SCIP_STATUS_UNBOUNDED:
-      case SCIP_STATUS_INFORUNBD:
-         goto cleanup;
-      default:
-         SCIPerrorMessage("unexpected status of subSCIP: <%d>\n", SCIPgetStatus(heurdata->subscip));
-         return SCIP_ERROR;
+   case SCIP_STATUS_NODELIMIT:
+      break; /* this is the status that is most likely happening */
+   case SCIP_STATUS_OPTIMAL: 
+   case SCIP_STATUS_INFEASIBLE: 
+   case SCIP_STATUS_USERINTERRUPT:
+   case SCIP_STATUS_TIMELIMIT:
+   case SCIP_STATUS_MEMLIMIT:
+   case SCIP_STATUS_UNBOUNDED:
+   case SCIP_STATUS_INFORUNBD:
+      goto CLEANUP;
+   default:
+      SCIPerrorMessage("unexpected status of subSCIP: <%d>\n", SCIPgetStatus(heurdata->subscip));
+      return SCIP_ERROR;
    } /*lint !e788*/
 
    nlp = SCIPgetNLP(heurdata->subscip);
@@ -1073,13 +1073,13 @@ SCIP_RETCODE solveSubNLP(
       }
    }
    
-cleanup:
+ CLEANUP:
    SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
    if( tighttolerances )
    {
       /* reset feasibility tolerance of subSCIP and reset to normal presolve */
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
-      SCIP_CALL( SCIPsetPresolvingDefault(heurdata->subscip) );
+      SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
       SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
    }
    

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.39 2010/09/08 15:05:41 bzfberth Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.40 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -271,7 +271,8 @@ extern
 SCIP_RETCODE SCIPparamsetSetToDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*           paramname           /**< name of the parameter */
+   const char*           paramname,          /**< name of the parameter */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** sets parameter to detect feasibility fast */
@@ -291,97 +292,31 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets heuristics to aggressive */
+/** sets heuristics parameters */
 extern
-SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
+SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets heuristics to fast */
+/** sets presolving parameters */
 extern
-SCIP_RETCODE SCIPparamsetSetToHeuristicsFast(
+SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** turns off all heuristics */
+/** sets separating parameters */
 extern
-SCIP_RETCODE SCIPparamsetSetToHeuristicsOff(
+SCIP_RETCODE SCIPparamsetSetSeparating(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets parameters changed by other SCIPparamsetSetToHeuristicsXxx functions to their default values */
-extern
-SCIP_RETCODE SCIPparamsetSetToHeuristicsDefault(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** sets presolving to aggressive */
-extern
-SCIP_RETCODE SCIPparamsetSetToPresolvingAggressive(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** sets presolving to fast */
-extern
-SCIP_RETCODE SCIPparamsetSetToPresolvingFast(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** turns off all presolving */
-extern
-SCIP_RETCODE SCIPparamsetSetToPresolvingOff(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets parameters changed by SCIPparamsetSetToPresolvingXxx to their default settings */
-extern
-SCIP_RETCODE SCIPparamsetSetToPresolvingDefault(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** sets separating to aggressive */
-extern
-SCIP_RETCODE SCIPparamsetSetToSeparatingAggressive(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** sets separating to fast */
-extern
-SCIP_RETCODE SCIPparamsetSetToSeparatingFast(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** turns off all separation */
-extern
-SCIP_RETCODE SCIPparamsetSetToSeparatingOff(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** reset parameters that may have been changed by other SCIPparamsetSetToSeparatingXxx to their default values */
-extern
-SCIP_RETCODE SCIPparamsetSetToSeparatingDefault(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the array of parameters */

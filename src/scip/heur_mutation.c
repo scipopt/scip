@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.43 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.44 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -475,10 +475,10 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use best estimate node selection */
    if( SCIPfindNodesel(scip, "estimate") != NULL )

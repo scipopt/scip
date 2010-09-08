@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.47 2010/09/08 19:14:53 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.48 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -2532,10 +2532,10 @@ SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP_CALL( SCIPsetBoolParam(scip, "reading/zplreader/usestartsol", FALSE) );
 
    /* turn off all heuristics */
-   SCIP_CALL( SCIPsetHeuristicsOff(scip, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* turn off all separation */
-   SCIP_CALL( SCIPsetSeparatingOff(scip, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
  
    /* turn off restart */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );

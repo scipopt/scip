@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.52 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.53 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -526,10 +526,10 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use best estimate node selection */
    if( SCIPfindNodesel(scip, "estimate") != NULL )

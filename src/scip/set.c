@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.246 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.247 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1869,7 +1869,7 @@ SCIP_RETCODE SCIPsetResetParam(
    const char*           name                /**< name of the parameter */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToDefault(set->paramset, set->scip, name) );
+   SCIP_CALL( SCIPparamsetSetToDefault(set->paramset, set->scip, name, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1907,131 +1907,38 @@ SCIP_RETCODE SCIPsetSetSubscipsOff(
    return SCIP_OKAY;
 }
 
-/** sets heuristic parameters to aggressive values */
-SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
+/** sets heuristic parameters */
+SCIP_RETCODE SCIPsetSetHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(set->paramset, set->scip, quiet) );
+   SCIP_CALL( SCIPparamsetSetHeuristics(set->paramset, set->scip, paramsetting, quiet) );
 
    return SCIP_OKAY;
 }
 
-/** sets heuristic parameters to fast values */
-SCIP_RETCODE SCIPsetSetHeuristicsFast(
+/** sets presolving parameters */
+SCIP_RETCODE SCIPsetSetPresolving(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToHeuristicsFast(set->paramset, set->scip, quiet) );
+   SCIP_CALL( SCIPparamsetSetPresolving(set->paramset, set->scip, paramsetting, quiet) );
 
    return SCIP_OKAY;
 }
 
-/** turns off all heuristics */
-SCIP_RETCODE SCIPsetSetHeuristicsOff(
+/** sets separating parameters */
+SCIP_RETCODE SCIPsetSetSeparating(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToHeuristicsOff(set->paramset, set->scip, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** resets heuristics settings made by other SCIPsetSetHeuristicsXxx functions */
-SCIP_RETCODE SCIPsetSetHeuristicsDefault(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToHeuristicsDefault(set->paramset, set->scip) );
-
-   return SCIP_OKAY;
-}
-
-/** sets presolving parameters to aggressive values */
-SCIP_RETCODE SCIPsetSetPresolvingAggressive(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToPresolvingAggressive(set->paramset, set->scip, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** sets presolving parameters to fast values */
-SCIP_RETCODE SCIPsetSetPresolvingFast(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToPresolvingFast(set->paramset, set->scip, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** turns off all presolving */
-SCIP_RETCODE SCIPsetSetPresolvingOff(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToPresolvingOff(set->paramset, set->scip, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** resets presolving settings made by other SCIPsetSetPresolvingXxx functions */
-SCIP_RETCODE SCIPsetSetPresolvingDefault(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToPresolvingDefault(set->paramset, set->scip) );
-
-   return SCIP_OKAY;
-}
-
-/** sets separating parameters to aggressive values */
-SCIP_RETCODE SCIPsetSetSeparatingAggressive(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToSeparatingAggressive(set->paramset, set->scip, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** sets separating parameters to fast values */
-SCIP_RETCODE SCIPsetSetSeparatingFast(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToSeparatingFast(set->paramset, set->scip, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** turns off all separation */
-SCIP_RETCODE SCIPsetSetSeparatingOff(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToSeparatingOff(set->paramset, set->scip, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** resets separation settings made by other SCIPsetSetSeparatingXxx functions */
-SCIP_RETCODE SCIPsetSetSeparatingDefault(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   SCIP_CALL( SCIPparamsetSetToSeparatingDefault(set->paramset, set->scip) );
+   SCIP_CALL( SCIPparamsetSetSeparating(set->paramset, set->scip, paramsetting, quiet) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.23 2010/09/08 19:27:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.24 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -322,10 +322,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

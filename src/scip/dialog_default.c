@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.115 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.116 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1743,7 +1743,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisAggressive)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetHeuristicsAggressive(scip, FALSE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_AGGRESSIVE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1754,7 +1754,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisFast)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetHeuristicsFast(scip, FALSE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_FAST, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -1765,7 +1765,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisOff)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetHeuristicsOff(scip, FALSE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1776,7 +1776,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisAggressive)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetPresolvingAggressive(scip, FALSE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_AGGRESSIVE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1787,7 +1787,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisFast)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetPresolvingFast(scip, FALSE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_FAST, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -1798,7 +1798,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisOff)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetPresolvingOff(scip, FALSE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1809,7 +1809,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisAggressive)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetSeparatingAggressive(scip, FALSE) );
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1820,7 +1820,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisFast)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetSeparatingFast(scip, FALSE) );
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_FAST, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -1831,7 +1831,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff)
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
-   SCIP_CALL( SCIPsetSeparatingOff(scip, FALSE) );
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, FALSE) );
 
    return SCIP_OKAY;
 }

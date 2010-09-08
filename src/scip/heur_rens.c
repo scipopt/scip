@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.49 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.50 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -355,11 +355,11 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
-
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   
    /* use best estimate node selection */
    if( SCIPfindNodesel(scip, "estimate") != NULL )
    {

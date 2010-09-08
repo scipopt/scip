@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.125 2010/09/08 15:05:41 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.126 2010/09/08 23:36:28 bzfheinz Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -335,85 +335,28 @@ SCIP_RETCODE SCIPsetSetSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets heuristic parameters to aggressive values */
+/** sets heuristic parameters */
 extern
-SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
+SCIP_RETCODE SCIPsetSetHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets heuristic parameters to fast values */
+/** sets presolving parameters */
 extern
-SCIP_RETCODE SCIPsetSetHeuristicsFast(
+SCIP_RETCODE SCIPsetSetPresolving(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** turns off all heuristics */
+/** sets separating parameters */
 extern
-SCIP_RETCODE SCIPsetSetHeuristicsOff(
+SCIP_RETCODE SCIPsetSetSeparating(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets heuristics settings made by other SCIPsetSetHeuristicsXxx functions */
-extern
-SCIP_RETCODE SCIPsetSetHeuristicsDefault(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
-/** sets presolving parameters to aggressive values */
-extern
-SCIP_RETCODE SCIPsetSetPresolvingAggressive(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** sets presolving parameters to fast values */
-extern
-SCIP_RETCODE SCIPsetSetPresolvingFast(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** turns off all presolving */
-extern
-SCIP_RETCODE SCIPsetSetPresolvingOff(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets presolving settings made by other SCIPsetSetPresolvingXxx functions */
-extern
-SCIP_RETCODE SCIPsetSetPresolvingDefault(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
-/** sets separating parameters to aggressive values */
-extern
-SCIP_RETCODE SCIPsetSetSeparatingAggressive(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** sets separating parameters to fast values */
-extern
-SCIP_RETCODE SCIPsetSetSeparatingFast(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** turns off all separation */
-extern
-SCIP_RETCODE SCIPsetSetSeparatingOff(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets separation settings made by other SCIPsetSetSeparatingXxx functions */
-extern
-SCIP_RETCODE SCIPsetSetSeparatingDefault(
-   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns the array of all available SCIP parameters */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.417 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.418 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -669,87 +669,30 @@ SCIP_RETCODE SCIPsetSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets heuristic parameters to aggressive values */
+/** sets heuristic parameters values */
+extern
+SCIP_RETCODE SCIPsetHeuristics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets presolving parameters */
 extern 
-SCIP_RETCODE SCIPsetHeuristicsAggressive(
+SCIP_RETCODE SCIPsetPresolving(
    SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets separating parameters */
+extern 
+SCIP_RETCODE SCIPsetSeparating(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
    
-/** sets heuristic parameters to fast values */
-extern 
-SCIP_RETCODE SCIPsetHeuristicsFast(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** turns off all heuristic */
-extern 
-SCIP_RETCODE SCIPsetHeuristicsOff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets parameters set by other SCIPsetHeuristicsXxx functions to their default values */
-extern
-SCIP_RETCODE SCIPsetHeuristicsDefault(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** sets presolving parameters to aggressive values */
-extern 
-SCIP_RETCODE SCIPsetPresolvingAggressive(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-   
-/** sets presolving parameters to fast values */
-extern 
-SCIP_RETCODE SCIPsetPresolvingFast(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** turns off all presolving */
-extern 
-SCIP_RETCODE SCIPsetPresolvingOff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets parameters set by other SCIPsetPresolvingXxx functions to their default values */
-extern
-SCIP_RETCODE SCIPsetPresolvingDefault(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** sets separating parameters to aggressive values */
-extern 
-SCIP_RETCODE SCIPsetSeparatingAggressive(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-   
-/** sets separating parameters to fast values */
-extern 
-SCIP_RETCODE SCIPsetSeparatingFast(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** turns off all separation */
-extern 
-SCIP_RETCODE SCIPsetSeparatingOff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** resets parameters set by other SCIPsetSeparatingXxx functions to their default values */
-extern
-SCIP_RETCODE SCIPsetSeparatingDefault(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns the array of all available SCIP parameters */
 extern
 SCIP_PARAM** SCIPgetParams(

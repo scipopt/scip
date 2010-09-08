@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.647 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.648 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1782,156 +1782,44 @@ SCIP_RETCODE SCIPsetSubscipsOff(
    return SCIP_OKAY;
 }
 
-
-/** sets heuristic parameters to aggressive values */
-SCIP_RETCODE SCIPsetHeuristicsAggressive(
+/** sets heuristic parameters values */
+SCIP_RETCODE SCIPsetHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetHeuristics", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetHeuristicsAggressive(scip->set, quiet) );
+   SCIP_CALL( SCIPsetSetHeuristics(scip->set, paramsetting, quiet) );
 
    return SCIP_OKAY;
 }
 
-/** sets heuristic parameters to fast values */
-SCIP_RETCODE SCIPsetHeuristicsFast(
+/** sets presolving parameters */
+SCIP_RETCODE SCIPsetPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolving", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   SCIP_CALL( SCIPsetSetHeuristicsFast(scip->set, quiet) );
+   SCIP_CALL( SCIPsetSetSeparating(scip->set, paramsetting, quiet) );
+
+   return SCIP_OKAY;
+}
+
+/** sets separating parameters */
+SCIP_RETCODE SCIPsetSeparating(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSeparating", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   return SCIP_OKAY;
-}
-
-/** turns off all heuristics */
-SCIP_RETCODE SCIPsetHeuristicsOff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetHeuristicsOff(scip->set, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** resets parameters set by other SCIPsetHeuristicsXxx functions to their default values */
-SCIP_RETCODE SCIPsetHeuristicsDefault(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetHeuristicsDefault", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetHeuristicsDefault(scip->set) );
-
-   return SCIP_OKAY;
-}
-
-/** sets presolving parameters to aggressive values */
-SCIP_RETCODE SCIPsetPresolvingAggressive(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetPresolvingAggressive(scip->set, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** sets presolving parameters to fast values */
-SCIP_RETCODE SCIPsetPresolvingFast(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
-   SCIP_CALL( SCIPsetSetPresolvingFast(scip->set, quiet) );
-   
-   return SCIP_OKAY;
-}
-
-/** turns off all presolvers */
-SCIP_RETCODE SCIPsetPresolvingOff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetPresolvingOff(scip->set, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** resets parameters set by other SCIPsetPresolvingXxx functions to their default values */
-SCIP_RETCODE SCIPsetPresolvingDefault(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetPresolvingDefault", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetPresolvingDefault(scip->set) );
-
-   return SCIP_OKAY;
-}
-
-/** sets separating parameters to aggressive values */
-SCIP_RETCODE SCIPsetSeparatingAggressive(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingAggressive", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
-   SCIP_CALL( SCIPsetSetSeparatingAggressive(scip->set, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** sets separating parameters to fast values */
-SCIP_RETCODE SCIPsetSeparatingFast(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingFast", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
-   SCIP_CALL( SCIPsetSetSeparatingFast(scip->set, quiet) );
-   
-   return SCIP_OKAY;
-}
-
-/** turns off all separation */
-SCIP_RETCODE SCIPsetSeparatingOff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetSeparatingOff(scip->set, quiet) );
-
-   return SCIP_OKAY;
-}
-
-/** resets parameters set by other SCIPsetSeparatingXxx functions to their default values */
-SCIP_RETCODE SCIPsetSeparatingDefault(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetSeparatingDefault", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPsetSetSeparatingDefault(scip->set) );
+   SCIP_CALL( SCIPsetSetSeparating(scip->set, paramsetting, quiet) );
 
    return SCIP_OKAY;
 }

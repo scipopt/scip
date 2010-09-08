@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.21 2010/07/20 15:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.22 2010/09/08 23:36:27 bzfheinz Exp $"
 
 /**@file   pub_paramset.h
  * @ingroup PUBLICMETHODS
@@ -235,7 +235,7 @@ SCIP_Bool SCIPparamIsDefault(
 extern
 SCIP_RETCODE SCIPparamSetToDefault(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */  
    );
 
 #ifdef __cplusplus

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_paramset.h,v 1.17 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_paramset.h,v 1.18 2010/09/08 23:36:28 bzfheinz Exp $"
 
 /**@file   type_paramset.h
  * @ingroup TYPEDEFINITIONS
@@ -36,14 +36,24 @@ extern "C" {
 /** possible parameter types */
 enum SCIP_ParamType
 {
-   SCIP_PARAMTYPE_BOOL    = 0,           /**< bool values: TRUE or FALSE */
-   SCIP_PARAMTYPE_INT     = 1,           /**< integer values */
-   SCIP_PARAMTYPE_LONGINT = 2,           /**< long integer values */
-   SCIP_PARAMTYPE_REAL    = 3,           /**< real values */
-   SCIP_PARAMTYPE_CHAR    = 4,           /**< characters */
-   SCIP_PARAMTYPE_STRING  = 5            /**< strings: arrays of characters */
+   SCIP_PARAMTYPE_BOOL    = 0,               /**< bool values: TRUE or FALSE */
+   SCIP_PARAMTYPE_INT     = 1,               /**< integer values */
+   SCIP_PARAMTYPE_LONGINT = 2,               /**< long integer values */
+   SCIP_PARAMTYPE_REAL    = 3,               /**< real values */
+   SCIP_PARAMTYPE_CHAR    = 4,               /**< characters */
+   SCIP_PARAMTYPE_STRING  = 5                /**< strings: arrays of characters */
 };
 typedef enum SCIP_ParamType SCIP_PARAMTYPE;
+
+/** possible parameter settings */
+enum SCIP_ParamSetting
+{
+   SCIP_PARAMSETTING_DEFAULT    = 0,         /**< use default values */
+   SCIP_PARAMSETTING_OFF        = 1,         /**< turn off */
+   SCIP_PARAMSETTING_FAST       = 2,         /**< set to fast settings */
+   SCIP_PARAMSETTING_AGGRESSIVE = 3          /**< set to aggressive settings */
+};
+typedef enum SCIP_ParamSetting SCIP_PARAMSETTING;
 
 typedef struct SCIP_Param SCIP_PARAM;             /**< single parameter */
 typedef struct SCIP_ParamData SCIP_PARAMDATA;     /**< locally defined parameter specific data */
