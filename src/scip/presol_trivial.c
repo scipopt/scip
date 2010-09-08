@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.38 2010/06/19 11:24:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.39 2010/09/08 02:10:30 bzfwinkm Exp $"
 
 /**@file   presol_trivial.c
  * @ingroup PRESOLVERS
@@ -179,7 +179,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
          {
             SCIP_Real fixval;
 
+#if 0            
             fixval = SCIPselectSimpleValue(lb - SCIPepsilon(scip), ub + SCIPepsilon(scip), MAXDNOM);
+#else
+            fixval = (lb + ub)/2;
+#endif
             SCIPdebugMessage("fixing continuous variable <%s>[%.17f,%.17f] to %.17f\n", 
                SCIPvarGetName(vars[v]), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, vars[v], fixval, &infeasible, &fixed) );
