@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.26 2010/01/04 20:35:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.27 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   type_var.h
  * @ingroup TYPEDEFINITIONS
@@ -91,14 +91,32 @@ typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem *
 typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
 
 
+/** copies variable data of source SCIP variable to target SCIP variable
+ *
+ *  This method should copy the variable data of the source SCIP and create a target variable data for target variable.
+ *
+ *  input:
+ *  - scip            : target SCIP data structure
+ *  - sourcescip      : source SCIP main data structure
+ *  - sourcevar       : variable of the source SCIP
+ *  - sourcedata      : variable data of the source variable which should get copied
+ *  - targetvar       : variable of the (targert) SCIP (targetvar is the copy of sourcevar)
+ *  - targetdata      : pointer to store created copy of the variable data for the (target) SCIP
+ *
+ *  output:
+ *  - success         : pointer to store whether the copying was successful or not 
+ */
+#define SCIP_DECL_VARCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_VAR* sourcevar, SCIP_VARDATA* sourcedata, \
+      SCIP_VAR* targetvar, SCIP_VARDATA** targetdata, SCIP_Bool* success)
+
 /** frees user data of original variable (called when the original variable is freed)
  *
  *  This method should free the user data of the original variable.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    var             : original variable the data to free is belonging to
- *    vardata         : pointer to the user variable data to free
+ *  - scip            : SCIP main data structure
+ *  - var             : original variable the data to free is belonging to
+ *  - vardata         : pointer to the user variable data to free
  */
 #define SCIP_DECL_VARDELORIG(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* var, SCIP_VARDATA** vardata)
 
@@ -114,11 +132,11 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *  memory location.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sourcevar       : original variable
- *    sourcedata      : source variable data to transform
- *    targetvar       : transformed variable
- *    targetdata      : pointer to store created transformed variable data
+ *  - scip            : SCIP main data structure
+ *  - sourcevar       : original variable
+ *  - sourcedata      : source variable data to transform
+ *  - targetvar       : transformed variable
+ *  - targetdata      : pointer to store created transformed variable data
  */
 #define SCIP_DECL_VARTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* sourcevar, SCIP_VARDATA* sourcedata, SCIP_VAR* targetvar, SCIP_VARDATA** targetdata)
 
@@ -129,9 +147,9 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *  user data of the transformed variable, that was created in the VARTRANS method.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    var             : transformed variable the data to free is belonging to
- *    vardata         : pointer to the user variable data to free
+ *  - scip            : SCIP main data structure
+ *  - var             : transformed variable the data to free is belonging to
+ *  - vardata         : pointer to the user variable data to free
  */
 #define SCIP_DECL_VARDELTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* var, SCIP_VARDATA** vardata)
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.17 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.18 2010/09/08 22:16:36 bzfheinz Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -164,7 +164,13 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip, FALSE) );
+   success = TRUE;
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip, FALSE, &success) );
+   if( !success )
+   {
+      SCIPwarningMessage("failed to copy some active variables to subSCIP, continue anyway\n");
+   }
+
    /* copy as many constraints as possible */
    success = TRUE;
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, heurdata->var_scip2subscip, NULL, FALSE, &success) );

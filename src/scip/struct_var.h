@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.54 2010/03/16 16:40:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.55 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -219,6 +219,7 @@ struct SCIP_Var
       SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
    char*                 name;               /**< name of the variable */
+   SCIP_DECL_VARCOPY     ((*varcopy));       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans));      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans));   /**< frees user data of transformed variable */

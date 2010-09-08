@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.64 2010/09/06 16:10:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.65 2010/09/08 22:16:36 bzfheinz Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -148,7 +148,8 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-   SCIP_Bool             global              /**< create a global or a local copy? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool*            success             /**< pointer to store if the copying was successfully */
    );
 
 /** adds coefficient to linear constraint (if it is not zero) */

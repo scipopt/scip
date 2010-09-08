@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.26 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.27 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -324,7 +324,7 @@ SCIP_RETCODE getVariable(
    SCIPdebugMessage("parse variable\n");
    
    /* parse the variable */
-   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, &success) );
+   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &success) );
    
    if( !success )
    {

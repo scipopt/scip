@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.77 2010/09/08 19:31:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.78 2010/09/08 22:16:36 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -385,7 +385,7 @@ SCIP_RETCODE createCoveringProblem(
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPvarGetName(vars[i]));
       SCIP_CALL( SCIPcreateVar(coveringscip, &coveringvars[i], name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
-            TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       assert(coveringvars[i] != NULL);      
       SCIP_CALL( SCIPaddVar(coveringscip, coveringvars[i]) );
    }

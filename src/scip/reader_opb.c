@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.56 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.57 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -782,7 +782,7 @@ SCIP_RETCODE createVariable(
    SCIPdebugMessage("creating new variable: <%s>\n", name);
    
    SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
-         initial, removable, NULL, NULL, NULL, NULL) );
+         initial, removable, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
    *var = newvar;
    

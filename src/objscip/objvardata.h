@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.h,v 1.17 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objvardata.h,v 1.18 2010/09/08 22:16:35 bzfheinz Exp $"
 
 /**@file   objvardata.h
  * @brief  C++ wrapper for user variable data
@@ -28,12 +28,13 @@
 #include <cassert>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for user variable data */
-class ObjVardata
+class ObjVardata  : public ObjCloneable
 {
 public:
    /** default constructor */

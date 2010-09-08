@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.21 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.22 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   type_prob.h
  * @ingroup TYPEDEFINITIONS
@@ -47,7 +47,7 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
 
 /** copies user data of source scip to target scip
  *
- *  This method should free the user data of the original problem.
+ *  This method should copy the problem data of the source SCIP and create a target problem data for (target) SCIP.
  *
  *  input:
  *  - scip            : target SCIP data structure

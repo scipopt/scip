@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.124 2010/09/08 19:14:53 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.125 2010/09/08 22:16:35 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -2617,17 +2617,15 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    SCIP_VAR* resvar;
    int nvars;
    int v;
-   const char* consname;
 
    assert(success != NULL);
-
    (*success) = TRUE;
    
    sourceresvar = SCIPgetResultantAnd(sourcescip, sourcecons);
 
    /* map resultant to active variable of the target SCIP  */
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, global) );
-   
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, global, success) );
+
    /* map operand variables to active variables of the target SCIP  */
    sourcevars = SCIPgetVarsAnd(sourcescip, sourcecons);
    nvars = SCIPgetNVarsAnd(sourcescip, sourcecons);
@@ -2635,18 +2633,24 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    
-   for( v = 0; v < nvars; ++v )
+   for( v = 0; v < nvars && (*success); ++v )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, global, success) );
    }
    
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
-   
-   SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
-         initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+   if( *success )
+   {
+      const char* consname;
+
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+ 
+      /* creates and captures a and constraint */
+      SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
+            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+   }
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);

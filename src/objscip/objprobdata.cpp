@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.18 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.19 2010/09/08 22:16:35 bzfheinz Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -52,8 +52,7 @@ extern "C"
 /** copies user data if you want to copy it to a subscip, or NULL */
 static
 SCIP_DECL_PROBCOPY(probcopy)
-{
-  /*lint --e{715}*/
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sourcescip != NULL);
    assert(sourceprobdata != NULL);
@@ -67,13 +66,11 @@ SCIP_DECL_PROBCOPY(probcopy)
    if( sourceprobdata->objprobdata->iscloneable() )
    {
       scip::ObjProbData* newobjprobdata;
-      newobjprobdata = (scip::ObjProbData*) sourceprobdata->objprobdata->clone(sourcescip, NULL);
+      newobjprobdata = (scip::ObjProbData*) sourceprobdata->objprobdata->clone(sourcescip, success);
 
       *targetprobdata = new SCIP_PROBDATA;
       (*targetprobdata)->objprobdata = newobjprobdata; /*lint !e40*/
       (*targetprobdata)->deleteobject = TRUE;
-
-      *success = TRUE;
    }
 
    return SCIP_OKAY;

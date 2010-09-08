@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.16 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.17 2010/09/08 22:16:35 bzfheinz Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -48,6 +48,34 @@ struct SCIP_VarData
 
 extern "C"
 {
+/** copies variable data of source SCIP variable to target SCIP variable */
+static
+SCIP_DECL_VARCOPY(varCopyObj)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcedata != NULL);
+   assert(targetdata != NULL);
+   assert(success != NULL);
+   assert(sourcedata->objvardata != NULL);
+
+   *success = FALSE;
+
+   /* call virtual method of probdata object */
+   if( sourcedata->objvardata->iscloneable() )
+   {
+      scip::ObjVardata* newobjvardata;
+      newobjvardata = (scip::ObjVardata*) sourcedata->objvardata->clone(sourcescip, success);
+
+      *targetdata = new SCIP_VARDATA;
+      (*targetdata)->objvardata = newobjvardata; /*lint !e40*/
+      (*targetdata)->deleteobject = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees user data of original variable (called when the original variable is freed) */
 static
 SCIP_DECL_VARDELORIG(varDelorigObj)
@@ -153,7 +181,7 @@ SCIP_RETCODE SCIPcreateObjVar(
 
    /* create variable */
    SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removable, 
-         varDelorigObj, varTransObj, varDeltransObj, vardata) ); /*lint !e429*/
+         varCopyObj, varDelorigObj, varTransObj, varDeltransObj, vardata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

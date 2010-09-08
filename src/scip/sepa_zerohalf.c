@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.34 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.35 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -5063,7 +5063,7 @@ success = FALSE;
    /* create variables and set objective */ 
    /* q */
    SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->q), "q", 0.0, SCIPinfinity(auxipdata->subscip),
-         0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+         0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->q) );
    SCIP_CALL( SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING) );
    /* r */
@@ -5071,7 +5071,7 @@ success = FALSE;
    {
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "r_colsind%d(rcols%d)", j, mod2data->colsind[j]);
       SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->r[j]), varname, 0.0, SCIPinfinity(auxipdata->subscip),
-            0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->r[j]) );
       SCIP_CALL( SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING) );
    }
@@ -5101,7 +5101,7 @@ success = FALSE;
          objcoef = mod2data->slacks[mod2data->rowsind[i]];
       assert(!SCIPisFeasNegative(scip, objcoef));
       SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->v[i]), varname, 0.0, 1.0, objcoef,
-            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->v[i]) );
       SCIP_CALL(SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__PREFER_BRANCHING));
    }
@@ -5115,7 +5115,7 @@ success = FALSE;
       else
          objcoef = mod2data->fracsol[mod2data->colsind[j]];
       SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->y[j]), varname, 0.0, 1.0, objcoef,
-            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->y[j]) );
    }
 

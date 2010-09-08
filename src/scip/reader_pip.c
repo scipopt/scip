@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.8 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.9 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -645,7 +645,7 @@ SCIP_RETCODE getVariable(
       /* create new variable of the given name */
       SCIPdebugMessage("creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-            initial, removable, NULL, NULL, NULL, NULL) );
+            initial, removable, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, newvar) );
       *var = newvar;
 
@@ -1286,8 +1286,8 @@ SCIP_RETCODE readObjective(
 
          getLinearAndQuadraticCoefs(scip, exprtree, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
-         SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS,
-            TRUE, TRUE, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, 
+               SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
 
          if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )

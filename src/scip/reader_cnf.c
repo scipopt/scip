@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.54 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.55 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   reader_cnf.c
  * @ingroup FILEREADERS 
@@ -201,7 +201,7 @@ SCIP_RETCODE readCnf(
    {
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "x%d", v+1);
       SCIP_CALL( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
-            NULL, NULL, NULL, NULL) );
+            NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, vars[v]) );
       varsign[v] = 0;
    }

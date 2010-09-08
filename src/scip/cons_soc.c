@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.49 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.50 2010/09/08 22:16:36 bzfheinz Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -1548,11 +1548,13 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    for( i = 1; i <= N; ++i )
    {
       (void) SCIPsnprintf(varname, 255, "soc#%s_a%d", basename, i);
-      SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, 
+            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, avars[i]) );
 
       (void) SCIPsnprintf(varname, 255, "soc#%s_b%d", basename, i);
-      SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, bvars[i]) );
    }
 
@@ -1767,11 +1769,13 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
    for( i = 0; i <= N; ++i )
    {
       (void) SCIPsnprintf(varname, 255, "soc#%s_a%d", basename, i);
-      SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsLocal(cons), TRUE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &avars[i], varname, 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsLocal(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, avars[i]) );
 
       (void) SCIPsnprintf(varname, 255, "soc#%s_b%d", basename, i);
-      SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsLocal(cons), TRUE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &bvars[i], varname, 0.0, SCIPinfinity(scip), 0.0, 
+            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsLocal(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, bvars[i]) );
    }
 
@@ -2047,10 +2051,12 @@ SCIP_RETCODE presolveCreateOuterApprox(
    }
    
    if( nlhsvars == 3 || (nlhsvars == 2 && !SCIPisZero(scip, constant)) )
-   { /* a bit special case too */
+   { 
+      /* a bit special case too */
       /* for first two variables on lhs, create a new aux.var and a new SOC3 */
       (void) SCIPsnprintf(name, 255, "%s#z1", basename);
-      SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, auxvar1) );
 
       /* constraint alpha_0 (x_0+beta0)^2 + alpha_1 (x_1+beta1)^2 <= auxvar^2 */
@@ -2086,7 +2092,8 @@ SCIP_RETCODE presolveCreateOuterApprox(
    /* nlhsvars >= 4 */
    
    (void) SCIPsnprintf(name, 255, "%s#z1", basename);
-   SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0.0, SCIPinfinity(scip), 0.0,
+         SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar1) );
 
    /* approx for left half of lhs */
@@ -2096,7 +2103,8 @@ SCIP_RETCODE presolveCreateOuterApprox(
       constant, name, origcons, soc3_nr_auxvars, glineur) );
 
    (void) SCIPsnprintf(name, 255, "%s#z2", basename);
-   SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0.0, 
+         SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar2) );
 
    /* approx for right half of lhs */

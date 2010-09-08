@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.62 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.63 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -623,7 +623,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint copying method of constraint handler
  *
  *  The constraint handler can provide a copy method which copy a constraint from one SCIP data structure into a other
- *  SCIP data structure.
+ *  SCIP data structure. If a copy is created the constraint has to be captured (which usually already done due to the
+ *  creation of the constraint).
+ *
+ *  To get copy of variable in the target SCIP you should use the function SCIPgetVarCopy(). 
  *
  *  input:
  *  - scip            : target SCIP data structure

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.29 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.30 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -990,13 +990,13 @@ SCIP_RETCODE createSubscip(
 	    /* create two variables for each equation */
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq1_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
 	    ++cnt;
 	    
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
 	    ++cnt;
 	 }
@@ -1014,7 +1014,7 @@ SCIP_RETCODE createSubscip(
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ylhs_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
 	    ++cnt;
 	 }
@@ -1027,7 +1027,7 @@ SCIP_RETCODE createSubscip(
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yrhs_%d", i);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[i]), name, 0.0, 1.0-EPSILONVALUE,
-		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
 	    ++cnt;
 	 }
@@ -1059,7 +1059,7 @@ SCIP_RETCODE createSubscip(
 	 /* create alpha variables */
 	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "alpha_%d", j);
 	 SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->alpha[j]), name, -CUTCOEFBND, CUTCOEFBND, obj,
-	       SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+	       SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	 SCIP_CALL( SCIPaddVar(subscip, mipdata->alpha[j]) );
 	 ++cnt;
 
@@ -1069,13 +1069,13 @@ SCIP_RETCODE createSubscip(
 	 {
 	    /* fix fractional value to be zero for free original variables */
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 0.0, 0.0,
-		  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+		  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	 }
 	 else
 	 {
 	    /* fractional value in [0, 1) for variables with finite bounds */
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 1.0-EPSILONVALUE, 0.0,
-		  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+		  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	 }
 	 SCIP_CALL( SCIPaddVar(subscip, mipdata->fracalpha[j]) );
 	 ++cnt;
@@ -1085,7 +1085,7 @@ SCIP_RETCODE createSubscip(
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "zub_%d", j);
 	    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->z[j]), name, 0.0, 1.0-EPSILONVALUE,
-		  0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+		  0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->z[j]) );
 	    ++ucnt;
 	 }
@@ -1098,18 +1098,18 @@ SCIP_RETCODE createSubscip(
    if ( sepadata->objlone )
    {
       SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -CUTCOEFBND, CUTCOEFBND, 0.0,
-            SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
    else
    {
       SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->beta), "beta", -CUTCOEFBND, CUTCOEFBND, -1.0,
-            SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
    SCIP_CALL( SCIPaddVar(subscip, mipdata->beta) );
 
    /* create fractional variable for the rhs */
    SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracbeta), "fracbeta", 0.0, 1.0-BETAEPSILONVALUE, 0.0,
-	 SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+	 SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(subscip, mipdata->fracbeta) );
    mipdata->n += cnt + ucnt + 2;
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.55 2010/09/08 19:27:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.56 2010/09/08 22:16:36 bzfheinz Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -790,7 +790,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
       
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE) );
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE, &success) );
    }
    else
    {

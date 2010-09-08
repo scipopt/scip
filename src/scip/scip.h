@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.416 2010/09/08 15:05:41 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.417 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -277,18 +277,10 @@ SCIP_RETCODE SCIPcopyParamSettings(
    SCIP*                 targetscip          /**< target SCIP data structure */
    );
 
-/** copies a variable from source to target SCIP and captures it in target SCIP */
-extern
-SCIP_RETCODE SCIPcopyVar(
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_VAR*             sourcevar,          /**< source variable */
-   SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_Bool             global              /**< should global or local bounds be used? */
-   );
-
-/** returns the copy of a source variable in a target SCIP as given by a hashmap. Creates a copy, if not existent yet */
+/** returns the copy of a source variable in a target SCIP as given by a hash map (if not NULL) or creates a copy and
+ *  adds it to the target SCIP, if not existent yet; in case the hash map is not NULL the created variable is add; in
+ *  case ?????????????????????? and captured
+ */
 extern
 SCIP_RETCODE SCIPgetVarCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -297,20 +289,27 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables */
-   SCIP_Bool             global              /**< should global or local bounds be used? */
+   SCIP_Bool             global,             /**< should global or local bounds be used? */
+   SCIP_Bool*            success             /**< pointer to store whether the variable was successfully copied */
    );
 
-/** copies all active variables from source to target SCIP and captures it in target SCIP */
+/** copies all active variables from source SCIP and adds these variable to the target SCIP if the copy process for a
+ *  variable was successfully; in case the variable map is not NULL the mapping is added and the target variable are
+ *  captured
+ */
 extern
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
-   SCIP_Bool             global              /**< should global or local bounds be used? */
+   SCIP_Bool             global,             /**< should global or local bounds be used? */
+   SCIP_Bool*            success             /**< pointer to store whether all variables were successfully copied */
    );
 
-/** copies constraints from sourcescip to targetscip; if consmap is not NULL, the constraints will be captured in target SCIP */
+/** copies constraints from sourcescip to targetscip; if consmap is not NULL, the constraints will be captured in target
+ *  SCIP 
+ */
 extern
 SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -2260,10 +2259,11 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
-   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
-   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
-   SCIP_VARDATA*         vardata             /**< user data for this specific variable */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
+   SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 
 /** outputs the variable name to the file stream */
@@ -2310,6 +2310,7 @@ SCIP_RETCODE SCIPparseVar(
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */

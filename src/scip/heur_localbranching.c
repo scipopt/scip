@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.51 2010/09/08 19:27:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.52 2010/09/08 22:16:36 bzfheinz Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -456,6 +456,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    if ( heurdata->uselprows )
    {
+      SCIP_Bool varsuccess;
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
@@ -466,14 +467,17 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
             TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif      
+
       /* get name of the original problem and add the string "_renssub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
       
-      /* create the subproblem */
+         /* create the subproblem */
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
       
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE) );
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE, &varsuccess) );
+
+      success = success && varsuccess;
    }
    else
    {
@@ -495,7 +499,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       for (i = 0; i < nvars; ++i)
       {
 	 if ( subvars[i] != NULL )
+         {
 	    SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+         }
       }
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );

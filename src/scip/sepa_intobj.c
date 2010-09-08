@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.38 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.39 2010/09/08 22:16:37 bzfheinz Exp $"
 
 /**@file   sepa_intobj.c
  * @ingroup SEPARATORS
@@ -118,7 +118,7 @@ SCIP_RETCODE createObjRow(
       if( sepadata->objvar == NULL )
       {
          SCIP_CALL( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-               SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, sepadata->objvar) );
          SCIP_CALL( SCIPaddVarLocks(scip, sepadata->objvar, +1, +1) );
       }
