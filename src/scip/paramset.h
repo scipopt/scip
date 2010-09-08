@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.38 2010/09/04 14:38:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.39 2010/09/08 15:05:41 bzfberth Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -277,6 +277,15 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 /** sets parameter to detect feasibility fast */
 extern
 SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
+ * this function should be called by that very plugins to avoid recursion */
+extern
+SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */

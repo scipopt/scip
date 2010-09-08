@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.81 2010/09/04 14:38:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.82 2010/09/08 15:05:41 bzfberth Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2435,6 +2435,71 @@ SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
    
    return SCIP_OKAY;
 }
+
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
+ * this function should be called by that very plugins to avoid recursion */
+SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_HEUR** heurs;
+   SCIP_SEPA** sepas;
+   SCIP_PARAM* param;
+   int nheurs;
+   int nsepas;
+   int i;
+
+   heurs = SCIPgetHeurs(scip);
+   nheurs = SCIPgetNHeurs(scip);
+
+   /* disable all heuristics that use auxiliary SCIP instances */
+   for( i = 0; i < nheurs; ++i )
+   {
+      if( SCIPheurUsesSubscip(heurs[i]) )
+      {
+         const char* heurname;
+         char paramname[SCIP_MAXSTRLEN];
+
+         /* get frequency parameter of heuristic */
+         heurname = SCIPheurGetName(heurs[i]);
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
+         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+         assert(param != NULL);
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+
+         /* disable heuristic by setting frequency parameter to -1 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, -1, quiet) );
+      }
+   }
+
+   sepas = SCIPgetSepas(scip);
+   nsepas = SCIPgetNSepas(scip);
+
+   /* disable all separators that use auxiliary SCIP instances */
+   for( i = 0; i < nsepas; ++i )
+   {
+      if( SCIPsepaUsesSubscip(sepas[i]) )
+      {
+         const char* sepaname;
+         char paramname[SCIP_MAXSTRLEN];
+
+         /* get frequency parameter of separator */
+         sepaname = SCIPsepaGetName(sepas[i]);
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
+         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+         assert(param != NULL);
+         assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+
+         /* disable separator by setting frequency parameter to -1 */
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, -1, quiet) );
+      }
+   }
+      
+   return SCIP_OKAY;
+}
+
 
 /** sets heuristics to aggressive */
 SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.44 2010/09/06 16:10:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.45 2010/09/08 15:05:41 bzfberth Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -35,7 +35,7 @@
 #define SEPA_PRIORITY             -2000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
-#define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of strong CG separation rounds per node (-1: unlimited) */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.415 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.416 2010/09/08 15:05:41 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -658,6 +658,14 @@ SCIP_RETCODE SCIPresetParams(
 /** sets parameters to detect feasibility fast */
 extern
 SCIP_RETCODE SCIPsetEmphasisFeasibility(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
+ * this function should be called by that very plugins to avoid recursion */
+extern
+SCIP_RETCODE SCIPsetSubscipsOff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );

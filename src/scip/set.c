@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.244 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.245 2010/09/08 15:05:41 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1849,6 +1849,18 @@ SCIP_RETCODE SCIPsetSetEmphasisFeasibility(
    )
 {
    SCIP_CALL( SCIPparamsetSetToEmphasisFeasibility(set->paramset, set->scip, quiet) );
+   
+   return SCIP_OKAY;
+}
+
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
+ * this function should be called by that very plugins to avoid recursion */
+SCIP_RETCODE SCIPsetSetSubscipsOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToSubscipsOff(set->paramset, set->scip, quiet) );
    
    return SCIP_OKAY;
 }

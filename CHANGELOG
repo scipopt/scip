@@ -46,7 +46,7 @@ interface:
 - new method for heuristics SCIPheurSetFreq() to change the frequency of the heuristic (pub_heur.h, heur.c)
 - new method SCIPselectBranchVarPscost() in branch_pscost.{c,h}; this method selects from a given candidate array a branching variable 
   w.r.t. pseudo cost branching for relax candidates
-- new methods SCIPsetEmphasisFeasibility() which sets parameter to detect feasibility fast
+- new method SCIPsetEmphasisFeasibility() which sets parameter to detect feasibility fast
 - lpi_spx.cpp: implemented option to restore basis only after entire strong branching phase instead of after each strong branch
   (off, because it mostly appears to increase strong branching time and iterations)
 - NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into src/nlpi 
@@ -99,6 +99,7 @@ interface:
 - new methods SCIPsepaUsesSubscip(), SCIPheurUsesSubscip()
 - new methods SCIPconshdlrGetEnfoConss(), SCIPconshdlrGetNEnfoConss()
 - new method SCIPcopyProbData and SCIPprobCopyProbData() which copies the probdata from a sourcescip to a targetscip
+- new method SCIPsetSubscipsOff() which disables all plugins that uses subscips
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

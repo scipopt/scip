@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.44 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.45 2010/09/08 15:05:41 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -354,18 +354,10 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
-#if 1
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) ); 
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
+#if 1
    /* use best estimate node selection */
    SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
 

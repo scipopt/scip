@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.645 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.646 2010/09/08 15:05:41 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1761,6 +1761,21 @@ SCIP_RETCODE SCIPsetEmphasisFeasibility(
    
    return SCIP_OKAY;
 }
+
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
+ * this function should be called by that very plugins to avoid recursion */
+SCIP_RETCODE SCIPsetSubscipsOff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSubscipsOff", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPsetSetSubscipsOff(scip->set, quiet) );
+   
+   return SCIP_OKAY;
+}
+
 
 /** sets heuristic parameters to aggressive values */
 SCIP_RETCODE SCIPsetHeuristicsAggressive(
