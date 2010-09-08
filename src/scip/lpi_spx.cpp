@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.115 2010/09/08 05:51:59 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.116 2010/09/08 11:15:02 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -697,6 +697,7 @@ public:
       SPxSolver::clear();
       freePreStrongbranchingBasis();
       m_stat = NO_PROBLEM;
+      m_sense = sense();
    }
 
    bool readLP(const char* fname)
