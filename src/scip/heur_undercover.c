@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.76 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.77 2010/09/08 19:31:03 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -950,16 +950,8 @@ SCIP_RETCODE solveCoveringProblem(
 
    *success = FALSE;
 
-   /* deactivate expensive heuristics */
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/undercover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/oneopt/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/rins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(coveringscip, "separating/rapidlearning/freq", -1) );
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(coveringscip, TRUE) );
 
    /* set time and memory limit */
    SCIP_CALL( SCIPsetRealParam(coveringscip, "limits/time", timelimit) );
