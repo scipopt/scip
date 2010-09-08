@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.27 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.28 2010/09/08 19:27:47 bzfberth Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -47,6 +47,9 @@
 #define DEFAULT_NWAITINGNODES 0LL       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                */
 #define DEFAULT_SOLNUM        5         /* number of pool-solutions to be checked for flag array update        */
+#define DEFAULT_USELPROWS     TRUE      /* should subproblem be created out of the rows in the LP rows, 
+                                         * otherwise, the copy constructors of the constraints handlers are used 
+					 */
 
 
 /*
@@ -68,6 +71,7 @@ struct SCIP_HeurData
    int                   deltalength;         /**< if there are no binary variables, we need no flag array             */
    SCIP_Longint          lastnsolsfound;      /**< solutions found until the last call of DINS                         */
    int                   solnum;              /**< number of pool-solutions to be checked for flag array update        */
+   SCIP_Bool             uselprows;           /**< should subproblem be created out of the rows in the LP rows?        */
 };
 
 
@@ -75,19 +79,19 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/** creates a subproblem for subscip by fixing a number of variables */
 static
-SCIP_RETCODE createReboundedVariables(
+SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< SCIP data structure of the original problem                    */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem                          */
    SCIP_VAR**            vars,               /**< variables of the original problem                              */
    SCIP_VAR**            subvars,            /**< variables of the subproblem                                    */
    int*                  nvars,              /**< number of variables of problem and subproblem                  */
    int*                  nbinvars,           /**< number of binary variables of problem and subproblem           */
-   int*                  nintvars            /**< number of general integer variables of problem and subproblem  */
+   int*                  nintvars,           /**< number of general integer variables of problem and subproblem  */
+   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    )
 {
-   SCIP_ROW** rows;      /* original scip rows */
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Real lpsol;
@@ -103,27 +107,17 @@ SCIP_RETCODE createReboundedVariables(
    SCIP_Real* vals;
 
    int nnonz;
-   int nrows;
    int i;
    int j;
    
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( vars != NULL );
-   assert( subvars != NULL );
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(vars != NULL);
+   assert(subvars != NULL);
    
    /* get the best MIP-solution known so far */
    bestsol = SCIPgetBestSol(scip);
-   assert( bestsol != NULL );
-
-   /* create the binary variables of the subproblem */  
-   for( i = 0; i < *nbinvars; i++ )
-   {
-      SCIP_CALL( SCIPcreateVar( subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
-            SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-            SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL ) );
-      SCIP_CALL( SCIPaddVar( subscip, subvars[i] ) );
-   }
+   assert(bestsol != NULL);
 
    /* create the rebounded general integer variables of the subproblem */
    for( i = *nbinvars; i < *nbinvars + *nintvars; i++ )
@@ -167,66 +161,60 @@ SCIP_RETCODE createReboundedVariables(
                lb = mipsol;
          }
 
-         /* create rebounded variable */
-         SCIP_CALL( SCIPcreateVar( subscip, &subvars[i], SCIPvarGetName(vars[i]), lb, ub, 
-               SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), 
-               SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL ) );
+         /* perform the bound change */
+         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
       }
       else
       {
-         /* hard fixing for general integer variables with abs(mipsol-lpsol) < 0.5:
-          * create variable fixed to mipsol value */
-         SCIP_CALL( SCIPcreateVar( subscip, &subvars[i], SCIPvarGetName(vars[i]), mipsol, mipsol, 
-               SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), 
-               SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL ) );
+         /* hard fixing for general integer variables with abs(mipsol-lpsol) < 0.5 */
+         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], mipsol) );
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], mipsol) );
+         
       }
-      SCIP_CALL( SCIPaddVar( subscip, subvars[i] ) );
+   }
+   
+   if( uselprows )
+   {
+      SCIP_ROW** rows;                          /* original scip rows                         */
+      int nrows;
+     
+      /* get the rows and their number */
+      SCIP_CALL( SCIPgetLPRowsData( scip, &rows, &nrows ) ); 
+   
+      /* copy all rows to linear constraints */
+      for( i = 0; i < nrows; i++ )
+      {
+         /* ignore rows that are only locally valid */
+         if( SCIProwIsLocal(rows[i]) )
+            continue;
+   
+         /* get the row's data */
+         constant = SCIProwGetConstant(rows[i]);
+         lhs = SCIProwGetLhs(rows[i]) - constant;
+         rhs = SCIProwGetRhs(rows[i]) - constant;
+         vals = SCIProwGetVals(rows[i]);
+         nnonz = SCIProwGetNNonz(rows[i]);
+         cols = SCIProwGetCols(rows[i]);
+      
+         assert( lhs <= rhs );
+      
+         /* allocate memory array to be filled with the corresponding subproblem variables */
+         SCIP_CALL( SCIPallocBufferArray( subscip, &consvars, nnonz ) );
+         for( j = 0; j < nnonz; j++ ) 
+            consvars[j] = subvars [ SCIPvarGetProbindex( SCIPcolGetVar(cols[j]) ) ];
+
+         /* create a new linear constraint and add it to the subproblem */
+         SCIP_CALL( SCIPcreateConsLinear( subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE ) );
+         SCIP_CALL( SCIPaddCons( subscip, cons ) );
+         SCIP_CALL( SCIPreleaseCons( subscip, &cons ) );
+      
+         /* free temporary memory */
+         SCIPfreeBufferArray( subscip, &consvars );
+      }
    }
 
-   /* create the continuous variables of the subproblem */  
-   for( i = *nbinvars + *nintvars; i < *nvars; i++ )
-   {
-      SCIP_CALL( SCIPcreateVar( subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
-            SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-            SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL ) );
-      SCIP_CALL( SCIPaddVar( subscip, subvars[i] ) );
-   }
-   
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData( scip, &rows, &nrows ) ); 
-   
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-   
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-      
-      assert( lhs <= rhs );
-      
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray( subscip, &consvars, nnonz ) );
-      for( j = 0; j < nnonz; j++ ) 
-         consvars[j] = subvars [ SCIPvarGetProbindex( SCIPcolGetVar(cols[j]) ) ];
-
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear( subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE ) );
-      SCIP_CALL( SCIPaddCons( subscip, cons ) );
-      SCIP_CALL( SCIPreleaseCons( subscip, &cons ) );
-      
-      /* free temporary memory */
-      SCIPfreeBufferArray( subscip, &consvars );
-   }
-   
    return SCIP_OKAY;
 }
 
@@ -462,13 +450,13 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP* subscip;                            /* the subproblem created by DINS                               */
    SCIP_VAR** subvars;                       /* subproblem's variables                                       */
    SCIP_VAR** vars;                          /* varibales of the original problem                            */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to subSCIP variables */    
    SCIP_SOL* bestsol;                        /* best solution known so far                                   */
    SCIP_SOL** sols;                          /* list of known solutions                                      */
 
    SCIP_Bool* fixed;                         /* fixing flag array                                            */
    SCIP_Bool* delta;                         /* flag array if variable value changed during solution process */
 
-   char probname[SCIP_MAXSTRLEN];
 
    SCIP_Longint maxnnodes;                   /* maximum number of subnodes                                   */
    SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                        */
@@ -557,16 +545,23 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( SCIPisStopped(scip) )
      return SCIP_OKAY;
 
+   /* initialize the subproblem */  
+   SCIP_CALL( SCIPcreate(&subscip) );
+
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    assert(vars != NULL || nvars == 0);
-   
-   /* get name of the original problem and add the string "_dinssub" */
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip));
 
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPallocBufferArray( scip, &subvars, nvars ) ); 
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   
    success = FALSE;
+   if( heurdata->uselprows )
+   {
+      char probname[SCIP_MAXSTRLEN];
+
+      /* copy all plugins */
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
@@ -575,12 +570,30 @@ SCIP_DECL_HEUREXEC(heurExecDins)
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
+
+      /* get name of the original problem and add the string "_renssub" */
+      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
+      
+      /* create the subproblem */
+      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+      
+      /* copy all variables */
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, &success) );
+      SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
+   }
    
-   SCIP_CALL( SCIPallocBufferArray( scip, &subvars, nvars ) ); 
-   SCIP_CALL( SCIPcreateProb( subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL ) );
+   for( i = 0; i < nvars; i++ )
+     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+   
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
    
    /* create variables and rebound them if their bounds differ by more than 0.5 */
-   SCIP_CALL( createReboundedVariables(scip, subscip, vars, subvars, &nvars, &nbinvars, &nintvars) );
+   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, &nvars, &nbinvars, &nintvars, heurdata->uselprows) );
    SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n", 
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip) );
 
@@ -598,40 +611,26 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* disable heuristics which aim to feasibility instead of optimality */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/octane/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/objpscostdiving/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rootsoldiving/freq", -1) );
-
-   /* disable cut separation in sub problem */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
-   
-   /* use inference branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-
-   /* use best estimate node selection */
-   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
+   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
+
+   /* use best estimate node selection */
+   if( SCIPfindNodesel(scip, "estimate") != NULL )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
+   }
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(scip, "inference") != NULL )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+   }
 
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
@@ -808,30 +807,34 @@ SCIP_RETCODE SCIPincludeHeurDins(
          heurdata ) );
 
    /* add DINS primal heuristic parameters */
-   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/dins/nodesofs",
+   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/"HEUR_NAME"/nodesofs",
          "number of nodes added to the contingent of the total nodes",
          &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0LL, SCIP_LONGINT_MAX, NULL, NULL ) );
-   SCIP_CALL( SCIPaddRealParam( scip, "heuristics/dins/nodesquot",
+   SCIP_CALL( SCIPaddRealParam( scip, "heuristics/"HEUR_NAME"/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/dins/minnodes",
+   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/"HEUR_NAME"/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, FALSE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL ) );
-   SCIP_CALL( SCIPaddIntParam( scip, "heuristics/dins/solnum",
+   SCIP_CALL( SCIPaddIntParam( scip, "heuristics/"HEUR_NAME"/solnum",
          "number of pool-solutions to be checked for flag array update (for hard fixing of binary variables)",
          &heurdata->solnum, FALSE, DEFAULT_SOLNUM, 1, INT_MAX, NULL, NULL ) );
-   SCIP_CALL( SCIPaddIntParam( scip, "heuristics/dins/neighborhoodsize",
+   SCIP_CALL( SCIPaddIntParam( scip, "heuristics/"HEUR_NAME"/neighborhoodsize",
          "radius (using Manhattan metric) of the incumbent's neighborhood to be searched",
          &heurdata->neighborhoodsize, FALSE, DEFAULT_NEIGHBORHOODSIZE, 1, INT_MAX, NULL, NULL ) );
-   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/dins/maxnodes",
+   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes,TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL ) );
-   SCIP_CALL( SCIPaddRealParam( scip, "heuristics/dins/minimprove",
-         "factor by which DINS should at least improve the incumbent  ",
+   SCIP_CALL( SCIPaddRealParam( scip, "heuristics/"HEUR_NAME"/minimprove",
+         "factor by which "HEUR_NAME" should at least improve the incumbent  ",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/dins/nwaitingnodes",
+   SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL ) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
+         "should subproblem be created out of the rows in the LP rows?",
+         &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

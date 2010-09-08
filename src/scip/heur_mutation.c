@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.41 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.42 2010/09/08 19:27:47 bzfberth Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -47,6 +47,9 @@
 #define DEFAULT_MINFIXINGRATE 0.8           /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NODESQUOT     0.1           /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_NWAITINGNODES 200           /* number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_USELPROWS     TRUE          /* should subproblem be created out of the rows in the LP rows, 
+                                             * otherwise, the copy constructors of the constraints handlers are used 
+					     */
 
 
 
@@ -66,6 +69,7 @@ struct SCIP_HeurData
    SCIP_Longint          usednodes;         /**< nodes already used by Mutation in earlier calls                     */
    SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem       */
    unsigned int          randseed;          /**< seed value for random number generator                              */
+   SCIP_Bool             uselprows;         /**< should subproblem be created out of the rows in the LP rows?        */
 };
 
 
@@ -81,16 +85,15 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
-   unsigned int*         randseed            /**< a seed value for the random number generator                  */
+   unsigned int*         randseed,           /**< a seed value for the random number generator                  */
+   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    )
 {
    SCIP_VAR** vars;                          /* original scip variables                    */
-   SCIP_ROW** rows;                          /* original scip rows                         */
    SCIP_SOL* sol;                            /* pool of solutions                          */
    SCIP_Bool* marked;                        /* array of markers, which variables to fixed */
    SCIP_Bool fixingmarker;                   /* which flag should label a fixed variable?  */
 
-   int nrows;
    int nvars; 
    int nbinvars;
    int nintvars;
@@ -98,21 +101,13 @@ SCIP_RETCODE createSubproblem(
    int j;
    int nmarkers;
 
-   char consname[SCIP_MAXSTRLEN];  
-
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    sol = SCIPgetBestSol(scip);
-   assert( sol != NULL );
+   assert(sol != NULL);
 
 
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nbinvars+nintvars) );
-
-   /* get name of the original problem and add the string "_mutationsub" */
-   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_mutationsub", SCIPgetProbName(scip));
-
-   /* create the subproblem */
-   SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    if( minfixingrate > 0.5 )
    {
@@ -140,77 +135,74 @@ SCIP_RETCODE createSubproblem(
    }
    assert( j == nmarkers );
 
-   /* create variables of the subproblem and fix them to solution's value*/  
+   /* change bounds of variables of the subproblem */
    for( i = 0; i < nbinvars + nintvars; i++ )
    { 
+      /* fix all randomly marked variables */
       if( marked[i] == fixingmarker )
       {
          SCIP_Real solval;
          solval = SCIPgetSolVal(scip, sol, vars[i]);
-         SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), solval,
-               solval, SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
-               SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
-      }
-      SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
-   }
-   
-   /* create continuous variables of the subproblem and leave them unfixed */  
-   for( i = nbinvars + nintvars; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
-            SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-            SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
-      SCIP_CALL( SCIPaddVar(subscip, subvars[i]) ); 
-   }
-      
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
-   
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      SCIP_CONS* cons;
-      SCIP_VAR** consvars;
-      SCIP_COL** cols;
-      SCIP_Real constant;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      SCIP_Real* vals;
-      int nnonz;
-          
-      /* ignore rows that are only locally valid */
-      if( SCIProwIsLocal(rows[i]) )
-         continue;
-      
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-      
-      assert( lhs <= rhs );
-      
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ ) 
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
 
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+         /* due to dual reductions, it may happen that the solution value is not in
+            the variable's domain anymore */
+         solval = MIN(SCIPvarGetUbGlobal(subvars[i]), solval);
+         solval = MIN(SCIPvarGetLbGlobal(subvars[i]), solval);
+         
+         /* perform the bound change */
+         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
+      }
+   }
+
+   if( uselprows )
+   {
+      SCIP_ROW** rows;                          /* original scip rows                         */
+      int nrows;
       
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &consvars);
+      /* get the rows and their number */
+      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
+   
+      /* copy all rows to linear constraints */
+      for( i = 0; i < nrows; i++ )
+      {
+         SCIP_CONS* cons;
+         SCIP_VAR** consvars;
+         SCIP_COL** cols;
+         SCIP_Real constant;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_Real* vals;
+         int nnonz;
+          
+         /* ignore rows that are only locally valid */
+         if( SCIProwIsLocal(rows[i]) )
+            continue;
+      
+         /* get the row's data */
+         constant = SCIProwGetConstant(rows[i]);
+         lhs = SCIProwGetLhs(rows[i]) - constant;
+         rhs = SCIProwGetRhs(rows[i]) - constant;
+         vals = SCIProwGetVals(rows[i]);
+         nnonz = SCIProwGetNNonz(rows[i]);
+         cols = SCIProwGetCols(rows[i]);
+      
+         assert( lhs <= rhs );
+      
+         /* allocate memory array to be filled with the corresponding subproblem variables */
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
+         for( j = 0; j < nnonz; j++ ) 
+            consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
+
+         /* create a new linear constraint and add it to the subproblem */
+         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+         SCIP_CALL( SCIPaddCons(subscip, cons) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+      
+         /* free temporary memory */
+         SCIPfreeBufferArray(scip, &consvars);
+      }
    }
 
    SCIPfreeBufferArray(scip, &marked);
@@ -344,6 +336,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP* subscip;                            /* the subproblem created by mutation                  */
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to subSCIP variables */    
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Real maxnnodesr;
@@ -422,8 +415,15 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
 
-   success = FALSE;
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
+   success = FALSE;
+   if( heurdata->uselprows )
+   {
+      char probname[SCIP_MAXSTRLEN];
+
+      /* copy all plugins */
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
@@ -432,10 +432,29 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif
    SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
+      /* get name of the original problem and add the string "_renssub" */
+      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
+      
+      /* create the subproblem */
+      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+      
+      /* copy all variables */
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, &success) );
+      SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
+   }
+   
+   for( i = 0; i < nvars; i++ )
+     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+   
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
 
-   success = FALSE;
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed) );
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed, heurdata->uselprows) );
    
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -448,34 +467,26 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* disable cut separation in sub problem */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
-   
-   /* use inference branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-
-   /* use best estimate node selection */
-   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
+   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
+
+   /* use best estimate node selection */
+   if( SCIPfindNodesel(scip, "estimate") != NULL )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
+   }
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(scip, "inference") != NULL )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+   }
 
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
@@ -575,33 +586,37 @@ SCIP_RETCODE SCIPincludeHeurMutation(
          heurdata) );
   
    /* add mutation primal heuristic parameters */ 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/nodesofs",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
          "number of nodes added to the contingent of the total nodes",
          &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/maxnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/minnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/nwaitingnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/nodesquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/minfixingrate",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
          "percentage of integer variables that have to be fixed ",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, SCIPsumepsilon(scip), 1.0-SCIPsumepsilon(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/minimprove",
-         "factor by which Mutation should at least improve the incumbent",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
+         "factor by which "HEUR_NAME" should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
+         "should subproblem be created out of the rows in the LP rows?",
+         &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
    
    return SCIP_OKAY;
 }

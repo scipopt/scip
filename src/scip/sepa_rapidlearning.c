@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.22 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.23 2010/09/08 19:27:47 bzfberth Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -318,28 +318,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", restarts) );
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
-   /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* disable cut separation in sub problem */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
-   
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparatingOff(subscip, TRUE) );
+
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
+   SCIP_CALL( SCIPsetPresolvingFast(subscip, TRUE) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -651,39 +637,39 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          sepadata) );
 
    /* add rapidlearning separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/rapidlearning/applyconflicts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyconflicts",
          "should the found conflicts be applied in the original SCIP?",
          &sepadata->applyconflicts, TRUE, DEFAULT_APPLYCONFLICTS, NULL, NULL) );
   
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/rapidlearning/applybdchgs",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applybdchgs",
          "should the found global bound deductions be applied in the original SCIP?",
          &sepadata->applybdchgs, TRUE, DEFAULT_APPLYBDCHGS, NULL, NULL) );
   
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/rapidlearning/applyinfervals",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyinfervals",
          "should the inference values be used as initialization in the original SCIP?",
          &sepadata->applyinfervals, TRUE, DEFAULT_APPLYINFERVALS, NULL, NULL) );
   
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/rapidlearning/applyprimalsol",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyprimalsol",
          "should the incumbent solution be copied to the original SCIP?",
          &sepadata->applyprimalsol, TRUE, DEFAULT_APPLYPRIMALSOL, NULL, NULL) );
   
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/rapidlearning/applysolved",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applysolved",
          "should a solved status be copied to the original SCIP?",
          &sepadata->applysolved, TRUE, DEFAULT_APPLYSOLVED, NULL, NULL) );
  
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/rapidlearning/maxnvars",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxnvars",
          "maximum problem size (variables) for which rapid learning will be called",
          &sepadata->maxnvars, TRUE, DEFAULT_MAXNVARS, 0, INT_MAX, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/rapidlearning/maxnconss",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxnconss",
          "maximum problem size (constraints) for which rapid learning will be called",
          &sepadata->maxnconss, TRUE, DEFAULT_MAXNCONSS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/rapidlearning/maxnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxnodes",
          "maximum number of nodes considered in rapid learning run",
          &sepadata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/rapidlearning/minnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/minnodes",
          "minimum number of nodes considered in rapid learning run",
          &sepadata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
 

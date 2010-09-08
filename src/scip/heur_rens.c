@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.47 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.48 2010/09/08 19:27:47 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -104,7 +104,7 @@ SCIP_RETCODE createSubproblem(
    
    fixingcounter = 0;
    
-   /* create the variables of the subproblem */
+   /* change bounds of variables of the subproblem */
    for( i = 0; i < nbinvars + nintvars; i++ )
    {
       SCIP_Real lpsolval;
@@ -157,15 +157,7 @@ SCIP_RETCODE createSubproblem(
       return SCIP_OKAY;      
    }
      
-   /* change bounds of the continuous variables of the subproblem */  
-   for( i = nbinvars + nintvars; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], SCIPvarGetLbGlobal(vars[i])) );
-      SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], SCIPvarGetUbGlobal(vars[i])) );
-   }
-
    /**@todo it might be also of interest to copy the cuts, like in case of restart (see cons_linear.c) */
-
    if( uselprows )
    {
       SCIP_ROW** rows;                          /* original scip rows                         */
@@ -297,13 +289,13 @@ SCIP_RETCODE SCIPapplyRens(
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* initializing the subproblem */  
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
+   /* initialize the subproblem */  
    SCIP_CALL( SCIPcreate(&subscip) );
+   success = FALSE;
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
-   success = FALSE;
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
 
    if( uselprows )
    {
@@ -317,6 +309,8 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
             TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
 #endif      
+      SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
+
       /* get name of the original problem and add the string "_renssub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
       
@@ -329,8 +323,8 @@ SCIP_RETCODE SCIPapplyRens(
    else
    {
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, &success) );
+      SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
    }
-   SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
    
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -703,7 +697,7 @@ SCIP_RETCODE SCIPincludeHeurRens(
          "factor by which RENS should at least improve the incumbent  ",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/rens/uselprows",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
    
