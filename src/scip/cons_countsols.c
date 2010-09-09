@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.48 2010/09/08 23:36:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.49 2010/09/09 10:11:06 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -302,58 +302,28 @@ SCIP_RETCODE checkParameters(
    int h;
    int intvalue;
    
-   SCIP_Bool boolvalue;
    SCIP_Bool valid;
 
    assert( scip != NULL );
    
    valid = TRUE;
    
-   if( SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED )
-   {
-      /* check if dual methods are turnred off */
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/dualfix/maxrounds", &intvalue) );
-      if( intvalue != 0 )
-      {
-         valid = FALSE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-            "The presolver <dualfix> is not turned off! This might cause a wrong counting process.\n");
-      }
-
-      /* check dual presolving in knapsack constraint handler */
-      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/knapsack/dualpresolving", &boolvalue) );
-      if( boolvalue )
-      {
-         valid = FALSE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-            "The dual presolving of constraints handler <knapsack> is not turned off! This might cause a wrong counting process.\n");
-      }
-
-      /* check dual presolving in linear constraint handler */
-      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/linear/dualpresolving", &boolvalue) );
-      if( boolvalue )
-      {
-         valid = FALSE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-            "The dual presolving of constraints handler <knapsack> is not turned off! This might cause a wrong counting process.\n");
-      }
-   }
-
    /* check if all heuristics are turned off */
    heuristics = SCIPgetHeurs(scip);
    nheuristics = SCIPgetNHeurs(scip);
 
-   for( h = 0; h < nheuristics; ++h )
+   for( h = 0; h < nheuristics && valid; ++h )
    {
       if( SCIPheurGetFreq(heuristics[h]) != -1 )
-      {
          valid = FALSE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-            "The heuristic <%s> is not turned off! This might cause a wrong counting process.\n", 
-            SCIPheurGetName(heuristics[h]));
-      }
    }
   
+   if( valid )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
+         "At least of heuristic is not turned off! Heuristic solutions are currently not accepted.\n");
+   }
+   
    /* check if restart is turned off */
    SCIP_CALL( SCIPgetIntParam(scip,  "presolving/maxrestarts", &intvalue) );
    if( intvalue != 0 )
@@ -362,11 +332,6 @@ SCIP_RETCODE checkParameters(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
          "The parameter <presolving/maxrestarts> is not 0 (currently %d)! This might cause a wrong counting process.\n",
          intvalue);
-   }
-   
-   if( !valid )
-   {
-      SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.\n");
    }
    
    return SCIP_OKAY;
@@ -1561,6 +1526,7 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
    {
       int v;
       
+      /* this avoids dual reductions */
       for( v = 0; v < conshdlrdata->nvars; ++v )
       {
          SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->vars[v], 
@@ -2144,25 +2110,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
    return SCIP_OKAY;
 }
 
-/** set parameters for a valid counting process */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounting)
-{  /*lint --e{715}*/
-   
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-   
-   /* set parameters for counting */
-   SCIP_CALL( SCIPsetParamsCountsols(scip) );
-   
-   /* display non default parameters */
-   SCIP_CALL( SCIPwriteParams(scip, NULL, FALSE, TRUE) );
-   
-   return SCIP_OKAY;
-}
-
-/** create the interactive shell dialogs for the counting process  */
+/** create the interactive shell dialogs for the counting process */
 static
 SCIP_RETCODE createCountDialog(
    SCIP*                    scip             /**< SCIP data structure */
@@ -2213,23 +2161,6 @@ SCIP_RETCODE createCountDialog(
    }
    assert(setmenu != NULL);
 
-   /* search for the "emphasis" sub menu to add "counting" dialog */
-   if( SCIPdialogFindEntry(setmenu, "emphasis", &submenu) != 1 )
-   {
-      SCIPerrorMessage("emphasis sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert(submenu != NULL);
-
-   /* add "counter" dialog to "set/emphasis" sub menu */
-   if( !SCIPdialogHasEntry(submenu, "counter") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisCounting, NULL, NULL,
-            "counter", "predefined parameter settings for a valid counting process", FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-   
    return SCIP_OKAY;
 }
 
@@ -2510,49 +2441,6 @@ SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/upgrade/logicor", FALSE) );
-   
-   /* turn off dual presolver */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0) );
-   
-   /* turn off knapsack dual presolving */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE) );
-   
-   /* turn off linear dual presolving */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE) );
-   
-   /* set priority for inference branching to highest possible value */
-   SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4) );
- 
-   /* set priority for depth first search to highest possible value */
-   SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
-
-   /* avoid that the ZIMPL reader transforms the problem before the problem is generated */
-   SCIP_CALL( SCIPsetBoolParam(scip, "reading/zplreader/usestartsol", FALSE) );
-
-   /* turn off all heuristics */
-   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* turn off all separation */
-   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
- 
-   /* turn off restart */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
-
-   /* unlimited propagation round in any branch and bound node */
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", -1) );
-
-   /* adjust conflict analysis for depth first search */
-   SCIP_CALL( SCIPsetIntParam(scip, "conflict/fuiplevels", 1) );        
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/dynamic", FALSE) );
-   
-   /* prefer binary variables for branching */
-   SCIP_CALL( SCIPsetBoolParam(scip, "branching/preferbinary", TRUE) );
-
-   /* turn on aggressive constraint aging */ 
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/agelimit", 1) );       
-   
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_COUNTER, TRUE) );
    return SCIP_OKAY;
 }

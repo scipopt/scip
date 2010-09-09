@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.85 2010/09/09 07:22:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.86 2010/09/09 10:11:06 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2383,7 +2383,7 @@ SCIP_RETCODE SCIPparamsetSetToDefaults(
 {
    int i;
 
-   /* set all parameters to their default values */
+   /* set all parameters to their default values */
    for( i = 0; i < paramset->nparams; ++i )
    {
       SCIP_CALL( SCIPparamSetToDefault(paramset->params[i], scip) );
@@ -2396,8 +2396,7 @@ SCIP_RETCODE SCIPparamsetSetToDefaults(
 SCIP_RETCODE SCIPparamsetSetToDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*           paramname,          /**< name of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   const char*           paramname           /**< name of the parameter */
    )
 {
    SCIP_PARAM* param;
@@ -2411,12 +2410,36 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
    }
 
    SCIP_CALL( SCIPparamSetToDefault(param, scip) );
-
-   if( !quiet )
-   {
-      SCIP_CALL( paramWrite(param, NULL, FALSE, TRUE) );
-   }
    
+   return SCIP_OKAY;
+}
+
+/** resets all parameters which start with given prefix to their default value */
+static
+SCIP_RETCODE paramsetSetDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           prefix              /**< prefix of the parameter name */
+   )
+{
+   SCIP_PARAM* param;
+   int nparams;
+   int prefixlen;
+   int p;
+
+   nparams = paramset->nparams;
+   prefixlen = strlen(prefix);
+   
+   for( p = 0; p < nparams; ++p )
+   {
+      param = paramset->params[p];
+      /* check if the prefix matches */
+      if( strncmp(param->name, prefix, prefixlen) == 0 )
+      {
+         SCIP_CALL( SCIPparamSetToDefault(param, scip) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2428,53 +2451,8 @@ SCIP_RETCODE paramsetSetHeuristicsDefault(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_HEUR** heurs;
-   char paramname[SCIP_MAXSTRLEN];
-   SCIP_PARAM* param;
-   int nheurs;
-   int i;
-
-   heurs = SCIPgetHeurs(scip);
-   nheurs = SCIPgetNHeurs(scip);
-
-   for( i = 0; i < nheurs; ++i )
-   {
-      const char* heurname;
-      heurname = SCIPheurGetName(heurs[i]);
-
-      /* reset frequency parameter of heuristic */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
-
-      /* reset (possible) parameter for LP iteration offset */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
-      {
-         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
-      }
-
-      /* reset (possible) parameter name for LP iteration quotient */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
-      {
-         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
-      }
-   }
-
-   /* reset specific parameters for RENS heuristic, if available */
-   if( SCIPfindHeur(scip, "rens") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "heuristics/rens/nodesofs", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "heuristics/rens/minfixingrate", quiet) );
-   }
-
-   /* reset specific parameters for Crossover heuristic, if available */
-   if( SCIPfindHeur(scip, "crossover") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "heuristics/crossover/nwaitingnodes", quiet) );
-   }
+   /* reset all parameter which start with "heuristics" in their name to default */
+   SCIP_CALL( paramsetSetDefault(paramset, scip, "heuristics") );
 
    return SCIP_OKAY;
 }
@@ -2632,7 +2610,9 @@ SCIP_RETCODE paramsetSetHeuristicsOff(
    return SCIP_OKAY;
 }
 
-/** resets all presolving settings that SCIPparamsetSetToPresolving{Off,Fast,Aggressive} may have set */
+/** resets all parameters that start "presolving" in their name to their default value; additionally set the parameters
+ *  which  might be previous changed by the methods SCIPparamsetSetToPresolving{Off,Fast,Aggressive} to their default value
+ */
 static
 SCIP_RETCODE paramsetSetPresolvingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2640,41 +2620,15 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_PRESOL** presols;
    SCIP_CONSHDLR** conshdlrs;
    SCIP_PARAM* param;
    char paramname[SCIP_MAXSTRLEN];
-   int npresols;
    int nconshdlrs;
    int i;
 
-   presols = SCIPgetPresols(scip);
-   npresols = SCIPgetNPresols(scip);
-
-   /* reset each individual presolver settings */
-   for( i = 0; i < npresols; ++i )
-   {
-      const char* presolname;
-      presolname = SCIPpresolGetName(presols[i]);
-
-      /* get maxrounds parameter of presolvers */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", presolname);
-
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
-   }
-
-   /* explicitely reset probing maxrounds */
-   if( SCIPfindPresol(scip, "probing") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/probing/maxuseless", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/probing/maxtotaluseless", quiet) );
-   }
-
-   /* reset restarts parameter */
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/maxrestarts", quiet) );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/restartfac", quiet) );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "presolving/restartminred", quiet) );
-
+   /* reset all parameter which start with "presolving" in their name to default */
+   SCIP_CALL( paramsetSetDefault(paramset, scip, "presolving") );
+   
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
 
@@ -2686,28 +2640,28 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
 
       /* reset maxprerounds parameter of presolvers */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", conshdlrname);
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
 
       /* reset presolpairwise parameter of constraint handler */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presolpairwise", conshdlrname);
       param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
       if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_BOOL )
       {
-         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
+         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
       }
    }
 
    /* explicitly reset parameters of knapsack constraint handler, if the constraint handler is included */
    if( SCIPfindConshdlr(scip, "knapsack") != NULL )
    {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/disaggregation", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/simplifyinequalities", quiet) );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/disaggregation") );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/knapsack/simplifyinequalities") );
    }
 
    /* explicitly reset parameters of linear constraint handler, if the constraint handler is included */
    if( SCIPfindConshdlr(scip, "linear") != NULL )
    {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/simplifyinequalities", quiet) );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/simplifyinequalities") );
    }
 
    return SCIP_OKAY;
@@ -2882,40 +2836,13 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_SEPA** sepas;
    SCIP_CONSHDLR** conshdlrs;
    char paramname[SCIP_MAXSTRLEN];
-   int nsepas;
    int nconshdlrs;
    int i;
 
-   sepas = SCIPgetSepas(scip);
-   nsepas = SCIPgetNSepas(scip);
-
-   /* reset each individual separator settings */
-   for( i = 0; i < nsepas; ++i )
-   {
-      const char* sepaname;
-      sepaname = SCIPsepaGetName(sepas[i]);
-
-      /* reset frequency parameter of separator */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
-
-      /* reset maximum number of round in root node, if available */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxroundsroot", sepaname);
-      if( SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname) != NULL )
-      {
-         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
-      }
-
-      /* reset maximum number of cuts per separation in root node, if available */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxsepacutsroot", sepaname);
-      if( SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname) != NULL )
-      {
-         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
-      }
-   }
+   /* reset all parameter which start with "separating" in their name to default */
+   SCIP_CALL( paramsetSetDefault(paramset, scip, "separating") );
 
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
@@ -2928,51 +2855,19 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
 
       /* reset separation frequency parameter of constraint handler */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", conshdlrname);
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
 
       /* reset maximal separated cuts in root node of constraint handler, if available */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxsepacutsroot", conshdlrname);
       if( SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname) != NULL )
       {
-         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname, quiet) );
+         SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, paramname) );
       }
    }
 
-   /* explicitly reset expensive heuristics settings, if available */
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/maxbounddist", quiet) );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/minorthoroot", quiet) );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/maxroundsrootsubrun", quiet) );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/maxaddrounds", quiet) );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/maxcutsroot", quiet) );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/poolfreq", quiet) );
    if( SCIPfindConshdlr(scip, "linear") != NULL )
    {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/separateall", quiet) );
-   }
-   if( SCIPfindSepa(scip, "cmir") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/cmir/maxtriesroot", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/cmir/maxfailsroot", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/cmir/maxaggrsroot", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/cmir/maxsepacutsroot", quiet) );
-   }
-   if( SCIPfindSepa(scip, "gomory") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/gomory/maxroundsroot", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/gomory/maxsepacutsroot", quiet) );
-   }
-   if( SCIPfindSepa(scip, "mcf") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/mcf/maxtestdelta", quiet) );
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/mcf/trynegscaling", quiet) );
-   }
-   if( SCIPfindSepa(scip, "redcost") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/redcost/maxbounddist", quiet) );
-   }
-   if( SCIPfindSepa(scip, "strongcg") != NULL )
-   {
-      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "separating/strongcg/maxsepacutsroot", quiet) );
+      SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip, "constraints/linear/separateall") );
    }
 
    return SCIP_OKAY;
@@ -3235,32 +3130,161 @@ SCIP_RETCODE paramsetSetSeparatingOff(
    return SCIP_OKAY;
 }
 
-/** sets parameters to detect feasibility fast */
-SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
+/** sets parameters to 
+ *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPparamsetSetToDefault())
+ *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
+ *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
+ *  - SCIP_PARAMSETTING_FEASINILITY to detect feasibility fast 
+ *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
+ *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ */
+SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   /* set heuristics aggressive */
-   SCIP_CALL( paramsetSetHeuristicsAggressive(paramset, scip, quiet) );
-
-   /* set cuts fast */
-   SCIP_CALL( paramsetSetSeparatingFast(paramset, scip, quiet) );
-   
-   /* set priority for node selection "restartdfs" to be higher as the current used one, if available */
-   if( SCIPfindNodesel(scip, "restartdfs") != NULL )
+   /* reset all parameter to default */
+   SCIP_CALL( SCIPparamsetSetToDefaults(paramset, scip) );
+      
+   switch( paramsetting )
    {
-      SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/restartdfs/stdpriority", INT_MAX/4, quiet) );
-   }
+   case SCIP_PARAMSETTING_DEFAULT:
+      /* the default values are already set */
+      break;
+
+   case SCIP_PARAMSETTING_COUNTER:
+      /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/upgrade/logicor", FALSE, quiet) );
    
+#if 0 /* dual presolving should be no issue since the countsols constraint handler adds a rounding lock to all variables */
+
+      /* turn off dual presolver */
+      SCIP_CALL( paramSetInt(scip, paramset, "presolving/dualfix/maxrounds", 0, quiet) );
+   
+      /* turn off knapsack dual presolving */
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/knapsack/dualpresolving", FALSE, quiet) );
+   
+      /* turn off linear dual presolving */
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/linear/dualpresolving", FALSE, quiet) );
+#endif
+
+      /* set priority for inference branching to highest possible value */
+      SCIP_CALL( paramSetInt(scip, paramset, "branching/inference/priority", INT_MAX/4, quiet) );
+ 
+      /* set priority for depth first search to highest possible value */
+      SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
+      
+      /* avoid that the ZIMPL reader transforms the problem before the problem is generated */
+      SCIP_CALL( paramSetBool(scip, paramset, "reading/zplreader/usestartsol", FALSE, quiet) );
+
+      /* turn off all heuristics */
+      SCIP_CALL( paramsetSetHeuristicsOff(paramset, scip, quiet) );
+
+      /* turn off all separation */
+      SCIP_CALL( paramsetSetSeparatingOff(paramset, scip, quiet) );
+      
+      /* turn off restart */
+      SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0, quiet) );
+
+      /* unlimited propagation round in any branch and bound node */
+      SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxrounds", -1, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxroundsroot", -1, quiet) );
+
+      /* adjust conflict analysis for depth first search */
+      SCIP_CALL( paramSetInt(scip, paramset, "conflict/fuiplevels", 1, quiet) );        
+      SCIP_CALL( paramSetBool(scip, paramset, "conflict/dynamic", FALSE, quiet) );
+   
+      /* prefer binary variables for branching */
+      SCIP_CALL( paramSetBool(scip, paramset, "branching/preferbinary", TRUE, quiet) );
+
+      /* turn on aggressive constraint aging */ 
+      SCIP_CALL( paramSetInt(scip, paramset, "constraints/agelimit", 1, quiet) );       
+      break;
+
+   case SCIP_PARAMSETTING_CPSOLVER:
+      /* use only first unique implication point */
+      SCIP_CALL( paramSetInt(scip, paramset, "conflict/fuiplevels", 1, quiet) );
+
+      /* conflict constraints should be subject to aging to reduce the number of stored conflicts */
+      SCIP_CALL( paramSetBool(scip, paramset, "conflict/dynamic", FALSE, quiet) );
+
+      /* perform a restart after 100 conflict analysis calls were successfully */
+      SCIP_CALL( paramSetInt(scip, paramset, "conflict/restartnum", 100, quiet) );
+
+      /* do not check pseudo solution (for performance reaseons) */
+      SCIP_CALL( paramSetBool(scip, paramset, "constraints/disableenfops", TRUE, quiet) );
+
+      /* turn of LP relaxation */
+      SCIP_CALL( paramSetInt(scip, paramset, "lp/solvefreq", -1, quiet) );
+
+
+      /* set priority for depth first search to highest possible value */
+      SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
+
+      /* turn off pseudo cost propagation  */
+      SCIP_CALL( paramSetInt(scip, paramset, "propagating/pseudoobj/freq", -1, quiet) );
+
+      break;
+
+   case SCIP_PARAMSETTING_EASYCIP:
+      /* set heuristics to fast, to avoid spending to much time for involved heuristics */
+      SCIP_CALL( paramsetSetHeuristicsFast(paramset, scip, quiet) );
+
+      /* set presolving to fast, to avoid spending to much time for involved presolving */
+      SCIP_CALL( paramsetSetPresolvingFast(paramset, scip, quiet) );
+
+      /* set separation to fast, to avoid spending to much time for involved separation */
+      SCIP_CALL( paramsetSetSeparatingFast(paramset, scip, quiet) );
+      
+      break;
+
+   case SCIP_PARAMSETTING_FEASINILITY:
+      /* set heuristics aggressive */
+      SCIP_CALL( paramsetSetHeuristicsAggressive(paramset, scip, quiet) );
+      
+      /* set cuts fast */
+      SCIP_CALL( paramsetSetSeparatingFast(paramset, scip, quiet) );
+   
+      /* set priority for node selection "restartdfs" to be higher as the current used one, if available */
+      SCIP_CALL( paramSetInt(scip, paramset, "nodeselection/restartdfs/stdpriority", INT_MAX/4, quiet) );
+      break;
+
+   case SCIP_PARAMSETTING_HARDLP:
+      /* set heuristics to fast, to avoid heuristics which solve also an LP */
+      SCIP_CALL( paramsetSetHeuristicsFast(paramset, scip, quiet) );
+
+      /* set presolving to fast, to avoid spending to much time for involved presolving */
+      SCIP_CALL( paramsetSetPresolvingFast(paramset, scip, quiet) );
+      
+      /* reduce the amount of strong branching */
+      SCIP_CALL( paramSetInt(scip, paramset, "branching/relpscost/maxreliable", 1, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "branching/relpscost/inititer", 10, quiet) );
+      
+      /* reduce the amount of separation rounds */
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/maxrounds", 1, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, "separating/maxroundsroot", 5, quiet) );
+
+      break;
+
+   case SCIP_PARAMSETTING_OPTIMALITY:
+      /* set cuts aggressive */
+      SCIP_CALL( paramsetSetSeparatingAggressive(paramset, scip, quiet) );
+      break;
+
+   default:
+      SCIPerrorMessage("the parameter setting <%d> are not allowed for emphasis call\n", paramsetting);
+      return SCIP_INVALIDCALL;
+   }  
    return SCIP_OKAY;
 }
 
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances this function should be
  *  called which solve a auxiliary SCIP instance to avoid recursion
  */
-SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
+   SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
@@ -3268,6 +3292,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
 {
    SCIP_HEUR** heurs;
    SCIP_SEPA** sepas;
+
+   char paramname[SCIP_MAXSTRLEN];
 
    int nheurs;
    int nsepas;
@@ -3280,7 +3306,15 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    for( i = 0; i < nheurs; ++i )
    {
       if( SCIPheurUsesSubscip(heurs[i]) )
-         SCIPheurSetFreq(heurs[i], -1);
+      {
+         const char* heurname;
+         heurname = SCIPheurGetName(heurs[i]);
+
+         /* get frequency parameter of heuristic */
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
+
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, -1, quiet) );
+      }
    }
 
    sepas = SCIPgetSepas(scip);
@@ -3290,9 +3324,16 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    for( i = 0; i < nsepas; ++i )
    {
       if( SCIPsepaUsesSubscip(sepas[i]) )
-         SCIPsepaSetFreq(sepas[i], -1);
-   }
+      {
+         const char* sepaname;
+         sepaname = SCIPsepaGetName(sepas[i]);
       
+         /* get frequency parameter of separator */
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, -1, quiet) );
+      }
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -3324,8 +3365,8 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
       SCIP_CALL( paramsetSetHeuristicsAggressive(paramset, scip, quiet) );
       break;
    default:
-      SCIPerrorMessage("unknown parameter setting\n");
-      SCIPABORT();
+      SCIPerrorMessage("the parameter setting <%d> are not allowed for heuristics\n", paramsetting);
+      return SCIP_INVALIDCALL;
    }
    
    return SCIP_OKAY;
@@ -3359,8 +3400,8 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
       SCIP_CALL( paramsetSetPresolvingAggressive(paramset, scip, quiet) );
       break;
    default:
-      SCIPerrorMessage("unknown parameter setting\n");
-      SCIPABORT();
+      SCIPerrorMessage("the parameter setting <%d> are not allowed for presolving\n", paramsetting);
+      return SCIP_INVALIDCALL;
    }
    
    return SCIP_OKAY;
@@ -3394,8 +3435,8 @@ SCIP_RETCODE SCIPparamsetSetSeparating(
       SCIP_CALL( paramsetSetSeparatingAggressive(paramset, scip, quiet) );
       break;
    default:
-      SCIPerrorMessage("unknown parameter setting\n");
-      SCIPABORT();
+      SCIPerrorMessage("the parameter setting <%d> are not allowed for separating\n", paramsetting);
+      return SCIP_INVALIDCALL;
    }
    
    return SCIP_OKAY;

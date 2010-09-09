@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.h,v 1.13 2010/07/21 08:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.h,v 1.14 2010/09/09 10:11:06 bzfheinz Exp $"
 
 /**@file   cons_countsols.h
  * @brief  constraint handler for counting feasible solutions
@@ -47,10 +47,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);
 
-/** set parameters for a valid counting process */
-extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounting);
-   
 /** creates the handler for countsol constraints and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeConshdlrCountsols(

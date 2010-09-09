@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.43 2010/08/30 18:51:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.44 2010/09/09 10:11:06 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -227,9 +227,29 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisFast);
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff);
 
+/** dialog execution method for the set emphasis counter command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounter);
+
+/** dialog execution method for the set emphasis cpsolver command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver);
+
+/** dialog execution method for the set emphasis easy CIP command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisEasycip);
+
 /** dialog execution method for the set emphasis feasibility command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility);
+
+/** dialog execution method for the set emphasis hard LP command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp);
+
+/** dialog execution method for the set emphasis optimality command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
 
 /** dialog execution method for the set limits objective command */
 extern

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.248 2010/09/09 07:22:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.249 2010/09/09 10:11:06 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1869,7 +1869,7 @@ SCIP_RETCODE SCIPsetResetParam(
    const char*           name                /**< name of the parameter */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToDefault(set->paramset, set->scip, name, TRUE) );
+   SCIP_CALL( SCIPparamsetSetToDefault(set->paramset, set->scip, name) );
 
    return SCIP_OKAY;
 }
@@ -1884,13 +1884,22 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
-/** sets parameters to detect feasibility fast */
-SCIP_RETCODE SCIPsetSetEmphasisFeasibility(
+/** sets parameters to 
+ *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPsetResetParams())
+ *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
+ *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
+ *  - SCIP_PARAMSETTING_FEASINILITY to detect feasibility fast 
+ *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
+ *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ */
+SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( SCIPparamsetSetToEmphasisFeasibility(set->paramset, set->scip, quiet) );
+   SCIP_CALL( SCIPparamsetSetEmphasis(set->paramset, set->scip, paramsetting, quiet) );
    
    return SCIP_OKAY;
 }

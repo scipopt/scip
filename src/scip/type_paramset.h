@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_paramset.h,v 1.18 2010/09/08 23:36:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_paramset.h,v 1.19 2010/09/09 10:11:07 bzfheinz Exp $"
 
 /**@file   type_paramset.h
  * @ingroup TYPEDEFINITIONS
@@ -48,10 +48,18 @@ typedef enum SCIP_ParamType SCIP_PARAMTYPE;
 /** possible parameter settings */
 enum SCIP_ParamSetting
 {
-   SCIP_PARAMSETTING_DEFAULT    = 0,         /**< use default values */
-   SCIP_PARAMSETTING_OFF        = 1,         /**< turn off */
-   SCIP_PARAMSETTING_FAST       = 2,         /**< set to fast settings */
-   SCIP_PARAMSETTING_AGGRESSIVE = 3          /**< set to aggressive settings */
+   SCIP_PARAMSETTING_DEFAULT     = 0,        /**< use default values */
+
+   SCIP_PARAMSETTING_AGGRESSIVE  = 1,        /**< set to aggressive settings */
+   SCIP_PARAMSETTING_FAST        = 2,        /**< set to fast settings */
+   SCIP_PARAMSETTING_OFF         = 3,        /**< turn off */
+
+   SCIP_PARAMSETTING_COUNTER     = 4,        /**< get a feasible and "fast" counting process */
+   SCIP_PARAMSETTING_CPSOLVER    = 5,        /**< get CP like search (e.g. no LP relaxation) */
+   SCIP_PARAMSETTING_EASYCIP     = 6,        /**< solve easy problems fast */
+   SCIP_PARAMSETTING_FEASINILITY = 7,        /**< detect feasibility fast */
+   SCIP_PARAMSETTING_HARDLP      = 8,        /**< be capable to handle hard LPs */
+   SCIP_PARAMSETTING_OPTIMALITY  = 9         /**< prove optimality fast */
 };
 typedef enum SCIP_ParamSetting SCIP_PARAMSETTING;
 

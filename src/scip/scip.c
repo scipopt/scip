@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.649 2010/09/09 07:22:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.650 2010/09/09 10:11:06 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1755,15 +1755,24 @@ SCIP_RETCODE SCIPresetParams(
    return SCIP_OKAY;
 }
 
-/** sets parameters to detect feasibility fast */
-SCIP_RETCODE SCIPsetEmphasisFeasibility(
+/** sets parameters to 
+ *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPresetParams())
+ *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
+ *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
+ *  - SCIP_PARAMSETTING_FEASINILITY to detect feasibility fast 
+ *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
+ *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ */
+SCIP_RETCODE SCIPsetEmphasis(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetEmphasisFeasibility", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetSetEmphasisFeasibility(scip->set, quiet) );
+   SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramsetting, quiet) );
    
    return SCIP_OKAY;
 }

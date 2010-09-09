@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.116 2010/09/08 23:36:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.117 2010/09/09 10:11:06 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1836,6 +1836,51 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set emphasis counter command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounter)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for counting problems */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_COUNTER, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set emphasis cpsolver command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for cp like search problems */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_CPSOLVER, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set emphasis easy CIP command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisEasycip)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for easy CIP problems */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_EASYCIP, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set emphasis feasibility command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
 {  /*lint --e{715}*/
@@ -1846,7 +1891,37 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
    SCIP_CALL( SCIPresetParams(scip) );
 
    /* set parameters for feasibility problems */
-   SCIP_CALL( SCIPsetEmphasisFeasibility(scip, FALSE) );
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_FEASINILITY, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set emphasis hard LP command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for problems with hard LP */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_HARDLP, FALSE) );
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set emphasis optimality command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality)
+{  /*lint --e{715}*/
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for problems to prove optimality fast */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_OPTIMALITY, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -3552,7 +3627,34 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    }
 
    /* set emphasis feasibility */
-      /* add "counter" dialog to "set/emphasis" sub menu */
+   /* add "counter" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "counter") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisCounter, NULL, NULL,
+            "counter", "predefined parameter settings for a \"feasible\" and \"fast\" counting process", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "cpsolver" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "cpsolver") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisCpsolver, NULL, NULL,
+            "cpsolver", "predefined parameter settings for CP like search", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "easycip" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "easycip") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisEasycip, NULL, NULL,
+            "easycip", "predefined parameter settings for easy problems", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "feasibility" dialog to "set/emphasis" sub menu */
    if( !SCIPdialogHasEntry(submenu, "feasibility") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisFeasibility, NULL, NULL,
@@ -3561,6 +3663,23 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* add "hardlp" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "hardlp") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisHardlp, NULL, NULL,
+            "hardlp", "predefined parameter settings for problems with a hard LP", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "optimality" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "optimality") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisOptimality, NULL, NULL,
+            "optimality", "predefined parameter settings for proving optimality fast", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
 
    return SCIP_OKAY;
 }

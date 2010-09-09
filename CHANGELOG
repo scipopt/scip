@@ -43,7 +43,9 @@ interface:
 - new method for heuristics SCIPheurSetFreq() to change the frequency of the heuristic (pub_heur.h, heur.c)
 - new method SCIPselectBranchVarPscost() in branch_pscost.{c,h}; this method selects from a given candidate array a branching variable 
   w.r.t. pseudo cost branching for relax candidates
-- new method SCIPsetEmphasisFeasibility() which sets parameter to detect feasibility fast
+- new method SCIPsetEmphasis() which sets parameter to detect feasibility fast, handle hard LP, solves easy CIPs fast,
+  behaves like a CP solver, set parameter for a valid counting process; the desired behavior is triggered 
+  via a parameter of the function
 - lpi_spx.cpp: implemented option to restore basis only after entire strong branching phase instead of after each strong branch
   (off, because it mostly appears to increase strong branching time and iterations)
 - NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into src/nlpi 
@@ -197,6 +199,7 @@ features:
 - the LP reader (.lp files) and MPS reader can now read semicontinuous variables, they are handled by creating bound disjunction constraints
 - in case of using SCIPwriteTransProblem() the currently (locally) valid problem is written 
   this now also includes the local constraints
+- added new dialog for setting the SCIP parameters for hardlp, optimality, easy CIP, CP like search
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
