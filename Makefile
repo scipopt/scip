@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.371 2010/09/06 17:48:14 bzfviger Exp $
+# $Id: Makefile,v 1.372 2010/09/09 09:11:42 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -676,9 +676,6 @@ lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
 			do \
-			if test $$i = "src/scip/event.c" ; then \
-			  echo "!!!! skipping event.c because of flexelint bug !!!!"; \
-			  continue; fi; \
 			echo $$i; \
 			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
