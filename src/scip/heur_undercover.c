@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.80 2010/09/09 10:11:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.81 2010/09/09 10:20:23 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -39,6 +39,7 @@
 #define HEUR_FREQOFS            0
 #define HEUR_MAXDEPTH           -1
 #define HEUR_TIMING             SCIP_HEURTIMING_AFTERNODE
+#define HEUR_USESSUBSCIP        TRUE         /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_FIXINGALTS      "li"         /**< sequence of fixing values used: 'l'p relaxation, 'n'lp relaxation, 'i'ncumbent solution */
 #define DEFAULT_MAXNODES        (SCIP_Longint)500/**< maximum number of nodes to regard in the subproblem */
@@ -2532,7 +2533,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, TRUE,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyUndercover,
          heurFreeUndercover, heurInitUndercover, heurExitUndercover, 
          heurInitsolUndercover, heurExitsolUndercover, heurExecUndercover,
