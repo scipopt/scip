@@ -376,4 +376,5 @@ $(LIBOBJDIR)/objscip/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvar
  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
- src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h
+ src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
+ src/objscip/objcloneable.h
