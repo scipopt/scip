@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.652 2010/09/09 16:20:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.653 2010/09/09 18:14:27 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1259,6 +1259,12 @@ SCIP_RETCODE SCIPcopyConss(
       for( c = 0; c < nsourceconss; ++c )
       {
          assert(sourceconss[c] != NULL);
+         if( !SCIPconsIsActive(sourceconss[c]) || SCIPconsIsDeleted(sourceconss[c]) )  /* @todo FIXME ???????????? it seems that sourceconss can contain inactive or deleted constraints, so the following two assert fail from time to time; for now, we just do not copy those constraints */
+         {
+            *success = FALSE;
+            SCIPdebugMessage("did not copy inactive or deleted constraint %s\n", SCIPconsGetName(sourceconss[c]));
+            continue;
+         }
          assert(SCIPconsIsActive(sourceconss[c]));
          assert(!SCIPconsIsDeleted(sourceconss[c]));
          assert(!global || !SCIPconsIsLocal(sourceconss[c]));
