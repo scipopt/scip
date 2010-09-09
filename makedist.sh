@@ -11,6 +11,13 @@ then
     mkdir release
 fi
 rm -f release/$NAME.tgz
+
+# Before we create a tarball change the director and file right in a command way
+echo adjust file modes
+find ./ -type d -exec chmod 750 {} \;
+find ./ -type f -exec chmod 640 {} \;
+find ./ -name "*.sh" -exec chmod 750 {} \;
+
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
 --exclude="*cvs*" \
@@ -31,7 +38,6 @@ $NAME/check/checkcount.sh $NAME/check/evalcheckcount.sh $NAME/check/checkcount.a
 $NAME/check/shortmiplib.test $NAME/check/shortmiplib.solu \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
-$NAME/settings/cuts/*.set $NAME/settings/emphasis/*.set $NAME/settings/heuristics/*.set $NAME/settings/presolving/*.set \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
