@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.84 2010/09/08 23:36:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.85 2010/09/09 07:22:21 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -3257,8 +3257,9 @@ SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
    return SCIP_OKAY;
 }
 
-/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
- * this function should be called by that very plugins to avoid recursion */
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances this function should be
+ *  called which solve a auxiliary SCIP instance to avoid recursion
+ */
 SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3295,7 +3296,12 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    return SCIP_OKAY;
 }
 
-/** sets heuristics parameters */
+/** sets heuristic parameters values to 
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
+ */
 SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3325,7 +3331,12 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    return SCIP_OKAY;
 }
 
-/** sets heuristics parameters */
+/** sets presolving parameters to 
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters 
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all presolving
+ */
 SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3355,7 +3366,12 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    return SCIP_OKAY;
 }
 
-/** sets heuristics parameters */
+/** sets separating parameters to 
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters 
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all separating
+ */
 SCIP_RETCODE SCIPparamsetSetSeparating(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */

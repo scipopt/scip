@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.40 2010/09/08 23:36:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.41 2010/09/09 07:22:21 bzfheinz Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -283,8 +283,9 @@ SCIP_RETCODE SCIPparamsetSetToEmphasisFeasibility(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
- * this function should be called by that very plugins to avoid recursion */
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances this function should be
+ *  called which solve a auxiliary SCIP instance to avoid recursion
+ */
 extern
 SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -292,7 +293,12 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets heuristics parameters */
+/** sets heuristic parameters values to 
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
+ */
 extern
 SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -301,7 +307,12 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets presolving parameters */
+/** sets presolving parameters to 
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters 
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all presolving
+ */
 extern
 SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -310,7 +321,12 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets separating parameters */
+/** sets separating parameters to 
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters 
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all separating
+ */
 extern
 SCIP_RETCODE SCIPparamsetSetSeparating(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
