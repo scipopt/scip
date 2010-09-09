@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.70 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.71 2010/09/09 09:29:27 bzfviger Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -912,7 +912,7 @@ SCIP_Real SCIPeventGetOldobj(
    {
       SCIPerrorMessage("event is not an objective value change event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventobjchg.oldobj;
@@ -929,7 +929,7 @@ SCIP_Real SCIPeventGetNewobj(
    {
       SCIPerrorMessage("event is not an objective value change event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventobjchg.newobj;
@@ -994,7 +994,7 @@ SCIP_NODE* SCIPeventGetNode(
    {
       SCIPerrorMessage("event is neither node nor LP event\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    return event->data.node;
@@ -1012,7 +1012,7 @@ SCIP_RETCODE SCIPeventChgNode(
    {
       SCIPerrorMessage("event is neither node nor LP event\n");
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    event->data.node = node;
@@ -1031,7 +1031,7 @@ SCIP_SOL* SCIPeventGetSol(
    {
       SCIPerrorMessage("event is not a primal solution event\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
    
    return event->data.sol;
@@ -1049,7 +1049,7 @@ SCIP_RETCODE SCIPeventChgSol(
    {
       SCIPerrorMessage("event is not a primal solution event\n");
       SCIPABORT();
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    event->data.sol = sol;
@@ -1068,7 +1068,7 @@ SCIP_Real SCIPeventGetHoleLeft(
    {
       SCIPerrorMessage("event is not a hole added or removed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventhole.left;
@@ -1085,7 +1085,7 @@ SCIP_Real SCIPeventGetHoleRight(
    {
       SCIPerrorMessage("event is not a hole added or removed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventhole.right;
@@ -1117,7 +1117,7 @@ SCIP_ROW* SCIPeventGetRow(
       default:
          SCIPerrorMessage("event does not belong to a row\n");
          SCIPABORT();
-         return NULL;
+         return NULL;  /*lint !e527*/
    }
 }
 
@@ -1132,7 +1132,7 @@ SCIP_COL* SCIPeventGetRowCol(
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
-      return NULL;
+      return NULL;  /*lint !e527*/
    }
 
    return event->data.eventrowcoefchanged.col;
@@ -1149,7 +1149,7 @@ SCIP_Real SCIPeventGetRowOldCoefVal(
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventrowcoefchanged.oldval;
@@ -1166,7 +1166,7 @@ SCIP_Real SCIPeventGetRowNewCoefVal(
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventrowcoefchanged.newval;
@@ -1183,7 +1183,7 @@ SCIP_Real SCIPeventGetRowOldConstVal(
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventrowconstchanged.oldval;
@@ -1200,7 +1200,7 @@ SCIP_Real SCIPeventGetRowNewConstVal(
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventrowconstchanged.newval;
@@ -1217,7 +1217,7 @@ SCIP_SIDETYPE SCIPeventGetRowSide(
    {
       SCIPerrorMessage("event is not a row side changed event\n");
       SCIPABORT();
-      return SCIP_SIDETYPE_LEFT;
+      return SCIP_SIDETYPE_LEFT;  /*lint !e527*/
    }
 
    return event->data.eventrowsidechanged.side;
@@ -1234,7 +1234,7 @@ SCIP_Real SCIPeventGetRowOldSideVal(
    {
       SCIPerrorMessage("event is not a row side changed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventrowsidechanged.oldval;
@@ -1251,7 +1251,7 @@ SCIP_Real SCIPeventGetRowNewSideVal(
    {
       SCIPerrorMessage("event is not a row side changed event\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID;  /*lint !e527*/
    }
 
    return event->data.eventrowsidechanged.newval;

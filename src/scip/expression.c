@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.11 2010/09/08 14:14:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.12 2010/09/09 09:29:27 bzfviger Exp $"
 
 /**@file   scip/expression.c
  * @brief  more methods for expressions and expression trees
@@ -104,7 +104,7 @@ SCIP_RETCODE SCIPexprtreeAddVars(
 
    /* append vars to tree->vars array */
    SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, tree->nvars + nvars) );
-   BMScopyMemoryArray(&tree->vars[tree->nvars], vars, nvars);  /* lint !e866*/
+   BMScopyMemoryArray(&tree->vars[tree->nvars], vars, nvars);  /*lint !e866*/
    tree->nvars += nvars;
 
    return SCIP_OKAY;
@@ -201,8 +201,8 @@ SCIP_RETCODE SCIPexprtreeEvalIntLocalBounds(
    for( i = 0; i < tree->nvars; ++i )
    {
       SCIPintervalSetBounds(&varvals[i],
-         -infty2infty(SCIPinfinity(scip), infinity, -SCIPvarGetLbLocal(tree->vars[i])),  /*lint --e{666}*/
-          infty2infty(SCIPinfinity(scip), infinity,  SCIPvarGetUbLocal(tree->vars[i]))); /*lint --e{666}*/
+         -infty2infty(SCIPinfinity(scip), infinity, -SCIPvarGetLbLocal(tree->vars[i])),  /*lint !e666*/
+          infty2infty(SCIPinfinity(scip), infinity,  SCIPvarGetUbLocal(tree->vars[i]))); /*lint !e666*/
    }
 
    SCIP_CALL( SCIPexprEvalInt(tree->root, infinity, varvals, tree->params, val) );
