@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.377 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.378 2010/09/09 11:49:11 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -10454,7 +10454,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, global, success) );
    }
 
-   if( !(*success) )
+   if( (*success) )
    {
       if( !SCIPisInfinity(scip, -lhs) )
          lhs -= constant;
