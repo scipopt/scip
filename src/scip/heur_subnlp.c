@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.21 2010/09/09 18:25:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.22 2010/09/09 19:58:12 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -34,6 +34,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_knapsack.h"
+#include "scip/cons_bounddisjunction.h"
 
 #define HEUR_NAME             "subnlp"
 #define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
@@ -76,6 +77,7 @@ struct SCIP_HeurData
    char*                 nlpoptfile;         /**< name of NLP solver specific option file */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in subSCIP */
+   SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
                          
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
@@ -806,7 +808,7 @@ static
 SCIP_RETCODE solveSubNLP(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
-   SCIP_RESULT*          result,             /**< buffer to store result                                         */
+   SCIP_RESULT*          result,             /**< buffer to store result, DIDNOTFIND, FOUNDSOL, or CUTOFF        */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
@@ -852,6 +854,9 @@ SCIP_RETCODE solveSubNLP(
    {
       /* presolve probably found the subproblem infeasible */
       SCIPdebugMessage("SCIP returned from presolve in stage solved with status %d\n", SCIPgetStatus(heurdata->subscip));
+      /* if presolve found subproblem infeasible, report this to caller by setting *result to cutoff */
+      if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
+         *result = SCIP_CUTOFF;
       goto CLEANUP;
    }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
@@ -904,8 +909,15 @@ SCIP_RETCODE solveSubNLP(
    /* we should either have variables, or the problem was trivial, in which case it should have been solved */
    assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
 
-   /* @todo if subscip is infeasible here, one should use this information to cutoff current fixation in main scip */
-   
+   /* if subscip is infeasible here, we signal this to the caller */
+   if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
+   {
+      assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
+      *result = SCIP_CUTOFF;
+      goto CLEANUP;
+   }
+
+   /* if we stopped for some other reason, or there is no NLP, we also stop */
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED || !SCIPisNLPConstructed(heurdata->subscip) )
       goto CLEANUP;
 
@@ -1086,6 +1098,162 @@ SCIP_RETCODE solveSubNLP(
    return SCIP_OKAY;
 }
 
+
+/** adds a set covering or bound disjunction constraint to the original problem */
+static
+SCIP_RETCODE forbidFixation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   SCIP_VAR** subvars;
+   int nsubvars;
+   int nsubbinvars;
+   int nsubintvars;
+   SCIP_VAR* var;
+   SCIP_VAR* subvar;
+   SCIP_CONS* cons;
+   SCIP_VAR** consvars;
+   int nconsvars;
+   char name[SCIP_MAXSTRLEN];
+   int i;
+   SCIP_Real fixval;
+
+   assert(scip != NULL);
+   
+   SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, &nsubbinvars, &nsubintvars, NULL, NULL) );
+   assert(nsubvars == heurdata->nsubvars);
+
+   if( nsubbinvars == 0 && nsubintvars == 0 )
+   {
+      /* If we did not fix any discrete variables but found the "sub"CIP infeasible, then also the CIP is infeasible.
+       * Why was that not detected? */
+      SCIPwarningMessage("heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
+      return SCIP_OKAY;
+   }
+   
+   /* initialize */
+   cons = NULL;
+   consvars = NULL;
+
+   /* create constraint name */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "subnlp_cutoff");
+
+   /* if all discrete variables in the CIP are binary, then we create a set covering constraint
+    * sum_{x_i fixed at 0} x_i + sum_{x_i fixed at 1} ~x_i >= 1 */
+   if( nsubintvars == 0 )
+   {
+      /* allocate memory for constraint variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsubbinvars) );
+
+      /* get fixations of discrete variables 
+       * to be sure, we take the values that were put into the subCIP before */
+      nconsvars = 0;
+      for( i = nsubbinvars - 1; i >= 0; --i )
+      {
+         subvar = subvars[i];
+         assert(SCIPvarGetProbindex(subvar) == i);
+
+         var = heurdata->var_subscip2scip[i];
+         assert(var != NULL || SCIPisEQ(scip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar))); /* otherwise we should have exited in the variable fixation loop */
+         if( var == NULL )
+            continue;
+         
+         fixval = SCIPvarGetLbGlobal(subvar);
+         assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in subSCIP */
+         assert(fixval == 0.0 || fixval == 1.0); /* we have rounded values before fixing */
+         
+         if( fixval == 0.0 )
+         {
+            /* variable fixed at lower bound */
+            consvars[i] = var;
+         }
+         else
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, var, &consvars[i]) );
+         }
+         
+         ++nconsvars;
+      }
+      
+      /* create conflict constraint */
+      SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, name, nconsvars, consvars,
+            FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   }
+   else
+   {
+      /* if there are also integer variable, then create a bound disjunction constraint
+       * x_1 >= fixval_1 + 1 || x_1 <= fixval_1 - 1 || x_2 >= fixval_2 + 1 || x_2 <= fixval_2 - 1 || ...
+       */
+      SCIP_BOUNDTYPE* boundtypes;
+      SCIP_Real* bounds;
+      
+      /* allocate memory for constraint variables, boundtypes, and bounds
+       * (there should be at most two literals for each integer variable) */
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars,   nsubbinvars + 2*nsubintvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nsubbinvars + 2*nsubintvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &bounds,     nsubbinvars + 2*nsubintvars) );
+      
+      /* get fixations of discrete variables 
+       * to be sure, we take the values that were put into the subCIP before */
+      nconsvars = 0;
+      for( i = nsubbinvars + nsubintvars - 1; i >= 0; --i )
+      {
+         subvar = subvars[i];
+         assert(SCIPvarGetProbindex(subvar) == i);
+
+         var = heurdata->var_subscip2scip[i];
+         assert(var != NULL || SCIPisEQ(scip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar))); /* otherwise we should have exited in the variable fixation loop */
+         
+         if( var == NULL )
+            continue;
+         
+         fixval = SCIPvarGetLbGlobal(subvar);
+         assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in subSCIP */
+         assert((int)fixval == fixval); /* we have rounded values before fixing */
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */ 
+         
+         if( SCIPvarGetLbGlobal(var) < fixval )
+         {
+            /* literal x_i <= fixval-1 */
+            boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
+            bounds[nconsvars]     = fixval - 1.0;
+            ++nconsvars;
+         }
+         
+         if( SCIPvarGetUbGlobal(var) > fixval )
+         {
+            /* literal x_i >= fixval+1 */
+            boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
+            bounds[nconsvars]     = fixval - 1.0;
+            ++nconsvars;
+         }
+      }
+      
+      /* create conflict constraint */
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, nconsvars, consvars, boundtypes, bounds,
+            FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+      
+      SCIPfreeBufferArray(scip, &boundtypes);
+      SCIPfreeBufferArray(scip, &bounds);
+   }
+
+   /* add and release constraint if created successfully */
+   if( cons != NULL )
+   {
+      SCIPdebugMessage("adding constraint to forbid fixation in main problem\n");
+      /* SCIPdebug( SCIPprintCons(scip, cons, NULL) ); */
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* free memory */
+   SCIPfreeBufferArrayNull(scip, &consvars);
+
+   return SCIP_OKAY;
+}
+
+
 /** main procedure of the subNLP heuristic */
 SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
@@ -1221,9 +1389,20 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    if( heurdata->subscip == NULL )
    {
       /* something horrible must have happened that we decided to give up completely on this heuristic */
+      *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
    assert(!SCIPisTransformed(heurdata->subscip));
+   
+   if( *result == SCIP_CUTOFF && SCIPgetNPricers(scip) == 0 )
+   {
+      /* if the subNLP turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
+      if( heurdata->forbidfixings )
+      {
+         SCIP_CALL( forbidFixation(scip, heurdata) );
+      }
+      *result = SCIP_DIDNOTFIND;
+   }
    
    /* undo fixing of discrete variables in subSCIP */
    if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
@@ -1603,6 +1782,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          "limit on number of presolve rounds in subSCIP (-1 for unlimited, 0 for no presolve)",
          &heurdata->maxpresolverounds, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/forbidfixings",
+         "whether to add constraints that forbid specific fixings that turned out to be infeasible",
+         &heurdata->forbidfixings, FALSE, TRUE, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 
