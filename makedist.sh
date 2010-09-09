@@ -65,10 +65,10 @@ $NAME/examples/Queens/* \
 $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
 $NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
-$NAME/examples/SamplePricer/Makefile $NAME/examples/SamplePricer/INSTALL \
-$NAME/examples/SamplePricer/doc/* \
-$NAME/examples/SamplePricer/src/depend.* \
-$NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \
+$NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
+$NAME/examples/Binpacking/doc/* \
+$NAME/examples/Binpacking/src/depend.* \
+$NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
