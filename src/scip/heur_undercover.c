@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.81 2010/09/09 10:20:23 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.82 2010/09/09 14:00:42 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -955,8 +955,8 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_CALL( SCIPsetSubscipsOff(coveringscip, TRUE) );
 
    /* set time and memory limit */
-   SCIP_CALL( SCIPsetRealParam(coveringscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(coveringscip, "limits/memory", memorylimit) );
+   timelimit = SCIPgetTimeLimit(coveringscip);
+   memorylimit = SCIPgetMemoryLimit(coveringscip);
 
    /* do not abort on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(coveringscip, "misc/catchctrlc", FALSE) );
@@ -1515,10 +1515,10 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
    
    /* set time, memory and node limits */
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
+   SCIPsetTimeLimit(subscip, timelimit);
+   SCIPsetMemoryLimit(subscip, memorylimit);
+   SCIPsetNodeLimit(subscip, nodelimit);
+   SCIPsetStallnodeLimit(subscip, nstallnodes);
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -2477,7 +2477,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    }
 
    /* only call heuristics if we have enough time left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit = SCIPgetTimeLimit(scip);
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    if( timelimit <= 2*MINTIMELEFT )
@@ -2487,7 +2487,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    }
 
    /* only call heuristics if we have enough memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if( !SCIPisInfinity(scip, memorylimit) )
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( memorylimit <= 0.0 )

@@ -102,6 +102,11 @@ interface:
 - new method SCIPsepaSetFreq() to set the calling frequency of a separator
 - added new callback "SCIP_DECL_VARCOPY" for variables data to be able to copy (see type_var.h)
 - added new parameter "varcopy" to SCIPcreateVar() to add the function for copying variable data
+- new methods SCIPsetXxxLimit() Xxx = {Node, Time, Stallnode, Gap, Absgap, Memory, Restart, Solution, Bestsolution} which can
+  be used to set these limits
+- new methods SCIPgetXxxLimit() Xxx = {Node, Time, Stallnode, Gap, Absgap, Memory, Restart, Solution, Bestsolution} which can
+  be used to get these limits
+- new methods SCIPgetMaxsolutionStored() and SCIPsetMaxsolutionStored() to set and get the size of the solution pool
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)

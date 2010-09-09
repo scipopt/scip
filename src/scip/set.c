@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.249 2010/09/09 10:11:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.250 2010/09/09 14:00:43 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1882,6 +1882,107 @@ SCIP_RETCODE SCIPsetResetParams(
    SCIP_CALL( SCIPparamsetSetToDefaults(set->paramset, set->scip) );
 
    return SCIP_OKAY;
+}
+
+/** set the time limit to given value */
+void SCIPsetSetTimeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< time limit to set */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_time = limit;
+}
+
+/** set the memory limit to the given value */
+void SCIPsetSetMemoryLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< memory limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_memory = limit;
+}
+
+
+/** set the gap limit to the given value */
+void SCIPsetSetGapLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< gap limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_gap = limit;
+}
+
+/** set the absolute gap limit to the given value */
+void SCIPsetSetAbsgapLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< absolute gap limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, 0.0));
+   set->limit_absgap = limit;
+}
+
+/** set the node limit to the given value */
+void SCIPsetSetNodeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Longint          limit               /**< node limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, -1LL));
+   set->limit_nodes = limit;
+}
+
+/** set the stall node limit to the given value */
+void SCIPsetSetStallnodeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Longint          limit               /**< stall node limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, -1LL));
+   set->limit_stallnodes = limit;
+}
+
+/** set the solution limit to the given value */
+void SCIPsetSetSolutionLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< solution limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, -1));
+   set->limit_solutions = limit;
+}
+
+/** set the best solution limit to the given value */
+void SCIPsetSetBestsolutionLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< best solution limit */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, -1));
+   set->limit_bestsol = limit;
+}
+
+/** set the maximum number of solution stored */
+void SCIPsetSetMaxsolutionStored(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< maximum number of solution stored */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, -1));
+   set->limit_maxsol = limit;
+}
+   
+/** set the maximum number of restarts until the solution process is stopped (-1: no limit) */
+void SCIPsetSetRestartLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< maximum number of solution stored */
+   )
+{
+   assert(SCIPsetIsGE(set, limit, -1));
+   set->limit_restarts = limit;
 }
 
 /** sets parameters to 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.24 2010/09/08 23:36:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.25 2010/09/09 14:00:43 bzfheinz Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -250,10 +250,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       return SCIP_OKAY; 
 
    /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit = SCIPgetTimeLimit(scip);
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit < 10.0 || memorylimit <= 0.0 )
@@ -312,10 +312,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    restarts = 0;
    restartnum = 1000;
 
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) ); 
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", restarts) );
+   SCIPsetNodeLimit(subscip, nodelimit/5); 
+   SCIPsetTimeLimit(subscip, timelimit);
+   SCIPsetMemoryLimit(subscip, memorylimit);
+   SCIPsetRestartLimit(subscip, restarts);
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
@@ -414,7 +414,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
 
       /* set node limit to 100% */
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) ); 
+      nodelimit = SCIPgetNodeLimit(subscip);
 
 #ifdef NDEBUG
       retstat = SCIPsolve(subscip);

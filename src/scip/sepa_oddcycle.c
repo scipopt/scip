@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.4 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.5 2010/09/09 14:00:43 bzfheinz Exp $"
 
 /**@file   sepa_oddcycle.c
  * @brief  oddcycle separator
@@ -1306,7 +1306,7 @@ SCIP_RETCODE checkArraySizesHeur(
       additional += MIN(graph->m+graph->n-*size,*size)*(int)sizeof(**targetAdjArray);
    }
 
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
 
@@ -1332,7 +1332,7 @@ SCIP_RETCODE checkArraySizesHeur(
    }
 
    /* if memorylimit is exceeded free all data and exit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( memorylimit <= 0.0 )
@@ -2936,7 +2936,7 @@ SCIP_RETCODE checkArraySizesGLS(
    additional = (MIN(maxarcs, 2*(*arraysize))-(*arraysize))*(int)sizeof(*(graph->head));
    additional += (MIN(maxarcs, 2*(*arraysize))-(*arraysize))*(int)sizeof(*(graph->weight));
    
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
 
@@ -2955,7 +2955,7 @@ SCIP_RETCODE checkArraySizesGLS(
    SCIP_CALL( SCIPreallocBufferArray(scip, &(graph->weight), MIN(maxarcs, (*arraysize))) );
 
    /* if memorylimit exceeded, leave the separator */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( memorylimit <= 0.0 )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.50 2010/09/08 23:36:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.51 2010/09/09 14:00:42 bzfheinz Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -346,10 +346,11 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
  
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) ); 
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) ); 
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+   SCIPsetStallnodeLimit(subscip, nstallnodes); 
+   SCIPsetNodeLimit(subscip, maxnodes); 
+   SCIPsetTimeLimit(subscip, timelimit);
+   SCIPsetMemoryLimit(subscip, memorylimit);
+
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -450,12 +451,12 @@ SCIP_RETCODE SCIPapplyRens(
 #if 0
    {
    char fname[SCIP_MAXSTRLEN];
-   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "test/%s.lp",SCIPgetProbName(scip));
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "test/%s.lp", SCIPgetProbName(scip));
+   SCIPsetNodeLimit(subscip, 1);
    SCIP_CALL( SCIPsolve(subscip) );
    SCIP_CALL( SCIPwriteMIP(subscip,fname,TRUE,TRUE) );
    SCIPmessagePrintInfo("wrote RENS-subMIP to file <%s>\n",fname);
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes ) );
+   SCIPsetNodeLimit(subscip, maxnodes);
    }
 #endif
 
@@ -626,10 +627,10 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    }
 
    /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit = SCIPgetTimeLimit(scip);
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit < 10.0 || memorylimit <= 0.0 )

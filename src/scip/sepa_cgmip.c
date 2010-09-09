@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.30 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.31 2010/09/09 14:00:43 bzfheinz Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -1434,7 +1434,7 @@ SCIP_RETCODE subscipSetParams(
 
    /* set other limits of subscip */
    /* SCIP_CALL( SCIPsetObjlimit(subscip, mipdata->objectivelimit) ); */
-   /* SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", sepadata->sollimit) ); */
+   /* SCIPsetSolutionLimit(subscip, sepadata->sollimit); */
 
    /* do not abort subscip on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -1519,14 +1519,14 @@ SCIP_RETCODE solveSubscip(
    subscip = mipdata->subscip;
 
    /* determine timelimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit = SCIPgetTimeLimit(scip);
    if ( sepadata->timelimit < timelimit )
       timelimit = sepadata->timelimit;
    if ( ! SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    if ( timelimit > 0.0 )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+      SCIPsetTimeLimit(subscip, timelimit);
    }
    else
    {
@@ -1535,14 +1535,14 @@ SCIP_RETCODE solveSubscip(
    }
 
    /* determine memorylimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   memorylimit = SCIPgetMemoryLimit(scip);
    if ( sepadata->memorylimit < memorylimit )
       memorylimit = sepadata->memorylimit;
    if ( ! SCIPisInfinity(scip, memorylimit) )
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if ( memorylimit > 0.0 )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+      SCIPsetMemoryLimit(subscip, memorylimit);
    }
    else
    {
@@ -1551,7 +1551,7 @@ SCIP_RETCODE solveSubscip(
    }
 
    /* set nodelimit */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", sepadata->nodelimit) );
+   SCIPsetNodeLimit(subscip, sepadata->nodelimit);
 
    /* check whether we want a complete solve */
    if ( ! sepadata->earlyterm )
@@ -1582,9 +1582,9 @@ SCIP_RETCODE solveSubscip(
       /* otherwise we want a heuristic solve */
 
       /* -> solve until first solution is found */
-      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
+      SCIPsetBestsolutionLimit(subscip, 1);
       SCIP_CALL( SCIPsolve(subscip) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
+      SCIPsetBestsolutionLimit(subscip, -1);
 
       status = SCIPgetStatus(subscip);
 
@@ -1608,9 +1608,9 @@ SCIP_RETCODE solveSubscip(
       {
          SCIPdebugMessage("Continue solving separation problem ...\n");
 
-         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
+         SCIPsetStallnodeLimit(subscip, STALLNODELIMIT);
          SCIP_CALL( SCIPsolve(subscip) );
-         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1LL) );
+         SCIPsetStallnodeLimit(subscip, -1LL);
 
          status = SCIPgetStatus(subscip);
          assert( status != SCIP_STATUS_BESTSOLLIMIT );

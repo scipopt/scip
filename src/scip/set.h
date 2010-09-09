@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.128 2010/09/09 10:11:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.129 2010/09/09 14:00:43 bzfheinz Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -318,6 +318,76 @@ SCIP_RETCODE SCIPsetResetParam(
 extern
 SCIP_RETCODE SCIPsetResetParams(
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** set the time limit to given value */
+extern
+void SCIPsetSetTimeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< time limit to set */
+   );
+
+/** set the memory limit to the given value */
+extern 
+void SCIPsetSetMemoryLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< memory limit */
+   );
+
+/** set the gap limit to the given value */
+extern 
+void SCIPsetSetGapLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< gap limit */
+   );
+
+/** set the absolute gap limit to the given value */
+extern 
+void SCIPsetSetAbsgapLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             limit               /**< absolute gap limit */
+   );
+
+/** set the node limit to the given value */
+extern 
+void SCIPsetSetNodeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Longint          limit               /**< node limit */
+   );
+
+/** set the stall node limit to the given value */
+extern 
+void SCIPsetSetStallnodeLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Longint          limit               /**< stall node limit */
+   );
+
+/** set the solution limit to the given value */
+extern 
+void SCIPsetSetSolutionLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< solution limit */
+   );
+
+/** set the best solution limit to the given value */
+extern 
+void SCIPsetSetBestsolutionLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< best solution limit */
+   );
+
+/** set the maximum number of solution stored */
+extern 
+void SCIPsetSetMaxsolutionStored(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< maximum number of solution stored */
+   );
+   
+/** set the maximum number of restarts until the solution process is stopped (-1: no limit) */
+extern 
+void SCIPsetSetRestartLimit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   limit               /**< maximum number of solution stored */
    );
 
 /** sets parameters to 
