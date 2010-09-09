@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.651 2010/09/09 14:00:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.652 2010/09/09 16:20:43 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1995,7 +1995,7 @@ SCIP_RETCODE SCIPsetPresolving(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetPresolving", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   SCIP_CALL( SCIPsetSetSeparating(scip->set, paramsetting, quiet) );
+   SCIP_CALL( SCIPsetSetPresolving(scip->set, paramsetting, quiet) );
 
    return SCIP_OKAY;
 }
