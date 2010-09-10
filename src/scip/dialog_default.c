@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.117 2010/09/09 10:11:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.118 2010/09/10 15:00:48 bzfwolte Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1891,7 +1891,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
    SCIP_CALL( SCIPresetParams(scip) );
 
    /* set parameters for feasibility problems */
-   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_FEASINILITY, FALSE) );
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMSETTING_FEASIBILITY, FALSE) );
    
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_paramset.h,v 1.19 2010/09/09 10:11:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_paramset.h,v 1.20 2010/09/10 15:00:48 bzfwolte Exp $"
 
 /**@file   type_paramset.h
  * @ingroup TYPEDEFINITIONS
@@ -57,7 +57,7 @@ enum SCIP_ParamSetting
    SCIP_PARAMSETTING_COUNTER     = 4,        /**< get a feasible and "fast" counting process */
    SCIP_PARAMSETTING_CPSOLVER    = 5,        /**< get CP like search (e.g. no LP relaxation) */
    SCIP_PARAMSETTING_EASYCIP     = 6,        /**< solve easy problems fast */
-   SCIP_PARAMSETTING_FEASINILITY = 7,        /**< detect feasibility fast */
+   SCIP_PARAMSETTING_FEASIBILITY = 7,        /**< detect feasibility fast */
    SCIP_PARAMSETTING_HARDLP      = 8,        /**< be capable to handle hard LPs */
    SCIP_PARAMSETTING_OPTIMALITY  = 9         /**< prove optimality fast */
 };

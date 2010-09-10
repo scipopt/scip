@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.42 2010/09/09 10:11:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.43 2010/09/10 15:00:48 bzfwolte Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -279,7 +279,7 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
  *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
  *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
  *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMSETTING_FEASINILITY to detect feasibility fast 
+ *  - SCIP_PARAMSETTING_FEASIBILITY to detect feasibility fast 
  *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
  *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
  */

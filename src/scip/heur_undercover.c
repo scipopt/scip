@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.83 2010/09/10 13:58:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.84 2010/09/10 15:00:48 bzfwolte Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1507,7 +1507,7 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* set the parameters such that good solutions are found fast */
-   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMSETTING_FEASINILITY, TRUE) );
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMSETTING_FEASIBILITY, TRUE) );
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
  

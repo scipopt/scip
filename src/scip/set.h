@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.130 2010/09/10 09:15:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.131 2010/09/10 15:00:48 bzfwolte Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -396,7 +396,7 @@ void SCIPsetSetRestartLimit(
  *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
  *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
  *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMSETTING_FEASINILITY to detect feasibility fast 
+ *  - SCIP_PARAMSETTING_FEASIBILITY to detect feasibility fast 
  *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
  *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
  */
