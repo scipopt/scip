@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.46 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.47 2010/09/10 09:20:04 bzfwolte Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -318,8 +318,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
-#if 0
-   /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
+#if 0 /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
    if( ncols >= 50*nrows )
       return SCIP_OKAY;
    if( ncols >= 5*nrows )

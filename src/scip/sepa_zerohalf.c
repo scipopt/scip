@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.36 2010/09/09 14:00:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.37 2010/09/10 09:20:04 bzfwolte Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -1670,11 +1670,12 @@ SCIP_RETCODE getRelevantColumns(
          {
             /* column is declared to be irrelevant because its lower bound is negative, 
              * variable would have to be shifted, complemented or decomposed. 
-             * ????? TODO: consider general integers with negative lower bounds
-             * transform to positive representation  and propagate through corresponding rows.
-             * In the current version, redundant inequalities might be considered as cut candidates
-             * and valid cuts might be missed, but no wrong cuts should be produced (due to SCIPcalcMIR)
-             * this leads to performance detoriation in the (rare) case of general integers with negative bounds.
+             */
+            /**@todo consider general integers with negative lower bounds and transform to positive representation
+             * and propagate through corresponding rows. In the current version, redundant inequalities might be 
+             * considered as cut candidates and valid cuts might be missed, but no wrong cuts should be produced 
+             * (due to SCIPcalcMIR) this leads to performance detoriation in the (rare) case of general integers 
+             * with negative bounds.
              */
             lpdata->subproblemsindexofcol[j] = IRRELEVANT;
             lpdata->rcolsindexofcol[j] = IRRELEVANT;      
@@ -2251,7 +2252,7 @@ SCIP_RETCODE getRelevantRows(
                      rhsisinfinity = TRUE;
                   else
                   {
-                     /* ???????? QUEST: why is REALABS correct? */ 
+                     /**@todo check whether REALABS is really correct */
                      if ( bestbndtype == -1 )
                         rhs -= intscalarrightrow * REALABS(valscurrentrow[c]) * bestbndsol;
                      else
@@ -2282,7 +2283,7 @@ SCIP_RETCODE getRelevantRows(
                      lhsisinfinity = TRUE;
                   else
                   {
-                     /* ???????? QUEST: why is REALABS correct? */ 
+                     /**@todo check whether REALABS is really correct */
                      if( bestbndtype == -1 )
                        lhs -= intscalarleftrow * REALABS(valscurrentrow[c]) * bestbndsol;
                      else
@@ -2337,8 +2338,8 @@ SCIP_RETCODE getRelevantRows(
                lpdata->rrowsindexofleftrow[r] = problem->nrrows;
               
                problem->rrows[problem->nrrows] = r;
-               /* ???????? QUEST: why not -lhs? do we store the -ax <= -lhs or ax >= lhs? 
-                * is this handled correctly above while updating lhs? 
+               /**@todo check whether lhs is correct, or whether this must be -lhs. do we store the 
+                * -ax <= -lhs constraint or the ax >= lhs constraint? Is this handled correctly above while updating lhs? 
                 */ 
                problem->rrowsrhs[problem->nrrows] = lhs;
                problem->rrowsslack[problem->nrrows] = lhsslack;            
@@ -2347,8 +2348,8 @@ SCIP_RETCODE getRelevantRows(
             {
                lpdata->rrowsindexofleftrow[r] = lhsisinfinity ? NONEXISTENT_ROW : SLACK_GREATER_THAN_MAXSLACK;
             }
-            /* ???????? QUEST: if !lhsinfinity AND !rhsinfinity: then only one of them is stored currently, 
-             * because problem->nrrows++ is only called once; if this is intended, why do we allocate 2 * lpdata->nrows 
+            /**@todo check the following: if !lhsinfinity AND !rhsinfinity: then only one of them is stored currently, 
+             * because problem->nrrows++ is only called once. if this is intended, why do we allocate 2 * lpdata->nrows 
              * entries for rrows?
              */
             if( !rhsisinfinity && rhsslackislessequalmaxslack )
@@ -2966,25 +2967,6 @@ SCIP_RETCODE addZerohalfCutToLP(
    if( !cutdata->isfeasviolated || !cutdata->success )
       return SCIP_OKAY;
 
-
-   /* check if zerohalf cut is not violated */ 
-/*   //   if( !cutdata->isfeasviolated ) ????????????????????????????????
-   //   {
-   //     if( !SCIPisFeasZero(scip, cutdata->rhs - cutdata->activity)
-   //       && SCIPisLE(scip, cutdata->activity, cutdata->rhs) )
-   //     {      
-   //       SCIPerrorMessage("Zerohalf cut is NOT violated! (act: %e, rhs: %e, viol: %e)\n",
-   //         cutdata->activity, cutdata->rhs, cutdata->violation);      
-   //       assert(FALSE); */ /* zerohalf cut is not violated! */
-/*   //       return SCIP_ERROR;
-   //     }
-   //     else
-   //     {      
-   //       ZEROHALFstatisticsMessage("Zerohalf cut is not violated because of numerics\n");
-   //       return SCIP_OKAY;
-   //     }
-   //   }
-*/
    /* check if norm was not calculated correctly */
    if( !SCIPisPositive(scip, cutdata->norm) )
    {
@@ -3891,25 +3873,25 @@ SCIP_RETCODE decomposeProblem(
    ZEROHALF_LPDATA*      lpdata              /**< data of current LP relaxation */  
    )
 {
-   /* ????????? TODO: this is buggy in different ways.
-    * 1. it might happen that we ignore a variable of the current row and of all other rows. 
-    * thus at the end, the variable will not occure in any subproblem. BUT, currently we do not update 
-    * lpdata->subproblemsindexofcol[lppos] and lpdata->rcolsindexofcol[lppos] accordingly. 
-    * consequently, it might happen that lpdata->rcolsindexofcol[lppos] > problem->nrcols, with 
-    * with problem being the subproblem still associated to our column. therefore, a corresponding assert 
-    * assert(rcolsindex < problem->nrcols) in storeMod2Data() is violated 
-    * [e.g., for IP/atamtuerk/mik/unbounded/mik.250-1-50.3.mps.gz].
-    * we could recognize whether a variable is never added to a subproblem and update its data structures,
-    * but i'm not sure whether this will be correct, i.e., whether it is really ok to ignore some variables here.
-    * 2. in particular, it seems like that this method has not been adapted to that we can deal with 
-    * continuous variables now. (see the below todo of Manuel)
-    * 3. in case we end up with only one subproblem, we use the old problem. but in this case we do not update 
-    * the problem data and hence it is not consistent with the lpdata anymore where we might have set some 
-    * rows to be irrelevant.  
-    *
-    * therefore, we will currently do nothing in here.
-    */
-#if 0 
+   
+#if 0 /**@todo this is buggy in different ways.
+       * 1. it might happen that we ignore a variable of the current row and of all other rows. 
+       * thus at the end, the variable will not occure in any subproblem. BUT, currently we do not update 
+       * lpdata->subproblemsindexofcol[lppos] and lpdata->rcolsindexofcol[lppos] accordingly. 
+       * consequently, it might happen that lpdata->rcolsindexofcol[lppos] > problem->nrcols, with 
+       * with problem being the subproblem still associated to our column. therefore, a corresponding assert 
+       * assert(rcolsindex < problem->nrcols) in storeMod2Data() is violated 
+       * [e.g., for IP/atamtuerk/mik/unbounded/mik.250-1-50.3.mps.gz].
+       * we could recognize whether a variable is never added to a subproblem and update its data structures,
+       * but i'm not sure whether this will be correct, i.e., whether it is really ok to ignore some variables here.
+       * 2. in particular, it seems like that this method has not been adapted to that we can deal with 
+       * continuous variables now. (see the below todo of Manuel)
+       * 3. in case we end up with only one subproblem, we use the old problem. but in this case we do not update 
+       * the problem data and hence it is not consistent with the lpdata anymore where we might have set some 
+       * rows to be irrelevant.  
+       *
+       * therefore, we will currently do nothing in here.
+       */
    BITARRAY              processedrows;
    int                   nprocessedrows;
    int                   processedrowsbitarraysize;
@@ -4073,7 +4055,7 @@ SCIP_RETCODE decomposeProblem(
                      (lpdata->rcolsindexofcol[lppos] == LP_SOL_EQUALS_ODD_LB
                         || lpdata->rcolsindexofcol[lppos] == LP_SOL_EQUALS_ODD_UB));
 
-               /* // ???????????? TODO (?) analog fuer kont. Vars (?) */
+               /**@todo analogue for continuous variables? */
 
                continue;  /* col is not relevant */
             }
@@ -6378,9 +6360,6 @@ SCIP_RETCODE separateByGaussHeuristics(
    identsubmatrixsize = 0;
     
    /* apply gaussian elimination mod 2 */
-#ifdef SCIP_DEBUG
-   debugPrintMod2Data(scip, lpdata, mod2data, FALSE); /* // ???????????????????????????? DEBUG */
-#endif
 
    /* choose pivot col */
    for( pivotcol = 0; pivotcol < mod2data->ncolsind; ++pivotcol )
@@ -6442,31 +6421,18 @@ SCIP_RETCODE separateByGaussHeuristics(
       identsubmatrixsize++;
    }
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("after gaussian steps:\n"); /* // ?????????????DEBUG */
-   debugPrintMod2Data(scip, lpdata, mod2data, FALSE); /* // ???????????????????????????? DEBUG */
-#endif
    /* remove (generated) column singletons */
    SCIP_CALL(preprocessColumns(scip, sepadata, lpdata, mod2data,
          0, mod2data->ncolsind, FALSE, TRUE, TRUE));
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("w/o col singletons:\n"); /* // ?????????????DEBUG */
-   debugPrintMod2Data(scip, lpdata, mod2data, FALSE); /* // ???????????????????????????? DEBUG */
-#endif
    /* remove zero rows and rows with slack > maxslack */
    SCIP_CALL(preprocessRows(scip, sepadata, lpdata, mod2data,
          0, mod2data->nrowsind, TRUE, TRUE, FALSE));
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("w/o slack>maxslack rowsl:\n"); /* // ?????????????DEBUG */
-   debugPrintMod2Data(scip, lpdata, mod2data, FALSE); /* // ???????????????????????????? DEBUG */
-#endif
    /* search for zerohalf cuts */ 
    SCIP_CALL(preprocessTrivialZerohalfCuts(scip, sepadata, lpdata, mod2data,
          0, mod2data->nrowsind, normtype, maxsepacuts, maxcuts, nsepacuts,
          nzerohalfcuts, zerohalfcuts, varsolvals, HEURISTICSGAUSS, result));
-
   
    return SCIP_OKAY;  
 }
@@ -7454,8 +7420,8 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          &(sepadata->maxncalls), TRUE, DEFAULT_MAXNCALLS, -1LL, SCIP_LONGINT_MAX, NULL, NULL));
    SCIP_CALL(SCIPaddBoolParam(scip,
          "separating/zerohalf/relaxcontvars", 
-         "should continuous variables be relaxed by adding variable bounds?", /* // ????????? TODO */
-         &(sepadata->relaxcontvars), TRUE, DEFAULT_RELAXCONTVARS, NULL, NULL));
+         "should continuous variables be relaxed by adding variable bounds?", 
+         &(sepadata->relaxcontvars), TRUE, DEFAULT_RELAXCONTVARS, NULL, NULL)); /**@todo support this */
    SCIP_CALL(SCIPaddBoolParam(scip,
          "separating/zerohalf/scalefraccoeffs",
          "should rows be scaled to make fractional coefficients integer?",  

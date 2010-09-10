@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.380 2010/09/10 09:15:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.381 2010/09/10 09:20:04 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -7475,11 +7475,9 @@ SCIP_RETCODE preprocessConstraintPairs(
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
 
-#if 0
-      SCIPdebugMessage("preprocess linear constraint pair <%s>[chgd:%d, upgd:%d] and <%s>[chgd:%d, upgd:%d]\n",
+      /* SCIPdebugMessage("preprocess linear constraint pair <%s>[chgd:%d, upgd:%d] and <%s>[chgd:%d, upgd:%d]\n",
          SCIPconsGetName(cons0), cons0changed, cons0upgraded,
-         SCIPconsGetName(cons1), consdata1->changed, consdata1->upgraded);
-#endif
+         SCIPconsGetName(cons1), consdata1->changed, consdata1->upgraded); */
 
       /* if both constraints didn't change since last pair processing, we can ignore the pair */
       if( !cons0changed && !consdata1->changed )
