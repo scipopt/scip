@@ -511,6 +511,9 @@ INPUT                  = . \
                          ../src/nlpi \
                          ../src/objscip \
                          ../src/tclique \
+                         ../src/dijkstra \
+                         ../src/rectlu \
+                         ../src/xml \
                          ../src/blockmemshell
                          
 # This tag can be used to specify the character encoding of the source files that 
