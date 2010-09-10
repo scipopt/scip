@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.85 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.86 2010/09/10 21:22:11 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -2324,7 +2324,7 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
     * however, if we want to use nlp fixing values exclusively and no nlp solver is available,
     * heuristic will not run anyway
     */
-   if( strcmp(heurdata->fixingalts, "n") != 0 || SCIPgetNNlpis(scip) > 0 )
+   if( strcmp(heurdata->fixingalts, "n") != 0 && SCIPgetNNlpis(scip) > 0 )
       SCIPmarkRequireNLP(scip);
 
    return SCIP_OKAY;
