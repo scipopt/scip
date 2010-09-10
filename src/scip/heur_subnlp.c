@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.25 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.26 2010/09/10 20:14:05 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -276,6 +276,8 @@ SCIP_RETCODE freeSubSCIP(
       {
          SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, -1) );
       }
+      
+      SCIP_CALL( SCIPreleaseVar(heurdata->subscip, &subvar) );
    }
 
    /* free variable mappings subscip -> scip and scip -> subscip */
