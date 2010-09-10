@@ -4080,7 +4080,7 @@
  *  @section SETUP Setting up the test environment
  *
  *  At first you should create a file which contains all problem instances which should be part of the test.
- *  This file has be located in the the directory <code>scip/check/</code> 
+ *  This file has to be located in the the directory <code>scip/check/</code> 
  *  and has to have the file extension <code>.test</code>, e.g., <code>testrun.test</code>, 
  *  in order to be found by the <code>scip/check/check.sh</code> script. 
  *  \n
@@ -4329,8 +4329,8 @@
  *  
  *  @section SOLVER Testing and Evaluating for other solvers
  *  
- *  Analog to the target <code>test</code> there are further <code>test</code>-targets in the Makefile.
- *  Therefore we can call
+ *  Analogously to the target <code>test</code> there are further targets to run automated tests with other MIP solvers.
+ *  These are:
  *  \arg for cplex
  *  \code
  *  make testcplex
@@ -4370,7 +4370,7 @@
  *  After the testrun there should be an <code>.out</code>, an <code>.err</code> and a <code>.res</code> file 
  *  with the same basename as described above.
  *  
- *  Furthermore you can use the script <code>allcmpres.sh</code> for comparing results of different solvers.
+ *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results of different solvers.
  *  
  */
 
