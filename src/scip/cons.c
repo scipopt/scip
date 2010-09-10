@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.207 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.208 2010/09/10 09:15:02 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1786,6 +1786,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    assert(conssepalp != NULL || conssepasol != NULL || sepafreq == -1);
    assert(consprop != NULL || propfreq == -1);
    assert(eagerfreq >= -1);
+   assert(!needscons || ((conshdlrcopy == NULL) == (conscopy == NULL)));
 
    SCIP_ALLOC( BMSallocMemory(conshdlr) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conshdlr)->name, name, strlen(name)+1) );

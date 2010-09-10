@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.250 2010/09/09 14:00:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.251 2010/09/10 09:15:03 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -369,7 +369,9 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
 }
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, success will return FALSE. Note that in this case dual reductions might be invalid. */
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
+ *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
    SCIP_SET*             targetset,          /**< target SCIP_SET data structure */
@@ -388,7 +390,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
-   SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were successfully copied */
+   SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
 {
    int p;
@@ -406,7 +408,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nreaders - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -426,21 +428,22 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    /* copy all constraint handler plugins */
    if( copyconshdlrs && sourceset->conshdlrs_include != NULL )
    {	
-      /* copy them in order they were added to the sourcescip */
+      /* copy them in order they were added to the sourcescip
+       *
+       * @note we only have to set the valid pointer to FALSE in case that a constraint handler, which does not need
+       *       constraints, does not copy; in the case that a constraint handler does not copy and it needs constraint
+       *       we will detect later that the problem is not valid if a constraint of that type exits
+       */
       for( p = 0; p < sourceset->nconshdlrs; ++p )
       {
+         valid = FALSE;
          if( SCIPconshdlrIsClonable(sourceset->conshdlrs_include[p]) )
          {
-            valid = FALSE;
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
+         }
+
+         if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
             *allvalid = *allvalid && valid;
-         }
-         else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
-         {
-            valid = FALSE;
-            SCIPdebugMessage("constraint handler <%s> (which does not need constraints) cannot be copied.", 
-               SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
-         }
       }
    }
 
@@ -449,7 +452,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nconflicthdlrs - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPconflicthdlrCopyInclude(sourceset->conflicthdlrs[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -460,7 +463,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->npresols - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -472,7 +475,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nrelaxs - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -484,7 +487,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nsepas - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -495,7 +498,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nprops - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -506,7 +509,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nheurs - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -531,7 +534,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nnodesels - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPnodeselCopyInclude(sourceset->nodesels[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -542,7 +545,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nbranchrules - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -554,7 +557,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->ndisps - 1; p >= 0; --p )
       {
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
@@ -580,7 +583,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       {
          SCIP_NLPI* nlpicopy;
 
-         valid = FALSE;
+         valid = TRUE;
          SCIP_CALL( SCIPnlpiCopy(sourceset->nlpis[p], &nlpicopy, &valid) );
          *allvalid = *allvalid && valid;
          SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );

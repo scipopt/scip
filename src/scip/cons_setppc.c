@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.153 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.154 2010/09/10 09:15:02 bzfberth Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -3868,21 +3868,6 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
  * Callback methods of conflict handler
  */
 
-/** copy method for conflict handlers (called when SCIP copies plugins) */
-static
-SCIP_DECL_CONFLICTCOPY(conflictCopySetppc)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conflicthdlr != NULL);
-   assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
-   
-  /* The conflict handler should be created in a previous call of the constraint handler's copy callback.
-    * If we find a conflict handler with the correct name, we declare the copy to be correct */
-   *valid = (SCIPfindConflicthdlr(scip, CONFLICTHDLR_NAME) != NULL);
-
-   return SCIP_OKAY;
-}
-
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
 {  /*lint --e{715}*/
@@ -3959,15 +3944,11 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecSetppc,
-         NULL) );
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecSetppc, NULL) );
 
    /* create conflict handler for setppc constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         conflictCopySetppc,
-         NULL, NULL, NULL, NULL, NULL, conflictExecSetppc,
-         NULL) );
+         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecSetppc, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );

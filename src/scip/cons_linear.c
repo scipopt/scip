@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.379 2010/09/09 16:55:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.380 2010/09/10 09:15:02 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -7208,7 +7208,7 @@ SCIP_RETCODE detectRedundantConstraints(
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  nchgsides           /**< pointer to count number of changed left/right hand sides */
-)
+   )
 {
    SCIP_HASHTABLE* hashtable;
    int hashtablesize;
@@ -8300,8 +8300,8 @@ SCIP_RETCODE fullDualPresolve(
           * if largest bound to make constraints redundant is -infinity, we better do nothing for numerical reasons
           */
          if( SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars]
-             && !SCIPisInfinity(scip, -redlb[v - nbinvars])
-             && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
+            && !SCIPisInfinity(scip, -redlb[v - nbinvars])
+            && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
          {
 	    SCIP_Real ub;
 
@@ -8327,8 +8327,8 @@ SCIP_RETCODE fullDualPresolve(
           * if smallest bound to make constraints redundant is +infinity, we better do nothing for numerical reasons
           */
          if( SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars]
-             && !SCIPisInfinity(scip, redub[v - nbinvars])
-             && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
+            && !SCIPisInfinity(scip, redub[v - nbinvars])
+            && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
          {
 	    SCIP_Real lb;
 
@@ -8364,8 +8364,8 @@ SCIP_RETCODE fullDualPresolve(
 
       /* we can only conclude implied integrality if the variable appears in no other constraint */
       if( isimplint[v-nintvars]
-          && SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars]
-          && SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars] )
+         && SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars]
+         && SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars] )
       {
          /* only collect variables here, because SCIPchgVarType() reorders vars array */
          conscontvars[nupgdvars] = var; /* borrow this array for collecting implied integer variables */
@@ -9270,7 +9270,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    if( !cutoff && (conshdlrdata->presolusehashing || conshdlrdata->presolpairwise) )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
-          && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
+         && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
       {
          assert(firstchange >= 0);
 
@@ -9278,7 +9278,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          {
             /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
             SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff,
-                                                  ndelconss, nchgsides) );
+                  ndelconss, nchgsides) );
          }
 
          if( firstchange < nconss && conshdlrdata->presolpairwise )
@@ -9324,7 +9324,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
                assert(SCIPconsIsActive(usefulconss[c]) && !SCIPconsIsModifiable(usefulconss[c]));
                SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,
-                                                    &cutoff, ndelconss, nchgsides, nchgcoefs) );
+                     &cutoff, ndelconss, nchgsides, nchgcoefs) );
 
                if( npaircomparisons > NMINCOMPARISONS )
                {
@@ -9350,7 +9350,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    if( !cutoff && firstupgradetry < nconss
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
-       )
+      )
    {
       if( conshdlrdata->dualpresolving )
       {
@@ -9365,7 +9365,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    if( !cutoff
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
-       )
+      )
    {
       for( c = firstupgradetry; c < nconss && !SCIPisStopped(scip); ++c )
       {
@@ -10047,21 +10047,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
  * Callback methods of conflict handler
  */
 
-/** copy method for conflict handlers (called when SCIP copies plugins) */
-static
-SCIP_DECL_CONFLICTCOPY(conflictCopyLinear)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conflicthdlr != NULL);
-   assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
-   
-   /* The conflict handler should be created in a previous call of the constraint handler's copy callback.
-    * If we find a conflict handler with the correct name, we declare the copy to be correct */
-   *valid = (SCIPfindConflicthdlr(scip, CONFLICTHDLR_NAME) != NULL);
-
-   return SCIP_OKAY;
-}
-
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 {  /*lint --e{715}*/
@@ -10161,15 +10146,11 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecLinear,
-         NULL) );
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecLinear, NULL) );
 
    /* create conflict handler for linear constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         conflictCopyLinear,
-         NULL, NULL, NULL, NULL, NULL, conflictExecLinear,
-         NULL) );
+         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecLinear, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );

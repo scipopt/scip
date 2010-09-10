@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.129 2010/09/09 14:00:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.130 2010/09/10 09:15:03 bzfberth Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -59,7 +59,9 @@ extern "C" {
 #endif
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, success will return FALSE. Note that in this case dual reductions might be invalid. */
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
+ *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  Note that in this case dual reductions might be invalid. */
 extern
 SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
@@ -79,8 +81,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
-   SCIP_Bool*            success             /**< pointer to store whether all constraint handlers 
-                                              *   which do not need constraints were successfully copied */
+   SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
 
 /** copies parameterss from sourcescip to targetscip */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.653 2010/09/09 18:14:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.654 2010/09/10 09:15:02 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -907,7 +907,9 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  */
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, success will return FALSE. Note that in this case dual reductions might be invalid. */
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
+ *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPcopyPlugins(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -926,8 +928,8 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
-   SCIP_Bool*            success             /**< pointer to store whether all constraint handlers 
-                                              *   which do not need constraints were successfully copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraint handlers 
+                                              *   which do not need constraints were validly copied */
    )
 {
    assert(sourcescip != NULL);
@@ -941,7 +943,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copynlpis, success) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -978,7 +980,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
    SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            success             /**< pointer to store whether the variable was successfully copied */
+   SCIP_Bool*            valid               /**< pointer to store whether the variable was validly copied */
    )
 {
    /* check stages for both, the source and the target SCIP data structure */
@@ -1005,7 +1007,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
       SCIP_CALL( SCIPvarCopy(targetvar, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
-            sourcescip, sourcevar, global, success) );
+            sourcescip, sourcevar, global, valid) );
       break;
       
    case SCIP_VARSTATUS_AGGREGATED:
@@ -1024,11 +1026,11 @@ SCIP_RETCODE SCIPgetVarCopy(
       constant = SCIPvarGetAggrConstant(sourcevar);
 
       /* get copy of the aggregation variable */
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, varmap, global, success) );      
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, varmap, global, valid) );      
 
       /* create copy of the aggregated variable */
       SCIP_CALL( SCIPvarCopy(targetvar, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
-            sourcescip, sourcevar, global, success) );
+            sourcescip, sourcevar, global, valid) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_aggr", SCIPvarGetName(sourcevar));
          
@@ -1070,12 +1072,12 @@ SCIP_RETCODE SCIPgetVarCopy(
       /* get copies of the active variables of the multiaggregation */
       for( i = 0; i < naggrvars; i++ )
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], varmap, global, success) );
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], varmap, global, valid) );
       }
          
       /* create copy of the multiaggregated variable */
       SCIP_CALL( SCIPvarCopy(targetvar, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
-            sourcescip, sourcevar, global, success) );
+            sourcescip, sourcevar, global, valid) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_multaggr", SCIPvarGetName(sourcevar));
          
@@ -1101,7 +1103,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
 
       /* get copy of negated source variable */         
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap, global, success) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap, global, valid) );
       assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
 
       /* get negation of copied negated source variable, this is the target variable */
@@ -1118,8 +1120,8 @@ SCIP_RETCODE SCIPgetVarCopy(
       break;
    }
    
-   /* if the variable was successfully copied add the variable to the target problem and the hash map */
-   if( *success )
+   /* if the variable was validly copied add the variable to the target problem and the hash map */
+   if( *valid )
    {
       /* add the (new) target variable to the target problem */
       SCIP_CALL( SCIPaddVar(targetscip, *targetvar) );
@@ -1139,7 +1141,7 @@ SCIP_RETCODE SCIPgetVarCopy(
 }
 
 /** copies all active variables from source SCIP and adds these variable to the target SCIP if the copy process for a
- *  variable was successfully; in case the variable map is not NULL the mapping is added and the target variable are
+ *  variable was valid; in case the variable map is not NULL the mapping is added and the target variable are
  *  captured
  */
 SCIP_RETCODE SCIPcopyVars(
@@ -1148,7 +1150,7 @@ SCIP_RETCODE SCIPcopyVars(
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
    SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            success             /**< pointer to store whether all variables were successfully copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all variables were validly copied */
    )
 {
    SCIP_VAR** sourcevars;
@@ -1165,7 +1167,7 @@ SCIP_RETCODE SCIPcopyVars(
    /* get active variables of the source SCIP */
    SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nsoucrcevars, NULL, NULL, NULL, NULL) );
 
-   (*success) = TRUE;
+   (*valid) = TRUE;
 
    /* create the variables of the target SCIP */
    for( i = 0; i < nsoucrcevars; ++i )
@@ -1175,18 +1177,18 @@ SCIP_RETCODE SCIPcopyVars(
 
       succeed = TRUE;
       
-      /* copy variable and add this copy to the target SCIP if the copying was successfully */
+      /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, varmap, global, &succeed) );
       assert(!succeed || targetvar != NULL);
 
-      (*success) = (*success) && succeed;
+      (*valid) = (*valid) && succeed;
    }
 
    /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
-   assert(!(success) || (SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip)));
-   assert(!(success) || (SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) == SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip)));
-   assert(!(success) || (SCIPgetNImplVars(sourcescip) == SCIPgetNImplVars(targetscip)));
-   assert(!(success) || (SCIPgetNContVars(sourcescip) == SCIPgetNContVars(targetscip)));
+   assert(!(valid) || (SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip)));
+   assert(!(valid) || (SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) == SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip)));
+   assert(!(valid) || (SCIPgetNImplVars(sourcescip) == SCIPgetNImplVars(targetscip)));
+   assert(!(valid) || (SCIPgetNContVars(sourcescip) == SCIPgetNContVars(targetscip)));
 
    return SCIP_OKAY;
 }
@@ -1201,7 +1203,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    )
 {
    SCIP_CONSHDLR** sourceconshdlrs;
@@ -1261,7 +1263,7 @@ SCIP_RETCODE SCIPcopyConss(
          assert(sourceconss[c] != NULL);
          if( !SCIPconsIsActive(sourceconss[c]) || SCIPconsIsDeleted(sourceconss[c]) )  /* @todo FIXME ???????????? it seems that sourceconss can contain inactive or deleted constraints, so the following two assert fail from time to time; for now, we just do not copy those constraints */
          {
-            *success = FALSE;
+            *valid = FALSE;
             SCIPdebugMessage("did not copy inactive or deleted constraint %s\n", SCIPconsGetName(sourceconss[c]));
             continue;
          }
@@ -1278,7 +1280,7 @@ SCIP_RETCODE SCIPcopyConss(
                SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsDynamic(sourceconss[c]), 
                SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
             
-         /* add the copied constraint to target SCIP if the copying process was successfully */
+         /* add the copied constraint to target SCIP if the copying process was valid */
          if( succeed )
          {
             assert(targetcons != NULL);
@@ -1299,7 +1301,7 @@ SCIP_RETCODE SCIPcopyConss(
          }
          else
          {
-            *success = FALSE;
+            *valid = FALSE;
             SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
          }
       }
@@ -1312,14 +1314,14 @@ SCIP_RETCODE SCIPcopyConss(
 SCIP_RETCODE SCIPcopyProbData(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   SCIP_Bool*            valid             /**< pointer to store whether all constraints were validly copied */
    )
 {
    SCIP_PROB* copyprob;
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
-   assert(success != NULL);
+   assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyProbData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -1332,7 +1334,7 @@ SCIP_RETCODE SCIPcopyProbData(
 
    assert(copyprob != NULL);
 
-   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, success) );
+   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, valid) );
    
    return SCIP_OKAY;
 }
@@ -1349,7 +1351,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   target constraints, or NULL */
    const char*           suffix,             /**< suffix which will be added to the names of the source SCIP, might be empty string */          
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid             /**< pointer to store whether the copying was valid or not */
    )
 {
    SCIP_PROB* copyprob;
@@ -1359,16 +1361,16 @@ SCIP_RETCODE SCIPcopy(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
-   assert(success != NULL);
+   assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   *success = TRUE;   
+   *valid = TRUE;   
 
    /* copy all plugins and settings */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, success) );
+         TRUE, TRUE, TRUE, TRUE, valid) );
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
    if( SCIPisTransformed(sourcescip) )
@@ -1385,7 +1387,7 @@ SCIP_RETCODE SCIPcopy(
          copyprob->probtrans, copyprob->probdeltrans, copyprob->probinitsol, copyprob->probexitsol, NULL) );
 
    /** copies probdata from sourcescip to targetscip */
-   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, success) );
+   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, valid) );
 
    uselocalvarmap = (varmap == NULL);
    if( uselocalvarmap )
@@ -1395,10 +1397,10 @@ SCIP_RETCODE SCIPcopy(
    }
 
    /* copy all variables*/
-   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap, global, success) );
+   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap, global, valid) );
 
    /* copy all constraints */
-   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, success) );
+   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, valid) );
 
    if( uselocalvarmap )
    {
