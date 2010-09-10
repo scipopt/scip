@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.297 2010/09/10 18:15:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.298 2010/09/10 19:01:46 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -7146,6 +7146,9 @@ SCIP_RETCODE SCIPvarResetBounds(
 {
    assert(var != NULL);
    assert(SCIPvarIsOriginal(var));
+   /* resetting of bounds on original variables which have a transformed counterpart easily fails if, e.g.,
+    * the transformed variable has been fixed */ 
+   assert(SCIPvarGetTransVar(var) == NULL);
 
    /* copy the original bounds back to the global and local bounds */
    SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.lb) );
