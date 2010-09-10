@@ -477,7 +477,35 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
+# Workaround: Some files are called explicitly to incluence their order in the group PUBLICMETHODS.
+
 INPUT                  = . \
+                         ../src/scip/scip.h \
+                         ../src/scip/pub_branch.h \
+                         ../src/scip/pub_conflict.h \
+                         ../src/scip/pub_cons.h \
+                         ../src/scip/pub_cutpool.h \
+                         ../src/scip/pub_dialog.h \
+                         ../src/scip/pub_disp.h \
+                         ../src/scip/pub_event.h \
+                         ../src/scip/pub_fileio.h \
+                         ../src/scip/pub_heur.h \
+                         ../src/scip/pub_implics.h \
+                         ../src/scip/pub_lp.h \
+                         ../src/scip/pub_message.h \
+                         ../src/scip/pub_misc.h \
+                         ../src/scip/pub_nlp.h \
+                         ../src/scip/pub_nodesel.h \
+                         ../src/scip/pub_paramset.h \
+                         ../src/scip/pub_presol.h \
+                         ../src/scip/pub_pricer.h \
+                         ../src/scip/pub_prop.h \
+                         ../src/scip/pub_reader.h \
+                         ../src/scip/pub_relax.h \
+                         ../src/scip/pub_sepa.h \
+                         ../src/scip/pub_sol.h \
+                         ../src/scip/pub_tree.h \
+                         ../src/scip/pub_var.h \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \
