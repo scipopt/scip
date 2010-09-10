@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.23 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.24 2010/09/10 16:23:10 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -103,6 +103,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_Bool success;
    char probname[SCIP_MAXSTRLEN];
    int i;
+   SCIP_HASHMAP* conssmap;
 
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
@@ -175,7 +176,9 @@ SCIP_RETCODE createSubSCIP(
 
    /* copy as many constraints as possible */
    success = TRUE;
-   SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, heurdata->var_scip2subscip, NULL, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );   
+   SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, heurdata->var_scip2subscip, conssmap, FALSE, FALSE, &success) );
+   SCIPhashmapFree(&conssmap);
    if( !success )
    {
       SCIPwarningMessage("failed to copy some constraints to subSCIP, continue anyway\n");
