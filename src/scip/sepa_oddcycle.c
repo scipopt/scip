@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.5 2010/09/09 14:00:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.6 2010/09/10 15:13:09 bzfwanie Exp $"
 
 /**@file   sepa_oddcycle.c
+ * @ingroup SEPARATORS
  * @brief  oddcycle separator
  * @author Robert Waniek
  * 
