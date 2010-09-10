@@ -21,6 +21,7 @@
  * @author Stefan Heinz
  * @author Mathias Kinder
  * @author Marc Pfetsch
+ * @author Robert Waniek
  * @author Kati Wolter
  */
 
@@ -4124,7 +4125,7 @@
  *   =unkn=  instance1
  *   \endcode
  * 
- * <b>Note that the in all lines the file extension of the file name is omitted.</b>
+ * <b>Note that in all lines the file extension of the file name is omitted.</b>
  *  \n
  *  See the files <code>scip/check/shortmiplib.test</code> and <code>scip/check/shortmiplib.solu</code> 
  *  for an example of a <code>test</code>-file and its corresponding <code>solu</code>-file.
@@ -4325,6 +4326,51 @@
  *  allcmpres.sh printsoltimes=1 ...
  *  \endcode
  *  As in the evaluation, the output contains the two additional columns of the solving time until the first and the best solution was found.
+ *  
+ *  @section SOLVER Testing and Evaluating for other solvers
+ *  
+ *  Analog to the target <code>test</code> there are further <code>test</code>-targets in the Makefile.
+ *  Therefore we can call
+ *  \arg for cplex
+ *  \code
+ *  make testcplex
+ *  \endcode
+ *  \arg for gurobi
+ *  \code
+ *  make testgurobi
+ *  \endcode
+ *  \arg for cbc
+ *  \code
+ *  make testcbc
+ *  \endcode
+ *  \arg for mosek
+ *  \code
+ *  make testmosek
+ *  \endcode
+ *  \arg for glpk
+ *  \code
+ *  make testglpk
+ *  \endcode
+ *  \arg for symphony
+ *  \code
+ *  make testsymphony
+ *  \endcode
+ *  \arg for blis
+ *  \code
+ *  make testblis
+ *  \endcode
+ *  
+ *  Note: This only works if the referred programs are installed globally on your machine.
+ *  
+ *  The above options like <code>TIME</code> are also available for the other solvers.
+ *  
+ *  For cplex, gurobi and cbc another advanced option is available:
+ *  \arg <code>THREADS</code> - number of threads used in the solution process
+ *  
+ *  After the testrun there should be an <code>.out</code>, an <code>.err</code> and a <code>.res</code> file 
+ *  with the same basename as described above.
+ *  
+ *  Furthermore you can use the script <code>allcmpres.sh</code> for comparing results of different solvers.
  *  
  */
 
