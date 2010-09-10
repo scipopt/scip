@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.423 2010/09/10 09:24:29 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.424 2010/09/10 13:58:11 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -321,6 +321,8 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    );
 
@@ -343,6 +345,10 @@ SCIP_RETCODE SCIPcopy(
                                               *   target constraints, or NULL */
    const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */          
    SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              * plugins will be copied and activated, and the modifiable flag of
+                                              * constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              * there are pricers present */
    SCIP_Bool*            valid              /**< pointer to store whether the copying was valid or not */
    );
 
@@ -3837,12 +3843,15 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even

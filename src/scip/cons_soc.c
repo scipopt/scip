@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.50 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.51 2010/09/10 13:58:10 bzfberth Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3632,7 +3632,7 @@ SCIP_DECL_CONSCOPY(consCopySOC)
       SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
          consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
          rhsvar, consdata->rhscoeff, consdata->rhsoffset,
-         initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    }
    else
       *cons = NULL;

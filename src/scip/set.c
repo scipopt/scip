@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.252 2010/09/10 09:24:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.253 2010/09/10 13:58:11 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -423,6 +423,8 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          valid = FALSE;
          SCIP_CALL( SCIPpricerCopyInclude(sourceset->pricers[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
+         if( SCIPpricerIsActive(sourceset->pricers[p]) )
+            SCIPactivatePricer(targetset->scip, targetset->pricers[p]);
       }
    }
 
@@ -437,14 +439,14 @@ SCIP_RETCODE SCIPsetCopyPlugins(
        */
       for( p = 0; p < sourceset->nconshdlrs; ++p )
       {
-         valid = FALSE;
          if( SCIPconshdlrIsClonable(sourceset->conshdlrs_include[p]) )
          {
+            valid = FALSE;
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
-         }
-
-         if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
             *allvalid = *allvalid && valid;
+         } 
+         else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
+            *allvalid = FALSE;
       }
    }
 

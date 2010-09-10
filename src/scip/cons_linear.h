@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.65 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.66 2010/09/10 13:58:10 bzfberth Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -144,6 +144,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even

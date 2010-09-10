@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.381 2010/09/10 09:20:04 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.382 2010/09/10 13:58:10 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9551,7 +9551,7 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
 
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
          SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap,
-         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global, success) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
    assert(cons != NULL);
 
    return SCIP_OKAY;
@@ -10360,6 +10360,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -10380,7 +10381,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    if( nvars == 0 )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       return SCIP_OKAY;
    }
    
@@ -10442,7 +10443,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
          rhs -= constant;
       
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
    
    /* free buffer array */

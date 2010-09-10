@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.h,v 1.2 2010/08/06 17:57:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.h,v 1.3 2010/09/10 13:58:11 bzfberth Exp $"
 
 /**@file   prop_vbounds.h
  * @brief  variable upper and lower bound propagator
@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
    SCIP_Bool             lowerbound          /**< topological sorted with respect to the variable lower bounds, otherwise variable upper bound */
    );
 
-/** returns TRUE if the propagater has the status that all variable lower and upper bounds are propgated */
+/** returns TRUE if the propagator has the status that all variable lower and upper bounds are propgated */
 extern
 SCIP_Bool SCIPisPropagatedVbounds(
    SCIP*                 scip                 /**< SCIP data structure */
@@ -66,7 +66,7 @@ SCIP_Bool SCIPisPropagatedVbounds(
 extern
 SCIP_RETCODE SCIPexecPropVbounds(
    SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             focre,               /**< should domain changes be forced */
+   SCIP_Bool             force,               /**< should domain changes be forced */
    SCIP_RESULT*          result               /**< pointer to store result */
    );
 

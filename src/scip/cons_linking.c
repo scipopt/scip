@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.12 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.13 2010/09/10 13:58:10 bzfberth Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -2818,7 +2818,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
          consname = SCIPconsGetName(sourcecons);
 
       SCIP_CALL( SCIPcreateConsLinking(scip, cons, consname, intvar, binvars, nbinvars, offset,  
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
    
    /* free buffer array */

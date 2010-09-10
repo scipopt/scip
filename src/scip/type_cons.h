@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.63 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.64 2010/09/10 13:58:11 bzfberth Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -636,12 +636,14 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - sourceconshdlr  : source constraint handler of the source SCIP
  *  - sourcecons      : source constraint of the source SCIP
  *  - varmap          : a SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP
+ *  - consmap         : a SCIP_HASHMAP mapping constraints of the source SCIP to corresponding constraints of the target SCIP
  *  - initial         : should the LP relaxation of constraint be in the initial LP?
  *  - separate        : should the constraint be separated during LP processing?
  *  - enforce         : should the constraint be enforced during node processing?
  *  - check           : should the constraint be checked for feasibility?
  *  - propagate       : should the constraint be propagated during node processing?
  *  - local           : is constraint only valid locally?
+ *  - modifiable      : is constraint modifiable (subject to column generation)?
  *  - dynamic         : is constraint subject to aging?
  *  - removable       : should the relaxation be removed from the LP due to aging or cleanup?
  *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
@@ -652,9 +654,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - success         : pointer to store whether the copying was successful or not 
  */
 #define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS** cons, const char* name, \
-      SCIP* sourcescip, SCIP_CONSHDLR* sourceconshdlr, SCIP_CONS* sourcecons,  SCIP_HASHMAP* varmap, \
+      SCIP* sourcescip, SCIP_CONSHDLR* sourceconshdlr, SCIP_CONS* sourcecons, SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, \
       SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, \
-      SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool global, SCIP_Bool* success)
+      SCIP_Bool local, SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, \
+      SCIP_Bool global, SCIP_Bool* success)
 
 /** constraint parsing method of constraint handler
  *

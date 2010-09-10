@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.87 2010/09/08 22:16:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.88 2010/09/10 13:58:09 bzfberth Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3842,7 +3842,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    
    /* create indicator constraint */
    SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
-         initial, separate, enforce, check, propagate, local, dynamic, FALSE, stickingatnode) );
+         initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
 
    return SCIP_OKAY;
 }

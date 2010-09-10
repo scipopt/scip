@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.655 2010/09/10 09:24:29 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.656 2010/09/10 13:58:11 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1154,7 +1154,7 @@ SCIP_RETCODE SCIPcopyVars(
    )
 {
    SCIP_VAR** sourcevars;
-   int nsoucrcevars;   
+   int nsourcevars;   
    int i;
   
    assert(sourcescip != NULL);
@@ -1165,12 +1165,12 @@ SCIP_RETCODE SCIPcopyVars(
    SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
   
    /* get active variables of the source SCIP */
-   SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nsoucrcevars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nsourcevars, NULL, NULL, NULL, NULL) );
 
    (*valid) = TRUE;
 
    /* create the variables of the target SCIP */
-   for( i = 0; i < nsoucrcevars; ++i )
+   for( i = 0; i < nsourcevars; ++i )
    {          
       SCIP_VAR* targetvar;
       SCIP_Bool succeed;
@@ -1201,8 +1201,10 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP, must not be NULL! */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
+                                              *   target constraints, must not be NULL! */
    SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    )
 {
@@ -1214,6 +1216,7 @@ SCIP_RETCODE SCIPcopyConss(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(varmap != NULL);
+   assert(consmap != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -1274,11 +1277,13 @@ SCIP_RETCODE SCIPcopyConss(
 
          /* use the copy constructor of the constraint handler and creates and captures the constraint if possible */
          targetcons = NULL;
-         SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, sourcescip, sourceconshdlrs[i], sourceconss[c], varmap,
+         SCIP_CALL( SCIPcopyCons(targetscip, &targetcons, NULL, sourcescip, sourceconshdlrs[i], sourceconss[c], varmap, consmap,
                SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]),
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
-               SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsDynamic(sourceconss[c]), 
-               SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
+               SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]), 
+               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
+
+         /* @todo: ?????????????????? enablepricing vs. modfiable */
             
          /* add the copied constraint to target SCIP if the copying process was valid */
          if( succeed )
@@ -1289,15 +1294,7 @@ SCIP_RETCODE SCIPcopyConss(
             SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
 	      
             /* insert constraint into mapping between source SCIP and the target SCIP */
-            if( consmap != NULL )
-            {
-               SCIP_CALL( SCIPhashmapInsert(consmap, sourceconss[c], targetcons) );
-            }
-            else 
-            {
-               SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
-            }
-
+            SCIP_CALL( SCIPhashmapInsert(consmap, sourceconss[c], targetcons) );
          }
          else
          {
@@ -1340,6 +1337,7 @@ SCIP_RETCODE SCIPcopyProbData(
 }
 
 #define HASHTABLESIZE_FACTOR 5
+
 /** copies source SCIP to target SCIP; if the variable hash map is not NULL all variables get captured; if the
  *  constraint hash map is not NULL all constraints get captured */
 SCIP_RETCODE SCIPcopy(
@@ -1349,13 +1347,18 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP, might be empty string */          
+   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */          
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            valid             /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              * plugins will be copied and activated, and the modifiable flag of
+                                              * constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              * there are pricers present */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    SCIP_PROB* copyprob;
    SCIP_Bool uselocalvarmap;
+   SCIP_Bool uselocalconsmap;
    char probname[SCIP_MAXSTRLEN];
 
    assert(sourcescip != NULL);
@@ -1366,10 +1369,10 @@ SCIP_RETCODE SCIPcopy(
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   *valid = TRUE;   
+   *valid = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
 
    /* copy all plugins and settings */
-   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, valid) );
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
@@ -1390,22 +1393,36 @@ SCIP_RETCODE SCIPcopy(
    SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, valid) );
 
    uselocalvarmap = (varmap == NULL);
+   uselocalconsmap = (consmap == NULL);
+
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
    }
 
+   if( uselocalconsmap )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+   }
+
    /* copy all variables*/
    SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap, global, valid) );
 
    /* copy all constraints */
-   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, valid) );
+   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, enablepricing, valid) );
 
    if( uselocalvarmap )
    {
       /* free hash map */
       SCIPhashmapFree(&varmap);
+   }
+
+   if( uselocalconsmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&consmap);
    }
 
    return SCIP_OKAY;
@@ -11577,12 +11594,15 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -11596,8 +11616,8 @@ SCIP_RETCODE SCIPcopyCons(
    
    SCIP_CALL( checkStage(scip, "SCIPcopyCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
    
-   SCIP_CALL( SCIPconsCopy(cons, scip->set, name, sourcescip, sourceconshdlr, sourcecons, varmap, 
-         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode, global, success) );
+   SCIP_CALL( SCIPconsCopy(cons, scip->set, name, sourcescip, sourceconshdlr, sourcecons, varmap, consmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
 
    return SCIP_OKAY;
 }

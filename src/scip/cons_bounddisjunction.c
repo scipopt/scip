@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.37 2010/09/10 09:15:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.38 2010/09/10 13:58:09 bzfberth Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1787,7 +1787,7 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    if ( *success )
    {
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name ? name : SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
-            bounds, initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );      
+            bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );      
    }
 
    SCIPfreeBufferArray(scip, &targetvars);

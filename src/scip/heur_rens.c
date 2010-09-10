@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.51 2010/09/09 14:00:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.52 2010/09/10 13:58:10 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -303,14 +303,7 @@ SCIP_RETCODE SCIPapplyRens(
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
-#ifndef NDEBUG
-      SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &success) );
-#else
-      SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
-#endif      
-      SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
+      SCIPincludeDefaultPlugins(subscip);
 
       /* get name of the original problem and add the string "_renssub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
@@ -325,7 +318,7 @@ SCIP_RETCODE SCIPapplyRens(
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &success) );
       SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
    }
    

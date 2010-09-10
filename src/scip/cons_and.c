@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.125 2010/09/08 22:16:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.126 2010/09/10 13:58:09 bzfberth Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -2649,7 +2649,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
  
       /* creates and captures a and constraint */
       SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    /* free buffer array */

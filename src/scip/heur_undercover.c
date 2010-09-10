@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.82 2010/09/09 14:00:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.83 2010/09/10 13:58:11 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1478,7 +1478,7 @@ SCIP_RETCODE solveSubproblem(
 
    /* copy original problem to subproblem */
    success = FALSE;
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, &success) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, &success) );
 
    if( !success )
    {

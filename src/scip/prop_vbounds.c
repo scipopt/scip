@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.10 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.11 2010/09/10 13:58:11 bzfberth Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -1031,7 +1031,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
    return SCIP_OKAY;
 }
 
-/** returns TRUE if the propagater has the status that all variable lower and upper bounds are propgated */
+/** returns TRUE if the propagator has the status that all variable lower and upper bounds are propgated */
 SCIP_Bool SCIPisPropagatedVbounds(
    SCIP*                 scip                 /**< SCIP data structure */
    )
