@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.22 2010/09/08 14:14:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.23 2010/09/10 21:19:48 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -3238,7 +3238,9 @@ SCIP_RETCODE nlpUpdateScipObjCoef(
    /* if variable not in NLPI yet, then we only need to remember to update the objective after variable additions were flushed */
    if( nlp->varmap_nlp2nlpi[pos] == -1 && coef != 0.0 )
    {
-      nlp->objflushed = FALSE;
+      /* actually we only need to remember flushing the objective if we also have an NLPI */
+      if( nlp->solver != NULL )
+         nlp->objflushed = FALSE;
       return SCIP_OKAY;
    }
 
@@ -4904,7 +4906,8 @@ SCIP_RETCODE SCIPnlpSetObjective(
 #endif
    }
 
-   nlp->objflushed = FALSE;
+   if( nlp->solver != NULL )
+      nlp->objflushed = FALSE;
 
    /* if we were feasible before, then we stay feasible
     * if we were locally or globally optimal, then we are now still feasible
