@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.38 2010/09/10 13:58:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.39 2010/09/10 18:15:18 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1778,18 +1778,13 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
    
    /* map source variables to active variables of the target SCIP */
-   for( v = 0; v < nvars && (*success); ++v )
+   for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, global, success) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global) );
    }
 
-   /* create copied of constraint in target SCIP and capture it */
-   if ( *success )
-   {
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name ? name : SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
-            bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );      
-   }
-
+   SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name ? name : SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
+         bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );      
    SCIPfreeBufferArray(scip, &targetvars);
 
    return SCIP_OKAY;   

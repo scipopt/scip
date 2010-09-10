@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.h,v 1.18 2010/09/08 22:16:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objvardata.h,v 1.19 2010/09/10 18:15:18 bzfheinz Exp $"
 
 /**@file   objvardata.h
  * @brief  C++ wrapper for user variable data
@@ -34,7 +34,7 @@ namespace scip
 {
 
 /** C++ wrapper object for user variable data */
-class ObjVardata  : public ObjCloneable
+class ObjVardata
 {
 public:
    /** default constructor */
@@ -111,8 +111,38 @@ public:
       return SCIP_OKAY;
    }
 
+   /** copies variable data of source SCIP variable for the target SCIP variable
+    *
+    *  This method should copy the variable data of the source SCIP and create a target variable data for target
+    *  variable. This callback is optimal. If it is implemented, however, to copying process has to be always successfully.
+    *
+    *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
+    *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
+    *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+    *
+    *  possible return values for *result:
+    *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+    *  - SCIP_SUCCESS    : the copying process was successfully performed
+    */
+   virtual SCIP_RETCODE scip_copy(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP*              sourcescip,         /**< source SCIP main data structure */
+      SCIP_VAR*          sourcevar,          /**< variable of the source SCIP */
+      SCIP_HASHMAP*      varmap,             /**< a hashmap which stores the mapping of source variables to corresponding
+                                              *   target variables */
+      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding 
+                                              *   target constraints */
+      SCIP_VAR*          targetvar,          /**< variable of the (targert) SCIP (targetvar is the copy of sourcevar) */
+      ObjVardata**       objvardata,         /**< pointer to store the copyed variable data object */
+      SCIP_RESULT*       result              /**< pointer to store the result of the call */
+      )
+   {
+      *objvardata = NULL;
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 };
-
+   
 } /* namespace scip */
 
 

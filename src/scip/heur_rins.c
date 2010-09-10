@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.53 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.54 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   heur_rins.c
  * @ingroup PRIMALHEURISTICS
@@ -398,14 +398,12 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-   success = FALSE;
    if( heurdata->uselprows )
    {
-      SCIP_Bool varsuccess;
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
-      SCIPincludeDefaultPlugins(subscip);
+      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
    
       /* get name of the original problem and add the string "_rinssub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_rinssub", SCIPgetProbName(scip));
@@ -417,14 +415,15 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
       
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE, &varsuccess) );
-
-      success = success && varsuccess;
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rins", TRUE, FALSE, &success) );
-      SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
+      SCIP_Bool valid;
+      valid = FALSE;
+
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rins", TRUE, FALSE, &valid) );
+      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
    }
    
    for( i = 0; i < nvars; i++ )
@@ -440,15 +439,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    if( !success )
    {
-      int nbinvars;
-      int nintvars;
       *result = SCIP_DIDNOTRUN;
-      SCIP_CALL( SCIPfreeTransform(subscip) );
-      SCIP_CALL( SCIPgetVarsData(subscip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
-      for( i = 0; i < nbinvars + nintvars; i++ )
-      {
-         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-      }
       SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
       return SCIP_OKAY;
@@ -548,11 +539,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    }
 
    /* free subproblem */
-   SCIP_CALL( SCIPfreeTransform(subscip) );
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-   }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
  

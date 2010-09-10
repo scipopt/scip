@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.24 2010/09/10 16:23:10 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.25 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -168,11 +168,7 @@ SCIP_RETCODE createSubSCIP(
 
    /* copy all variables */
    success = TRUE;
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip, FALSE, &success) );
-   if( !success )
-   {
-      SCIPwarningMessage("failed to copy some active variables to subSCIP, continue anyway\n");
-   }
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip, NULL, FALSE) );
 
    /* copy as many constraints as possible */
    success = TRUE;
@@ -267,9 +263,7 @@ SCIP_RETCODE freeSubSCIP(
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );
    assert(nsubvars == heurdata->nsubvars);
 
-   /* drop global bound change events
-    * release variables in subSCIP
-    */
+   /* drop global bound change events */
    for( i = 0; i < heurdata->nsubvars; ++i )
    {
       subvar = subvars[i];
@@ -282,8 +276,6 @@ SCIP_RETCODE freeSubSCIP(
       {
          SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, -1) );
       }
-
-      SCIP_CALL( SCIPreleaseVar(heurdata->subscip, &subvar) );
    }
 
    /* free variable mappings subscip -> scip and scip -> subscip */

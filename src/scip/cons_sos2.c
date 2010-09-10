@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.41 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.42 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS
@@ -1877,17 +1877,14 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    SCIP_CALL( SCIPduplicateBufferArray(sourcescip, &targetweights, sourceweights, nVars) );
 
    /* get copied variables in target SCIP */
-   for (v = 0; v < nVars && success; ++v)
+   for (v = 0; v < nVars; ++v)
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &(targetvars[v]), varmap, global, success) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &(targetvars[v]), varmap, consmap, global) );
    }
    
-   if( *success )
-   {
-      SCIP_CALL( SCIPcreateConsSOS2(scip, cons, consname, nVars, targetvars, targetweights,
-            initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-   }
-
+   SCIP_CALL( SCIPcreateConsSOS2(scip, cons, consname, nVars, targetvars, targetweights,
+         initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+   
    /* free buffer array */
    SCIPfreeBufferArray(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);

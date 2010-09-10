@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.24 2010/09/08 01:36:22 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.25 2010/09/10 18:15:18 bzfheinz Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -34,7 +34,7 @@ namespace scip
 {
 
 /** C++ wrapper object for user problem data */
-class ObjProbData : public ObjCloneable
+class ObjProbData
 {
 public:
    /** default constructor */
@@ -133,6 +133,34 @@ public:
       return SCIP_OKAY;
    }
 
+   /** copies user data of source SCIP for the target SCIP
+    *
+    *  This method should copy the problem data of the source SCIP and create a target problem data for (target) SCIP. This
+    *  callback is optimal. If it is implemented, however, to copying process has to be always successfully.
+    *
+    *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
+    *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
+    *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+    *
+    *  possible return values for *result:
+    *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+    *  - SCIP_SUCCESS    : the copying process was successfully performed
+    */
+   virtual SCIP_RETCODE scip_copy(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP*              sourcescip,         /**< source SCIP main data structure */
+      SCIP_HASHMAP*      varmap,             /**< a hashmap which stores the mapping of source variables to corresponding 
+                                              *   target variables */
+      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding 
+                                              *   target constraints */
+      ObjProbData**      objprobdata,        /**< pointer to store the copyed problem data object */
+      SCIP_RESULT*       result              /**< pointer to store the result of the call */
+      )
+   {  /*lint --e{715}*/
+      *objprobdata = NULL;
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

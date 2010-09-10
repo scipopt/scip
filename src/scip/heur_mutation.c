@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.46 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.47 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -418,10 +418,8 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-   success = FALSE;
    if( heurdata->uselprows )
    {
-      SCIP_Bool varsuccess;
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
@@ -434,14 +432,15 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
       
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE, &varsuccess) );
-
-      success = success && varsuccess;
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &success) );
-      SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
+      SCIP_Bool valid;
+      valid = FALSE;
+
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &valid) );
+      SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
    }
    
    for( i = 0; i < nvars; i++ )
@@ -549,11 +548,6 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    }
    
    /* free subproblem */
-   SCIP_CALL( SCIPfreeTransform(subscip) );
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-   }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
 

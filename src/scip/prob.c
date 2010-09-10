@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.116 2010/09/08 01:36:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.117 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -177,25 +177,56 @@ SCIP_Bool varHasName(
  * problem creation
  */
 
-/** copies probdata from sourcescip to targetscip */
-SCIP_RETCODE SCIPprobCopyProbData(
-   SCIP_SET*             sourceset,          /**< source SCIP settings */
-   SCIP_SET*             targetset,          /**< target SCIP settings */
+/** creates problem data structure by copying the source problem; 
+ *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+SCIP_RETCODE SCIPprobCopy(
+   SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< problem name */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP_PROB*            sourceprob,         /**< source problem structure */
-   SCIP_PROB*            targetprob,         /**< target problem structure */
-   SCIP_Bool*            success             /**< pointer to store whether all constraints were successfully copied */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables */
+   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
    )
 {
-   assert(sourceset != NULL);
-   assert(targetset != NULL);
-   assert(sourceprob != NULL);
-   assert(targetprob != NULL);
-   assert(success != NULL);
-   
-   /* call user data transformation */
+   SCIP_PROBDATA* targetdata;
+   SCIP_RESULT result;
+
+   assert(prob != NULL);
+
+   targetdata = NULL;
+   result = SCIP_DIDNOTRUN;
+
+   /* call user copy callback method */
    if( sourceprob->probcopy != NULL )
    {
-      SCIP_CALL( sourceprob->probcopy(targetset->scip, sourceset->scip, sourceprob->probdata, &(targetprob->probdata), success) );
+      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, &result) );
+
+      /* evaluate result */
+      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      {
+         SCIPerrorMessage("prodata copying method returned invalid result <%d>\n", result);
+         return SCIP_INVALIDRESULT;
+      }
+      
+      assert(targetdata == NULL || result == SCIP_SUCCESS);
+   }
+
+   /* check if the copying process was successfully */
+   if( result == SCIP_DIDNOTRUN )
+   {
+      SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, sourceprob->probdelorig, sourceprob->probtrans, 
+            sourceprob->probdeltrans, sourceprob->probinitsol, sourceprob->probexitsol, sourceprob->probcopy, 
+            targetdata, FALSE) );
    }
    
    return SCIP_OKAY;
@@ -210,12 +241,12 @@ SCIP_RETCODE SCIPprobCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< problem name */
-   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    SCIP_DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
    SCIP_DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_PROBDATA*        probdata,           /**< user problem data set by the reader */
    SCIP_Bool             transformed         /**< is this the transformed problem? */
    )
@@ -400,8 +431,8 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
-   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probcopy, NULL, NULL, source->probdeltrans, 
-                  source->probinitsol, source->probexitsol, NULL, TRUE) );
+   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probdelorig, source->probtrans, source->probdeltrans, 
+         source->probinitsol, source->probexitsol, source->probcopy, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);
 
    /* transform objective limit */

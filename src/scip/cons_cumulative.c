@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.7 2010/09/10 13:58:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.8 2010/09/10 18:15:18 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -6399,6 +6399,7 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    SCIP_CONSDATA* sourceconsdata;
    SCIP_VAR** sourcevars;
    SCIP_VAR** vars;
+   const char* consname;
 
    int nvars;
    int v;
@@ -6418,25 +6419,20 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
-   for( v = 0; v < nvars && (*success); ++v )
+   for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, global, success) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global) );
    }
-
-   if( *success )
-   {
-      const char* consname;
-
-      if( name != NULL )
-         consname = name;
-      else
-         consname = SCIPconsGetName(sourcecons);
    
-      /* copy the logic using the linear constraint copy method */
-      SCIP_CALL( SCIPcreateConsCumulative(scip, cons, consname, nvars, vars, 
-            sourceconsdata->durations, sourceconsdata->demands, sourceconsdata->capacity,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   }
+   if( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+   
+   /* copy the logic using the linear constraint copy method */
+   SCIP_CALL( SCIPcreateConsCumulative(scip, cons, consname, nvars, vars, 
+         sourceconsdata->durations, sourceconsdata->demands, sourceconsdata->capacity,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);

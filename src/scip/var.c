@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.296 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.297 2010/09/10 18:15:20 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1866,10 +1866,10 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -1909,10 +1909,10 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -1940,56 +1940,73 @@ SCIP_RETCODE SCIPvarCreateTransformed(
  *  copied at all
  */
 SCIP_RETCODE SCIPvarCopy(
-   SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
+   SCIP_VAR**            var,                /**< pointer to store the target variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP_VAR*             sourcevar,          /**< source variable */
-   SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            success             /**< pointer to store whether the variable was successfully copied */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    )
 {
+   SCIP_VARDATA* targetdata;
+   SCIP_RESULT result;
+   
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
    /** @todo copy hole lists */
    assert(global || SCIPvarGetHolelistLocal(sourcevar) == NULL);
    assert(!global || SCIPvarGetHolelistGlobal(sourcevar) == NULL);
 
-   /* creates and captures the variable in the target SCIP */
-   SCIP_CALL( SCIPvarCreateOriginal(targetvar, blkmem, set, stat, SCIPvarGetName(sourcevar), 
+   result = SCIP_DIDNOTRUN;
+
+   /* creates and captures the variable in the target SCIP and initial all callback methods with NULL */
+   SCIP_CALL( SCIPvarCreateOriginal(var, blkmem, set, stat, SCIPvarGetName(sourcevar), 
          global ? SCIPvarGetLbGlobal(sourcevar) : SCIPvarGetLbLocal(sourcevar),
          global ? SCIPvarGetUbGlobal(sourcevar) : SCIPvarGetUbLocal(sourcevar), 
          SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
          SCIPvarIsInitial(sourcevar), SCIPvarIsRemovable(sourcevar), 
-         sourcevar->varcopy, sourcevar->vardelorig, sourcevar->vartrans, sourcevar->vardeltrans, NULL) );       
+         NULL, NULL, NULL, NULL, NULL) );
+   assert(*var != NULL);
 
-   /* in case there exists variable data, copy it */
-   if( sourcevar->vardata != NULL )
+   /* insert variable into mapping between source SCIP and the target SCIP */
+   assert(!SCIPhashmapExists(varmap, sourcevar));
+   SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *var) );
+
+   /* in case there exists variable data and the variable data copy callback, try to copy variable data */
+   if( sourcevar->vardata != NULL && sourcevar->varcopy != NULL )
    {
-      if( (*targetvar)->varcopy != NULL )
+      SCIP_CALL( sourcevar->varcopy(set->scip, sourcescip, sourcevar, sourcevar->vardata, 
+            varmap, consmap, (*var), &targetdata, &result) );
+      
+      /* evaluate result */
+      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
       {
-         SCIP_CALL( (*targetvar)->varcopy(set->scip, sourcescip, sourcevar, sourcevar->vardata, 
-               (*targetvar), &(*targetvar)->vardata, success) );
+         SCIPerrorMessage("variable data copying method returned invalid result <%d>\n", result);
+         return SCIP_INVALIDRESULT;
       }
-      else
-         (*success) = FALSE;
+      
+      assert(targetdata == NULL || result == SCIP_SUCCESS);
    }
-   else
-      (*success) = TRUE;
-
-   /* if the variable data was not success copied release variable; this will also delete the variable since the capture
-    * counter will be zero afterwards 
+   
+   /* in case the copying was successfully, add the create variable data to the variable as well as all callback
+    * methods 
     */
-   if( !(*success) )
+   if( result == SCIP_SUCCESS )
    {
-      SCIP_CALL( SCIPvarRelease(targetvar, blkmem, set, NULL, NULL) );
+      (*var)->varcopy = sourcevar->varcopy;
+      (*var)->vardelorig = sourcevar->vardelorig;
+      (*var)->vartrans = sourcevar->vartrans;
+      (*var)->vardeltrans = sourcevar->vardeltrans;
+      (*var)->vardata = targetdata;
    }
-   else
-   {
-      SCIPdebugMessage("created copy <%s> of variable <%s>\n", SCIPvarGetName(*targetvar), SCIPvarGetName(sourcevar));
-   }
-
+   
+   SCIPdebugMessage("created copy <%s> of variable <%s>\n", SCIPvarGetName(*var), SCIPvarGetName(sourcevar));
+   
    return SCIP_OKAY;
 }
 
@@ -2975,7 +2992,7 @@ SCIP_RETCODE SCIPvarTransform(
       SCIP_CALL( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (SCIP_Real)objsense * origvar->obj,
             SCIPvarGetType(origvar), origvar->initial, origvar->removable,
-            origvar->varcopy, origvar->vardelorig, origvar->vartrans, origvar->vardeltrans, NULL) );
+            origvar->vardelorig, origvar->vartrans, origvar->vardeltrans, origvar->varcopy, NULL) );
       
       /* copy the branch factor and priority */
       (*transvar)->branchfactor = origvar->branchfactor;

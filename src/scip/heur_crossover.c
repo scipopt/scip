@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.59 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.60 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -776,7 +776,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
-      SCIPincludeDefaultPlugins(subscip);
+      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
       /* get name of the original problem and add the string "_crossoversub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
@@ -785,7 +785,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
       
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, TRUE, &success) );
+      SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
    }
    else
    {
@@ -813,19 +813,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( !success )
    {
       *result = SCIP_DIDNOTRUN;
-      
-      /* if creation was aborted due to number of fixings, free the already created subproblem */
-      if( SCIPgetStage(subscip) != SCIP_STAGE_INIT )
-      {
-         int nbinvars;
-         int nintvars;
-         SCIP_CALL( SCIPgetVarsData(scip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
-         for( i = 0; i < nbinvars + nintvars; i++ )
-         {
-            SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-         }
-         SCIP_CALL( SCIPfreeTransform(subscip) ); 
-      }
       
       /* free memory */
       SCIPfreeBufferArray(scip, &selection);
@@ -978,11 +965,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    
    /* free subproblem */
    SCIPfreeBufferArray(scip, &selection);
-   SCIP_CALL( SCIPfreeTransform(subscip) );
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-   }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.88 2010/09/10 13:58:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.89 2010/09/10 18:15:18 bzfheinz Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3814,17 +3814,9 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    sourceslackvar = sourceconsdata->slackvar;
 
    /* find corresponding copied variables */
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, global, success) );
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, consmap, global) );
 
-   /* if a copy was nit create, we can nit copy the constraint */
-   if( !(*success) )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, global, success) );
-   
-   /* if a copy was nit create, we can nit copy the constraint */
-   if( !(*success) )
-      return SCIP_OKAY;
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, consmap, global) );
    
    /* @warning We require that the linear constraints are copied before the indicator constraints! */
    /* construct linear constraint name */

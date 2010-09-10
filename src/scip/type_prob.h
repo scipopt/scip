@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.22 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.23 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   type_prob.h
  * @ingroup TYPEDEFINITIONS
@@ -43,22 +43,6 @@ typedef enum SCIP_Objsense SCIP_OBJSENSE;
 
 typedef struct SCIP_Prob SCIP_PROB;               /**< main problem to solve */
 typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by the reader */
-
-
-/** copies user data of source scip to target scip
- *
- *  This method should copy the problem data of the source SCIP and create a target problem data for (target) SCIP.
- *
- *  input:
- *  - scip            : target SCIP data structure
- *  - sourcescip      : source SCIP main data structure
- *  - sourceprobdata  : source user problem data
- *  - targetprobdata  : pointer to the target user problem data to create
- *
- *  output:
- *  - success         : pointer to store whether the copying was successful or not 
- */
-#define SCIP_DECL_PROBCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_PROBDATA* sourceprobdata, SCIP_PROBDATA** targetprobdata, SCIP_Bool* success)
 
 
 /** frees user data of original problem (called when the original problem is freed)
@@ -125,6 +109,33 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - restart         : was this exit solve call triggered by a restart?
  */
 #define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata, SCIP_Bool restart)
+
+/** copies user data of source SCIP for the target SCIP
+ *
+ *  This method should copy the problem data of the source SCIP and create a target problem data for (target) SCIP. This
+ *  callback is optimal. If it is implemented, however, to copying process has to be always successfully.
+ *
+ *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
+ *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
+ *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+ *
+ *  input:
+ *  - scip            : target SCIP data structure
+ *  - sourcescip      : source SCIP main data structure
+ *  - sourcedata      : source user problem data
+ *  - varmap,         : a hashmap which stores the mapping of source variables to corresponding target variables
+ *  - consmap,        : a hashmap which stores the mapping of source contraints to corresponding target constraints
+ *  - targetdata      : pointer to the target user problem data to create
+ *
+ *  output:
+ *  - result          : pointer to store the result of the call
+ *
+ *  possible return values for *result:
+ *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+ *  - SCIP_SUCCESS    : the copying process was successfully performed
+ */
+#define SCIP_DECL_PROBCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_PROBDATA* sourcedata, \
+      SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, SCIP_PROBDATA** targetdata, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

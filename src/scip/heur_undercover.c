@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.84 2010/09/10 15:00:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.85 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -2255,10 +2255,6 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIPfreeBufferArrayNull(scip, &bdvars);
 
    /* free covering problem */
-   for( i = nvars-1; i >= 0; i-- )
-   {
-      SCIP_CALL( SCIPreleaseVar(coveringscip, &(coveringvars[i])) );
-   }
    SCIPfreeBufferArray(scip, &coveringvars);
    SCIP_CALL( SCIPfree(&coveringscip) );
 

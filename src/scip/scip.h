@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.425 2010/09/10 15:00:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.426 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -279,9 +279,11 @@ SCIP_RETCODE SCIPcopyParamSettings(
    SCIP*                 targetscip          /**< target SCIP data structure */
    );
 
-/** returns the copy of a source variable in a target SCIP as given by a hash map (if not NULL) or creates a copy and
- *  adds it to the target SCIP, if not existent yet; in case the hash map is not NULL the created variable is add; in
- *  case ?????????????????????? and captured
+/** returns the copy of the source variable in the target SCIP; if the mapping is detected in the variable hash map the
+ *  target variable is just returned; in the other case a new variable is creates and added to the target SCIP; the
+ *  created variable is add to hash map;
+ *
+ *  @note if a new variable was created, this variable will be added to the target problem but it is not captured
  */
 extern
 SCIP_RETCODE SCIPgetVarCopy(
@@ -291,13 +293,15 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables */
-   SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            valid               /**< pointer to store whether the variable was validly copied */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    );
 
-/** copies all active variables from source SCIP and adds these variable to the target SCIP if the copy process for a
- *  variable was validly; in case the variable map is not NULL the mapping is added and the target variable are
- *  captured
+/** copies all active variables from source SCIP and adds these variable to the target SCIP; the mapping between these
+ *  variables are stored in the variable hash map 
+ *
+ *  @note the variables are not captured
  */
 extern
 SCIP_RETCODE SCIPcopyVars(
@@ -305,8 +309,9 @@ SCIP_RETCODE SCIPcopyVars(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
-   SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            valid               /**< pointer to store whether all variables were validly copied */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    );
 
 /** copies constraints from sourcescip to targetscip; if consmap is not NULL, the constraints will be captured in target
@@ -326,12 +331,16 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    );
 
-/** copies probdata from sourcescip to targetscip */
+/** create a problem by copying the problem of the sources SCIP */
 extern
-SCIP_RETCODE SCIPcopyProbData(
+SCIP_RETCODE SCIPcopyProb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< problem name */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables */
+   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
    );
 
 /** copies sourcescip to targetscip */
@@ -1727,12 +1736,12 @@ extern
 SCIP_RETCODE SCIPcreateProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
-   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    SCIP_DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
    SCIP_DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 
@@ -2365,10 +2374,10 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 

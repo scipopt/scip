@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.382 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.383 2010/09/10 18:15:18 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9550,7 +9550,7 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
       consname = SCIPconsGetName(sourcecons);
 
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
-         SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap,
+         SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap, consmap, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
    assert(cons != NULL);
 
@@ -10354,6 +10354,8 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Real             rhs,                /**< right hand side of the linear constraint */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
@@ -10426,26 +10428,23 @@ SCIP_RETCODE SCIPcopyConsLinear(
    }
    
    /* map variables of the source constraint to variables of the target SCIP */
-   for( v = 0; v < nvars && (*success) ; ++v )
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       var = vars[v];
       
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, global, success) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global) );
    }
 
-   if( (*success) )
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
-         lhs -= constant;
+   if( !SCIPisInfinity(scip, -lhs) )
+      lhs -= constant;
    
-      if( !SCIPisInfinity(scip, rhs) )
-         rhs -= constant;
+   if( !SCIPisInfinity(scip, rhs) )
+      rhs -= constant;
       
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   }
-   
+   SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      
    /* free buffer array */
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);

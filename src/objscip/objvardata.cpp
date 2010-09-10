@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.17 2010/09/08 22:16:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.18 2010/09/10 18:15:18 bzfheinz Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -48,33 +48,6 @@ struct SCIP_VarData
 
 extern "C"
 {
-/** copies variable data of source SCIP variable to target SCIP variable */
-static
-SCIP_DECL_VARCOPY(varCopyObj)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(sourcescip != NULL);
-   assert(sourcedata != NULL);
-   assert(targetdata != NULL);
-   assert(success != NULL);
-   assert(sourcedata->objvardata != NULL);
-
-   *success = FALSE;
-
-   /* call virtual method of probdata object */
-   if( sourcedata->objvardata->iscloneable() )
-   {
-      scip::ObjVardata* newobjvardata;
-      newobjvardata = (scip::ObjVardata*) sourcedata->objvardata->clone(sourcescip, success);
-
-      *targetdata = new SCIP_VARDATA;
-      (*targetdata)->objvardata = newobjvardata; /*lint !e40*/
-      (*targetdata)->deleteobject = TRUE;
-   }
-
-   return SCIP_OKAY;
-}
-
 
 /** frees user data of original variable (called when the original variable is freed) */
 static
@@ -146,6 +119,29 @@ SCIP_DECL_VARDELTRANS(varDeltransObj)
    
    return SCIP_OKAY;
 }
+
+/** copies user data if you want to copy it to a subscip */
+static
+SCIP_DECL_VARCOPY(varCopyObj)
+{  /*lint --e{715}*/
+   scip::ObjVardata* objvardata; /*lint !e78 !e40 !e55 !e530 !e522*/
+
+   assert(sourcedata != NULL);
+   assert(sourcedata->objvardata != NULL);
+   assert(targetdata != NULL);
+   assert(*targetdata == NULL);
+
+   /* call virtual method of probdata object */
+   SCIP_CALL( sourcedata->objvardata->scip_copy(scip, sourcescip, sourcevar, varmap, consmap, targetvar, &objvardata, result) ); /*lint !e40*/
+   
+   /* create transformed user problem data */
+   *targetdata = new SCIP_VARDATA;
+   (*targetdata)->objvardata = objvardata; /*lint !e40*/
+   (*targetdata)->deleteobject = sourcedata->deleteobject;
+   
+   return SCIP_OKAY;
+}
+
 }
 
 
@@ -181,7 +177,7 @@ SCIP_RETCODE SCIPcreateObjVar(
 
    /* create variable */
    SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removable, 
-         varCopyObj, varDelorigObj, varTransObj, varDeltransObj, vardata) ); /*lint !e429*/
+         varDelorigObj, varTransObj, varDeltransObj, varCopyObj, vardata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

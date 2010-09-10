@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.657 2010/09/10 15:00:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.658 2010/09/10 18:15:19 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -906,6 +906,8 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  * SCIP copy methods
  */
 
+#define HASHTABLESIZE_FACTOR 5
+
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
  *  copied SCIP instance might not represent the same problem semantics as the original. 
@@ -968,9 +970,11 @@ SCIP_RETCODE SCIPcopyParamSettings(
    return SCIP_OKAY;
 }
 
-/** returns the copy of a source variable in a target SCIP as given by a hash map (if not NULL) or creates a copy and
- *  adds it to the target SCIP, if not existent yet; in case the hash map is not NULL the created variable is add; in
- *  case ?????????????????????? and captured
+/** returns the copy of the source variable in the target SCIP; if the mapping is detected in the variable hash map the
+ *  target variable is just returned; in the other case a new variable is creates and added to the target SCIP; the
+ *  created variable is add to hash map;
+ *
+ *  @note if a new variable was created, this variable will be added to the target problem but it is not captured
  */
 SCIP_RETCODE SCIPgetVarCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -978,11 +982,17 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_VAR*             sourcevar,          /**< source variable */
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            valid               /**< pointer to store whether the variable was validly copied */
+                                              *   target variables */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    )
 {
+   SCIP_VAR* var;
+
+   assert(varmap != NULL);
+   assert(consmap != NULL);
+
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -991,13 +1001,10 @@ SCIP_RETCODE SCIPgetVarCopy(
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
 
-   if( varmap != NULL )
-   {
-      /* try to retrieve copied variable from hashmap */
-      *targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
-      if( *targetvar != NULL )
-         return SCIP_OKAY;
-   }
+   /* try to retrieve copied variable from hashmap */
+   *targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
+   if( *targetvar != NULL )
+      return SCIP_OKAY;
 
    /* if variable does not exists yet in target SCIP, create it */
    switch( SCIPvarGetStatus(sourcevar) )
@@ -1006,8 +1013,8 @@ SCIP_RETCODE SCIPgetVarCopy(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
-      SCIP_CALL( SCIPvarCopy(targetvar, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
-            sourcescip, sourcevar, global, valid) );
+      SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
+            sourcescip, sourcevar, varmap, consmap, global) );
       break;
       
    case SCIP_VARSTATUS_AGGREGATED:
@@ -1026,18 +1033,18 @@ SCIP_RETCODE SCIPgetVarCopy(
       constant = SCIPvarGetAggrConstant(sourcevar);
 
       /* get copy of the aggregation variable */
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, varmap, global, valid) );      
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, varmap, consmap, global) );      
 
       /* create copy of the aggregated variable */
-      SCIP_CALL( SCIPvarCopy(targetvar, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
-            sourcescip, sourcevar, global, valid) );
+      SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
+            sourcescip, sourcevar, varmap, consmap, global) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_aggr", SCIPvarGetName(sourcevar));
          
       /* add aggregation x = a*y + c as linear constraint x - a*y = c */
       SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, 0, NULL, NULL, constant,
             constant, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, *targetvar, 1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, var, 1.0) );
       SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, targetaggrvar, -aggrcoef) );
 
       SCIP_CALL( SCIPaddCons(targetscip, cons) );
@@ -1070,21 +1077,21 @@ SCIP_RETCODE SCIPgetVarCopy(
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetaggrvars, naggrvars) );
             
       /* get copies of the active variables of the multiaggregation */
-      for( i = 0; i < naggrvars; i++ )
+      for( i = 0; i < naggrvars; ++i )
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], varmap, global, valid) );
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], varmap, consmap, global) );
       }
          
       /* create copy of the multiaggregated variable */
-      SCIP_CALL( SCIPvarCopy(targetvar, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
-            sourcescip, sourcevar, global, valid) );
+      SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
+            sourcescip, sourcevar, varmap, consmap, global) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_multaggr", SCIPvarGetName(sourcevar));
          
       /* add multiaggregation x = a^T y + c as linear constraint a^T y - x = -c */
       SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, naggrvars, targetaggrvars, aggrcoefs, -constant,
             -constant, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, *targetvar, -1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(targetscip, cons, var, -1.0) );
       SCIP_CALL( SCIPaddCons(targetscip, cons) );
       SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );               
 
@@ -1103,7 +1110,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
 
       /* get copy of negated source variable */         
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap, global, valid) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, varmap, consmap, global) );
       assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
 
       /* get negation of copied negated source variable, this is the target variable */
@@ -1119,41 +1126,36 @@ SCIP_RETCODE SCIPgetVarCopy(
       SCIPABORT();
       break;
    }
+
+   /* add the (new) target variable to the target problem */
+   SCIP_CALL( SCIPaddVar(targetscip, var) );
+
+   *targetvar = var;
    
-   /* if the variable was validly copied add the variable to the target problem and the hash map */
-   if( *valid )
-   {
-      /* add the (new) target variable to the target problem */
-      SCIP_CALL( SCIPaddVar(targetscip, *targetvar) );
-
-      if( varmap != NULL )
-      {
-         /* insert variable into mapping between source SCIP and the target SCIP */
-         assert(!SCIPhashmapExists(varmap, sourcevar));
-         SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *targetvar) );
-         assert(*targetvar != NULL);
-      }
-   }
-   else
-      assert(*targetvar == NULL);
-
+   /* remove the variable capture which was done due to the creation of the variable */
+   SCIP_CALL( SCIPreleaseVar(targetscip, &var) );
+   
    return SCIP_OKAY;
 }
 
-/** copies all active variables from source SCIP and adds these variable to the target SCIP if the copy process for a
- *  variable was valid; in case the variable map is not NULL the mapping is added and the target variable are
- *  captured
+/** copies all active variables from source SCIP and adds these variable to the target SCIP; the mapping between these
+ *  variables are stored in the variable hash map 
+ *
+ *  @note the variables are not captured
  */
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
-   SCIP_Bool             global,             /**< should global or local bounds be used? */
-   SCIP_Bool*            valid               /**< pointer to store whether all variables were validly copied */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global              /**< should global or local bounds be used? */
    )
 {
    SCIP_VAR** sourcevars;
+   SCIP_Bool uselocalvarmap;
+   SCIP_Bool uselocalconsmap;
    int nsourcevars;   
    int i;
   
@@ -1167,29 +1169,49 @@ SCIP_RETCODE SCIPcopyVars(
    /* get active variables of the source SCIP */
    SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nsourcevars, NULL, NULL, NULL, NULL) );
 
-   (*valid) = TRUE;
+   uselocalvarmap = (varmap == NULL);
+   uselocalconsmap = (consmap == NULL);
+   
+   if( uselocalvarmap )
+   {
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNVars(sourcescip))) );
+   }
 
+   if( uselocalconsmap )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
+   }
+   
    /* create the variables of the target SCIP */
    for( i = 0; i < nsourcevars; ++i )
    {          
       SCIP_VAR* targetvar;
-      SCIP_Bool succeed;
-
-      succeed = TRUE;
       
       /* copy variable and add this copy to the target SCIP if the copying was valid */
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, varmap, global, &succeed) );
-      assert(!succeed || targetvar != NULL);
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, varmap, consmap, global) );
+      assert(targetvar != NULL);
+   }
+   
+   /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
+   assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip));
+   assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) == SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip));
+   assert(SCIPgetNImplVars(sourcescip) == SCIPgetNImplVars(targetscip));
+   assert(SCIPgetNContVars(sourcescip) == SCIPgetNContVars(targetscip));
 
-      (*valid) = (*valid) && succeed;
+   if( uselocalvarmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&varmap);
    }
 
-   /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
-   assert(!(valid) || (SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip)));
-   assert(!(valid) || (SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) == SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip)));
-   assert(!(valid) || (SCIPgetNImplVars(sourcescip) == SCIPgetNImplVars(targetscip)));
-   assert(!(valid) || (SCIPgetNContVars(sourcescip) == SCIPgetNContVars(targetscip)));
-
+   if( uselocalconsmap )
+   {
+      /* free hash map */
+      SCIPhashmapFree(&consmap);
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -1307,36 +1329,46 @@ SCIP_RETCODE SCIPcopyConss(
    return SCIP_OKAY;
 }
 
-/** copies probdata from sourcescip to targetscip */
-SCIP_RETCODE SCIPcopyProbData(
+/** create a problem by copying the problem of the sources SCIP */
+SCIP_RETCODE SCIPcopyProb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< problem name */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_Bool*            valid             /**< pointer to store whether all constraints were validly copied */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables */
+   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
    )
 {
-   SCIP_PROB* copyprob;
+   SCIP_PROB* sourceprob;
 
+   assert(scip != NULL);
    assert(sourcescip != NULL);
-   assert(targetscip != NULL);
-   assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyProbData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyProbData", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   
+   SCIP_CALL( checkStage(scip, "SCIPcopyProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyProb", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* free old problem */
+   SCIP_CALL( SCIPfreeProb(scip) );
+   assert(scip->set->stage == SCIP_STAGE_INIT);
+
+   /* switch stage to PROBLEM */
+   scip->set->stage = SCIP_STAGE_PROBLEM;
+
    if( SCIPisTransformed(sourcescip) )
-      copyprob = sourcescip->transprob;
+      sourceprob = sourcescip->transprob;
    else
-      copyprob = sourcescip->origprob;
-
-   assert(copyprob != NULL);
-
-   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, valid) );
+      sourceprob = sourcescip->origprob;
    
+   /* create the statistics data structure */
+   SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
+
+   /* create the problem by copying the source problme */
+   SCIP_CALL( SCIPprobCopy(&scip->origprob, scip->mem->probmem, scip->set, name, sourcescip, sourceprob, varmap, consmap) );
+
    return SCIP_OKAY;
 }
-
-#define HASHTABLESIZE_FACTOR 5
 
 /** copies source SCIP to target SCIP; if the variable hash map is not NULL all variables get captured; if the
  *  constraint hash map is not NULL all constraints get captured */
@@ -1356,10 +1388,9 @@ SCIP_RETCODE SCIPcopy(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
-   SCIP_PROB* copyprob;
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
-   char probname[SCIP_MAXSTRLEN];
+   char name[SCIP_MAXSTRLEN];
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
@@ -1371,26 +1402,12 @@ SCIP_RETCODE SCIPcopy(
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    *valid = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
 
-   /* copy all plugins and settings */
-   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, valid) );
+   /* copy all plugins */
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
+
+   /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
-
-   if( SCIPisTransformed(sourcescip) )
-      copyprob = sourcescip->transprob;
-   else
-      copyprob = sourcescip->origprob;
-
-   assert(copyprob != NULL);
-
-   /* create problem in the target SCIP */
-   /* get name of the original problem and add the suffix string */
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
-   SCIP_CALL( SCIPcreateProb(targetscip, probname, copyprob->probcopy , copyprob->probdelorig,
-         copyprob->probtrans, copyprob->probdeltrans, copyprob->probinitsol, copyprob->probexitsol, NULL) );
-
-   /** copies probdata from sourcescip to targetscip */
-   SCIP_CALL( SCIPprobCopyProbData(sourcescip->set, targetscip->set, copyprob, targetscip->origprob, valid) );
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
@@ -1407,8 +1424,14 @@ SCIP_RETCODE SCIPcopy(
       SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
    }
 
+   /* construct name for the target SCIP using the source problem name and the given suffix string */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
+
+   /* create problem in the target SCIP by copying the soruce problem */
+   SCIP_CALL( SCIPcopyProb(targetscip, name, sourcescip, varmap, consmap) );
+
    /* copy all variables*/
-   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap, global, valid) );
+   SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, varmap, consmap, global) );
 
    /* copy all constraints */
    SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, enablepricing, valid) );
@@ -1965,7 +1988,7 @@ SCIP_RETCODE SCIPsetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetEmphasisFeasibility", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetEmphasis", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetSetEmphasis(scip->set, paramsetting, quiet) );
    
@@ -3617,12 +3640,12 @@ SCIP_RETCODE SCIPstartInteraction(
 SCIP_RETCODE SCIPcreateProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
-   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    SCIP_DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
    SCIP_DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
    )
 {
@@ -3636,8 +3659,8 @@ SCIP_RETCODE SCIPcreateProb(
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
    SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
-   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name, probcopy,
-         probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probdata, FALSE) );
+   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name, 
+         probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probcopy, probdata, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -6908,10 +6931,10 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -6924,7 +6947,7 @@ SCIP_RETCODE SCIPcreateVar(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat,
-            name, lb, ub, obj, vartype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+            name, lb, ub, obj, vartype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -6932,7 +6955,7 @@ SCIP_RETCODE SCIPcreateVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPvarCreateTransformed(var, scip->mem->probmem, scip->set, scip->stat,
-            name, lb, ub, obj, vartype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+            name, lb, ub, obj, vartype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
       break;
 
    default:

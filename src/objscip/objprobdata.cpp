@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.19 2010/09/08 22:16:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.20 2010/09/10 18:15:18 bzfheinz Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -48,33 +48,6 @@ struct SCIP_ProbData
 
 extern "C"
 {
-
-/** copies user data if you want to copy it to a subscip, or NULL */
-static
-SCIP_DECL_PROBCOPY(probcopy)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(sourcescip != NULL);
-   assert(sourceprobdata != NULL);
-   assert(targetprobdata != NULL);
-   assert(success != NULL);
-   assert(sourceprobdata->objprobdata != NULL);
-
-   *success = FALSE;
-
-   /* call virtual method of probdata object */
-   if( sourceprobdata->objprobdata->iscloneable() )
-   {
-      scip::ObjProbData* newobjprobdata;
-      newobjprobdata = (scip::ObjProbData*) sourceprobdata->objprobdata->clone(sourcescip, success);
-
-      *targetprobdata = new SCIP_PROBDATA;
-      (*targetprobdata)->objprobdata = newobjprobdata; /*lint !e40*/
-      (*targetprobdata)->deleteobject = TRUE;
-   }
-
-   return SCIP_OKAY;
-}
 
 /** frees user data of original problem (called when the original problem is freed) */
 static
@@ -174,6 +147,29 @@ SCIP_DECL_PROBEXITSOL(probExitsolObj)
 
    return SCIP_OKAY;
 }
+
+/** copies user data if you want to copy it to a subscip */
+static
+SCIP_DECL_PROBCOPY(probCopyObj)
+{  /*lint --e{715}*/
+   scip::ObjProbData* objprobdata; /*lint !e78 !e40 !e55 !e530 !e522*/
+
+   assert(sourcedata != NULL);
+   assert(sourcedata->objprobdata != NULL);
+   assert(targetdata != NULL);
+   assert(*targetdata == NULL);
+
+   /* call virtual method of probdata object */
+   SCIP_CALL( sourcedata->objprobdata->scip_copy(scip, sourcescip, varmap, consmap, &objprobdata, result) ); /*lint !e40*/
+
+   /* create transformed user problem data */
+   *targetdata = new SCIP_PROBDATA;
+   (*targetdata)->objprobdata = objprobdata; /*lint !e40*/
+   (*targetdata)->deleteobject = sourcedata->deleteobject;
+
+   return SCIP_OKAY;
+}
+
 }
 
 
@@ -200,8 +196,8 @@ SCIP_RETCODE SCIPcreateObjProb(
    probdata->deleteobject = deleteobject;
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, name, probcopy, probDelorigObj, probTransObj, probDeltransObj, 
-         probInitsolObj, probExitsolObj, probdata) ); /*lint !e429*/
+   SCIP_CALL( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, 
+         probInitsolObj, probExitsolObj, probCopyObj, probdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }
