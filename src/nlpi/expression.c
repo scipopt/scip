@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.23 2010/09/08 16:05:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.24 2010/09/10 20:52:37 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -568,7 +568,7 @@ SCIP_DECL_EVAL( SCIPexprevalIntPower )
          return SCIP_OKAY;
       }
 
-      *result = SIGN(argvals[0]) * pow(ABS(argvals[0]), n);
+      *result = SIGN(argvals[0]) * pow(ABS(argvals[0]), (SCIP_Real)n);
       return SCIP_OKAY;
    }
 
@@ -577,7 +577,7 @@ SCIP_DECL_EVAL( SCIPexprevalIntPower )
       *result = 1.0 / argvals[0];
       return SCIP_OKAY;
    }
-   *result = SIGN(argvals[0]) / pow(ABS(argvals[0]), -n);
+   *result = SIGN(argvals[0]) / pow(ABS(argvals[0]), (SCIP_Real)-n);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -669,7 +669,7 @@ SCIP_DECL_EVAL( SCIPexprevalLinear )
 
    *result = *coef;
    for( i = nargs-1, --coef; i >= 0; --i, --coef )
-      *result += *coef * argvals[i];
+      *result += *coef * argvals[i];  /*lint !e613*/
 
    assert(++coef == (SCIP_Real*)opdata.data);
 
@@ -734,12 +734,12 @@ SCIP_DECL_INTEVAL( SCIPexprevalQuadraticInt )
    SCIPintervalSet(result, 0.0);
    for( i = nquadelems; i > 0 ; --i, ++quadelems )  /*lint !e613*/
    {
-      if( quadelems->idx1 == quadelems->idx2 )
+      if( quadelems->idx1 == quadelems->idx2 )  /*lint !e613*/
          SCIPintervalSquare(infinity, &tmp, argvals[quadelems->idx1]);  /*lint !e613*/
       else
          SCIPintervalMul(infinity, &tmp, argvals[quadelems->idx1], argvals[quadelems->idx2]);  /*lint !e613*/
       
-      if( quadelems->coef != 1.0 )
+      if( quadelems->coef != 1.0 )  /*lint !e613*/
          SCIPintervalMulScalar(infinity, &tmp, tmp, quadelems->coef);  /*lint !e613*/
       
       SCIPintervalAdd(infinity, result, *result, tmp);
@@ -779,7 +779,7 @@ SCIP_DECL_EVAL( SCIPexprevalPolynom )
          assert(monomdata->childidxs[j] >= 0);
          assert(monomdata->childidxs[j] < nargs);
 
-         childval = argvals[monomdata->childidxs[j]];
+         childval = argvals[monomdata->childidxs[j]];  /*lint !e613*/
          if( childval == 1.0 )  /* 1^anything == 1 */
             continue;
 
@@ -796,7 +796,7 @@ SCIP_DECL_EVAL( SCIPexprevalPolynom )
             else if( exponent < 0.0 )
             {
                /* 0^negative = nan */
-               *result = 1.0/0.0;
+               *result = log(-1.0);
                return SCIP_OKAY;
             }
             /* 0^0 == 1 */
@@ -871,7 +871,7 @@ SCIP_DECL_INTEVAL( SCIPexprevalPolynomInt )
          assert(monomdata->childidxs[j] >= 0);
          assert(monomdata->childidxs[j] < nargs);
 
-         childval = argvals[monomdata->childidxs[j]];
+         childval = argvals[monomdata->childidxs[j]];  /*lint !e613*/
 
          exponent = monomdata->exponents[j];
 
@@ -1034,9 +1034,9 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_VARIDX:
       case SCIP_EXPR_PARAM:
       {
-         va_start( ap, op );
-         opdata.intval = va_arg( ap, int );
-         va_end( ap );
+         va_start( ap, op );  /*lint !e826*/
+         opdata.intval = va_arg( ap, int );  /*lint !e416 !e826*/
+         va_end( ap );  /*lint !e826*/
          
          assert( opdata.intval >= 0 );
          
@@ -1046,9 +1046,9 @@ SCIP_RETCODE SCIPexprCreate(
          
       case SCIP_EXPR_CONST:
       {
-         va_start(ap, op );
-         opdata.dbl = va_arg( ap, SCIP_Real );
-         va_end( ap );
+         va_start(ap, op );  /*lint !e826*/
+         opdata.dbl = va_arg( ap, SCIP_Real );  /*lint !e416 !e826*/
+         va_end( ap );  /*lint !e826*/
          
          SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata ) );
          break;
@@ -1066,12 +1066,12 @@ SCIP_RETCODE SCIPexprCreate(
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 2) );
          
-         va_start(ap, op );
-         children[0] = va_arg( ap, SCIP_EXPR* );
-         children[1] = va_arg( ap, SCIP_EXPR* );
+         va_start(ap, op );  /*lint !e826*/
+         children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
+         children[1] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
          assert(children[0] != NULL);
          assert(children[1] != NULL);
-         va_end( ap );
+         va_end( ap );  /*lint !e826*/
          opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
          
          SCIP_CALL( exprCreate( blkmem, expr, op, 2, children, opdata ) );
@@ -1086,15 +1086,16 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_SIN   :
       case SCIP_EXPR_COS   :
       case SCIP_EXPR_TAN   :
+      case SCIP_EXPR_ERF   :
       case SCIP_EXPR_ABS   :
       case SCIP_EXPR_SIGN  :
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
          
-         va_start(ap, op );
-         children[0] = va_arg( ap, SCIP_EXPR* );
+         va_start(ap, op );  /*lint !e826*/
+         children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
          assert(children[0] != NULL);
-         va_end( ap );
+         va_end( ap );  /*lint !e826*/
          opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
          
          SCIP_CALL( exprCreate( blkmem, expr, op, 1, children, opdata ) );
@@ -1105,11 +1106,11 @@ SCIP_RETCODE SCIPexprCreate(
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
 
-         va_start(ap, op );
-         children[0] = va_arg( ap, SCIP_EXPR* );
+         va_start(ap, op );  /*lint !e826*/
+         children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
          assert(children[0] != NULL);
-         opdata.intval = va_arg( ap, int);
-         va_end( ap );
+         opdata.intval = va_arg( ap, int);  /*lint !e416 !e826*/
+         va_end( ap );  /*lint !e826*/
 
          SCIP_CALL( exprCreate( blkmem, expr, op, 1, children, opdata ) );
          break;
@@ -1124,23 +1125,23 @@ SCIP_RETCODE SCIPexprCreate(
 
          opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
 
-         va_start(ap, op );
+         va_start(ap, op );  /*lint !e826*/
          /* first argument should be number of children */
-         nchildren = va_arg( ap, int );
+         nchildren = va_arg( ap, int );  /*lint !e416 !e826*/
          assert(nchildren >= 0);
 
          /* for a sum or product of 0 terms we can finish here */
          if( nchildren == 0 )
          {
             SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata) );
-            va_end( ap );
+            va_end( ap );  /*lint !e826*/
             break;
          }
 
          /* next argument should be array of children expressions */
-         childrenarg = va_arg( ap, SCIP_EXPR** );
+         childrenarg = va_arg( ap, SCIP_EXPR** );  /*lint !e416 !e826*/
          assert(childrenarg != NULL);
-         va_end( ap );
+         va_end( ap );  /*lint !e826*/
 
          SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &children, childrenarg, nchildren) );
 
@@ -1156,6 +1157,7 @@ SCIP_RETCODE SCIPexprCreate(
          return SCIP_INVALIDDATA;
       }
 
+      case SCIP_EXPR_LAST:
       default:
          SCIPerrorMessage("unknown operand: %d\n", op);
          return SCIP_INVALIDDATA;
@@ -1192,7 +1194,7 @@ SCIP_RETCODE quadraticdataCreate(
 
 /** frees SCIP_EXPRDATA_QUADRATIC data structure */
 static
-SCIP_RETCODE quadraticdataFree(
+void quadraticdataFree(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPRDATA_QUADRATIC** quadraticdata   /**< buffer to store pointer to quadratic data */
    )
@@ -1208,8 +1210,6 @@ SCIP_RETCODE quadraticdataFree(
    }
 
    BMSfreeBlockMemory(blkmem, quadraticdata);
-
-   return SCIP_OKAY;
 }
 
 /** creates SCIP_EXPRDATA_POLYNOM data structure from given monoms */
@@ -1240,9 +1240,9 @@ SCIP_RETCODE polynomdataCreate(
 
       for( i = 0; i < nmonoms; ++i )
       {
-         assert(monoms[i] != NULL);
+         assert(monoms[i] != NULL);  /*lint !e613*/
          SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &(*polynomdata)->monoms[i],
-            monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );
+            monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
       }
    }
 
@@ -1340,7 +1340,7 @@ SCIP_RETCODE SCIPexprCopyDeep(
       {
          /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
          assert(sourceexpr->data.data != NULL);
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, (SCIP_Real**)&(*targetexpr)->data.data, (SCIP_Real*)sourceexpr->data.data, sourceexpr->nchildren + 1) );
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, (SCIP_Real**)&(*targetexpr)->data.data, (SCIP_Real*)sourceexpr->data.data, sourceexpr->nchildren + 1) );  /*lint !e866*/
          break;
       }
       
@@ -1368,8 +1368,8 @@ SCIP_RETCODE SCIPexprCopyDeep(
          break;
       }
 
-      default: ;
-   }
+     default: ;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -1391,7 +1391,7 @@ void SCIPexprFreeDeep(
       {
          /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
          assert((*expr)->data.data != NULL);
-         BMSfreeBlockMemoryArray(blkmem, (SCIP_Real**)&(*expr)->data.data, (*expr)->nchildren + 1);
+         BMSfreeBlockMemoryArray(blkmem, (SCIP_Real**)&(*expr)->data.data, (*expr)->nchildren + 1);  /*lint !e866*/
          break;
       }
       
@@ -1410,7 +1410,7 @@ void SCIPexprFreeDeep(
       }
 
       default: ;
-   }
+   }  /*lint !e788*/
 
    if( (*expr)->nchildren )
    {
@@ -1492,7 +1492,7 @@ void* SCIPexprGetOpData(
 )
 {
    assert(expr != NULL);
-   assert(expr->op >= 64); /* only complex operands store their data as void* */
+   assert(expr->op >= SCIP_EXPR_SUM); /* only complex operands store their data as void* */
    
    return expr->data.data;
 }
@@ -1733,9 +1733,9 @@ SCIP_RETCODE SCIPexprAddPolynomMonoms(
 
    for( i = 0; i < nmonoms; ++i )
    {
-      assert(monoms[i] != NULL);
+      assert(monoms[i] != NULL);  /*lint !e613*/
       SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &data->monoms[data->nmonoms + i],
-         monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );
+         monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
    }
    data->nmonoms += nmonoms;
 
@@ -1960,7 +1960,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
          if( val == 0.0 ) /* polynomial ^ 0 == 0 */
             *maxdegree = 0;
-         else if( val > 0.0 && floor(val) == val ) /* natural exponent gives polynom again */ 
+         else if( val > 0.0 && floor(val) == val ) /* natural exponent gives polynom again */  /*lint !e777*/
             *maxdegree = child1 * (int)floor(val);
          else /* negative or nonintegral exponent does not give polynom */ 
             *maxdegree = SCIP_EXPR_DEGREEINFINITY;
@@ -2138,6 +2138,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          break;
       }
 
+      case SCIP_EXPR_LAST:
       default:
          SCIPerrorMessage("unknown operand: %d\n", expr->op);
          return SCIP_ERROR;
@@ -3022,9 +3023,9 @@ SCIP_Bool SCIPquadelemSortedFind(
       middle = (left+right)/2;
       assert(0 <= middle && middle < nquadelems);
 
-      if( idx1 < quadelems[middle].idx1 || (idx1 == quadelems[middle].idx1 && idx2 < quadelems[middle].idx2) )
+      if( idx1 < quadelems[middle].idx1 || (idx1 == quadelems[middle].idx1 && idx2 < quadelems[middle].idx2) )  /*lint !e613*/
          right = middle - 1;
-      else if( quadelems[middle].idx1 < idx1 || (quadelems[middle].idx1 == idx1 && quadelems[middle].idx2 < idx2) )
+      else if( quadelems[middle].idx1 < idx1 || (quadelems[middle].idx1 == idx1 && quadelems[middle].idx2 < idx2) )  /*lint !e613*/
          left  = middle + 1;
       else
       {

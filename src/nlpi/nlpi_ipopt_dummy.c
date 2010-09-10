@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt_dummy.c,v 1.2 2010/09/06 10:51:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt_dummy.c,v 1.3 2010/09/10 20:52:37 bzfviger Exp $"
 
 /**@file    nlpi_ipopt_dummy.c
  * @ingroup NLPIS
@@ -38,7 +38,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    *nlpi = NULL;
    
    return SCIP_OKAY;
-}
+}  /*lint !e715*/
 
 /** gets string that identifies Ipopt (version number) */
 const char* SCIPgetSolverNameIpopt(void)
@@ -65,8 +65,8 @@ void* SCIPgetIpoptApplicationPointerIpopt(
 {
    SCIPerrorMessage("Ipopt not available!\n");
    SCIPABORT();
-   return NULL;
-}
+   return NULL;  /*lint !e527*/
+}  /*lint !e715*/
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
  * It's here, because Ipopt is linked against Lapack.
@@ -80,4 +80,4 @@ SCIP_RETCODE LapackDsyev(
 {
    SCIPerrorMessage("Ipopt not available, cannot use it's Lapack link!\n");
    return SCIP_ERROR;
-}
+}  /*lint !e715*/

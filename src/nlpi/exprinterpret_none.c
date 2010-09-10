@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.8 2010/08/29 16:25:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.9 2010/09/10 20:52:37 bzfviger Exp $"
 
 /**@file   exprinterpret_none.c
  * @brief  function definitions for nonexisting expression interpreter to resolve linking references 
@@ -25,6 +25,7 @@
 
 struct SCIP_ExprInt
 {
+   char dummy;  /*lint !e830*/
 };
 
 /** gets name and version of expression interpreter */
@@ -33,7 +34,7 @@ const char* SCIPexprintGetName(
    )
 {
    return "NONE";
-}
+}  /*lint !e715*/
 
 /** gets descriptive text of expression interpreter */
 const char* SCIPexprintGetDesc(
@@ -41,7 +42,7 @@ const char* SCIPexprintGetDesc(
    )
 {
    return "dummy expression interpreter which solely purpose it is to resolve linking symbols";
-}
+}  /*lint !e715*/
 
 /** gets capabilities of expression interpreter (using bitflags) */
 SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
@@ -49,7 +50,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
    )
 {
    return SCIP_EXPRINTCAPABILITY_NONE;
-}
+}  /*lint !e715*/
 
 /** creates an expression interpreter object */
 SCIP_RETCODE SCIPexprintCreate(
@@ -63,7 +64,7 @@ SCIP_RETCODE SCIPexprintCreate(
    SCIP_ALLOC( BMSallocMemory(exprint) );
    
    return SCIP_OKAY;
-}
+}  /*lint !e715*/
 
 /** frees an expression interpreter object */
 SCIP_RETCODE SCIPexprintFree(
@@ -73,7 +74,7 @@ SCIP_RETCODE SCIPexprintFree(
    BMSfreeMemory(exprint);
    
    return SCIP_OKAY;
-}
+}  /*lint !e715*/
 
 /** compiles an expression tree and stores compiled data in expression tree */
 SCIP_RETCODE SCIPexprintCompile(
@@ -82,7 +83,7 @@ SCIP_RETCODE SCIPexprintCompile(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(
@@ -90,7 +91,7 @@ SCIP_RETCODE SCIPexprintFreeData(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** notify expression interpreter that a new parameterization is used
  * this probably causes retaping by AD algorithms
@@ -101,7 +102,7 @@ SCIP_RETCODE SCIPexprintNewParametrization(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** evaluates an expression tree */
 SCIP_RETCODE SCIPexprintEval(
@@ -112,7 +113,7 @@ SCIP_RETCODE SCIPexprintEval(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** evaluates an expression tree on intervals */
 SCIP_RETCODE SCIPexprintEvalInt(
@@ -124,7 +125,7 @@ SCIP_RETCODE SCIPexprintEvalInt(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** computes value and gradient of an expression tree */
 SCIP_RETCODE SCIPexprintGrad(
@@ -137,7 +138,7 @@ SCIP_RETCODE SCIPexprintGrad(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** computes interval value and interval gradient of an expression tree */
 SCIP_RETCODE SCIPexprintGradInt(
@@ -151,7 +152,7 @@ SCIP_RETCODE SCIPexprintGradInt(
 )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** gives sparsity pattern of hessian
  * NOTE: this function might be replaced later by something nicer 
@@ -165,7 +166,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
 
 /** computes value and dense hessian of an expression tree
  * the full hessian is computed (lower left and upper right triangle)
@@ -180,4 +181,4 @@ SCIP_RETCODE SCIPexprintHessianDense(
    )
 {
    return SCIP_PLUGINNOTFOUND;
-}
+}  /*lint !e715*/
