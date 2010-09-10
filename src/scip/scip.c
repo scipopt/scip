@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.658 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.659 2010/09/10 18:23:08 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1216,7 +1216,8 @@ SCIP_RETCODE SCIPcopyVars(
 }
 
 /** copies constraints from source SCIP to target SCIP; if consmap is not NULL, the constraint will be captured in
- *  target SCIP */
+ *  target SCIP 
+ */
 SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1371,7 +1372,8 @@ SCIP_RETCODE SCIPcopyProb(
 }
 
 /** copies source SCIP to target SCIP; if the variable hash map is not NULL all variables get captured; if the
- *  constraint hash map is not NULL all constraints get captured */
+ *  constraint hash map is not NULL all constraints get captured 
+ */
 SCIP_RETCODE SCIPcopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1400,14 +1402,15 @@ SCIP_RETCODE SCIPcopy(
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   *valid = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
+
+   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
+    * SCIP 
+    */
+   (*valid) = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
-
-   /* copy all settings */
-   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
@@ -1436,6 +1439,9 @@ SCIP_RETCODE SCIPcopy(
    /* copy all constraints */
    SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, enablepricing, valid) );
 
+   /* copy all settings */
+   SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+   
    if( uselocalvarmap )
    {
       /* free hash map */
