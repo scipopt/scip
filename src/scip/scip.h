@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.422 2010/09/10 09:15:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.423 2010/09/10 09:24:29 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4819,12 +4819,6 @@ SCIP_Bool SCIPisNLPRequired(
 /** returns, whether an NLP has been constructed */
 extern
 SCIP_Bool SCIPisNLPConstructed(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** makes sure that the NLP is loaded and may be accessed through the NLP information methods */
-extern
-SCIP_RETCODE SCIPconstructNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.102 2010/08/30 20:39:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.103 2010/09/10 09:24:30 bzfviger Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -232,6 +232,7 @@ struct SCIP_Set
    int                   lp_threads;         /**< number of threads used for solving the LP (0: automatic) */
 
    /* NLP settings */
+   SCIP_Bool             nlp_disable;        /**< should the NLP be disabled? */
    char*                 nlp_solver;         /**< name of NLP solver to use */
 
    /* memory settings */

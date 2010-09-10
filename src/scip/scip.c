@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.654 2010/09/10 09:15:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.655 2010/09/10 09:24:29 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6249,11 +6249,16 @@ SCIP_RETCODE initSolve(
    /* switch stage to INITSOLVE */
    scip->set->stage = SCIP_STAGE_INITSOLVE;
 
-   /* initialize NLP if there are nonlinearities and there is someone who can make use of it */
+   /* initialize NLP if there are nonlinearities and there is someone who can make use of it and the user did not switch it off */
    assert(!scip->set->continnonlinpresent || scip->set->nonlinearitypresent); /* if there is continous nonlinearity, then there should be nonlinearity in general */
-   if( scip->set->nonlinearitypresent && scip->set->nlprequired )
+   if( scip->set->nonlinearitypresent && scip->set->nlprequired && !scip->set->nlp_disable )
    {
-      SCIP_CALL( SCIPconstructNLP(scip) );
+      SCIPdebugMessage("constructing empty NLP\n");
+
+      SCIP_CALL( SCIPnlpCreate(&scip->nlp, scip->mem->probmem, scip->set, scip->stat, SCIPprobGetName(scip->transprob), scip->transprob->nvars) );
+      assert(scip->nlp != NULL);
+
+      SCIP_CALL( SCIPnlpAddVars(scip->nlp, scip->mem->probmem, scip->set, scip->transprob->nvars, scip->transprob->vars) );
    }
 
    /* create VBC output file */
@@ -6348,7 +6353,9 @@ SCIP_RETCODE freeSolve(
 
    /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
    if( scip->nlp != NULL )
+   {
       SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+   }
    scip->set->continnonlinpresent = FALSE;
    scip->set->nonlinearitypresent = FALSE;
    
@@ -13438,31 +13445,6 @@ SCIP_NLP* SCIPgetNLP(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->nlp;
-}
-
-/** makes sure that the NLP is loaded and may be accessed through the NLP information methods */
-SCIP_RETCODE SCIPconstructNLP(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPconstructNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPdebugMessage("constructing empty NLP\n");
-
-      SCIP_CALL( SCIPnlpCreate(&scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, SCIPprobGetName(scip->transprob), scip->transprob->nvars) );
-      assert(scip->nlp != NULL);
-
-      /* if called after (or during) initsolve, then we add variables
-       * normally, they are added in initsolve(), if the NLP existed there */
-      if( scip->set->stage >= SCIP_STAGE_INITSOLVE )
-      {
-         SCIP_CALL( SCIPnlpAddVars(scip->nlp, SCIPblkmem(scip), scip->set, scip->transprob->nvars, scip->transprob->vars) );
-      }
-   }
-
-   return SCIP_OKAY;
 }
 
 /** makes sure that the NLP of the current node is flushed */

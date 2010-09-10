@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.251 2010/09/10 09:15:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.252 2010/09/10 09:24:30 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -176,6 +176,7 @@
 /* NLP */
 
 #define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be choosen by priority */
+#define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be disabled? */
 
 /* Memory */
 
@@ -696,6 +697,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->extcodessize = 0;
    (*set)->vbc_filename = NULL;
    (*set)->nlp_solver = NULL;
+   (*set)->nlp_disable = FALSE;
 
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
@@ -1066,6 +1068,11 @@ SCIP_RETCODE SCIPsetCreate(
          "nlp/solver",
          "solver to use for solving NLPs; leave empty to select NLPI with highest priority",
          &(*set)->nlp_solver, FALSE, SCIP_DEFAULT_NLP_SOLVER,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "nlp/disable",
+         "should the NLP be disabled?",
+         &(*set)->nlp_disable, FALSE, SCIP_DEFAULT_NLP_DISABLE,
          NULL, NULL) );
 
    /* memory parameters */
