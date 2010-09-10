@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.42 2010/09/08 19:14:53 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.43 2010/09/10 14:39:37 bzfgamra Exp $"
 
 /**@file   cons_conjunction.c
  * @ingroup CONSHDLRS 
@@ -252,6 +252,7 @@ SCIP_RETCODE checkAllConss(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
+#if 0
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
 {  /*lint --e{715}*/
@@ -266,6 +267,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
 
    return SCIP_OKAY;
 }
+#else
+#define conshdlrCopyConjunction NULL
+#endif
 
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */

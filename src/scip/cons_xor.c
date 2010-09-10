@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.80 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.81 2010/09/10 14:39:37 bzfgamra Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -2274,7 +2274,58 @@ SCIP_DECL_CONSPRINT(consPrintXor)
 }
 
 /** constraint copying method of constraint handler */
-#define consCopyXor NULL
+static
+SCIP_DECL_CONSCOPY(consCopyXor)
+{  /*lint --e{715}*/
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** targetvars;
+   const char* consname;
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+
+   (*success) = TRUE;
+
+   /* get variables and coefficients of the source constraint */
+   sourcevars = SCIPgetVarsXor(sourcescip, sourcecons);
+   nvars = SCIPgetNVarsXor(sourcescip, sourcecons);
+   
+   if( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+
+   if( nvars == 0 )
+   {
+      SCIP_CALL( SCIPcreateConsXor(scip, cons, name, SCIPgetRhsXor(sourcescip, sourcecons), 0, NULL,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      return SCIP_OKAY;
+   }
+
+   /* duplicate variable array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
+
+   /* map variables of the source constraint to variables of the target SCIP */
+   for( v = 0; v < nvars && (*success) ; ++v )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, global, success) );
+   }
+
+   if( (*success) )
+   {
+      SCIP_CALL( SCIPcreateConsXor(scip, cons, name, SCIPgetRhsXor(sourcescip, sourcecons), nvars, targetvars,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+   
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &targetvars);
+   
+   return SCIP_OKAY;
+}
+
 
 /** constraint parsing method of constraint handler */
 #define consParseXor NULL

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.51 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.52 2010/09/10 14:39:37 bzfgamra Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2643,7 +2643,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySOC)
 }
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 1
 static
 SCIP_DECL_CONSFREE(consFreeSOC)
 {  
@@ -2660,13 +2659,9 @@ SCIP_DECL_CONSFREE(consFreeSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeSOC NULL
-#endif
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_CONSINIT(consInitSOC)
 {  /*lint --e{715}*/
@@ -2684,13 +2679,9 @@ SCIP_DECL_CONSINIT(consInitSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitSOC NULL
-#endif
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXIT(consExitSOC)
 {  /*lint --e{715}*/
@@ -2708,9 +2699,6 @@ SCIP_DECL_CONSEXIT(consExitSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitSOC NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
@@ -2729,7 +2717,6 @@ SCIP_DECL_CONSINITPRE(consInitpreSOC)
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 {  /*lint --e{715}*/
@@ -2781,13 +2768,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreSOC NULL
-#endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITSOL(consInitsolSOC)
 {  
@@ -2832,13 +2815,9 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consInitsolSOC NULL
-#endif
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSOC)
 {
@@ -2881,13 +2860,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
 
    return SCIP_OKAY;
 } /*lint !e715*/
-#else
-#define consExitsolSOC NULL
-#endif
 
 
 /** frees specific constraint data */
-#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteSOC)
 {
@@ -2930,13 +2905,9 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeleteSOC NULL
-#endif
 
 
 /** transforms constraint data into data belonging to the transformed problem */ 
-#if 1
 static
 SCIP_DECL_CONSTRANS(consTransSOC)
 {  
@@ -3008,9 +2979,6 @@ SCIP_DECL_CONSTRANS(consTransSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consTransSOC NULL
-#endif
 
 
 /** LP initialization method of constraint handler */
@@ -3029,7 +2997,6 @@ SCIP_DECL_CONSINITLP(consInitlpSOC)
 
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpSOC)
 {  
@@ -3057,13 +3024,9 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepalpSOC NULL
-#endif
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSOC)
 {  
@@ -3092,9 +3055,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consSepasolSOC NULL
-#endif
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -3295,7 +3255,6 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropSOC)
 {
@@ -3319,13 +3278,9 @@ SCIP_DECL_CONSPROP(consPropSOC)
 
    return SCIP_OKAY;
 } /*lint !e715*/
-#else
-#define consPropSOC NULL
-#endif
 
 
 /** presolving method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolSOC)
 {
@@ -3390,9 +3345,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
 
    return SCIP_OKAY;
 } /*lint !e715*/
-#else
-#define consPresolSOC NULL
-#endif
 
 
 /** propagation conflict resolving method of constraint handler */
@@ -3503,7 +3455,6 @@ SCIP_DECL_CONSDISABLE(consDisableSOC)
 
 
 /** constraint display method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintSOC)
 {  
@@ -3579,13 +3530,9 @@ SCIP_DECL_CONSPRINT(consPrintSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consPrintSOC NULL
-#endif
 
 
 /** constraint copying method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSCOPY(consCopySOC)
 {
@@ -3641,9 +3588,6 @@ SCIP_DECL_CONSCOPY(consCopySOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consCopySOC NULL
-#endif
 
 
 /** constraint parsing method of constraint handler @todo */
