@@ -4331,36 +4331,36 @@
  *  
  *  Analogously to the target <code>test</code> there are further targets to run automated tests with other MIP solvers.
  *  These are:
- *  \arg for cplex
+ *  \arg for <a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">cplex</a>
  *  \code
  *  make testcplex
  *  \endcode
- *  \arg for gurobi
+ *  \arg for <a href="http://www.gurobi.com/">gurobi</a>
  *  \code
  *  make testgurobi
  *  \endcode
- *  \arg for cbc
+ *  \arg for <a href="http://projects.coin-or.org/Cbc">cbc</a>
  *  \code
  *  make testcbc
  *  \endcode
- *  \arg for mosek
+ *  \arg for <a href="http://www.mosek.com/">mosek</a>
  *  \code
  *  make testmosek
  *  \endcode
- *  \arg for glpk
+ *  \arg for <a href="http://www.gnu.org/software/glpk/">glpk</a>
  *  \code
  *  make testglpk
  *  \endcode
- *  \arg for symphony
+ *  \arg for <a href="http://projects.coin-or.org/SYMPHONY">symphony</a>
  *  \code
  *  make testsymphony
  *  \endcode
- *  \arg for blis
+ *  \arg for <a href="https://projects.coin-or.org/CHiPPS">blis</a>
  *  \code
  *  make testblis
  *  \endcode
  *  
- *  Note: This only works if the referred programs are installed globally on your machine.
+ *  Note: This works only if the referred programs are installed globally on your machine.
  *  
  *  The above options like <code>TIME</code> are also available for the other solvers.
  *  
