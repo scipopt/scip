@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.117 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.118 2010/09/10 19:01:09 bzfviger Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -543,6 +543,8 @@ void probInsertVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
    /* insert variable in array */
    insertpos = prob->nvars;
@@ -721,6 +723,8 @@ SCIP_RETCODE SCIPprobAddVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   /* original variables can not go into transformed problem and transformed variables cannot go into original problem */
+   assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
 #ifndef NDEBUG
    /* check if we add this variables to the same scip, where we created it */
