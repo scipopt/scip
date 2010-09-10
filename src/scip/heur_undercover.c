@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.88 2010/09/10 22:42:00 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.89 2010/09/10 22:53:00 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1602,6 +1602,8 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* set the parameters such that good solutions are found fast */
+   /* TODO: control better the effort, maybe turn off subscipheurs? Add a parameter to control effort spent solving the
+    * subproblem? */
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMSETTING_FEASIBILITY, TRUE) );
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
@@ -2596,11 +2598,13 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       nnlrows = SCIPnlpGetNNlRows(nlp);
       nlrows = SCIPnlpGetNlRows(nlp);
 
-      /* check for an nlrow with nontrivial expression tree */
+      /* check for an nlrow with nontrivial expression tree or quadratic terms; start from 0 since we expect the linear
+       * nlrows at the end */
       for( i = nnlrows-1; i >= 0 && !run; i-- )
       {
          assert(nlrows[i] != NULL);
-         run = SCIPnlrowGetExprtree(nlrows[i]) != NULL && SCIPexprtreeGetNVars(SCIPnlrowGetExprtree(nlrows[i])) >= 1;
+         run = SCIPnlrowGetExprtree(nlrows[i]) != NULL && SCIPexprtreeGetNVars(SCIPnlrowGetExprtree(nlrows[i])) > 0;
+         run = run || SCIPnlrowGetNQuadVars(nlrows[i]) > 0;
       }
    }
 
