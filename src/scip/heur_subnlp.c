@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.28 2010/09/11 10:35:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.29 2010/09/11 15:48:43 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1405,7 +1405,10 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       }
       *result = SCIP_DIDNOTFIND;
    }
-   
+
+if ( *result == SCIP_CUTOFF )
+  *result = SCIP_DIDNOTFIND;
+ 
    /* undo fixing of discrete variables in subSCIP */
    if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
    {
