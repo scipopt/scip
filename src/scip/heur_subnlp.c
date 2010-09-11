@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.27 2010/09/11 10:16:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.28 2010/09/11 10:35:16 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1173,7 +1173,10 @@ SCIP_RETCODE forbidFixation(
          ++nconsvars;
       }
       
-      /* create conflict constraint */
+      /* create conflict constraint
+       * In undercover, ConsLogicor is used, since then the inequality is not added to the LP.
+       * However, I may want to use Setcover to avoid that the same fixing is computed by some LP based heuristic again.
+       */
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, name, nconsvars, consvars,
             FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    }
@@ -1393,7 +1396,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    }
    assert(!SCIPisTransformed(heurdata->subscip));
    
-   if( *result == SCIP_CUTOFF && SCIPgetNPricers(scip) == 0 && !SCIPisInfinity(scip, cutoff) )
+   if( *result == SCIP_CUTOFF && SCIPgetNActivePricers(scip) == 0 && !SCIPisInfinity(scip, cutoff) )
    {
       /* if the subNLP turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
       if( heurdata->forbidfixings )
