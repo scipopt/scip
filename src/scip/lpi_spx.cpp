@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.116 2010/09/08 11:15:02 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.117 2010/09/11 00:01:18 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -24,7 +24,7 @@
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define AUTOPRICING_ITERSWITCH          100  /**< start with devex and switch to steepest edge after this many iterations */
+#define AUTOPRICING_ITERSWITCH          10000/**< start with devex and switch to steepest edge after this many iterations */
 #define STRONGBRANCH_RESTOREBASIS            /**< if defined then in SCIPlpiStrongbranch() we restore the basis after the
                                               *   down branch and after the up branch; if false only after the end of a
                                               *   strong branching phase, which however seems to mostly increase strong
@@ -70,6 +70,8 @@
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
 #include "spxfastrt.h"
+#include "spxmainsm.h"
+#include "spxequilisc.h"
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
@@ -146,6 +148,7 @@ class SPxSCIP : public SPxSolver
    SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
+   bool             m_scaling;          /**< use lp scaling */
    Real             m_objLoLimit;       /**< lower objective limit */
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
@@ -168,6 +171,7 @@ public:
         : SPxSolver(LEAVE, COLUMN),
           m_probname(0),
           m_fromscratch(false),
+          m_scaling(false),
           m_objLoLimit(-soplex::infinity),
           m_objUpLimit(soplex::infinity),
           m_stat(NO_PROBLEM),
@@ -184,7 +188,7 @@ public:
       setSolver(&m_slu);
       setTester(&m_ratio);
       setPricer(&m_price_steep);
-      /* no starter, no simplifier, no scaler */
+      /* no starter */
 
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
@@ -258,6 +262,16 @@ public:
    void setFromScratch(bool fs)
    {
       m_fromscratch = fs;
+   }
+
+   bool getScaling() const
+   {
+      return m_scaling;
+   }
+
+   void setScaling(bool s)
+   {
+      m_scaling = s;
    }
 
    bool getLpInfo() const
@@ -422,7 +436,7 @@ public:
    }
 #endif
 
-   void trySolve()
+   void trySolve(bool printwarning = true)
    {
       try
       {
@@ -430,8 +444,11 @@ public:
       }
       catch(SPxException x)
       {
-	 std::string s = x.what();      
-	 SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+	 std::string s = x.what();
+         if( printwarning )
+         {
+            SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+         }
 	 m_stat = SPxSolver::status();
 	 
 	 /* since it is not clear if the status in SoPlex are set correctly
@@ -442,34 +459,16 @@ public:
       }
    }
 
-   virtual Status solve()
+   virtual Status doSolve(bool printwarning = true)
    {
-      if ( getFromScratch() )
-      {
-	 try
-	 {
-	    SPxSolver::reLoad();
-	 }
-	 catch(SPxException x)
-	 {
-	    std::string s = x.what();      
-	    SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
-	    m_stat = SPxSolver::status();
-	    assert( m_stat != SPxSolver::OPTIMAL );
-	    return m_stat;
-	 }
-      }
+      /* set verbosity */
+      Param::setVerbose(getLpInfo() ? 5 : 0);
 
 #ifdef WITH_LPSCHECK
       /* dump LP with current basis and settings saved in SoPlex */
       if( getDoubleCheck() )
          writeState("spxcheck", NULL, NULL);
 #endif
-
-      if ( getLpInfo() )
-	 Param::setVerbose(5);
-      else 
-	 Param::setVerbose(0);
 
       /* in auto pricing, do the first 10000 iterations with devex, then switch to steepest edge */
       if( m_autopricing )
@@ -479,7 +478,7 @@ public:
 	 setAutoPricer(true);
 	 setTerminationIter(AUTOPRICING_ITERSWITCH);
 
-	 trySolve();
+	 trySolve(printwarning);
 
 	 m_autophase1iters = SPxSolver::iterations();
 	 setTerminationIter(olditlim);
@@ -488,8 +487,8 @@ public:
       else
 	 m_autophase1iters = 0;
 
-      trySolve();
-      
+      trySolve(printwarning);
+
       if( m_stat == OPTIMAL )
       {
          Real objval = value();
@@ -602,6 +601,86 @@ public:
 
    ENDCHECK:
 #endif
+
+      return m_stat;
+   }
+
+   virtual Status solve()
+   {
+      assert(m_sense == sense());
+
+      SPxSolver::VarStatus* cstat = NULL;
+      SPxSolver::VarStatus* rstat = NULL;
+      SPxLP unscaledlp;
+      int scalediters;
+      bool applyscaling;
+
+      /* delete starting basis if solving from scratch */
+      if ( getFromScratch() )
+      {
+	 try
+	 {
+	    SPxSolver::reLoad();
+	 }
+	 catch(SPxException x)
+	 {
+	    std::string s = x.what();      
+	    SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+	    m_stat = SPxSolver::status();
+	    assert( m_stat != SPxSolver::OPTIMAL );
+	    return m_stat;
+	 }
+      }
+      assert(!getFromScratch() || getBasisStatus() == SPxBasis::NO_PROBLEM);
+
+      /* use scaler if no basis is loaded, i.e., if solving for the first time or from scratch */
+      applyscaling = SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling();
+      if( applyscaling )
+      {
+         SPxEquiliSC scaler;
+
+         /* store original lp */
+         unscaledlp = SPxLP(*this);
+
+         /* perform scaling */
+         scaler.scale(*this);
+      }
+
+      /* solve */
+      doSolve();
+
+      /* if scaling was applied, restore unscaled lp */
+      if( applyscaling )
+      {
+         /* get basis if at least regular */
+         if( SPxSolver::getBasisStatus() >= SPxBasis::REGULAR )
+         {
+            rstat = new SPxSolver::VarStatus[nRows()];
+            cstat = new SPxSolver::VarStatus[nCols()];
+            SPxSolver::getBasis(rstat, cstat);
+         }
+
+         /* reload unscaled lp */
+         SPxSolver::loadLP(unscaledlp);
+         m_sense = sense();
+
+         /* set basis from scaled lp and reoptimize */
+         if( rstat != NULL && cstat != NULL )
+         {
+            scalediters = iterations();
+            SPxSolver::setBasis(rstat, cstat);
+            doSolve();
+            m_autophase1iters += scalediters;
+         }
+      }
+
+      if( m_stat == OPTIMAL )
+      {
+         Real objval = value();
+         
+         if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
+            m_stat = ABORT_VALUE;
+      }
 
       return m_stat;
    }
@@ -3790,6 +3869,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing;
       break;
+   case SCIP_LPPAR_SCALING:
+      *ival = lpi->spx->getScaling();
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3848,6 +3930,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       default:
          return SCIP_LPERROR;
       }
+      break;
+   case SCIP_LPPAR_SCALING:
+      assert(ival == TRUE || ival == FALSE);
+      lpi->spx->setScaling(bool(ival));
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

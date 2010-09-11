@@ -46,8 +46,9 @@ interface:
 - new method SCIPsetEmphasis() which sets parameter to detect feasibility fast, handle hard LP, solves easy CIPs fast,
   behaves like a CP solver, set parameter for a valid counting process; the desired behavior is triggered 
   via a parameter of the function
-- lpi_spx.cpp: implemented option to restore basis only after entire strong branching phase instead of after each strong branch
-  (off, because it mostly appears to increase strong branching time and iterations)
+- the SoPlex interface can now double check each SoPlex result against CPLEX (lpi_spx.cpp)
+- the SoPlex interface has the option to restore basis only after entire strong branching phase instead of after each strong branch
+  (off, because it mostly appears to increase strong branching time and iterations) (lpi_spx.cpp)
 - NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into src/nlpi 
 - NLPIs can now be managed like other SCIP plugins, i.e., they can be included into the SCIP core and accessed by methods
   SCIPincludeNlpi(), SCIPfindNlpi(), SCIPgetNNlpis(), SCIPgetNlpis(), SCIPsetNlpiPriority()
@@ -107,6 +108,7 @@ interface:
 - new methods SCIPgetXxxLimit() Xxx = {Node, Time, Stallnode, Gap, Absgap, Memory, Restart, Solution, Bestsolution} which can
   be used to get these limits
 - new methods SCIPgetMaxsolutionStored() and SCIPsetMaxsolutionStored() to set and get the size of the solution pool
+- the SoPlex interface now includes equilibrium scaling on lp's solved from scratch without starting basis
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -194,7 +196,6 @@ features:
 - the Flatzinc reader can now handle the output annotations of the Flatzinc format; the method SCIPprintSolReaderFzn() 
   outputs the given solution in Flatzinc format w.r.t. the output annotations
 - can now read and write indicator constraints in the (extended) MPS format
-- the SoPlex interface can now double check each SoPlex result against CPLEX (lpi_spx.cpp)
 - an XML-parser is available in the src/xml subdirectory
 - can now read XML-solution files as used by CPLEX
 - added new dialog "display pricers" which displays all included pricers 
