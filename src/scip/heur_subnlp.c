@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.26 2010/09/10 20:14:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.27 2010/09/11 10:16:41 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1267,6 +1267,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
    int            i;
+   SCIP_Real      cutoff;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1358,7 +1359,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real upperbound;
-      SCIP_Real cutoff;
       
       cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
@@ -1379,6 +1379,8 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
    }
+   else
+      cutoff = SCIPinfinity(scip);
 
    /* solve the subNLP and try to add solution to SCIP */
    SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, timelimit, iterused, FALSE) );
@@ -1391,7 +1393,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    }
    assert(!SCIPisTransformed(heurdata->subscip));
    
-   if( *result == SCIP_CUTOFF && SCIPgetNPricers(scip) == 0 )
+   if( *result == SCIP_CUTOFF && SCIPgetNPricers(scip) == 0 && !SCIPisInfinity(scip, cutoff) )
    {
       /* if the subNLP turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
       if( heurdata->forbidfixings )
