@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -12,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.89 2010/09/10 22:53:00 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.90 2010/09/11 00:09:23 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -955,7 +956,7 @@ SCIP_RETCODE createNogood(
       isbinary = isbinary && SCIPvarIsBinary(bdvars[i]);
    }
 
-   /* if all variables in the cover are binary, then we create a set covering constraint */
+   /* if all variables in the cover are binary, then we create a logicor constraint */
    if( isbinary )
    {
       /* allocate memory for constraint variables */
@@ -978,15 +979,14 @@ SCIP_RETCODE createNogood(
          }
       }
 
-      /* create conflict constraint */
-      /* TODO: use logicor */
-      SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, name, bdlen, consvars,
+      /* create nogood constraint */
+      SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, bdlen, consvars,
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
    }
    /* otherwise we create a bound disjunction constraint as given */
    else
    {
-      /* create conflict constraint */
+      /* create nogood constraint */
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, bdlen, bdvars, bdtypes, bdbounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
    }
@@ -2246,7 +2246,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                SCIP_CALL( createNogood(scip, bdlen, bdvars, bdtypes, bdbounds, SCIPgetDepth(scip) > 0, TRUE, TRUE, &success) );
             }
 
-            SCIPdebugMessage("subproblem solved (%s), forbiding assignment in original problem %s, %sconflict length=%d\n",
+            SCIPdebugMessage("subproblem solved (%s), forbidding assignment in original problem %s, %sconflict length=%d\n",
                sol == NULL ? "infeasible" : "optimal",
                success ? "successful" : "failed", useconf ? "" : "skipped due to ", bdlen);
          }
