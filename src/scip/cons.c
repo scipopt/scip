@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.209 2010/09/10 13:58:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.210 2010/09/12 22:19:12 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4580,6 +4580,8 @@ SCIP_RETCODE SCIPconsCopy(
 {
    assert(cons != NULL);
    assert(sourceconshdlr != NULL);
+   assert(varmap != NULL);
+   assert(consmap != NULL);
 
    /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
    (*success) = FALSE;
@@ -4596,8 +4598,6 @@ SCIP_RETCODE SCIPconsCopy(
    }
 #endif
    return SCIP_OKAY;
-
-   
 }
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.298 2010/09/10 19:01:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.299 2010/09/12 22:19:12 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1957,6 +1957,8 @@ SCIP_RETCODE SCIPvarCopy(
    SCIP_RESULT result;
    
    assert(set->stage == SCIP_STAGE_PROBLEM);
+   assert(varmap != NULL);
+   assert(consmap != NULL);
 
    /** @todo copy hole lists */
    assert(global || SCIPvarGetHolelistLocal(sourcevar) == NULL);
