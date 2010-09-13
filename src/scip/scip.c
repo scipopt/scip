@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.665 2010/09/13 15:29:28 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.666 2010/09/13 17:58:51 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1362,13 +1362,13 @@ SCIP_RETCODE SCIPcopyConss(
                SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]), 
                SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
 
-         if( !enablepricing )
-            SCIPconsSetModifiable(targetcons, FALSE);
-                     
          /* add the copied constraint to target SCIP if the copying process was valid */
          if( succeed )
          {
             assert(targetcons != NULL);
+
+            if( !enablepricing )
+               SCIPconsSetModifiable(targetcons, FALSE);
 
             /* add constraint to target SCIP */
             SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
