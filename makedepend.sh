@@ -6,13 +6,19 @@
 LPSS=(cpx spx spx132 xprs msk clp grb qso none)
 OPTS=(opt dbg prf)
 
-# disable ZIMPL for dependency generation
-
-make ZIMPL=false LPS=none depend
 
 for OPT in ${OPTS[@]}
-do 
-    make OPT=$OPT ZIMPL=false maindepend
+do
+    # dependencies of main SCIP source and objscip library
+    # with ZIMPL disabled
+    make OPT=$OPT ZIMPL=false LPS=none scipdepend
+
+    # dependencies of cmain and cppmain
+    make OPT=$OPT ZIMPL=false LPS=none LINKER=C   maindepend
+    make OPT=$OPT ZIMPL=false LPS=none LINKER=CPP maindepend
+
+    # dependencies of nlpi library (so far only for default config)
+    make OPT=$OPT LPS=none nlpidepend
     
     for LPS in ${LPSS[@]}
     do
