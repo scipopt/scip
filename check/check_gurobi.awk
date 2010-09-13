@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gurobi.awk,v 1.13 2010/09/06 14:08:38 bzfwanie Exp $
+# $Id: check_gurobi.awk,v 1.14 2010/09/13 14:23:13 bzfwanie Exp $
 #
 #@file    check_gurobi.awk
 #@brief   GUROBI Check Report Generator
@@ -421,17 +421,17 @@ BEGIN {
       else if( solstatus[prob] == "feas" ) {
          if( feasible ) {
             if( timeout ) {
-               status = "timeout";
+               printf("timeout\n");
                timeouttime += tottime;
                timeouts++;
             }
             else {
-               status = "ok";
+               printf("ok\n");
                pass++;
             }
          }
          else {
-            status = "fail";
+            printf("fail\n");
             failtime += tottime;
             fail++;
          }
@@ -441,16 +441,16 @@ BEGIN {
          abstol = 1e-4;
 
          if( abs(pb - db) < max(abstol,reltol) ) {
-            status = "solved not verified";
+            printf("solved not verified\n");
             pass++;
          }
          else if( timeout ) {
-            status = "timeout";
+            printf("timeout\n");
             timeouttime += tottime;
             timeouts++;
          }
          else
-            status = "unknown";
+            printf("unknown\n");
       }
    
       if( writesolufile ) {
