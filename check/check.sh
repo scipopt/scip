@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.64 2010/09/06 10:17:46 bzfwanie Exp $
+# $Id: check.sh,v 1.65 2010/09/13 11:28:53 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -165,12 +165,6 @@ do
 #            echo display solution                  >> $TMPFILE
             echo checksol                          >> $TMPFILE
             echo quit                              >> $TMPFILE
-
-#            if test "$LPS" == "cpx"      
-#            then
-#                waitcplex.sh # ??????????????????
-#            fi
-
             echo -----------------------------
             date
             date >>$ERRFILE
