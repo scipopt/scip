@@ -12,11 +12,12 @@ then
 fi
 rm -f release/$NAME.tgz
 
-# Before we create a tarball change the director and file right in a command way
+# Before we create a tarball change the director and file rights in a command way
 echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
+chmod 750 bin/*
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
