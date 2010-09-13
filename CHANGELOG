@@ -52,7 +52,7 @@ interface:
 - NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into src/nlpi 
 - NLPIs can now be managed like other SCIP plugins, i.e., they can be included into the SCIP core and accessed by methods
   SCIPincludeNlpi(), SCIPfindNlpi(), SCIPgetNNlpis(), SCIPgetNlpis(), SCIPsetNlpiPriority()
-- new data structures and methods to handle nonlinear expressions in NLPI ({type_, struct_}expression.{h,c}):
+- new data structures and methods to handle nonlinear expressions in NLPI ({type_, struct_, pub_}expression.{h,c}):
   nlpioracle can store and evaluate general NLPs now, nlpi_ipopt can solve general NLPs now
 - new API for "expressions interpreter" - code that evaluates expression trees, including first and second derivatives
 - added SCIPsortPtrPtrLongIntInt(), SCIPsortLongPtrPtrIntInt() and corresponding sorting/inserting/deleting methods 
