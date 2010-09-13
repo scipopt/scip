@@ -10,3 +10,11 @@
 =opt= tloss     16.3
 =opt= tltr      48.0666666667
 =opt= util      999.578750235364
+=opt= classical_20_0 -0.0822959412
+=opt= robust_20_0 -0.0797862095
+=opt= shortfall_20_0 -1.0904897
+=opt= estein1_t4Nr22 0.503284967
+=opt= estein4_data1 0.801362246
+=opt= estein5_data1 1.04536857
+=opt= clay0205m 8092.5
+=opt= clay0305m 8092.5

@@ -1,4 +1,6 @@
+#we state ex1263 here twice to compare that results of the LP and MPS reader
 MINLP/0s_1m/ex1263.mps.gz
+MINLP/0s_1m/ex1263.lp.gz
 MINLP/0s_1m/ex1264.mps.gz
 MINLP/0s_1m/ex1265.mps.gz
 MINLP/0s_1m/ex1266.mps.gz
@@ -10,3 +12,11 @@ MINLP/0s_1m/sep1.mps.gz
 MINLP/0s_1m/tloss.mps.gz
 MINLP/0s_1m/tltr.mps.gz
 MINLP/0s_1m/util.mps.gz
+MINLP/0s_1m/classical_20_0.mps.gz
+MINLP/0s_1m/robust_20_0.mps.gz
+MINLP/0s_1m/shortfall_20_0.mps.gz
+MINLP/0s_1m/estein1_t4Nr22.lp.gz
+MINLP/0s_1m/estein4_data1.lp.gz
+MINLP/0s_1m/estein5_data1.lp.gz
+MINLP/0s_1m/clay0205m.lp.gz
+MINLP/0s_1m/clay0305m.lp.gz
