@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.25 2010/09/13 11:57:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.26 2010/09/13 13:44:55 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -453,6 +453,9 @@ int nlrowSearchLinearCoef(
 
    assert(nlrow != NULL);
    assert(var   != NULL);
+   
+   if( nlrow->nlinvars == 0 )
+      return -1;
 
    nlrowSortLinear(nlrow);
    if( !SCIPsortedvecFindPtr((void**)nlrow->linvars, SCIPvarComp, (void*)var, nlrow->nlinvars, &pos) )
