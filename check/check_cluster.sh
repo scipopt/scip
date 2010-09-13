@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.36 2010/09/06 10:17:47 bzfwanie Exp $
+# $Id: check_cluster.sh,v 1.37 2010/09/13 11:28:45 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -123,7 +123,7 @@ do
   # reached the submitted jobs are dumped; to avoid that we check the total
   # load of the cluster and wait until it is save (total load not more than
   # 1900 jobs) to submit the next job.
-  ./waitcluster.sh 1900
+  ./waitcluster.sh 1500 $QUEUE
 
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
@@ -137,6 +137,16 @@ do
   SETFILE=$BASENAME.set
   
   echo $BASENAME >> $EVALFILE
+
+  # in case we want to continue we check if the job was already performed 
+  if test "$CONTINUE" = "true"
+      then
+      if test -e results/$FILENAME.out
+	  then 
+	  echo skipping file $i due to existing output file $FILENAME.out
+	  continue
+      fi
+  fi
   
   echo > $TMPFILE
   if test $SETNAME != "default"
