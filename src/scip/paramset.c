@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.87 2010/09/10 15:00:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.88 2010/09/13 11:16:17 bzfberth Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2505,24 +2505,28 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
          SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quiet) );
       }
 
-      /* construct (possible) parameter name for LP iteration offset */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      
-      if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+      /* LP iteration limits only get increased for heuristics which are activated by default */
+      if( SCIPparamGetIntDefault(param) > -1 )
       {
-         /* set LP iteration offset to 1.5 time the current value */
-         SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*SCIPparamGetIntDefault(param), quiet) );
-      }
+         /* construct (possible) parameter name for LP iteration offset */
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
+         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+         {
+            /* set LP iteration offset to 1.5 time the current value */
+            SCIP_CALL( paramSetInt(scip, paramset, paramname, (int) (1.5 * SCIPparamGetIntDefault(param)), quiet) );
+         }
       
-      /* construct (possible) parameter name for LP iteration quotient parameter */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
-      param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-      
-      if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
-      {
-         /* set LP iteration quotient to 1.5 time the current value */
-         SCIP_CALL( paramSetReal(scip, paramset, paramname, 1.5*SCIPparamGetRealDefault(param), quiet) );
+         /* construct (possible) parameter name for LP iteration quotient parameter */
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
+         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
+         {
+            /* set LP iteration quotient to 1.5 time the current value */
+            SCIP_CALL( paramSetReal(scip, paramset, paramname, 1.5*SCIPparamGetRealDefault(param), quiet) );
+         }
       }
    }  
 
@@ -2532,7 +2536,10 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
    
    /* set specific parameters for Crossover heuristic */
    SCIP_CALL( paramSetLongint(scip, paramset, "heuristics/crossover/nwaitingnodes", (SCIP_Longint)20, quiet) );
-   
+   SCIP_CALL( paramSetBool(scip, paramset, "heuristics/crossover/dontwaitatroot", TRUE, quiet) );
+   SCIP_CALL( paramSetReal(scip, paramset, "heuristics/crossover/nodesquot", 0.15, quiet) );
+   SCIP_CALL( paramSetReal(scip, paramset, "heuristics/crossover/minfixingrate", 0.5, quiet) );
+
    return SCIP_OKAY;
 }
 
@@ -2545,18 +2552,20 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
    )
 {
    int i;
-#  define NEXPENSIVEHEURFREQS 11
+#  define NEXPENSIVEHEURFREQS 13
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
       "heuristics/crossover/freq",
       "heuristics/feaspump/freq",
+      "heuristics/fracdiving/freq",
       "heuristics/guideddiving/freq",
       "heuristics/linesearchdiving/freq",
       "heuristics/subnlp/freq",
       "heuristics/objpscostdiving/freq",
-      "heuristics/pscostdiving",
+      "heuristics/pscostdiving/freq",
       "heuristics/rens/freq",
       "heuristics/rootsoldiving/freq",
+      "heuristics/undercover/freq",
       "heuristics/veclendiving/freq"
    };
 
@@ -2692,7 +2701,7 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
       assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
       defvalue = SCIPparamGetIntDefault(param);
     
-      SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defvalue, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, (int) (1.5 * defvalue), quiet) );
    }
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/probing/maxtotaluseless");
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
@@ -2703,7 +2712,7 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
       assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
       defvalue = SCIPparamGetIntDefault(param);
     
-      SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defvalue, quiet) );
+      SCIP_CALL( paramSetInt(scip, paramset, paramname, (int) (1.5 * defvalue), quiet) );
    }
  
    return SCIP_OKAY;
@@ -2880,6 +2889,10 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
       const char* sepaname;
       sepaname = SCIPsepaGetName(sepas[i]);
 
+      /* intobj separator should stay disabled */
+      if( strcmp(sepaname, "intobj") == 0 )
+         continue;
+         
       /* get frequency parameter of separator */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
       param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
@@ -2905,7 +2918,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
          SCIP_CALL( paramSetInt(scip, paramset, paramname, newfreq, quiet) );
       }
 
-      /* get maximum number of round in root node */
+      /* get maximum number of rounds in root node */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxroundsroot", sepaname);
       param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
       
@@ -2917,7 +2930,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
          defrounds = SCIPparamGetIntDefault(param);
          
          /* increase the maximum number of rounds in the root node by factor of 1.5 */
-         SCIP_CALL( paramSetInt(scip, paramset, paramname, (int)1.5*defrounds, quiet) );
+         SCIP_CALL( paramSetInt(scip, paramset, paramname, (int) (1.5 * defrounds), quiet) );
       }
 
       /* get maximum number of cuts per separation in root node */
@@ -3002,7 +3015,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
    /* explicitly change separating parameters of mcf separator */
    SCIP_CALL( paramSetInt(scip, paramset, "separating/mcf/maxtestdelta", -1, quiet) );
    SCIP_CALL( paramSetBool(scip, paramset, "separating/mcf/trynegscaling", TRUE, quiet) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -3240,7 +3253,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       break;
 
    default:
-      SCIPerrorMessage("the parameter setting <%d> are not allowed for emphasis call\n", paramsetting);
+      SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramsetting);
       return SCIP_INVALIDCALL;
    }  
    return SCIP_OKAY;
@@ -3330,7 +3343,7 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
       SCIP_CALL( paramsetSetHeuristicsAggressive(paramset, scip, quiet) );
       break;
    default:
-      SCIPerrorMessage("the parameter setting <%d> are not allowed for heuristics\n", paramsetting);
+      SCIPerrorMessage("the parameter setting <%d> is not allowed for heuristics\n", paramsetting);
       return SCIP_INVALIDCALL;
    }
    
@@ -3365,7 +3378,7 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
       SCIP_CALL( paramsetSetPresolvingAggressive(paramset, scip, quiet) );
       break;
    default:
-      SCIPerrorMessage("the parameter setting <%d> are not allowed for presolving\n", paramsetting);
+      SCIPerrorMessage("the parameter setting <%d> is not allowed for presolving\n", paramsetting);
       return SCIP_INVALIDCALL;
    }
    
@@ -3400,7 +3413,7 @@ SCIP_RETCODE SCIPparamsetSetSeparating(
       SCIP_CALL( paramsetSetSeparatingAggressive(paramset, scip, quiet) );
       break;
    default:
-      SCIPerrorMessage("the parameter setting <%d> are not allowed for separating\n", paramsetting);
+      SCIPerrorMessage("the parameter setting <%d> is not allowed for separating\n", paramsetting);
       return SCIP_INVALIDCALL;
    }
    

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.8 2010/09/10 17:03:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.9 2010/09/13 11:16:17 bzfberth Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -32,7 +32,7 @@
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic"
 #define HEUR_DISPCHAR         'T'
-#define HEUR_PRIORITY         10000
+#define HEUR_PRIORITY         1000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1

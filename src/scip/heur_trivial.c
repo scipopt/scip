@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.17 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.18 2010/09/13 11:16:17 bzfberth Exp $"
 
 
 /**@file   heur_trivial.c
@@ -32,7 +32,7 @@
 #define HEUR_NAME             "trivial"
 #define HEUR_DESC             "start heuristic which tries some trivial solutions"
 #define HEUR_DISPCHAR         't'
-#define HEUR_PRIORITY         1000
+#define HEUR_PRIORITY         10000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
