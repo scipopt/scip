@@ -19,6 +19,8 @@ IP/SOS/sparse2.lp.gz
 IP/SOS/findRoot.lp.gz
 IP/SOS/pcu_0.01.lp.gz
 IP/SOS/pcu_0.1.lp.gz
+IP/semicon/semicon1.lp.gz
+IP/semicon/semicon1.mps.gz
 IP/MINLP/ex1266.mps.gz
 IP/MINLP/feedtray2.mps.gz
 IP/MINLP/meanvarx.mps.gz
