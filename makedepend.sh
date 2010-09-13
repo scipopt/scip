@@ -5,7 +5,7 @@
 
 LPSS=(cpx spx spx132 xprs msk clp grb qso none)
 OPTS=(opt dbg prf)
-
+EXPRINTS=(none cppad)
 
 for OPT in ${OPTS[@]}
 do
@@ -17,20 +17,29 @@ do
     make OPT=$OPT ZIMPL=false LPS=none LINKER=C   maindepend
     make OPT=$OPT ZIMPL=false LPS=none LINKER=CPP maindepend
 
-    # dependencies of nlpi library (so far only for default config)
-    make OPT=$OPT LPS=none nlpidepend
-    
     for LPS in ${LPSS[@]}
     do
-	# check if the header for the LP solver are available 
-	if test -e lib/$LPS"inc"
-	then
-	    make LPS=$LPS OPT=$OPT lpidepend
-	fi
+        # check if the header for the LP solver are available,
+        # or we are in the special case "none"
+        if test -e lib/$LPS"inc" -o "$LPS" == "none"
+        then
+             make LPS=$LPS OPT=$OPT lpidepend
+        fi
 
-	if test "$LPS" == "none"
-	then
-	    make LPS=$LPS OPT=$OPT lpidepend
-	fi
     done
+
+    # dependencies of nlpi libraries
+    for EXPRINT in ${EXPRINTS[@]}
+    do
+        if test "$EXPRINT" == "none" -o -e lib/$EXPRINT -o -e lib/$EXPRINT"inc"
+        then
+            make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=false nlpidepend
+
+            if test -e lib/ipoptinc
+            then
+                 make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=true nlpidepend
+            fi
+        fi
+    done
+
 done
