@@ -1,8 +1,30 @@
-make LPS=cpx OPT=opt $@
-make LPS=cpx OPT=dbg $@
-make LPS=spx OPT=opt $@
-make LPS=spx OPT=dbg $@
-make LPS=clp OPT=opt $@
-make LPS=clp OPT=dbg $@
-#make LPS=xprs OPT=opt $@
-#make LPS=xprs OPT=dbg $@
+#!/bin/sh
+# 
+# This scripts compiles SCIP for all LP solver for which the links exit
+#
+
+
+LPSS=(cpx spx spx132 xprs msk clp grb qso)
+OPTS=(opt dbg prf)
+
+# check if zimpl is available
+if test -e lib/zimplinc/zimpl
+then
+    ZIMPL=true
+else
+    ZIMPL=false
+fi
+
+for OPT in ${OPTS[@]}
+do
+    make OPT=$OPT ZIMPL=$ZIMPL LPS=none  $@
+
+    for LPS in ${LPSS[@]}
+    do
+        # check if the header for the LP solver are available
+        if test -e lib/$LPS"inc"
+        then
+            make LPS=$LPS OPT=$OPT ZIMPL=$ZIMPL $@
+        fi
+    done
+done
