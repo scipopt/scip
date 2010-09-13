@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.661 2010/09/13 07:16:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.662 2010/09/13 09:37:53 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1315,9 +1315,8 @@ SCIP_RETCODE SCIPcopyConss(
    
       assert(sourceconshdlrs[i] != NULL);
 
-      /* for a global copy, copy all constraints that are globally active,
-       * for a local copy, copy all constraints that are locally enforced, 
-       * in order to also get local constraints, e.g. from branching 
+      /* for a global copy, copy all constraints that are globally active, for a local copy, copy all constraints that
+       * are locally enforced, in order to also get local constraints, e.g. from branching
        */
       if( global )
       {      
@@ -1341,7 +1340,9 @@ SCIP_RETCODE SCIPcopyConss(
       for( c = 0; c < nsourceconss; ++c )
       {
          assert(sourceconss[c] != NULL);
-         if( !SCIPconsIsActive(sourceconss[c]) || SCIPconsIsDeleted(sourceconss[c]) )  /* @todo FIXME ???????????? it seems that sourceconss can contain inactive or deleted constraints, so the following two assert fail from time to time; for now, we just do not copy those constraints */
+         /* @todo it seems that sourceconss can contain inactive or deleted constraints, so the
+          * following two assert fail from time to time; for now, we just do not copy those constraints */
+         if( !SCIPconsIsActive(sourceconss[c]) || SCIPconsIsDeleted(sourceconss[c]) )
          {
             *valid = FALSE;
             SCIPdebugMessage("did not copy inactive or deleted constraint %s\n", SCIPconsGetName(sourceconss[c]));
@@ -1360,8 +1361,9 @@ SCIP_RETCODE SCIPcopyConss(
                SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]), 
                SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
 
-         /* @todo: ?????????????????? enablepricing vs. modfiable */
-            
+         if( !enablepricing )
+            SCIPconsSetModifiable(targetcons, FALSE);
+                     
          /* add the copied constraint to target SCIP if the copying process was valid */
          if( succeed )
          {
@@ -11551,7 +11553,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    assert(cons != NULL);
    assert(sourceconshdlr != NULL);
    
-   SCIP_CALL( checkStage(scip, "SCIPcopyCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetConsCopy", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
    
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);

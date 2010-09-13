@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.299 2010/09/12 22:19:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.300 2010/09/13 09:37:53 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1994,8 +1994,8 @@ SCIP_RETCODE SCIPvarCopy(
       
       assert(targetdata == NULL || result == SCIP_SUCCESS);
    }
-   
-   /* in case the copying was successfully, add the create variable data to the variable as well as all callback
+
+   /* in case the copying was successfully, add the created variable data to the variable as well as all callback
     * methods 
     */
    if( result == SCIP_SUCCESS )

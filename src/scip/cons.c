@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.210 2010/09/12 22:19:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.211 2010/09/13 09:37:52 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -5101,6 +5101,17 @@ void SCIPconsSetLocal(
    cons->local = local;
    if( !local )
       cons->validdepth = 0;
+}
+
+/** sets the modifiable flag of the given constraint */
+void SCIPconsSetModifiable(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             modifiable          /**< new value */
+   )
+{
+   assert(cons != NULL);
+   
+   cons->modifiable = modifiable;
 }
 
 /** sets the dynamic flag of the given constraint */

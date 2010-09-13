@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.28 2010/09/13 07:16:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.29 2010/09/13 09:37:53 bzfberth Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -481,6 +481,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    nconflicts = 0;
    if( sepadata->applyconflicts && !disabledualreductions && SCIPgetNConflictConssApplied(subscip) > 0 )
    {
+      SCIP_HASHMAP* consmap;
+      
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5*SCIPgetNConflictConssApplied(subscip))) );
+
       /* loop over all constraint handlers that might contain conflict constraints */
       for( i = 0; i < nconshdlrs; ++i)
       {
@@ -504,7 +509,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                assert(cons != NULL);        
 
                success = FALSE;
-               SCIP_CALL( SCIPgetConsCopy(scip, &conscopy, NULL, subscip, conshdlrs[i], cons, varmapbw, NULL,
+
+               SCIP_CALL( SCIPcopyCons(scip, &conscopy, NULL, subscip, conshdlrs[i], cons, varmapbw, consmap,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      SCIPconsIsPropagated(cons), TRUE, FALSE, SCIPconsIsDynamic(cons), 
                      SCIPconsIsRemovable(cons), FALSE, TRUE, &success) );
@@ -522,6 +528,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
             }
          }
       }   
+      SCIPhashmapFree(&consmap);
    }
 
    /* check, whether tighter global bounds were detected */
@@ -600,11 +607,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPhashmapFree(&varmapbw);
 
    /* free subproblem */
-   SCIP_CALL( SCIPfreeTransform(subscip) );
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-   }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
   
