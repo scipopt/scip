@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.53 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.54 2010/09/13 07:16:40 bzfheinz Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -338,11 +338,10 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
  
    /* set limits for the subproblem */
-   SCIPsetStallnodeLimit(subscip, nstallnodes); 
-   SCIPsetNodeLimit(subscip, maxnodes); 
-   SCIPsetTimeLimit(subscip, timelimit);
-   SCIPsetMemoryLimit(subscip, memorylimit);
-
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -605,10 +604,10 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    }
 
    /* check whether there is enough time and memory left */
-   timelimit = SCIPgetTimeLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
-   memorylimit = SCIPgetMemoryLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit < 10.0 || memorylimit <= 0.0 )

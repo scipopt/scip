@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.427 2010/09/12 22:19:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.428 2010/09/13 07:16:41 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -607,66 +607,6 @@ SCIP_RETCODE SCIPgetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
-/** get the time limit to given value */
-extern 
-SCIP_Real SCIPgetTimeLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the memory limit to the given value */
-extern 
-SCIP_Real SCIPgetMemoryLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the gap limit to the given value */
-extern 
-SCIP_Real SCIPgetGapLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the absolute gap limit to the given value */
-extern 
-SCIP_Real SCIPgetAbsgapLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the node limit to the given value */
-extern 
-SCIP_Longint SCIPgetNodeLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the stall node limit to the given value */
-extern 
-SCIP_Longint SCIPgetStallnodeLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the solution limit to the given value */
-extern 
-int SCIPgetSolutionLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the best solution limit to the given value */
-extern 
-int SCIPgetBestsolutionLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get the maximum number of solution stored */
-extern 
-int SCIPgetMaxsolutionStored(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-   
-/** get the maximum number of restarts until the solution process is stopped (-1: no limit) */
-extern 
-int SCIPgetRestartLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** changes the value of an existing SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPsetBoolParam(
@@ -742,76 +682,6 @@ SCIP_RETCODE SCIPresetParam(
 extern
 SCIP_RETCODE SCIPresetParams(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** set the time limit to given value */
-extern 
-void SCIPsetTimeLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             limit               /**< time limit */
-   );
-
-/** set the memory limit to the given value */
-extern 
-void SCIPsetMemoryLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             limit               /**< memory limit */
-   );
-
-/** set the gap limit to the given value */
-extern 
-void SCIPsetGapLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             limit               /**< gap limit */
-   );
-
-/** set the absolute gap limit to the given value */
-extern 
-void SCIPsetAbsgapLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             limit               /**< absolute gap limit */
-   );
-
-/** set the node limit to the given value */
-extern 
-void SCIPsetNodeLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Longint          limit               /**< node limit */
-   );
-
-/** set the stall node limit to the given value */
-extern 
-void SCIPsetStallnodeLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Longint          limit               /**< stall node limit */
-   );
-
-/** set the solution limit to the given value */
-extern 
-void SCIPsetSolutionLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   limit               /**< solution limit */
-   );
-
-/** set the best solution limit to the given value */
-extern 
-void SCIPsetBestsolutionLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   limit               /**< best solution limit */
-   );
-
-/** set the maximum number of solution stored */
-extern 
-void SCIPsetMaxsolutionStored(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   limit               /**< maximum number of solution stored */
-   );
-   
-/** set the maximum number of restarts until the solution process is stopped (-1: no limit) */
-extern 
-void SCIPsetRestartLimit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   limit               /**< maximum number of solution stored */
    );
 
 /** sets parameters to 

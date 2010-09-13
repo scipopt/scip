@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.27 2010/09/12 22:19:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.28 2010/09/13 07:16:41 bzfheinz Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -250,10 +250,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       return SCIP_OKAY; 
 
    /* check whether there is enough time and memory left */
-   timelimit = SCIPgetTimeLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
-   memorylimit = SCIPgetMemoryLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit < 10.0 || memorylimit <= 0.0 )
@@ -311,11 +311,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    restarts = 0;
    restartnum = 1000;
-
-   SCIPsetNodeLimit(subscip, nodelimit/5); 
-   SCIPsetTimeLimit(subscip, timelimit);
-   SCIPsetMemoryLimit(subscip, memorylimit);
-   SCIPsetRestartLimit(subscip, restarts);
+   
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/restarts", restarts) );
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
@@ -414,7 +414,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
 
       /* set node limit to 100% */
-      nodelimit = SCIPgetNodeLimit(subscip);
+      SCIP_CALL( SCIPgetLongintParam(subscip, "limits/nodes", &nodelimit) );
 
 #ifdef NDEBUG
       retstat = SCIPsolve(subscip);

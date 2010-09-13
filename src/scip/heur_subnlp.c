@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.29 2010/09/11 15:48:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.30 2010/09/13 07:16:40 bzfheinz Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -840,7 +840,7 @@ SCIP_RETCODE solveSubNLP(
 
    /* presolve subSCIP */
    /* set node limit to 1 so that presolve can go */
-   SCIPsetNodeLimit(heurdata->subscip, 1);
+   SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1) );
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
    if( SCIPpressedCtrlC(heurdata->subscip) )
    {
@@ -864,14 +864,14 @@ SCIP_RETCODE solveSubNLP(
       SCIPmarkRequireNLP(heurdata->subscip);
 
       /* do init solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
-      SCIPsetNodeLimit(heurdata->subscip, 0);
+      SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0) );
       SCIP_CALL( SCIPsolve(heurdata->subscip) );
       
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
        * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem. */
       if( !SCIPisNLPConstructed(heurdata->subscip) )
       {
-         SCIPsetNodeLimit(heurdata->subscip, 1);
+         SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1) );
          SCIP_CALL( SCIPsolve(heurdata->subscip) );
       }
    }
@@ -1672,7 +1672,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    }
 
    /* check whether there is enough time left */
-   timelimit = SCIPgetTimeLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
    {
       timelimit -= SCIPgetSolvingTime(scip);

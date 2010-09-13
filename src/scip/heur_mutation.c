@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.47 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.48 2010/09/13 07:16:40 bzfheinz Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -395,7 +395,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
        return SCIP_OKAY;
  
   /* check whether there is enough time and memory left */
-   timelimit = SCIPgetTimeLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    memorylimit = SCIPgetMemUsed(scip);
@@ -459,9 +459,9 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
   
    /* set limits for the subproblem */
-   SCIPsetNodeLimit(subscip, nsubnodes); 
-   SCIPsetTimeLimit(subscip, timelimit);
-   SCIPsetMemoryLimit(subscip, memorylimit);
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.37 2010/09/10 09:20:04 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.38 2010/09/13 07:16:41 bzfheinz Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -4908,11 +4908,11 @@ SCIP_RETCODE createSubscip(
    nrrows = mod2data->relatedsubproblem->nrrows;
 
    /* determine subscip limits */    
-   auxipdata->timelimit = SCIPgetTimeLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &auxipdata->timelimit) );
    if( !SCIPisInfinity(scip, auxipdata->timelimit) )
       auxipdata->timelimit -= SCIPgetSolvingTime(scip);
 
-   auxipdata->memorylimit = SCIPgetMemoryLimit(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &auxipdata->memorylimit) );
    if( !SCIPisInfinity(scip, auxipdata->memorylimit) )
       auxipdata->memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
 
@@ -5032,14 +5032,15 @@ success = FALSE;
    ispenalized = (sepadata->subscipobjective == 'p' ? TRUE : FALSE);
   
    /* set limits of subscip */
-   SCIPsetNodeLimit(auxipdata->subscip, (SCIP_Longint) auxipdata->nodelimit);
-   SCIPsetTimeLimit(auxipdata->subscip, auxipdata->timelimit);
-   SCIPsetMemoryLimit(auxipdata->subscip, auxipdata->memorylimit);  
+   SCIP_CALL( SCIPsetLongintParam(auxipdata->subscip, "limits/nodes", (SCIP_Longint) auxipdata->nodelimit) );
+   SCIP_CALL( SCIPsetRealParam(auxipdata->subscip, "limits/time", auxipdata->timelimit) );
+   SCIP_CALL( SCIPsetRealParam(auxipdata->subscip, "limits/memory", auxipdata->memorylimit) );
+
    if( !isfeasip )
    {
-      SCIP_CALL(SCIPsetObjlimit(auxipdata->subscip, auxipdata->objectivelimit));
+      SCIP_CALL( SCIPsetObjlimit(auxipdata->subscip, auxipdata->objectivelimit) );
    }
-   SCIPsetSolutionLimit(auxipdata->subscip, sepadata->subscipsollimit);
+   SCIP_CALL( SCIPsetIntParam(auxipdata->subscip, "limits/solutions", sepadata->subscipsollimit) );
 
 
    /* create variables and set objective */ 
