@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.39 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.40 2010/09/13 20:08:31 bzfviger Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1243,7 +1243,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBounddisjunction)
    for( c = 0; c < nconss && !cutoff && !reduceddom; ++c )
    {
       SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom, &registeredbrcand) );
-      if( !registeredbrcand )
+      if( infeasible && !registeredbrcand )
       {
          /* if cons. c has less literals than the previous candidate for an n-ary branch, then keep cons. c as candidate for n-ary branch */
          if( !narybranchcons || SCIPconsGetData(conss[c])->nvars < SCIPconsGetData(narybranchcons)->nvars )
@@ -1306,7 +1306,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBounddisjunction)
    for( c = 0; c < nconss && !cutoff && !reduceddom; ++c )
    {
       SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom, &registeredbrcand) );
-      if( !registeredbrcand )
+      if( infeasible && !registeredbrcand )
       {
          /* if cons. c has less literals than the previous candidate for an n-ary branch, then keep cons. c as candidate for n-ary branch */
          if( !narybranchcons || SCIPconsGetData(conss[c])->nvars < SCIPconsGetData(narybranchcons)->nvars )
