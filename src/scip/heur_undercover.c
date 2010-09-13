@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.92 2010/09/13 07:16:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.93 2010/09/13 10:44:23 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -29,8 +29,6 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "scip/expression.h"
-#include "nlpi/expression.h"
 #include "scip/heur_undercover.h"
 
 #define HEUR_NAME               "undercover"

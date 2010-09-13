@@ -12,15 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.h,v 1.6 2010/06/07 16:43:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expression.h,v 1.1 2010/09/13 10:44:23 bzfviger Exp $"
 
-/**@file   scip/expression.h
+/**@file   scip/pub_expression.h
  * @brief  more methods for expressions and expression trees
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  *
  * This file contains methods for handling and manipulating expressions and expression trees
- * that are SCIP specific and thus not included in nlpi/expression.*
+ * that are SCIP specific and thus not included in nlpi/pub_expression.h
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +33,7 @@
 #include "scip/type_var.h"
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
-#include "nlpi/expression.h"
+#include "nlpi/pub_expression.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.9 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.10 2010/09/13 10:44:23 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -36,7 +36,6 @@
 #include <ctype.h>
 
 #include "scip/reader_pip.h"
-#include "scip/expression.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/pub_misc.h"

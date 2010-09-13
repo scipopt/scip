@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.52 2010/09/10 14:39:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.53 2010/09/13 10:44:23 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -32,7 +32,6 @@
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/intervalarith.h"
-#include "scip/expression.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/exprinterpret.h"
 

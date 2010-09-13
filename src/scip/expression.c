@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.12 2010/09/09 09:29:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.13 2010/09/13 10:44:23 bzfviger Exp $"
 
 /**@file   scip/expression.c
  * @brief  more methods for expressions and expression trees
@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/expression.h"
 #include "scip/scip.h"
 
 #include "nlpi/struct_expression.h"
