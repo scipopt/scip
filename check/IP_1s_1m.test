@@ -11,10 +11,10 @@ IP/Coloring/Instances/games120.col.lp.gz
 IP/Coloring/Instances/mug100_1.col.lp.gz
 IP/Coloring/Instances/myciel4.col.lp.gz
 IP/GUB/eplus/dfn3orig.mps.gz
-IP/GUB/p1/cpa_ilpi_mip.3.mps.gz
-IP/GUB/p17/cpa_ilpi_mip.4.mps.gz
-IP/GUB/p18/cpa_ilpi_mip.6.mps.gz
-IP/GUB/p9/cpa_ilpi_mip.22.mps.gz
+IP/GUB/p1/p1_cpa_ilpi_mip.3.mps.gz
+IP/GUB/p17/p17_cpa_ilpi_mip.4.mps.gz
+IP/GUB/p18/p18_cpa_ilpi_mip.6.mps.gz
+IP/GUB/p9/p9_cpa_ilpi_mip.22.mps.gz
 #IP/GUB/tasncp285.mps.gz
 IP/Margot/OA/ca36243.lp.gz
 IP/Margot/OA/oa57245.lp.gz

@@ -4,10 +4,10 @@
 =opt=  p_hat300-1.clq                      8 
 =inf=  1-Insertions_4_inf.col
 =inf=  myciel5_inf.col
-=opt=  cpa_ilpi_mip.2                  31121 
-=opt=  cpa_ilpi_mip.33              21354912 
-=opt=  cpa_ilpi_mip.23              39453281 
-=opt=  cpa_ilpi_mip.19            16238351.5 
+=opt=  p14_cpa_ilpi_mip.2              31121 
+=opt=  p4_cpa_ilpi_mip.33           21354912 
+=opt=  p6_cpa_ilpi_mip.23           39453281 
+=opt=  p8_cpa_ilpi_mip.19         16238351.5 
 =opt=  sts63                              45 
 =inf=  fled-as.sat03-1446
 =inf=  fled-as.sat03-1459

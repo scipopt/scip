@@ -3,10 +3,10 @@ IP/2matching/gr666.mps.gz
 IP/Clique/Instances/p_hat300-1.clq.lp.gz
 IP/Coloring/Infeasible/1-Insertions_4_inf.col.lp.gz
 IP/Coloring/Infeasible/myciel5_inf.col.lp.gz
-IP/GUB/p14/cpa_ilpi_mip.2.mps.gz
-IP/GUB/p4/cpa_ilpi_mip.33.mps.gz
-IP/GUB/p6/cpa_ilpi_mip.23.mps.gz
-IP/GUB/p8/cpa_ilpi_mip.19.mps.gz
+IP/GUB/p14/p14_cpa_ilpi_mip.2.mps.gz
+IP/GUB/p4/p4_cpa_ilpi_mip.33.mps.gz
+IP/GUB/p6/p6_cpa_ilpi_mip.23.mps.gz
+IP/GUB/p8/p8_cpa_ilpi_mip.19.mps.gz
 IP/Margot/symlp/sts63.lp.gz
 IP/MaxOnes/marg3x3add4.shuffled-as.sat03-1446.lp.gz
 IP/MaxOnes/urqh1c2x4.shuffled-as.sat03-1459.lp.gz

@@ -8,11 +8,11 @@ IP/Coloring/Infeasible/2-FullIns_4_inf.col.lp.gz
 IP/Coloring/Infeasible/ash608GPIA_inf.col.lp.gz
 IP/Coloring/Instances/4-FullIns_3.col.lp.gz
 IP/Coloring/Instances/homer.col.lp.gz
-IP/GUB/p12/cpa_ilpi_mip.34.mps.gz
-IP/GUB/p16/cpa_ilpi_mip.29.mps.gz
-IP/GUB/p4/cpa_ilpi_mip.37.mps.gz
-IP/GUB/p6/cpa_ilpi_mip.72.mps.gz
-IP/GUB/p8/cpa_ilpi_mip.30.mps.gz
+IP/GUB/p12/p12_cpa_ilpi_mip.34.mps.gz
+IP/GUB/p16/p16_cpa_ilpi_mip.29.mps.gz
+IP/GUB/p4/p4_cpa_ilpi_mip.37.mps.gz
+IP/GUB/p6/p6_cpa_ilpi_mip.72.mps.gz
+IP/GUB/p8/p8_cpa_ilpi_mip.30.mps.gz
 IP/Margot/OA/ca57245.lp.gz
 IP/Margot/OA/oa77247.lp.gz
 IP/Margot/symlp/cod105r.lp.gz

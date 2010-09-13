@@ -40,8 +40,8 @@
 =opt= cov954                                      30
 =opt= cpa_ilpi_mip.17                     15915379.9
 =opt= cpa_ilpi_mip.3                      9223953.52
-=opt= cpa_ilpi_mip.30                     16679965.6
-=opt= cpa_ilpi_mip.34                      130961.68
+=opt= p8_cpa_ilpi_mip.30                  16679965.6
+=opt= p12_cpa_ilpi_mip.34                  130961.68
 =opt= dano3_3                             576.344633
 =opt= dano3_4                             576.435225
 =opt= dano3_5                             576.924916
@@ -137,7 +137,7 @@
 =opt= v1620pre                               1140604
 =opt= wap07a.stab                                138
 =opt= sanr200_0.7.clq                             18
-=opt= cpa_ilpi_mip.72                       40533463
+=opt= p6_cpa_ilpi_mip.72                    40533463
 =opt= ca57245                                     82
 =inf= hfo5.005.0
 =opt= hfo5.006.1                                  30
@@ -157,8 +157,8 @@
 =opt= nsa                                        120
 =opt= pg5_34                             -14339.3534
 =opt= brock200_1.clq                              21
-=opt= cpa_ilpi_mip.29                       23655131
-=opt= cpa_ilpi_mip.37                       21635545
+=opt= p16_cpa_ilpi_mip.29                   23655131
+=opt= p4_cpa_ilpi_mip.37                    21635545
 =opt= N_x_plit_28_20                       153183.89
 =opt= ns60-pr3                                 26310
 =opt= enlight13                                   71
