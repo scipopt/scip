@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.31 2010/09/13 09:51:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.32 2010/09/13 16:47:21 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -57,9 +57,10 @@ struct SCIP_HeurData
    SCIP_Bool             triedsetupsubscip;  /**< whether we have tried to setup an subSCIP */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
    
-   int                   nsubvars;           /**< number of variables in subSCIP */
+   int                   nvars;              /**< number of active transformed variables in SCIP */
+   int                   nsubvars;           /**< number of original variables in subSCIP */
    SCIP_VAR**            var_subscip2scip;   /**< mapping variables in subSCIP to SCIP variables */
-   SCIP_HASHMAP*         var_scip2subscip;   /**< mapping variables in SCIP to subSCIP variables */
+   SCIP_VAR**            var_scip2subscip;   /**< mapping variables in SCIP to subSCIP variables */
                          
    SCIP_SOL*             startcand;          /**< candidate for start point for heuristic */
    SCIP_Real             startcandviol;      /**< violation of start point candidate w.r.t. constraint that reported this candidate */
@@ -103,6 +104,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_Bool success;
    char probname[SCIP_MAXSTRLEN];
    int i;
+   SCIP_HASHMAP* varsmap;
    SCIP_HASHMAP* conssmap;
 
    assert(heurdata != NULL);
@@ -116,7 +118,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
    /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->var_scip2subscip, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
 
    /* create subSCIP copy of CIP */
    
@@ -153,7 +155,7 @@ SCIP_RETCODE createSubSCIP(
    {
       SCIPdebugMessage("some NLPIs from main SCIP did not copy into subSCIP, give up heuristic.\n");
       SCIP_CALL( SCIPfree(&heurdata->subscip) );
-      SCIPhashmapFree(&heurdata->var_scip2subscip);
+      SCIPhashmapFree(&varsmap);
       
       return SCIP_OKAY;
    }
@@ -168,39 +170,55 @@ SCIP_RETCODE createSubSCIP(
 
    /* copy all variables */
    success = TRUE;
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, heurdata->var_scip2subscip, NULL, FALSE) );
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, FALSE) );
 
    /* copy as many constraints as possible */
    success = TRUE;
    SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );   
-   SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, heurdata->var_scip2subscip, conssmap, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, FALSE, FALSE, &success) );
    SCIPhashmapFree(&conssmap);
    if( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "failed to copy some constraints to subSCIP, continue anyway\n");
    }
 
-   /* create reverse hash mapping subscip to scip
-    * capture variables in subSCIP
+   /* create arrays translating scip transformed vars to subscip original vars, and vice versa
+    * capture variables in SCIP and subSCIP
     * catch global bound change events */
+   
    heurdata->nsubvars = SCIPgetNOrigVars(heurdata->subscip);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars) );
    BMSclearMemoryArray(heurdata->var_subscip2scip, heurdata->nsubvars);
-   for( i = 0; i < nvars; i++ )
+   
+   heurdata->nvars = nvars;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_scip2subscip, heurdata->nvars) );
+   BMSclearMemoryArray(heurdata->var_scip2subscip, heurdata->nvars);
+   
+   for( i = 0; i < heurdata->nvars; i++ )
    {
+      SCIP_VAR* var;
       SCIP_VAR* subvar;
-
-      assert(SCIPhashmapExists(heurdata->var_scip2subscip, vars[i]));
-      subvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(heurdata->var_scip2subscip, vars[i]);
-
-      SCIP_CALL( SCIPcaptureVar(heurdata->subscip, subvar) );
-
+      
+      var = vars[i];
+      
+      assert(SCIPvarGetProbindex(var) == i);
+      assert(SCIPhashmapExists(varsmap, var));
+      
+      subvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varsmap, var);
       assert(SCIPvarGetProbindex(subvar) >= 0);
       assert(SCIPvarGetProbindex(subvar) <  heurdata->nsubvars);
-      heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)] = vars[i];
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, vars[i], SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+      SCIP_CALL( SCIPcaptureVar(heurdata->subscip, subvar) );
+
+      heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)] = var;
+      heurdata->var_scip2subscip[i] = subvar;
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
    }
+   
+   /* do not need hashmap anymore */
+   SCIPhashmapFree(&varsmap);
 
    /* initialize data structure for NLP solve statistics */
    SCIP_CALL( SCIPnlpStatisticsCreate(&heurdata->nlpstatistics) );
@@ -263,27 +281,31 @@ SCIP_RETCODE freeSubSCIP(
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );
    assert(nsubvars == heurdata->nsubvars);
 
-   /* drop global bound change events */
-   for( i = 0; i < heurdata->nsubvars; ++i )
+   /* drop global bound change events 
+    * release variables in SCIP and subSCIP */
+   for( i = 0; i < heurdata->nvars; ++i )
    {
-      subvar = subvars[i];
+      subvar = heurdata->var_scip2subscip[i];
+      if( subvar == NULL )
+         continue;
       assert(SCIPvarGetProbindex(subvar) >= 0);
       assert(SCIPvarGetProbindex(subvar) <  heurdata->nsubvars);
       
       var = heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)];
+      assert(var != NULL);
       
-      if( var != NULL )
-      {
-         SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, -1) );
-      }
+      SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, -1) );
       
       SCIP_CALL( SCIPreleaseVar(heurdata->subscip, &subvar) );
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
 
    /* free variable mappings subscip -> scip and scip -> subscip */
    SCIPfreeBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars);
-   SCIPhashmapFree(&heurdata->var_scip2subscip);
-
+   SCIPfreeBlockMemoryArray(scip, &heurdata->var_scip2subscip, heurdata->nvars);
+   heurdata->nsubvars = 0;
+   heurdata->nvars = 0;
+   
    /* free subSCIP */
    SCIP_CALL( SCIPfree(&heurdata->subscip) );
 
@@ -308,9 +330,11 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    var = SCIPeventGetVar(event);
    assert(var != NULL);
-
-   assert(SCIPhashmapExists(heurdata->var_scip2subscip, var));
-   subvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(heurdata->var_scip2subscip, var);
+   assert(SCIPvarGetProbindex(var) >= 0);
+   assert(SCIPvarGetProbindex(var) < heurdata->nvars);
+   
+   subvar = heurdata->var_scip2subscip[SCIPvarGetProbindex(var)];
+   assert(subvar != NULL);
 
    if( SCIPeventGetType(event) & SCIP_EVENTTYPE_GLBCHANGED )
    {
@@ -1892,7 +1916,7 @@ SCIP* SCIPgetSubScipHeurSubNlp(
 }
 
 /** gets mapping of SCIP variables to subSCIP variables */
-SCIP_HASHMAP* SCIPgetVarMappingHeurSubNlp(
+SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    )
@@ -1906,4 +1930,21 @@ SCIP_HASHMAP* SCIPgetVarMappingHeurSubNlp(
    assert(heurdata != NULL);
 
    return heurdata->var_scip2subscip;
+}
+
+/** gets mapping of subSCIP variables to SCIP variables */
+SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   return heurdata->var_subscip2scip;
 }

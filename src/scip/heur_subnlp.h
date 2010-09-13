@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.h,v 1.2 2010/09/01 11:14:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.h,v 1.3 2010/09/13 16:47:21 bzfviger Exp $"
 
 /**@file   heur_subnlp.h
  * @brief  NLP local search primal heuristic using subSCIPs
@@ -81,7 +81,14 @@ SCIP* SCIPgetSubScipHeurSubNlp(
 
 /** gets mapping of SCIP variables to subSCIP variables */
 extern
-SCIP_HASHMAP* SCIPgetVarMappingHeurSubNlp(
+SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+   );
+
+/** gets mapping of subSCIP variables to SCIP variables */
+extern
+SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
