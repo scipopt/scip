@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.89 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.90 2010/09/13 09:41:01 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -1653,6 +1653,7 @@ SCIP_RETCODE checkAltLPInfeasible(
       *error = TRUE;
       return SCIP_OKAY;
    }
+   SCIP_CALL( retcode );
 
    /* resolve if LP is not stable */
    if ( ! SCIPlpiIsStable(lp) )
@@ -1663,9 +1664,20 @@ SCIP_RETCODE checkAltLPInfeasible(
 
       /* re-solve LP */
       if ( primal )
-         SCIP_CALL( SCIPlpiSolvePrimal(lp) );  /* use primal simplex */
+         retcode = SCIPlpiSolvePrimal(lp);  /* use primal simplex */
       else
-         SCIP_CALL( SCIPlpiSolveDual(lp) );    /* use dual simplex */
+         retcode = SCIPlpiSolveDual(lp);    /* use dual simplex */
+      
+      if( retcode == SCIP_LPERROR )
+      {
+         /* reset parameters */
+         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+         
+         *error = TRUE;
+         return SCIP_OKAY;
+      }
+      SCIP_CALL( retcode );
 
       /* reset parameters */
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
