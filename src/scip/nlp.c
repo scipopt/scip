@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.26 2010/09/13 13:44:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.27 2010/09/13 16:40:21 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -1103,6 +1103,9 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    if( nlrow->nquadvars == 0 )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("removing fixed quadratic variables from nlrow\n\t");
+   SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
+   
    nvarsold = nlrow->nquadvars;
    havechange = FALSE;
 
@@ -1129,6 +1132,9 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          ++i;
          continue;
       }
+      
+      SCIPdebugMessage("removing fixed quadratic variables from element %g <%s> <%s>",
+         elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]));
 
       /* if one of the variable is not active, we remove the element and insert new disaggregated ones */
       SCIP_CALL( nlrowDelQuadElemPos(nlrow, set, stat, nlp, i) );
@@ -1494,6 +1500,9 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    }
 
    SCIPsetFreeBufferArray(set, &used);
+   
+   SCIPdebugMessage("finished removing fixed quadratic variables\n\t");
+   SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
 
    return SCIP_OKAY;
 }
