@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.30 2010/09/13 09:39:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.31 2010/09/13 21:27:38 bzfheinz Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -315,7 +315,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/restarts", restarts) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", restarts) );
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
