@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.118 2010/09/10 15:00:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.119 2010/09/13 11:15:06 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1740,6 +1740,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 /** dialog execution method for the set heuristics aggressive command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisAggressive)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1751,6 +1752,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisAggressive)
 /** dialog execution method for the set heuristics fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisFast)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1762,6 +1764,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisFast)
 /** dialog execution method for the set heuristics off command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisOff)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1773,6 +1776,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsEmphasisOff)
 /** dialog execution method for the set heuristics aggressive command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisAggressive)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1784,6 +1788,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisAggressive)
 /** dialog execution method for the set heuristics fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisFast)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1795,6 +1800,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisFast)
 /** dialog execution method for the set heuristics off command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisOff)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1806,6 +1812,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingEmphasisOff)
 /** dialog execution method for the set heuristics aggressive command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisAggressive)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1817,6 +1824,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisAggressive)
 /** dialog execution method for the set heuristics fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisFast)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1828,6 +1836,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisFast)
 /** dialog execution method for the set heuristics off command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1839,6 +1848,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingEmphasisOff)
 /** dialog execution method for the set emphasis counter command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounter)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1854,6 +1864,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounter)
 /** dialog execution method for the set emphasis cpsolver command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1869,6 +1880,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver)
 /** dialog execution method for the set emphasis easy CIP command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisEasycip)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1884,6 +1896,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisEasycip)
 /** dialog execution method for the set emphasis feasibility command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1899,6 +1912,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
 /** dialog execution method for the set emphasis hard LP command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -1914,6 +1928,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp)
 /** dialog execution method for the set emphasis optimality command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality)
 {  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
