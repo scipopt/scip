@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.9 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   pricer_healthcare.c
  * @brief  healthcare variable pricer
@@ -182,7 +182,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostHealthcare)
       int i;
 
       SCIP_CALL( SCIPcreateVar(scip, &var, "varname", 0.0, 1.0, obj, SCIP_VARTYPE_BINARY, FALSE, FALSE,
-            NULL, NULL, NULL, NULL) );
+            NULL, NULL, NULL, NULL, NULL) );
 
       /* add new variable to the corresponding constraints */
       for( i = 0; i < njobs; ++i )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.c,v 1.9 2010/09/01 19:37:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_col.c,v 1.10 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   reader_col.c
  * @brief  COL file reader
@@ -488,7 +488,7 @@ SCIP_RETCODE COLORreaderCreateSetsForUncoveredNodes(
       
       /* create variable for the stable set and add it to SCIP*/
       SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
-            TRUE, FALSE, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) );
+            TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) );
       COLORprobAddVarForStableSet(scip, setnumber, var);
       SCIP_CALL( SCIPaddVar(scip, var) );
 

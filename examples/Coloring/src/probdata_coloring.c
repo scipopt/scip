@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.10 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.11 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -503,6 +503,7 @@ SCIP_DECL_PROBDELTRANS(probdeltransColoring)
 
 #define probinitsolColoring NULL
 #define probexitsolColoring NULL
+#define probcopyColoring NULL
 
 
 static
@@ -597,7 +598,7 @@ SCIP_RETCODE SCIPcreateProbColoring(
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring, 
-         probinitsolColoring, probexitsolColoring, probdata) );
+         probinitsolColoring, probcopyColoring, NULL, probdata) );
 
    SCIP_CALL( preprocessGraph(scip) );
 

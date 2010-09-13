@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_csol.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_csol.c,v 1.9 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   reader_csol.c
  * @brief  CSOL file writer
@@ -284,7 +284,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
       assert(setindex == i);
 
       SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
-            TRUE, FALSE, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) );
+            TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) );
       COLORprobAddVarForStableSet(scip, setindex, var);
       SCIP_CALL( SCIPaddVar(scip, var) );
 

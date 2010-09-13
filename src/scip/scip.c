@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.664 2010/09/13 13:18:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.665 2010/09/13 15:29:28 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1937,6 +1937,8 @@ SCIP_RETCODE SCIPsetHeuristics(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetHeuristics", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   assert(paramsetting == SCIP_PARAMSETTING_DEFAULT || paramsetting == SCIP_PARAMSETTING_FAST
+      || paramsetting == SCIP_PARAMSETTING_AGGRESSIVE || paramsetting == SCIP_PARAMSETTING_OFF);
 
    SCIP_CALL( SCIPsetSetHeuristics(scip->set, paramsetting, quiet) );
 
@@ -1956,6 +1958,8 @@ SCIP_RETCODE SCIPsetPresolving(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetPresolving", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   assert(paramsetting == SCIP_PARAMSETTING_DEFAULT || paramsetting == SCIP_PARAMSETTING_FAST
+      || paramsetting == SCIP_PARAMSETTING_AGGRESSIVE || paramsetting == SCIP_PARAMSETTING_OFF);
    
    SCIP_CALL( SCIPsetSetPresolving(scip->set, paramsetting, quiet) );
 
@@ -1975,6 +1979,8 @@ SCIP_RETCODE SCIPsetSeparating(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetSeparating", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   assert(paramsetting == SCIP_PARAMSETTING_DEFAULT || paramsetting == SCIP_PARAMSETTING_FAST
+      || paramsetting == SCIP_PARAMSETTING_AGGRESSIVE || paramsetting == SCIP_PARAMSETTING_OFF);
    
    SCIP_CALL( SCIPsetSetSeparating(scip->set, paramsetting, quiet) );
 

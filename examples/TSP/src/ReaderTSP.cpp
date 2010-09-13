@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.14 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.15 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -374,7 +374,7 @@ SCIP_RETCODE ReaderTSP::scip_read(
       // the variable is named after the two nodes connected by the edge it represents
       varname << "x_e_" << edge->back->adjac->id+1 << "-" << edge->adjac->id+1;
       SCIP_CALL( SCIPcreateVar(scip, &edge->var, varname.str().c_str(), 0.0, 1.0, edge->length,
-            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       
       //two parallel halfedges have the same variable
       edge->back->var = edge->var;

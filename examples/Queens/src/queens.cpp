@@ -37,7 +37,7 @@ scipexamples::QueensSolver::QueensSolver(int n)
    SCIP_CALL_EXC( SCIPsetMessagehdlr(NULL) );
 
    // create an empty problem
-   SCIP_CALL_EXC( SCIPcreateProb(_scip, "queens", NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_EXC( SCIPcreateProb(_scip, "queens", NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    // set the objective sense to maximize, default is minimize
    SCIP_CALL_EXC( SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE) );
@@ -53,7 +53,7 @@ scipexamples::QueensSolver::QueensSolver(int n)
 	 namebuf << "x#" << i << "#" << j;
 
 	 // create the SCIP_VAR object
-	 SCIP_CALL_EXC( SCIPcreateVar(_scip, & var, namebuf.str().c_str(), 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+	 SCIP_CALL_EXC( SCIPcreateVar(_scip, & var, namebuf.str().c_str(), 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
 	 // add the SCIP_VAR object to the scip problem
 	 SCIP_CALL_EXC( SCIPaddVar(_scip, var) );

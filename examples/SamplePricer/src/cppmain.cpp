@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.11 2010/03/24 20:34:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.12 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for p-median pricer example
@@ -182,7 +182,7 @@ SCIP_RETCODE runSCIP(
       const int num_points (3);
       const int num_centers(2);
 
-      SCIP_CALL(SCIPcreateProb(scip, "p-median", 0, 0, 0, 0, 0, 0));
+      SCIP_CALL(SCIPcreateProb(scip, "p-median", 0, 0, 0, 0, 0, 0, 0));
       
       SCIP_CONS* cons;
       

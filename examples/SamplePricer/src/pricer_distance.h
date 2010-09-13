@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.13 2010/03/24 20:34:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.14 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -219,6 +219,7 @@ public:
 			     0,
 			     0,
 			     0,
+			     0,
 			     0));
 
     SCIP_CALL(SCIPaddPricedVar(scip, var, 1));
@@ -304,6 +305,7 @@ public:
                              SCIP_VARTYPE_INTEGER, // SCIP_VARTYPE_BINARY,
 			     false,
                              false,
+			     0,
 			     0,
 			     0,
 			     0,

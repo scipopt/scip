@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.c,v 1.9 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   pricer_coloring.c
  * @brief  coloring variable pricer
@@ -493,7 +493,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          
          /* create variable for the stable set and add it to SCIP*/
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
-               TRUE, FALSE, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+               TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
          COLORprobAddVarForStableSet(scip, setnumber, var);
          SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
          
@@ -606,7 +606,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                {
                   /* create variable for the stable set and add it to SCIP */
                   SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0, SCIPinfinity(pricerdata->scip), 
-                        1, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+                        1, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
                   COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var);
                   SCIP_CALL( SCIPaddPricedVar(pricerdata->scip, var, 1.0) );
                   pricerdata->nstablesetsfound += 1;

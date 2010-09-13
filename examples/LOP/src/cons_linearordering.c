@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.12 2010/07/02 19:24:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.13 2010/09/13 15:29:27 bzfberth Exp $"
 
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
@@ -996,8 +996,8 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
    int n;
 
    assert( scip != 0 );
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( sourceconshdlr != 0 );
+   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != 0 );
    assert( sourcescip != 0 );
    assert( sourcecons != 0 );
@@ -1021,7 +1021,7 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 
       for (j = 0; j < n && *success; ++j)
       {
-	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, success) );
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, NULL, global) );
 	 assert( vars[i][j] != 0 );
       }
    }

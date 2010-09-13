@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.20 2010/02/04 16:58:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.21 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -40,35 +40,89 @@ struct SCIP_ConsData
    GRAPH* graph;
 };
 
+// static
+// bool findSubtour( 
+//    SCIP*              scip,               /**< SCIP data structure */
+//    GRAPH*             graph,              /**< underlying graph */
+//    SCIP_SOL*          sol                 /**< proposed solution */
+//    )
+// {  
+//    GRAPHNODE* node;
+//    GRAPHNODE* startnode;
+//    GRAPHEDGE* lastedge;
+//    GRAPHEDGE* edge;
+//    int tourlength;
+
+//    if(graph->nnodes <= 1)
+//       return FALSE;
+//    startnode = &graph->nodes[0];
+
+//    tourlength = 0;
+//    lastedge = NULL;
+//    node = startnode;
+
+//    // follow the (sub?)tour until you come back to the startnode
+//    do
+//    {
+//       edge = node->first_edge;
+
+//       // look for an outgoing edge to proceed
+//       while( edge != NULL )
+//       {
+//          // if a new edge with value numerical equal to one is found, we proceed
+//          if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
+//          {
+//             tourlength++;
+//             node = edge->adjac;
+//             lastedge = edge;
+               
+//             if( tourlength > graph->nnodes )
+//             {
+//                /* we found a subtour without the starting node, e.g. 0 - 1 - 2 - 3 - 1 - 2 - ...;
+//                 * this can only happen, if the degree constraints are violated;
+//                 * start again with the last visited node as starting node, because this must be member of the subtour;
+//                 * thus, in the second run we will find the subtour!
+//                 */
+//                return TRUE;
+//             }
+//             break;
+//          }    
+//          edge = edge->next;        
+//       }
+
+//       /* we didn't find an outgoing edge in the solution: the degree constraints must be violated; abort! */
+//       if( edge == NULL )
+//          return TRUE;
+//    }
+//    while( node != startnode );
+
+//    assert(tourlength <= graph->nnodes);
+
+//    return ( graph->nnodes != tourlength );
+// }
+
+
+
 static
-bool findSubtour( 
+SCIP_Bool findSubtour( 
    SCIP*              scip,               /**< SCIP data structure */
    GRAPH*             graph,              /**< underlying graph */
-   SCIP_SOL*          sol,                /**< proposed solution */
-   bool*              subtour             /**< if a subtour elimination cut is to be created, the nodes in a subtour are 
-                                           * labeled true */
+   SCIP_SOL*          sol                 /**< proposed solution */
    )
 {  
-   if(graph->nnodes <= 1)
-      return false;
-   int tourlength;
    GRAPHNODE* node;
    GRAPHNODE* startnode;
    GRAPHEDGE* lastedge;
    GRAPHEDGE* edge;
+   GRAPHEDGE* nextedge;
+   int tourlength;
+   SCIP_Bool foundnextedge;
+
+   if(graph->nnodes <= 1)
+      return FALSE;
 
    startnode = &graph->nodes[0];
 
-   //has to be restarted at maximum once
- SUBTOURLOOP:
-
-   // if a subtour exists, every node is part of some subtour, so we can look for the subtour containing node 0 
-   if(subtour != NULL)
-   {
-      assert(0 <= startnode->id && startnode->id < graph->nnodes);
-      BMSclearMemoryArray(subtour, graph->nnodes);
-      subtour[startnode->id] = true;
-   }
    tourlength = 0;
    lastedge = NULL;
    node = startnode;
@@ -77,53 +131,49 @@ bool findSubtour(
    do
    {
       edge = node->first_edge;
-    
+      foundnextedge = FALSE;
+      nextedge = NULL;
+
       // look for an outgoing edge to proceed
       while( edge != NULL )
       {
          // if a new edge with value numerical equal to one is found, we proceed
          if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
-         {
+         {          
             tourlength++;
-            node = edge->adjac;
-            lastedge = edge;
             
-            // the new node is stored to be part of a possible subtour
-            if( subtour != NULL )
-            {
-               assert(0 <= node->id && node->id < graph->nnodes);
-               assert(node == startnode || !subtour[node->id]);
-               subtour[node->id] = true;
-            }
-         
-            if( tourlength > graph->nnodes )
+            if( foundnextedge || tourlength > graph->nnodes )
             {
                /* we found a subtour without the starting node, e.g. 0 - 1 - 2 - 3 - 1 - 2 - ...;
                 * this can only happen, if the degree constraints are violated;
                 * start again with the last visited node as starting node, because this must be member of the subtour;
                 * thus, in the second run we will find the subtour!
                 */
-               startnode = node;
-
-               goto SUBTOURLOOP;
+               return TRUE;
             }
-            break;
+
+            foundnextedge= TRUE;
+            nextedge = edge;            
+            
+            if( node == startnode )
+               break;
          }    
+      
          edge = edge->next;        
       }
-      
+   
       /* we didn't find an outgoing edge in the solution: the degree constraints must be violated; abort! */
-      if( edge == NULL )
-         return false;
+      if( nextedge == NULL )
+         return TRUE;
+
+      node = nextedge->adjac;
+      lastedge = nextedge;
    }
    while( node != startnode );
-  
+
    assert(tourlength <= graph->nnodes);
 
-   if( graph->nnodes != tourlength )
-      return true;
-   else 
-      return false; 
+   return ( graph->nnodes != tourlength );
 }
 
 static
@@ -384,10 +434,8 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfolp(
    SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
    )
 {
-   bool* subtour;
-
    *result = SCIP_FEASIBLE;
-   subtour = NULL;
+
    for( int i = 0; i < nconss; ++i )
    {
       SCIP_CONSDATA* consdata;
@@ -398,49 +446,13 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfolp(
       graph = consdata->graph;
       assert(graph != NULL);
 
-      SCIP_CALL( SCIPreallocBufferArray(scip, &subtour, graph->nnodes) );
-      found = findSubtour(scip, graph, NULL, subtour);
+      found = findSubtour(scip, graph, NULL);
       
       // if a subtour was found, we generate a cut constraint saying that there must be at least two outgoing edges
       if( found )
-      {
-         SCIP_ROW* row;
-
-         // a new cut constraint is created 
-         SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "loop_con", 2.0, SCIPinfinity(scip), 
-               FALSE, FALSE, TRUE) ); 
-
-         SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-         for( int j = 0; j < graph->nnodes; j++ )
-         {
-            if( subtour[j] )
-            {
-               GRAPHEDGE* edge = graph->nodes[j].first_edge;
-      
-               // find edges going out of the subtour
-               while( edge != NULL )
-               {
-                  if( !subtour[edge->adjac->id] )
-                  {
-                     SCIP_CALL( SCIPaddVarToRow(scip, row, edge->var, 1.0) );
-                  }
-                  edge = edge->next;
-               }
-            }
-         }
-         
-         SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-
-         // add the constraint to SCIP 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-         
-         *result = SCIP_SEPARATED;
-      }
+         *result = SCIP_INFEASIBLE;
    }
-   SCIPfreeBufferArrayNull(scip, &subtour);
-
+   
    return SCIP_OKAY;
 }
 
@@ -499,11 +511,9 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfops(
       assert(graph != NULL);
   
       // if a subtour is found, the solution must be infeasible
-      found = findSubtour(scip, graph, NULL, NULL);      
+      found = findSubtour(scip, graph, NULL);      
       if( found )
-      {
          *result = SCIP_INFEASIBLE;
-      }
    }
 
    return SCIP_OKAY;
@@ -556,7 +566,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_check(
       assert(graph != NULL);
      
       // if a subtour is found, the solution must be infeasible
-      found = findSubtour(scip, graph, sol, NULL);      
+      found = findSubtour(scip, graph, sol);      
       if( found )
       {
          *result = SCIP_INFEASIBLE;

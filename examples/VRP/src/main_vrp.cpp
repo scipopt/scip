@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: main_vrp.cpp,v 1.7 2010/03/24 20:35:42 bzfpfets Exp $"
+#pragma ident "@(#) $Id: main_vrp.cpp,v 1.8 2010/09/13 15:29:28 bzfberth Exp $"
 
 /**@file   
  * @brief  main file for VRP pricer example
@@ -288,7 +288,7 @@ int main( int argc, char** argv )
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 4) );
 
    /* create empty problem */
-   SCIP_CALL( SCIPcreateProb(scip, "VRP", 0, 0, 0, 0, 0, 0) );
+   SCIP_CALL( SCIPcreateProb(scip, "VRP", 0, 0, 0, 0, 0, 0, 0) );
       
    /* add arc-routing variables */
    vector< vector<SCIP_VAR*> > arc_var( num_nodes );   
@@ -310,6 +310,7 @@ int main( int argc, char** argv )
                      true,                   // initial
                      false,                  // forget the rest ...
                      0,                      
+                     0,
                      0,
                      0,
                      0) );

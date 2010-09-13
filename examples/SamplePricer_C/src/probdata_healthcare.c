@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.6 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.7 2010/09/13 15:29:27 bzfberth Exp $"
 
 #include "probdata_healthcare.h"
 #include "scip/cons_setppc.h"
@@ -84,6 +84,7 @@ SCIP_DECL_PROBDELORIG(probdelorigHealthcare)
 #define probdeltransHealthcare NULL
 #define probinitsolHealthcare NULL
 #define probexitsolHealthcare NULL
+#define probcopyHealthcare NULL
 
 
 SCIP_RETCODE HCPcreateProbHealthcare(
@@ -97,7 +98,7 @@ SCIP_RETCODE HCPcreateProbHealthcare(
    SCIP_CALL( createProbdata(scip, &probdata) );
 
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigHealthcare, probtransHealthcare, probdeltransHealthcare, 
-         probinitsolHealthcare, probexitsolHealthcare, probdata) );
+         probinitsolHealthcare, probexitsolHealthcare, probcopyHealthcare, probdata) );
 
    return SCIP_OKAY;
 }

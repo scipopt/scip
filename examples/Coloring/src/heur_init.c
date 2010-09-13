@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_init.c,v 1.7 2010/06/24 13:07:29 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_init.c,v 1.8 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   heur_init.c
  * @brief  initial primal heuristic for coloring
@@ -81,6 +81,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 /* default values for parameters */
@@ -648,7 +649,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          
          /* create variable for the stable set and add it to SCIP*/
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
-               TRUE, FALSE, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+               TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
          COLORprobAddVarForStableSet(scip, setnumber, var);
          SCIP_CALL( SCIPaddVar(scip, var) );
          
@@ -709,7 +710,7 @@ SCIP_RETCODE SCIPincludeHeurInit(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, 
          heurCopyInit,
          heurFreeInit, heurInitInit, heurExitInit, 
          heurInitsolInit, heurExitsolInit, heurExecInit,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.6 2010/09/01 19:37:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.7 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -66,7 +66,7 @@ static SCIP_Bool readerror_ = FALSE;
 void xlp_alloc(const char* name, Bool need_startval)
 {
    /* create problem */
-   SCIP_CALL_ABORT( SCIPcreateProb(scip_, name, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_ABORT( SCIPcreateProb(scip_, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 }
 
 void xlp_free(void)
@@ -402,7 +402,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
       branchpriority = (int)numb_todbl(priority);
    }
 
-   SCIP_CALL_ABORT( SCIPcreateVar(scip_, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_ABORT( SCIPcreateVar(scip_, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
    zplvar = (Var*)var; /* this is ugly, because our VAR-pointer will be released; but in this case we know that the VAR will not be
                           destroyed by SCIPreleaseVar() */
    SCIP_CALL_ABORT( SCIPaddVar(scip_, var) );

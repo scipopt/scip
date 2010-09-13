@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.1 2010/09/09 12:21:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.2 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   pricer_binpacking.c
  * @brief  binpacking variable pricer
@@ -300,7 +300,7 @@ SCIP_RETCODE initPricing(
       dual = SCIPgetDualsolSetppc(scip, cons);
       
       SCIP_CALL( SCIPcreateVar(subscip, &var, SCIPconsGetName(cons), 0.0, 1.0, dual, 
-            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(subscip, var) );
       
       vals[nvars] = weights[c];
@@ -484,7 +484,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
    /* free sub SCIP */
-   SCIP_CALL( SCIPcreateProb(subscip, "pricing", NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(subscip, "pricing", NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
    
    /* do not abort subproblem on CTRL-C */

@@ -42,7 +42,7 @@ namespace tsp
 	 SCIP* scip
       )
          : ObjHeur(scip, "frats", "fractional travelling salesman: TSP rounding heuristic", 'T',-50000, 5, 0, -1,
-            SCIP_HEURTIMING_AFTERLPNODE)
+            SCIP_HEURTIMING_AFTERLPNODE, FALSE)
       {
       }   
    

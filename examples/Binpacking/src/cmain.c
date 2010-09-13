@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.1 2010/09/09 12:21:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.2 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   cmain.c
  * @brief  main file for binpacking pricing example
@@ -66,7 +66,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
 
    /* turn off all separation algorithms */
-   SCIP_CALL( SCIPsetSeparatingOff(scip, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    
    /**********************************
     * Process command line arguments *

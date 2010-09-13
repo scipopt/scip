@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.12 2010/07/04 18:29:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.13 2010/09/13 15:29:27 bzfberth Exp $"
 
 /**@file   probdata_lop.h
  * @brief  handling of data needed for solving linear ordering problems
@@ -72,6 +72,7 @@ SCIP_DECL_PROBDELORIG(probdelorigLOP)
 #define probdeltransLOP NULL
 #define probinitsolLOP NULL
 #define probexitsolLOP NULL
+#define probcopyLOP NULL
 
 
 
@@ -224,7 +225,7 @@ SCIP_RETCODE LOPcreateProb(
    probdata->vars = NULL;
 
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigLOP, probtransLOP, probdeltransLOP,
-	 probinitsolLOP, probexitsolLOP, probdata) );
+	 probinitsolLOP, probexitsolLOP, probcopyLOP, probdata) );
 
    return SCIP_OKAY;
 }
@@ -255,7 +256,7 @@ SCIP_RETCODE LOPgenerateModel(
 	    char s[SCIP_MAXSTRLEN];
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
 	    SCIP_CALL( SCIPcreateVar(scip, &(probdata->vars[i][j]), s, 0.0, 1.0, probdata->W[i][j], SCIP_VARTYPE_BINARY,
-		  TRUE, FALSE, NULL, NULL, NULL, NULL));
+		  TRUE, FALSE, NULL, NULL, NULL, NULL, NULL));
 	    SCIP_CALL( SCIPaddVar(scip, probdata->vars[i][j]) );
 	 }
 	 else

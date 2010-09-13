@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.7 2010/03/24 20:35:42 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.8 2010/09/13 15:29:28 bzfberth Exp $"
 
 #include "pricer_vrp.h"
 #include "pqueue.h"
@@ -276,6 +276,7 @@ add_tour_variable
                             false,                   // forget the rest ...
                             false,                  
                             0,                      
+                            0,
                             0,
                             0,
                             0 ) );
