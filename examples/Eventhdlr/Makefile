@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.2 2010/09/03 21:04:15 bzfviger Exp $
+# $Id: Makefile,v 1.3 2010/09/13 15:40:13 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for event handler plugin in C 
@@ -101,7 +101,7 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(M
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \ \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o)$@
 
