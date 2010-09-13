@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.129 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.130 2010/09/13 13:45:40 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7417,12 +7417,8 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &linvars, consdata->nlinvars) );
       for( i = 0; i < consdata->nlinvars; ++i )
       {
-         linvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->linvars[i]);
-         if( linvars[i] == NULL )
-         {
-            *success = FALSE;
-            break;
-         }
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->linvars[i], &linvars[i], varmap, consmap, global) );
+         assert(linvars[i] != NULL);
       }
    }
    
@@ -7436,12 +7432,8 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &quadvarterms, consdata->nquadvars) );
       for( i = 0; i < consdata->nquadvars; ++i )
       {
-         quadvarterms[i].var = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->quadvarterms[i].var);
-         if( quadvarterms[i].var == NULL )
-         {
-            *success = FALSE;
-            break;
-         }
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->quadvarterms[i].var, &quadvarterms[i].var, varmap, consmap, global) );
+         assert(quadvarterms[i].var != NULL);
          
          quadvarterms[i].lincoef   = consdata->quadvarterms[i].lincoef;
          quadvarterms[i].sqrcoef   = consdata->quadvarterms[i].sqrcoef;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.53 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.54 2010/09/13 13:45:40 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3551,37 +3551,24 @@ SCIP_DECL_CONSCOPY(consCopySOC)
 
    consdata = SCIPconsGetData(sourcecons);
    assert(consdata != NULL);
-   
-   rhsvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->rhsvar);
-   if( rhsvar == NULL )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
 
    *success = TRUE; /* think positive */
+
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->rhsvar, &rhsvar, varmap, consmap, global) );
+   assert(rhsvar != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &vars, consdata->nvars) );
    
    for( i = 0; i < consdata->nvars; ++i )
    {
-      vars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->vars[i]);
-      if( vars[i] == NULL )
-      {
-         *success = FALSE;
-         break;
-      }
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->vars[i], &vars[i], varmap, consmap, global) );
+      assert(vars[i] != NULL);
    }
    
-   if( *success )
-   {
-      SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
-         consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
-         rhsvar, consdata->rhscoeff, consdata->rhsoffset,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
-   }
-   else
-      *cons = NULL;
+   SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
+      consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
+      rhsvar, consdata->rhscoeff, consdata->rhsoffset,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    SCIPfreeBufferArray(sourcescip, &vars);
 
