@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.10 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.11 2010/09/13 18:42:59 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -1107,10 +1107,14 @@ TERMINATE_READPOLYNOM:
    return SCIP_OKAY;
 }
 
+/** given an expression tree that holds a polynomial expression of degree at most two,
+ * gives the coefficients of the constant, linear, and quadratic part of this expression
+ */
 static
 void getLinearAndQuadraticCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        exprtree,           /**< expression tree holding polynomial expression */
+   SCIP_Real*            constant,           /**< buffer to store constant monoms */
    int*                  nlinvars,           /**< buffer to store number of linear coefficients */
    SCIP_VAR**            linvars,            /**< array to fill with linear variables */
    SCIP_Real*            lincoefs,           /**< array to fill with coefficients of linear variables */
@@ -1134,16 +1138,22 @@ void getLinearAndQuadraticCoefs(
    nmonoms = SCIPexprGetPolynomNMonoms(expr);
    monoms  = SCIPexprGetPolynomMonoms(expr);
 
+   *constant = 0.0;
    *nlinvars = 0;
    *nquadterms = 0;
    for( i = 0; i < nmonoms; ++i )
    {
-      assert(SCIPexprGetPolynomMonomNFactors(monoms[i]) > 0);
+      assert(SCIPexprGetPolynomMonomNFactors(monoms[i]) >= 0);
       assert(SCIPexprGetPolynomMonomNFactors(monoms[i]) <= 2);
-      assert(SCIPexprGetPolynomMonomExponents(monoms[i]) != NULL);
-      assert(SCIPexprGetPolynomMonomChildIndices(monoms[i]) != NULL);
+      assert(SCIPexprGetPolynomMonomExponents(monoms[i]) != NULL    || SCIPexprGetPolynomMonomNFactors(monoms[i]) == 0);
+      assert(SCIPexprGetPolynomMonomChildIndices(monoms[i]) != NULL || SCIPexprGetPolynomMonomNFactors(monoms[i]) == 0);
       
-      if( SCIPexprGetPolynomMonomNFactors(monoms[i]) == 1 && SCIPexprGetPolynomMonomExponents(monoms[i])[0] == 1.0 )
+      if( SCIPexprGetPolynomMonomNFactors(monoms[i]) == 0 )
+      {
+         /* constant monom */
+         *constant += SCIPexprGetPolynomMonomCoef(monoms[i]);
+      }
+      else if( SCIPexprGetPolynomMonomNFactors(monoms[i]) == 1 && SCIPexprGetPolynomMonomExponents(monoms[i])[0] == 1.0 )
       {
          /* linear monom */
          varidx = SCIPexprGetPolynomMonomChildIndices(monoms[i])[0];
@@ -1269,6 +1279,7 @@ SCIP_RETCODE readObjective(
          SCIP_Real  lhs;
          SCIP_Real  rhs;
          
+         SCIP_Real constant;
          int nlinvars;
          SCIP_VAR** linvars;
          SCIP_Real* lincoefs;
@@ -1283,7 +1294,7 @@ SCIP_RETCODE readObjective(
          SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonoms) );
          SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonoms) );
 
-         getLinearAndQuadraticCoefs(scip, exprtree, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
+         getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, 
                SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
@@ -1292,11 +1303,11 @@ SCIP_RETCODE readObjective(
          if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
-            rhs = 0.0;
+            rhs = -constant;
          }
          else
          {
-            lhs = 0.0;
+            lhs = -constant;
             rhs = SCIPinfinity(scip);
          }
 
@@ -1349,6 +1360,8 @@ SCIP_RETCODE readConstraints(
    SCIP_EXPR* expr;
    int degree;
 
+   SCIP_Real constant;
+   
    int nlinvars;
    SCIP_VAR** linvars;
    SCIP_Real* lincoefs;
@@ -1419,27 +1432,6 @@ SCIP_RETCODE readConstraints(
    }
    sidevalue *= sidesign;
 
-   /* assign the left and right hand side, depending on the constraint sense */
-   switch ( sense )
-   {
-   case PIP_SENSE_GE:
-      lhs = sidevalue;
-      rhs = SCIPinfinity(scip);
-      break;
-   case PIP_SENSE_LE:
-      lhs = -SCIPinfinity(scip);
-      rhs = sidevalue;
-      break;
-   case PIP_SENSE_EQ:
-      lhs = sidevalue;
-      rhs = sidevalue;
-      break;
-   case PIP_SENSE_NOTHING:
-   default:
-      SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
-      return SCIP_INVALIDDATA;
-   }
-
    /* create and add the linear constraint */
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/pipreader/dynamicrows", &dynamicrows) );
@@ -1471,8 +1463,29 @@ SCIP_RETCODE readConstraints(
       SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonoms) );
       SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonoms) );
 
-      getLinearAndQuadraticCoefs(scip, exprtree, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
+      getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
 
+      /* assign the left and right hand side, depending on the constraint sense */
+      switch ( sense )
+      {
+      case PIP_SENSE_GE:
+         lhs = sidevalue - constant;
+         rhs = SCIPinfinity(scip);
+         break;
+      case PIP_SENSE_LE:
+         lhs = -SCIPinfinity(scip);
+         rhs = sidevalue - constant;
+         break;
+      case PIP_SENSE_EQ:
+         lhs = sidevalue - constant;
+         rhs = sidevalue - constant;
+         break;
+      case PIP_SENSE_NOTHING:
+      default:
+         SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
+         return SCIP_INVALIDDATA;
+      }
+      
       if( nquadcoefs == 0 )
       {
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlinvars, linvars, lincoefs, lhs, rhs,
