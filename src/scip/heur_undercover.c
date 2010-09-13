@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.94 2010/09/13 20:07:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.95 2010/09/13 21:45:30 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -435,7 +435,30 @@ SCIP_RETCODE createCoveringProblem(
 
    /* first, go through some special constraint handlers which we do not want to treat by looking at their nlrow
     * representation; we store these in a hash map and afterwards process all nlrows which are not found in the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nlrowmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * SCIPnlpGetNNlRows(SCIPgetNLP(scip)))) );
+   nlrowmap = NULL;
+   if( SCIPisNLPConstructed(scip) )
+   {
+      assert(SCIPgetNLP(scip) != NULL);
+      if( SCIPnlpGetNNlRows(SCIPgetNLP(scip)) > 0 )
+      {
+         int mapsize;
+
+         /* calculate size of hash map */
+         conshdlr = SCIPfindConshdlr(scip, "and");
+         mapsize = SCIPconshdlrGetNConss(conshdlr);
+         conshdlr = SCIPfindConshdlr(scip, "quadratic");
+         mapsize += SCIPconshdlrGetNConss(conshdlr);
+         conshdlr = SCIPfindConshdlr(scip, "soc");
+         mapsize += SCIPconshdlrGetNConss(conshdlr);
+         mapsize = MAX(mapsize, SCIPnlpGetNNlRows(SCIPgetNLP(scip)));
+         mapsize = SCIPcalcHashtableSize(2*mapsize);
+         assert(mapsize > 0);
+
+         /* create hash map */
+         SCIP_CALL( SCIPhashmapCreate(&nlrowmap, SCIPblkmem(scip), mapsize) );
+         assert(nlrowmap != NULL);
+      }
+   }
 
    /* go through all "and" constraints in the original problem */
    conshdlr = SCIPfindConshdlr(scip, "and");
@@ -569,8 +592,11 @@ SCIP_RETCODE createCoveringProblem(
          /* get nlrow representation and store it in hash map */
          SCIP_CALL( SCIPgetNlRowQuadratic(scip, quadcons, &nlrow) );
          assert(nlrow != NULL);
-         assert(!SCIPhashmapExists(nlrowmap, nlrow));
-         SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
+         if( nlrowmap != NULL )
+         {
+            assert(!SCIPhashmapExists(nlrowmap, nlrow));
+            SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, quadcons) );
+         }
 
          /* if we only want to convexify and curvature and bounds prove already convexity, nothing to do */
          if( heurdata->onlyconvexify
@@ -618,8 +644,11 @@ SCIP_RETCODE createCoveringProblem(
          /* get nlrow representation and store it in hash map */
          SCIP_CALL( SCIPgetNlRowSOC(scip, soccons, &nlrow) );
          assert(nlrow != NULL);
-         assert(!SCIPhashmapExists(nlrowmap, nlrow));
-         SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, soccons) );
+         if( nlrowmap != NULL )
+         {
+            assert(!SCIPhashmapExists(nlrowmap, nlrow));
+            SCIP_CALL( SCIPhashmapInsert(nlrowmap, nlrow, soccons) );
+         }
 
          /* allocate memory for covering constraint */
          SCIP_CALL( SCIPallocBufferArray(coveringscip, &coveringconsvars, SCIPgetNLhsVarsSOC(scip, soccons)+1) );
@@ -695,11 +724,13 @@ SCIP_RETCODE createCoveringProblem(
    }
 
    /* go through all yet unprocessed nlrows */
-   if( SCIPisNLPConstructed(scip) )
+   if( nlrowmap != NULL )
    {
       SCIP_NLP* nlp;
       SCIP_NLROW** nlrows;
       int nnlrows;
+
+      assert(SCIPisNLPConstructed(scip));
 
       /* get nlp */
       nlp = SCIPgetNLP(scip);
@@ -780,7 +811,10 @@ SCIP_RETCODE createCoveringProblem(
 
  TERMINATE:
    /* free nlrow hash map */
-   SCIPhashmapFree(&nlrowmap);
+   if( nlrowmap != NULL )
+   {
+      SCIPhashmapFree(&nlrowmap);
+   }
 
    /* free counter arrays for weighted objectives */
    SCIPfreeBufferArray(scip, &termcounter); 
@@ -1362,12 +1396,20 @@ void calculateAlternatives(
    SCIP_Real lb;
    SCIP_Real ub;
 
-   /* for binary variables, there is only one possible alternative value for backtracking */
+   /* for binary variables, there is only two possible fixing values */
    if( SCIPvarIsBinary(var) )
    {
-      assert(SCIPisFeasEQ(scip, fixval, 0.0) || SCIPisFeasEQ(scip, fixval, 1.0));
-      alternatives[0] = 1.0 - fixval;
-      *nalternatives = 1;
+      if( SCIPisFeasEQ(scip, fixval, 0.0) || SCIPisFeasEQ(scip, fixval, 1.0) )
+      {
+         alternatives[0] = 1.0 - fixval;
+         *nalternatives = 1;
+      }
+      else
+      {
+         alternatives[0] = 0.0;
+         alternatives[1] = 1.0;
+         *nalternatives = 2;
+      }
       return;
    }
 
