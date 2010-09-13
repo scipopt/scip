@@ -1,13 +1,30 @@
+#!/bin/sh
+# 
+# This scripts generates the dependences for SCIP 
+#
+
+LPSS=(cpx spx spx132 xprs msk clp grb qso none)
+OPTS=(opt dbg prf)
+
 # disable ZIMPL for dependency generation
-make LPS=cpx OPT=opt ZIMPL=false depend
-make LPS=cpx OPT=dbg ZIMPL=false depend
-make LPS=spx OPT=opt ZIMPL=false lpidepend
-make LPS=spx OPT=dbg ZIMPL=false lpidepend
-make LPS=spx132 OPT=opt ZIMPL=false lpidepend
-make LPS=spx132 OPT=dbg ZIMPL=false lpidepend
-make LPS=clp OPT=opt ZIMPL=false lpidepend
-make LPS=clp OPT=dbg ZIMPL=false lpidepend
-#make LPS=xprs OPT=opt lpidepend
-#make LPS=xprs OPT=dbg lpidepend
-#make LPS=msk OPT=opt lpidepend
-#make LPS=msk OPT=dbg lpidepend
+
+make ZIMPL=false LPS=none depend
+
+for OPT in ${OPTS[@]}
+do 
+    make OPT=$OPT ZIMPL=false maindepend
+    
+    for LPS in ${LPSS[@]}
+    do
+	# check if the header for the LP solver are available 
+	if test -e lib/$LPS"inc"
+	then
+	    make LPS=$LPS OPT=$OPT lpidepend
+	fi
+
+	if test "$LPS" == "none"
+	then
+	    make LPS=$LPS OPT=$OPT lpidepend
+	fi
+    done
+done
