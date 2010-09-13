@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.24 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.25 2010/09/13 11:57:28 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -951,7 +951,9 @@ SCIP_RETCODE nlrowCalcActivityBounds(
    return SCIP_OKAY;
 }
 
-/** removes a fixed variable from the linear part of a nonlinear row by replacing it with the corresponding constant or disaggregated term */
+/** makes sure that there is no fixed variable at position pos of the linear part of a nonlinear row
+ * a fixed variable is replaced with the corresponding constant or disaggregated term
+ */
 static
 SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
@@ -985,6 +987,13 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
    {
       nlrowMoveLinearCoef(nlrow, nlrow->nlinvars-1, pos);
       nlrow->nlinvars--;
+
+      if( pos < nlrow->nlinvars )
+      {
+         SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
+      }
+
+      return SCIP_OKAY;
    }
    nlrow->linvarssorted = FALSE;
 
@@ -1052,7 +1061,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefs(
    assert(nlrow != NULL);
 
    oldlen = nlrow->nlinvars;
-   for( i = 0; i < oldlen; ++i )
+   for( i = 0; i < MIN(oldlen, nlrow->nlinvars); ++i )
    {
       SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, i) );
    }
