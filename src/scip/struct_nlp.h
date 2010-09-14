@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlp.h,v 1.5 2010/09/03 18:02:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlp.h,v 1.6 2010/09/14 11:09:46 bzfviger Exp $"
 
 /**@file   struct_nlp.h
  * @brief  datastructures for NLP management
@@ -90,7 +90,7 @@ struct SCIP_NlRow
    SCIP_EXPRTREE*        exprtree;           /**< expression tree representing nonquadratic part */
 
    /* miscellaneous */
-   const char*           name;               /**< name */
+   char*                 name;               /**< name */
    int                   nuses;              /**< number of times, this row is referenced */
    SCIP_Real             activity;           /**< row activity value in NLP, or SCIP_INVALID if not yet calculated */
    int                   validactivitynlp;   /**< NLP number for which activity value is valid */
@@ -159,7 +159,7 @@ struct SCIP_Nlp
    int                   globalfilterpos;    /**< position of event handler in event handler filter */
 
    /* miscellaneous */
-   const char*           name;               /**< problem name */
+   char*                 name;               /**< problem name */
 };
 
 #ifdef __cplusplus
