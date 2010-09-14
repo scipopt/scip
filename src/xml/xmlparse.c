@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xmlparse.c,v 1.2 2010/09/14 08:24:21 bzfgamra Exp $"
+#pragma ident "@(#) $Id: xmlparse.c,v 1.3 2010/09/14 10:26:56 bzfviger Exp $"
 
 /**@file   xmldef.h
  * @brief  declarations for XML parsing
@@ -49,10 +49,8 @@
 
 
 /* forward declarations */
-typedef enum   parse_state_enum   PSTATE;
 typedef struct parse_stack_struct PSTACK;
 typedef struct parse_pos_struct   PPOS;
-
 
 /** state of the parser */
 enum parse_state_enum
@@ -63,6 +61,7 @@ enum parse_state_enum
    STATE_PCDATA,
    STATE_EOF
 };
+typedef enum   parse_state_enum   PSTATE;
 
 /** Stack as a (singly) linked list. The top element is the current node. */
 struct parse_stack_struct
