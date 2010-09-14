@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.12 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.13 2010/09/14 10:25:54 bzfviger Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -129,7 +129,7 @@ SCIP_RETCODE shiftValues(
    SCIP_ROW** rows2;
    SCIP_Real* colvals1;
    SCIP_Real* colvals2;
-   //   SCIP_Real* tmpactivities;
+   /* SCIP_Real* tmpactivities; */
    int ncolrows1;
    int ncolrows2;
    int i;
@@ -196,124 +196,127 @@ SCIP_RETCODE shiftValues(
 
    return SCIP_OKAY;
    
+#if 0
    /* copy current activities to temporary array. If variable shifting turns out to be feasible, 
     * we can use the temporary array as new activities array, 
     * otherwise the infeasible temporary activities array can be freed.*/
-   // SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpactivities, *activities, nrows) );
+   
+    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpactivities, *activities, nrows) );
 
-   // *feasible =  TRUE;
-   // i = 0;
-   // j = 0;
+    *feasible =  TRUE;
+    i = 0;
+    j = 0;
   
-   // /* go through every LP-row of the variables' constraint set, update the activity and 
-   //  * check if changed row activity will remain feasible. */
-   // while( (i < ncolrows1 || j < ncolrows2) && (*feasible) )
-   // {
-   //    SCIP_ROW* row;
-   //    int rowpos;
-   //    int index1;
-   //    int index2;
+    /* go through every LP-row of the variables' constraint set, update the activity and 
+     * check if changed row activity will remain feasible. */
+    while( (i < ncolrows1 || j < ncolrows2) && (*feasible) )
+    {
+       SCIP_ROW* row;
+       int rowpos;
+       int index1;
+       int index2;
 
-   //    /* ensure that the rows are in current LP */
-   //    /* increase counters, depending on whether they point at a non-LP-Row at the moment */
-   //    if( i < ncolrows1 && SCIProwGetLPPos(rows1[i]) == -1 )
-   //    {
-   //       i = ncolrows1;
-   //       continue;
-   //    }
+       /* ensure that the rows are in current LP */
+       /* increase counters, depending on whether they point at a non-LP-Row at the moment */
+       if( i < ncolrows1 && SCIProwGetLPPos(rows1[i]) == -1 )
+       {
+          i = ncolrows1;
+          continue;
+       }
 
-   //    if( j < ncolrows2 && SCIProwGetLPPos(rows2[j]) == -1 )
-   //    {
-   //       j = ncolrows2; 
-   //       continue;
-   //    }
+       if( j < ncolrows2 && SCIProwGetLPPos(rows2[j]) == -1 )
+       {
+          j = ncolrows2; 
+          continue;
+       }
 
-   //    /* If one counter has already reached its limit, assign a huge number to the corresponding 
-   //     * row position to simulate an always greater row position. */
-   //    if( i < ncolrows1 )
-   //       index1 = SCIProwGetIndex(rows1[i]);
-   //    else 
-   //       index1 = INT_MAX;
+       /* If one counter has already reached its limit, assign a huge number to the corresponding 
+        * row position to simulate an always greater row position. */
+       if( i < ncolrows1 )
+          index1 = SCIProwGetIndex(rows1[i]);
+       else 
+          index1 = INT_MAX;
 
-   //    if( j < ncolrows2 )
-   //       index2 = SCIProwGetIndex(rows2[j]);
-   //    else
-   //       index2 = INT_MAX;
+       if( j < ncolrows2 )
+          index2 = SCIProwGetIndex(rows2[j]);
+       else
+          index2 = INT_MAX;
      
       
-   //    assert(0 <= index1 && 0 <= index2);
-   //    assert(index1 < INT_MAX || index2 < INT_MAX);
+       assert(0 <= index1 && 0 <= index2);
+       assert(index1 < INT_MAX || index2 < INT_MAX);
 
-   //    /* the current row is the one with the smaller position */
-   //    if( index1 <= index2 )
-   //    {
-   //       rowpos = SCIProwGetLPPos(rows1[i]);
-   //       row = rows1[i];
-   //    } 
-   //    else
-   //    {
-   //       assert(j < ncolrows2);
+       /* the current row is the one with the smaller position */
+       if( index1 <= index2 )
+       {
+          rowpos = SCIProwGetLPPos(rows1[i]);
+          row = rows1[i];
+       } 
+       else
+       {
+          assert(j < ncolrows2);
 
-   //       rowpos = SCIProwGetLPPos(rows2[j]);
-   //       row = rows2[j];
-   //    }      
-   //    assert(row != NULL);
+          rowpos = SCIProwGetLPPos(rows2[j]);
+          row = rows2[j];
+       }      
+       assert(row != NULL);
 
-   //    if( !SCIProwIsLocal(row) )
-   //    {
-   //       SCIP_Real lhs;
-   //       SCIP_Real rhs;
+       if( !SCIProwIsLocal(row) )
+       {
+          SCIP_Real lhs;
+          SCIP_Real rhs;
 
-   //       /* get the necessary information about the current row, i.e its lower and upperbound and its activity */
-   //       lhs = SCIProwGetLhs(row);
-   //       rhs = SCIProwGetRhs(row);
+          /* get the necessary information about the current row, i.e its lower and upperbound and its activity */
+          lhs = SCIProwGetLhs(row);
+          rhs = SCIProwGetRhs(row);
 
-   //       assert(SCIPisFeasGE(scip, tmpactivities[rowpos], lhs) && SCIPisFeasLE(scip, tmpactivities[rowpos], rhs));
+          assert(SCIPisFeasGE(scip, tmpactivities[rowpos], lhs) && SCIPisFeasLE(scip, tmpactivities[rowpos], rhs));
       
-   //       /* update activity with respect to which of the variables occur in this row */
-   //       if( index1 <= index2 )
-   //          tmpactivities[rowpos] -= colvals1[i] * shiftval;
-   //       if( index2 <= index1 )
-   //          tmpactivities[rowpos] += colvals2[j] * shiftval;
+          /* update activity with respect to which of the variables occur in this row */
+          if( index1 <= index2 )
+             tmpactivities[rowpos] -= colvals1[i] * shiftval;
+          if( index2 <= index1 )
+             tmpactivities[rowpos] += colvals2[j] * shiftval;
 
-   //       /* check if the LP_row-constraint was violated. In this case, stop forward checking loop by setting 
-   //        * feasibility flag */
-   //       if( SCIPisFeasLT(scip, tmpactivities[rowpos], lhs) || SCIPisFeasGT(scip, tmpactivities[rowpos], rhs) )
-   //       {
-   //          *feasible = FALSE;
-   //          break;
-   //       } 
-   //    }
+          /* check if the LP_row-constraint was violated. In this case, stop forward checking loop by setting 
+           * feasibility flag */
+          if( SCIPisFeasLT(scip, tmpactivities[rowpos], lhs) || SCIPisFeasGT(scip, tmpactivities[rowpos], rhs) )
+          {
+             *feasible = FALSE;
+             break;
+          } 
+       }
 
-   //    /* shifting doesn't violate this constraint. Continue with the next row 
-   //     * increase counters depending on whether the variables occured in current row 
-   //     */
-   //    if( index1 <= index2 )
-   //       ++i;
-   //    if( index2 <= index1 )
-   //       ++j;
-   // }
-   // assert( (i == ncolrows1 && j == ncolrows2) || !(*feasible) );
+       /* shifting doesn't violate this constraint. Continue with the next row 
+        * increase counters depending on whether the variables occured in current row 
+        */
+       if( index1 <= index2 )
+          ++i;
+       if( index2 <= index1 )
+          ++j;
+    }
+    assert( (i == ncolrows1 && j == ncolrows2) || !(*feasible) );
    
-   // /* check if there is infeasible activity. If not, solution values and activities array can be updated. */ 
-   // if( *feasible )
-   // {
+    /* check if there is infeasible activity. If not, solution values and activities array can be updated. */ 
+    if( *feasible )
+    {
        
-   //    *varvalue1 -= shiftval;
-   //    *varvalue2 += shiftval;
-   //    SCIPfreeBufferArray(scip, activities);
-   //    *activities = tmpactivities;
+       *varvalue1 -= shiftval;
+       *varvalue2 += shiftval;
+       SCIPfreeBufferArray(scip, activities);
+       *activities = tmpactivities;
 
-   //    assert(SCIPisFeasIntegral(scip, (*varvalue1)));
-   //    assert(SCIPisFeasIntegral(scip, (*varvalue2)));
-   // }
-   // else
-   // {    
-   //    /* free temporary array */
-   //    SCIPfreeBufferArray(scip, &tmpactivities);
-   // }
+       assert(SCIPisFeasIntegral(scip, (*varvalue1)));
+       assert(SCIPisFeasIntegral(scip, (*varvalue2)));
+    }
+    else
+    {    
+       /* free temporary array */
+       SCIPfreeBufferArray(scip, &tmpactivities);
+    }
    
-   // return SCIP_OKAY;
+    return SCIP_OKAY;
+#endif
 }
 
 /** compare two variables with respect to their columns. Columns are treated as {0,1} vector, where every nonzero entry

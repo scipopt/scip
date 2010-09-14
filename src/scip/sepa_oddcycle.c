@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.7 2010/09/13 07:16:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.8 2010/09/14 10:25:54 bzfviger Exp $"
 
 /**@file   sepa_oddcycle.c
  * @ingroup SEPARATORS
@@ -150,7 +150,7 @@ enum sorttype
    MAXIMAL_LP_VALUE        = 1,         /**< variable array is sorted by maximal lp-value */
    MINIMAL_LP_VALUE        = 2,         /**< variable array is sorted by minimal fractionality */
    MAXIMAL_FRACTIONALITY   = 3,         /**< variable array is sorted by maximal lp-value */
-   MINIMAL_FRACTIONALITY   = 4,         /**< variable array is sorted by minimal fractionality */
+   MINIMAL_FRACTIONALITY   = 4          /**< variable array is sorted by minimal fractionality */
 };
 typedef enum sorttype SORTTYPE;
 
@@ -2572,7 +2572,7 @@ SCIP_RETCODE separateHeur(
    /* the implication graph is redundant and therefore more implic&cliquearcs may occur than should be possible
     * @todo later: filtering of edges which were already added
     */
-   // graph.m = nbinvars*(2*nbinvars-1); /* = 2*nbinvars*(2*nbinvars-1)/2 */
+   /* graph.m = nbinvars*(2*nbinvars-1); */ /* = 2*nbinvars*(2*nbinvars-1)/2 */
    graph.m = INT_MAX;
 
    /* set sizes for graph memory storage */

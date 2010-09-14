@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.13 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.14 2010/09/14 10:25:54 bzfviger Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -2916,7 +2916,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
 
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */
-   //  SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLinking, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   /* SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLinking, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) ); */
 
    
    /* add linking constraint handler parameters */

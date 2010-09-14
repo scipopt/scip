@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.9 2010/09/14 08:24:20 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.10 2010/09/14 10:25:54 bzfviger Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -2210,7 +2210,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
          }
          nconflictids = 0;         
       }
-   } // end for each job j
+   } /* end for each job j */
 
    assert(*success);
 
@@ -3178,9 +3178,9 @@ SCIP_RETCODE createCoverCuts(
             SCIP_CALL( createCoverCutsTimepoint(scip, cons, startvalues, t)  );
 
          }
-      } // end if freecapacity > 0
+      } /* end if freecapacity > 0 */
       
-   } // end for each activityindex j
+   } /* end for each activityindex j */
    
    consdata->covercuts = TRUE;
 

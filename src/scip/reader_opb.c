@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.57 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.58 2010/09/14 10:25:54 bzfviger Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1473,7 +1473,7 @@ SCIP_RETCODE readConstraints(
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
          SCIP_CALL( SCIPaddCoefLinear(scip, cons, negindvar, lb) );
       }
-#else // with indicator
+#else /* with indicator */
       /* @todo check whether it's better to set the initial flag to false */         
       initial = FALSE;
       created = FALSE;
@@ -1517,7 +1517,7 @@ SCIP_RETCODE readConstraints(
             /* free temporary memory */
             SCIPfreeBufferArray(scip, & tmpcoefs);
          }
-#endif // BACKIMPLICATION == TRUE
+#endif /* BACKIMPLICATION == TRUE */
       }
 
       if( !SCIPisInfinity(scip, -lhs) )
@@ -1553,7 +1553,7 @@ SCIP_RETCODE readConstraints(
 #endif
          if( isNonlinear )
             (*nNonlinearConss)++;
-#endif //BACKIMPLICATION == TRUE
+#endif /* BACKIMPLICATION == TRUE */
 
          /* second we are modelling the implication that if the negation of the indicator variable is on, the constraint
           * is enabled */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.209 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.210 2010/09/14 10:25:53 bzfviger Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -909,7 +909,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* fills dynamic programming table with optimal values */
    for( d = 0; d <= intcap; d++ )
-      optvalues[d] = 0.0; // simpler as optvalues[IDX(0,d)] = 0.0;
+      optvalues[d] = 0.0; /* simpler as optvalues[IDX(0,d)] = 0.0; */
    for( j = 1; j <= nitems; j++ )
    {
       int intweight;
