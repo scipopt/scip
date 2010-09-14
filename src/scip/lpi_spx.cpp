@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.117 2010/09/11 00:01:18 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.118 2010/09/14 07:07:41 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -480,12 +480,10 @@ public:
 
 	 trySolve(printwarning);
 
-	 m_autophase1iters = SPxSolver::iterations();
+	 m_autophase1iters += SPxSolver::iterations();
 	 setTerminationIter(olditlim);
 	 setAutoPricer(false);
       }
-      else
-	 m_autophase1iters = 0;
 
       trySolve(printwarning);
 
@@ -612,7 +610,6 @@ public:
       SPxSolver::VarStatus* cstat = NULL;
       SPxSolver::VarStatus* rstat = NULL;
       SPxLP unscaledlp;
-      int scalediters;
       bool applyscaling;
 
       /* delete starting basis if solving from scratch */
@@ -647,6 +644,7 @@ public:
       }
 
       /* solve */
+      m_autophase1iters = 0;
       doSolve();
 
       /* if scaling was applied, restore unscaled lp */
@@ -667,10 +665,9 @@ public:
          /* set basis from scaled lp and reoptimize */
          if( rstat != NULL && cstat != NULL )
          {
-            scalediters = iterations();
+            m_autophase1iters += iterations();
             SPxSolver::setBasis(rstat, cstat);
             doSolve();
-            m_autophase1iters += scalediters;
          }
       }
 
