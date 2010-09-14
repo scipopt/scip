@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.33 2010/09/14 10:27:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.34 2010/09/14 12:41:06 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -148,7 +148,7 @@ SCIP_RETCODE createSubSCIP(
       &success) );
    if( !success )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "failed to copy some plugins to subSCIP, continue anyway\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In heur_subnlp: failed to copy some plugins to subSCIP, continue anyway\n");
    }
    
    /* check if we still have NLPI's in subscip */
@@ -180,7 +180,7 @@ SCIP_RETCODE createSubSCIP(
    SCIPhashmapFree(&conssmap);
    if( !success )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "failed to copy some constraints to subSCIP, continue anyway\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In heur_subnlp: failed to copy some constraints to subSCIP, continue anyway\n");
    }
 
    /* create arrays translating scip transformed vars to subscip original vars, and vice versa
