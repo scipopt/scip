@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.cpp,v 1.1 2010/05/10 19:03:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.cpp,v 1.2 2010/09/14 08:24:20 bzfgamra Exp $"
 
-/**@file   intervalarith.hpp
+/**@file   intervalarith.cpp
  * @brief  C++ extensions to interval arithmetics for provable bounds
  * @author Stefan Vigerske
  */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xmlparse.c,v 1.1 2010/08/12 20:45:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: xmlparse.c,v 1.2 2010/09/14 08:24:21 bzfgamra Exp $"
 
 /**@file   xmldef.h
  * @brief  declarations for XML parsing
@@ -266,7 +266,7 @@ int getsymbol(
  *
  *  Here we convert all LF or CR into SPACE and return maximally one SPACE after the other.
  *
- *  @note This function counts lines differently. On systems that have only one '\r' as line feed
+ *  @note This function counts lines differently. On systems that have only one '\\r' as line feed
  *  (MAC) it does not count correctly.
  */
 static inline

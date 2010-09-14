@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.8 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.9 2010/09/14 08:24:20 bzfgamra Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -549,7 +549,7 @@ SCIP_RETCODE thetatreeInsertLeaf(
    return SCIP_OKAY;
 }
 
-/** return the envelop of the theta tree: max_{\Omega \subseteq \Theta} (C * est_{\Omega} + e_{\Omega}) */
+/** return the envelop of the theta tree: \f$max_{\Omega \subseteq \Theta} (C * est_{\Omega} + e_{\Omega})\f$ */
 static
 int thetaTreeGetEnvelop(
    THETATREE*            tree                /**< tree of which the envelop is returned */   
