@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.130 2010/09/13 13:45:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.131 2010/09/14 12:05:17 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5405,7 +5405,7 @@ void propagateBoundsGetLinearActivity(
          else
          {
             bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
-            if( SCIPisInfinity(scip,  bnd) )
+            if( SCIPisInfinity(scip, -bnd) )
             {
                ++*maxactivityinf;
                continue;
