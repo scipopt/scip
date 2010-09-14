@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.32 2010/09/13 16:47:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.33 2010/09/14 10:27:52 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -106,6 +106,11 @@ SCIP_RETCODE createSubSCIP(
    int i;
    SCIP_HASHMAP* varsmap;
    SCIP_HASHMAP* conssmap;
+#ifdef SCIP_DEBUG
+   static const SCIP_Bool copydisplays = FALSE;
+#else
+   static const SCIP_Bool copydisplays = TRUE;
+#endif
 
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
@@ -137,11 +142,7 @@ SCIP_RETCODE createSubSCIP(
       TRUE,  /* eventhandler */
       TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
       FALSE,  /* branchrules */
-#ifdef SCIP_DEBUG
-      TRUE,  /* displays */
-#else
-      FALSE, /* displays */
-#endif
+      copydisplays, /* displays */
       FALSE, /* dialogs */
       TRUE,  /* nlpis */
       &success) );
