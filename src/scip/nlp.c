@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.27 2010/09/13 16:40:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.28 2010/09/14 09:26:32 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -1062,10 +1062,12 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefs(
    int oldlen;
 
    assert(nlrow != NULL);
+   assert(nlrow->linvars != NULL || nlrow->nlinvars == 0);
 
    oldlen = nlrow->nlinvars;
    for( i = 0; i < MIN(oldlen, nlrow->nlinvars); ++i )
    {
+      assert(nlrow->linvars[i] != NULL);
       SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, i) );
    }
 
@@ -1605,6 +1607,10 @@ SCIP_RETCODE SCIPnlrowCreate(
    SCIP_Real             rhs                 /**< right hand side */
    )
 {
+#ifndef NDEBUG
+   int i;
+#endif
+   
    assert(nlrow  != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
@@ -1619,7 +1625,16 @@ SCIP_RETCODE SCIPnlrowCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, nlrow) );
 
    /* constant part */
+   assert(!SCIPsetIsInfinity(set, REALABS(constant)));
    (*nlrow)->constant = constant;
+   
+#ifndef NDEBUG
+   for( i = 0; i < nlinvars; ++i )
+   {
+      assert(linvars[i] != NULL);
+      assert(!SCIPsetIsInfinity(set, REALABS(lincoefs[i])));
+   }
+#endif
    
    /* linear part */
    (*nlrow)->nlinvars = nlinvars;
@@ -1636,8 +1651,13 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->lincoefs = NULL;
       (*nlrow)->linvarssorted = TRUE;
    }
-
+   
    /* quadratic variables */
+#ifndef NDEBUG
+   for( i = 0; i < nquadvars; ++i )
+      assert(quadvars[i] != NULL);
+#endif
+   
    (*nlrow)->nquadvars    = nquadvars;
    (*nlrow)->quadvarssize = nquadvars;
    (*nlrow)->quadvarshash = NULL;
@@ -1652,6 +1672,18 @@ SCIP_RETCODE SCIPnlrowCreate(
    }
 
    /* quadratic elements */
+#ifndef NDEBUG
+   for( i = 0; i < nquadelems; ++i )
+   {
+      assert(quadelems[i].idx1 >= 0);
+      assert(quadelems[i].idx1 <  nquadvars);
+      assert(quadelems[i].idx2 >= 0);
+      assert(quadelems[i].idx2 <  nquadvars);
+      assert(quadelems[i].idx1 <= quadelems[i].idx2);
+      assert(!SCIPsetIsInfinity(set, REALABS(quadelems[i].coef)));
+   }
+#endif
+
    (*nlrow)->nquadelems = nquadelems;
    (*nlrow)->quadelemssize = nquadelems;
    if( nquadelems > 0 )
@@ -1677,6 +1709,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    }
 
    /* left and right hand sides */
+   assert(SCIPsetIsLE(set, lhs, rhs));
    (*nlrow)->lhs = lhs;
    (*nlrow)->rhs = rhs;
 
