@@ -1737,6 +1737,12 @@
  * Obviously, at the root node the local dual bound is equal to the global dual bound and thus, the separator is called
  * for any value of SEPA_MAXBOUNDDIST.
  *
+ * \par SEPA_USESSUBSCIP: Does the separator use a secondary SCIP instance? 
+ * Some heuristics and separators solve MIPs or SAT problems and use a secondary SCIP instance therefor. Examples are
+ * Large Neighborhood Search heuristics such as RINS and Local Branching or the CGMIP separator. To avoid recursion,
+ * these plugins usually deactivate all other plugins that solve MIPs. If a separator uses a secondary SCIP instance,
+ * this parameter has to be TRUE and it is recommended to call SCIPsetSubscipsOff() for the secondary SCIP instance.
+ *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
  * or constraint handler found a cut during the price-and-cut loop. 
@@ -2774,7 +2780,13 @@
  * Most heuristics, however, are called either after a node was completely processed 
  * (e.g. expensive rounding heuristics like RENS), or even only after a full plunge was finished (e.g., diving heuristics). 
  *
- * Computational experiments seem to indicate that for the overall performance of a MIP solver, it is important to evenly 
+ * \par HEUR_USESSUBSCIP: Does the heuristic use a secondary SCIP instance? 
+ * Some heuristics and separators solve MIPs or SAT problems and use a secondary SCIP instance therefor. Examples are
+ * Large Neighborhood Search heuristics such as RINS and Local Branching or the CGMIP separator. To avoid recursion,
+ * these plugins usually deactivate all other plugins that solve MIPs. If a heuristic uses a secondary SCIP instance,
+ * this parameter has to be TRUE and it is recommended to call SCIPsetSubscipsOff() for the secondary SCIP instance.
+ *
+ * Computational experiments indicate that for the overall performance of a MIP solver, it is important to evenly 
  * spread the application of the heuristics across the branch-and-bound tree. Thus, the assignment of the parameters 
  * HEUR_FREQ, HEUR_FREQOFS, and HEUR_TIMING should contribute to this aim.
  *

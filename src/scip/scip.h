@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.429 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.430 2010/09/14 18:28:18 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -701,12 +701,11 @@ SCIP_RETCODE SCIPsetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances 
- *  this function should be called which solve a auxiliary SCIP instance to avoid recursion 
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
+ *  auxiliary SCIP instances to avoid recursion
  */
-extern
 SCIP_RETCODE SCIPsetSubscipsOff(
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 scip,               /**< (auxiliary) SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
