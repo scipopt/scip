@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.95 2010/09/13 21:45:30 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.96 2010/09/14 18:46:45 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -2371,7 +2371,6 @@ SCIP_RETCODE SCIPapplyUndercover(
  TERMINATE:
    if( *result != SCIP_FOUNDSOL && *result != SCIP_DELAYED )
    {
-      assert(!success);
       SCIPdebugMessage("heuristic terminating unsuccessfully\n");
    }
 
