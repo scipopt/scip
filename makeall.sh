@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # 
 # This scripts compiles SCIP for all LP solver for which the links exit
 #
