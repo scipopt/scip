@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.101 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.102 2010/09/14 10:28:13 bzfviger Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -1819,7 +1819,6 @@ SCIP_RETCODE readSemicontinuous(
    )
 {
    SCIP_Real oldlb;
-   assert(lpinput != NULL);
    char name[SCIP_MAXSTRLEN];
    SCIP_CONS* cons;
    SCIP_VAR* var;
@@ -1830,6 +1829,8 @@ SCIP_RETCODE readSemicontinuous(
    SCIP_VAR* vars[2];
    SCIP_BOUNDTYPE boundtypes[2];
    SCIP_Real bounds[2];
+
+   assert(lpinput != NULL);
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
