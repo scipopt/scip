@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.54 2010/09/13 13:45:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.55 2010/09/14 15:57:50 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3198,8 +3198,9 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       /* if we do linear feasibility shifting, then try to adjust solution */
       if( dolinfeasshift )
       {
-         if( (consdata->rhscoeff > 0.0 && SCIPvarMayRoundUp  (consdata->rhsvar)) ||
-             (consdata->rhscoeff < 0.0 && SCIPvarMayRoundDown(consdata->rhsvar)) )
+         if( SCIPvarGetStatus(consdata->rhsvar) != SCIP_VARSTATUS_MULTAGGR &&
+             ( (consdata->rhscoeff > 0.0 && SCIPvarMayRoundUp  (consdata->rhsvar)) ||
+               (consdata->rhscoeff < 0.0 && SCIPvarMayRoundDown(consdata->rhsvar)) )  )
          {
             SCIP_Bool success;
 
@@ -3220,7 +3221,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
             /* disable solution polishing if we failed for this constraint */
             dolinfeasshift = success;
          }
-         else /* if locks of the variable are bad, disable solution polishing */
+         else /* if locks of the variable are bad or rhs is multiaggregated, disable solution polishing */
          {
             dolinfeasshift = FALSE;
          }
