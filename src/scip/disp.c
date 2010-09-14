@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.61 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.62 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPdispCopyInclude(
 
    if( disp->dispcopy != NULL )
    {
-      SCIPdebugMessage("including display column %s in subscip %p\n", SCIPdispGetName(disp), set->scip);
+      SCIPdebugMessage("including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
       SCIP_CALL( disp->dispcopy(set->scip, disp, valid) );
    }
    return SCIP_OKAY;

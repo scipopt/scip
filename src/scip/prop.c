@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.27 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.28 2010/09/14 10:43:43 bzfviger Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPpropCopyInclude(
 
    if( prop->propcopy != NULL )
    {
-      SCIPdebugMessage("including propagator %s in subscip %p\n", SCIPpropGetName(prop), set->scip);
+      SCIPdebugMessage("including propagator %s in subscip %p\n", SCIPpropGetName(prop), (void*)set->scip);
       SCIP_CALL( prop->propcopy(set->scip, prop, valid) );
    }
    return SCIP_OKAY;

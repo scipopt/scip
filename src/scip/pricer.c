@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.32 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.33 2010/09/14 10:43:43 bzfviger Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPpricerCopyInclude(
 
    if( pricer->pricercopy != NULL )
    {
-      SCIPdebugMessage("including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), set->scip);
+      SCIPdebugMessage("including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), (void*)set->scip);
       SCIP_CALL( pricer->pricercopy(set->scip, pricer, valid) );
    }
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.26 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.27 2010/09/14 10:43:43 bzfviger Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPrelaxCopyInclude(
 
    if( relax->relaxcopy != NULL )
    {
-      SCIPdebugMessage("including relaxator %s in subscip %p\n", SCIPrelaxGetName(relax), set->scip);
+      SCIPdebugMessage("including relaxator %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
       SCIP_CALL( relax->relaxcopy(set->scip, relax, valid) );
    }
    return SCIP_OKAY;

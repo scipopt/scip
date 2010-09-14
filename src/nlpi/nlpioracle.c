@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.19 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.20 2010/09/14 10:43:40 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -37,7 +37,7 @@ struct SCIP_NlpiOracle
 {
    BMS_BLKMEM*           blkmem;             /**< block memory */
    SCIP_Real             infinity;           /**< value for infinity */
-   const char*           name;               /**< name of problem */
+   char*                 name;               /**< name of problem */
    
    int                   nvars;              /**< number of variables */
    SCIP_Real*            varlbs;             /**< array with variable lower bounds */

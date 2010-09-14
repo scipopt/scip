@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.78 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.79 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -95,7 +95,7 @@ SCIP_RETCODE SCIPheurCopyInclude(
 
    if( heur->heurcopy != NULL )
    {
-      SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), set->scip);
+      SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
       SCIP_CALL( heur->heurcopy(set->scip, heur, valid) );
    }
 

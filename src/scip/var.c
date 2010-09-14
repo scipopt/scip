@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.300 2010/09/13 09:37:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.301 2010/09/14 10:43:45 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -64,7 +64,7 @@ SCIP_RETCODE holelistCreate(
    assert(blkmem != NULL);
    assert(SCIPsetIsLT(set, left, right));
 
-   SCIPdebugMessage("create hole list element (%.15g,%.15g) in blkmem %p\n", left, right, blkmem);
+   SCIPdebugMessage("create hole list element (%.15g,%.15g) in blkmem %p\n", left, right, (void*)blkmem);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, holelist) );
    (*holelist)->hole.left = left;
@@ -89,7 +89,7 @@ void holelistFree(
       SCIP_HOLELIST* next;
 
       SCIPdebugMessage("free hole list element (%.15g,%.15g) in blkmem %p\n", 
-         (*holelist)->hole.left, (*holelist)->hole.right, blkmem);
+         (*holelist)->hole.left, (*holelist)->hole.right, (void*)blkmem);
 
       next = (*holelist)->next;
       BMSfreeBlockMemory(blkmem, holelist);

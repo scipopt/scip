@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.96 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.97 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1096,7 +1096,7 @@ SCIP_RETCODE SCIPbranchruleCopyInclude(
 
    if( branchrule->branchcopy != NULL )
    {
-      SCIPdebugMessage("including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), set->scip);
+      SCIPdebugMessage("including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), (void*)set->scip);
       SCIP_CALL( branchrule->branchcopy(set->scip, branchrule, valid) );
    }
    

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.71 2010/09/09 09:29:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.72 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -54,7 +54,7 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
 
    if( eventhdlr->eventcopy != NULL )
    {
-      SCIPdebugMessage("including event handler %s in subscip %p\n", SCIPeventhdlrGetName(eventhdlr), set->scip);
+      SCIPdebugMessage("including event handler %s in subscip %p\n", SCIPeventhdlrGetName(eventhdlr), (void*)set->scip);
       SCIP_CALL( eventhdlr->eventcopy(set->scip, eventhdlr, valid) );
    }
 

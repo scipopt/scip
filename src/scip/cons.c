@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.211 2010/09/13 09:37:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.212 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1722,7 +1722,7 @@ SCIP_RETCODE SCIPconshdlrCopyInclude(
 
    if( conshdlr->conshdlrcopy != NULL )
    {
-      SCIPdebugMessage("including constraint handler %s in subscip %p\n", SCIPconshdlrGetName(conshdlr), set->scip);
+      SCIPdebugMessage("including constraint handler %s in subscip %p\n", SCIPconshdlrGetName(conshdlr), (void*)set->scip);
       SCIP_CALL( conshdlr->conshdlrcopy(set->scip, conshdlr, valid) );
    }
 

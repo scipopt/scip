@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.65 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.66 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -693,7 +693,7 @@ SCIP_RETCODE SCIPnodeselCopyInclude(
 
    if( nodesel->nodeselcopy != NULL )
    {
-      SCIPdebugMessage("including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), set->scip);
+      SCIPdebugMessage("including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), (void*)set->scip);
       SCIP_CALL( nodesel->nodeselcopy(set->scip, nodesel, valid) );
    }
    return SCIP_OKAY;

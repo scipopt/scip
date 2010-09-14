@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.158 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.159 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -378,7 +378,7 @@ SCIP_RETCODE SCIPconflicthdlrCopyInclude(
 
    if( conflicthdlr->conflictcopy != NULL )
    {
-      SCIPdebugMessage("including conflict handler %s in subscip %p\n", SCIPconflicthdlrGetName(conflicthdlr), set->scip);
+      SCIPdebugMessage("including conflict handler %s in subscip %p\n", SCIPconflicthdlrGetName(conflicthdlr), (void*)set->scip);
       SCIP_CALL( conflicthdlr->conflictcopy(set->scip, conflicthdlr, valid) );
    }
 

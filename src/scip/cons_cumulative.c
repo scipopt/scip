@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.10 2010/09/14 10:25:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.11 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -1849,7 +1849,7 @@ SCIP_RETCODE checkCons(
 
 #ifndef NDEBUG
    /* check if the arrays are sorted correctly */
-   SCIPdebugMessage("Checking solution <%p> with starting times:\n",sol);
+   SCIPdebugMessage("Checking solution <%p> with starting times:\n", (void*)sol);
    SCIPdebugMessage("%i | ", startsolvalues[0]);
    for ( j = 1; j < nvars; ++j )
    {

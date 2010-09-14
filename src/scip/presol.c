@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.49 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.50 2010/09/14 10:43:41 bzfviger Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -77,7 +77,7 @@ SCIP_RETCODE SCIPpresolCopyInclude(
 
    if( presol->presolcopy != NULL )
    {
-      SCIPdebugMessage("including presolver %s in subscip %p\n", SCIPpresolGetName(presol), set->scip);
+      SCIPdebugMessage("including presolver %s in subscip %p\n", SCIPpresolGetName(presol), (void*)set->scip);
       SCIP_CALL( presol->presolcopy(set->scip, presol, valid) );
    }
    return SCIP_OKAY;
