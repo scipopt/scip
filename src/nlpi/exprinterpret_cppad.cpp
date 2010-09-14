@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.17 2010/09/13 11:03:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.18 2010/09/14 10:49:37 bzfviger Exp $"
 
 /**@file   exprinterpret_cppad.cpp
  * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -754,7 +754,7 @@ SCIP_RETCODE SCIPexprintCompile(
       data = new SCIP_EXPRINTDATA();
       assert( data != NULL );
       SCIPexprtreeSetInterpreterData(tree, data);
-      SCIPdebugMessage("set interpreter data in tree %p to %p\n", tree, data);
+      SCIPdebugMessage("set interpreter data in tree %p to %p\n", (void*)tree, (void*)data);
    }
    else
    {
