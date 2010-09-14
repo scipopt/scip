@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.118 2010/09/14 07:07:41 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.119 2010/09/14 07:43:25 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -658,6 +658,9 @@ public:
             SPxSolver::getBasis(rstat, cstat);
          }
 
+         /* save iteration count */
+         m_autophase1iters += SPxSolver::iterations();
+
          /* reload unscaled lp */
          SPxSolver::loadLP(unscaledlp);
          m_sense = sense();
@@ -665,7 +668,6 @@ public:
          /* set basis from scaled lp and reoptimize */
          if( rstat != NULL && cstat != NULL )
          {
-            m_autophase1iters += iterations();
             SPxSolver::setBasis(rstat, cstat);
             doSolve();
          }
