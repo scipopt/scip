@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.36 2010/09/15 19:41:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.37 2010/09/15 20:43:28 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1025,7 +1025,7 @@ SCIP_RETCODE solveSubNLP(
       itercontingent = heurdata->nlpiterlimit;
    if( itercontingent > 0 )
    {
-      SCIP_CALL( SCIPnlpSetIntPar(nlp, SCIP_NLPPAR_ITLIM, (int)itercontingent) );
+      SCIP_CALL( SCIPnlpSetIntPar(nlp, SCIP_NLPPAR_ITLIM, (int)MIN(INT_MAX, itercontingent)) );
    }
 
    /* set time limit for NLP solver */
