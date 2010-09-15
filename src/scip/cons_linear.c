@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.384 2010/09/15 17:45:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.385 2010/09/15 18:59:36 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5026,21 +5026,23 @@ SCIP_RETCODE consdataTightenCoefs(
 
                /* get the new minimal and maximal activity of the constraint */
                consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-            }
-            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisFeasEQ(scip, newlhs, consdata->lhs) )
-            {
-               SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
+               
+               if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+               {
+                  SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
 
-               SCIP_CALL( chgLhs(scip, cons, newlhs) );
-               (*nchgsides)++;
-               assert(SCIPisEQ(scip, consdata->lhs, newlhs));
-            }
-            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisFeasEQ(scip, newrhs, consdata->rhs) )
-            {
-               SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
-               SCIP_CALL( chgRhs(scip, cons, newrhs) );
-               (*nchgsides)++;
-               assert(SCIPisEQ(scip, consdata->rhs, newrhs));
+                  SCIP_CALL( chgLhs(scip, cons, newlhs) );
+                  (*nchgsides)++;
+                  assert(SCIPisEQ(scip, consdata->lhs, newlhs));
+               }
+               
+               if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+               {
+                  SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
+                  SCIP_CALL( chgRhs(scip, cons, newrhs) );
+                  (*nchgsides)++;
+                  assert(SCIPisEQ(scip, consdata->rhs, newrhs));
+               }
             }
          }
          else
@@ -5127,26 +5129,27 @@ SCIP_RETCODE consdataTightenCoefs(
 
                /* get the new minimal and maximal activity of the constraint */
                consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-            }
-            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisFeasEQ(scip, newlhs, consdata->lhs) )
-            {
-               SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
+               
+               if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+               {
+                  SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
 
-               SCIP_CALL( chgLhs(scip, cons, newlhs) );
-               (*nchgsides)++;
-               assert(SCIPisEQ(scip, consdata->lhs, newlhs));
-            }
-            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisFeasEQ(scip, newrhs, consdata->rhs) )
-            {
-               SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
+                  SCIP_CALL( chgLhs(scip, cons, newlhs) );
+                  (*nchgsides)++;
+                  assert(SCIPisEQ(scip, consdata->lhs, newlhs));
+               }
+               if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+               {
+                  SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
 
-               SCIP_CALL( chgRhs(scip, cons, newrhs) );
-               (*nchgsides)++;
-               assert(SCIPisEQ(scip, consdata->rhs, newrhs));
+                  SCIP_CALL( chgRhs(scip, cons, newrhs) );
+                  (*nchgsides)++;
+                  assert(SCIPisEQ(scip, consdata->rhs, newrhs));
+               }
             }
          }
          else
-         { 
+         {
             if( !SCIPisInfinity(scip, -minleftactivity) )
             {
                assert(!SCIPisInfinity(scip, -val));
