@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.7 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.8 2010/09/15 14:57:34 bzfviger Exp $"
 
 /**@file    nlpi_xxx.c
  * @ingroup NLPIS
@@ -27,7 +27,6 @@
 
 #define NLPI_NAME              "xxx"                       /* short concise name of solver */
 #define NLPI_DESC              "solver interface template" /* description of solver */
-#define NLPI_TYPE              "type of solver"            /* solver type */
 #define NLPI_PRIORITY          0                           /* priority of NLP solver */
 
 /*

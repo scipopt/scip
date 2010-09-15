@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.h,v 1.2 2010/05/05 19:20:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xxx.h,v 1.3 2010/09/15 14:57:34 bzfviger Exp $"
 
 /**@file    nlpi_xxx.h
  * @brief   XXX NLP interface
- * @ingroup NLPINTERFACES
+ * @ingroup NLPIS
  * @author  you
  */
 

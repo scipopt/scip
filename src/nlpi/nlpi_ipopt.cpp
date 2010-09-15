@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.22 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.23 2010/09/15 14:57:34 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -54,7 +54,6 @@ using namespace Ipopt;
 
 #define NLPI_NAME          "ipopt"           /**< short concise name of solver */
 #define NLPI_DESC          "Ipopt interface" /**< description of solver */
-#define NLPI_TYPE          "IP"              /**< solver type */
 #define NLPI_PRIORITY      0                 /**< priority */
 
 #ifdef SCIP_DEBUG

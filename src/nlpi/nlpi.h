@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.7 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.8 2010/09/15 14:57:34 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -141,8 +141,8 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI data structure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    int                   nconss,             /**< number of added constraints */
-   const SCIP_Real*      lhss,               /**< left hand sides of constraints */
-   const SCIP_Real*      rhss,               /**< right hand sides of constraints */
+   const SCIP_Real*      lhss,               /**< left hand sides of constraints, can be NULL if -infinity */
+   const SCIP_Real*      rhss,               /**< right hand sides of constraints, can be NULL if +infinity */
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */

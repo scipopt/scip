@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.9 2010/09/05 12:21:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.10 2010/09/15 14:57:34 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
- * @ingroup NLPINTERFACES
+ * @ingroup NLPIS
  * @author  Stefan Vigerske
  */
 

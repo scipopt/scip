@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.8 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.9 2010/09/15 14:57:34 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -159,8 +159,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - ncons number of added constraints
- *  - lhss left hand sides of constraints
- *  - rhss right hand sides of constraints
+ *  - lhss left hand sides of constraints, can be NULL if -infinity
+ *  - rhss right hand sides of constraints, can be NULL if +infinity
  *  - nlininds number of linear coefficients for each constraint
  *    may be NULL in case of no linear part
  *  - lininds indices of variables for linear coefficients for each constraint
