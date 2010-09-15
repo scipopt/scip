@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   Dijkstra_bh.c
+/**@file   dijkstra_bh.c
  * @brief  C implementation of Dijkstra's algorithm using binary heaps
  * @author Thorsten Koch
  * @author Marc Pfetsch

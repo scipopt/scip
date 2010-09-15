@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   Dijkstra_bh.h
+/**@file   dijkstra_bh.h
  * @brief  Definitions for Disjkstra's shortest path algorithm using binary heaps
  * @author Thorsten Koch
  * @author Marc Pfetsch
