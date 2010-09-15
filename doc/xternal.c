@@ -23,6 +23,7 @@
  * @author Marc Pfetsch
  * @author Robert Waniek
  * @author Kati Wolter
+ * @author Stefan Vigerske
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -84,6 +85,7 @@
  * - \ref DIALOG  "How to add dialogs"
  * - \ref DISP    "How to add display columns"
  * - \ref EVENT   "How to add event handler"
+ * - \ref NLPI    "How to add interfaces to NLP solvers"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
  *
@@ -3912,6 +3914,246 @@
  * Depending on the event type, the event offers different information. The methods which are allowed to use to get
  * access to these information are given in pub_event.h.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page NLPI How to add interfaces to nonlinear programming solvers
+ *
+ * NLPIs are used to interface a solver for nonlinear programs (NLP).
+ * It is used, e.g., to solve convex relaxations of the problem or to find local optimal solutions of
+ * nonlinear relaxations or subproblems.
+
+ * While the NLPI itself corresponds to the solver interface, the NLPIPROBLEM corresponds to the
+ * (solver specific) representation of a concrete nonlinear program.
+ * An NLP is specified in form of a set of indexed variables with variable bounds, an objective function,
+ * and a set of constraints, where each constraint is specified by a function which is restricted to lie
+ * between given left and right hand sides (possibly at infinity).
+ * A function consists of a linear, quadratic, and general nonlinear part.
+ * The linear and quadratic parts are specified via variable indices and coefficients, while the
+ * general nonlinear part is specified via an expression tree.
+ * That is, the user of the NLPI does not provide function evaluation callbacks but an algebraic representation of the NLP.
+ * Interfaces for solvers that require function evaluations can make use of the NLPIORACLE, which
+ * provides a set of methods to compute functions values, gradients, Jacobians, and Hessians for a given NLP.
+ * See the interface to Ipopt for an example on how to use the NLPIORACLE.
+ * 
+ * The NLPI has been designed such that it can be used independently from SCIP.
+ * 
+ * A complete list of all NLPIs contained in this release can be found \ref NLPIS "here".
+ *
+ * In the following, we explain how the user can add its own NLP solver interface.
+ * Take the interface to Ipopt (src/nlpi/nlpi_ipopt.cpp) as an example.
+ * Unlike many other plugins, it is written in C++.
+ *
+ * Additional documentation for the callback methods of an NLPI, in particular for their input parameters, 
+ * can be found in the file type_nlpi.h.
+ *
+ * Here is what you have to do to implement an NLPI:
+ * -# Copy the template files src/nlpi/nlpi_xxx.c and src/nlpi/nlpi_xxx.h into files named "nlpi_mynlpi.c"
+ *    and "nlpi_mynlpi.h".
+ *    \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynlpi".
+ * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
+ * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
+ * -# Implement the interface methods (see \ref NLPI_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref NLPI_FUNDAMENTALCALLBACKS).
+ *
+ * 
+ * @section NLPI_PROPERTIES Properties of an NLPI
+ *
+ * At the top of the new file "nlpi_mynlpi.c", you can find the NLPI properties.
+ * These are given as compiler defines.
+ * The properties you have to set have the following meaning:
+ *
+ * \par NLPI_NAME: the name of the NLP solver interface.
+ * This name is used in the interactive shell to address the NLPI.
+ * Additionally, if you are searching for an NLPI with SCIPfindNLPI(), this name is looked up.
+ * Names have to be unique: no two NLPIs may have the same name.
+ *
+ * \par NLPI_DESC: the description of the NLPI.
+ * This string is printed as description of the NLPI in the interactive shell.
+ *
+ * \par NLPI_PRIORITY: the priority of the NLPI.
+ * If an NLP has to be solved, an NLP solver has to be selected.
+ * In default settings, the solver which NLPI has the highest priority is selected.
+ * The priority of an NLPI should be set according to performance of the solver:
+ * solvers that provide fast algorithms that are usually successful on a wide range of problems should have a high priority.
+ * An easy way to list the priorities of all NLPIs is to type "display nlpis" in the interactive shell of SCIP.
+ *
+ * @section NLPI_DATA NLPI Data
+ *
+ * Below the header "Data structures" you can find structs which are called "struct SCIP_NlpiData" and "struct SCIP_NlpiProblem".
+ * In this data structure, you can store the data of your solver interface and of a specific NLP problem.
+ * For example, you could store a pointer to the block memory data struction in the SCIP_NlpiData data structure
+ * and store a pointer to an NLPIoracle in the SCIP_NlpiProblem data structure.
+ *
+ * @section NLPI_INTERFACE Interface Methods
+ *
+ * At the bottom of "nlpi_mynlpi.c", you can find the interface method SCIPcreateNlpSolverXxx(), 
+ * which also appears in "nlpi_mynlpi.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for creating an NLPI that contains all properties and callback methods of your
+ * solver interface by calling the method SCIPnlpiCreate().
+ * SCIPcreateNlpSolverXxx() is called by the user (e.g., SCIP), if he wants to use this solver interface in his application.
+ *
+ * If you are using NLPI data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &nlpidata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_NlpiData afterwards. For freeing the 
+ * NLPI data, see \ref NLPIFREE.
+ *
+ * 
+ * @section NLPI_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an NLPI
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain 
+ * an operational algorithm. Currently, all NLPI callbacks are fundamental.
+ *
+ * Additional documentation of the callback methods, in particular to their input parameters, 
+ * can be found in type_nlpi.h.
+ *
+ * @subsection NLPICOPY
+ *
+ * The NLPICOPY callback is executed if the plugin should be copied, e.g., when a SCIP instance is copied.
+ *
+ * @subsection NLPIFREE
+ *
+ * The NLPIFREE callback is executed if the NLP solver interface data structure should be freed, e.g., when a SCIP instance is freed.
+ *
+ * @subsection NLPIGETSOLVERPOINTER
+ *
+ * The NLPIGETSOLVERPOINTER callback can be used to pass a pointer to a solver specific data structure to the user.
+ *
+ * @subsection NLPICREATEPROBLEM
+ *
+ * The NLPICREATEPROBLEM callback is executed if a particular NLP problem is to be created.
+ * The callback method should initialize a SCIP_NlpiProblem struct here that corresponds to an empty NLP.
+ *
+ * @subsection NLPIFREEPROBLEM
+ *
+ * The NLPIFREEPROBLEMPOINTER callback is executed if a particular NLP problem is to be freed.
+ * The callback method should free a SCIP_NlpiProblem struct here.
+ *
+ * @subsection NLPIGETPROBLEMPOINTER
+ *
+ * The NLPIGETPROBLEMPOINTER callback can be used to pass a pointer to a solver specific data structure of the NLP to the user.
+ *
+ * @subsection NLPIADDVARS
+ * 
+ * The NLPIADDVARS callback is executed if a set of variables with lower and upper bounds and names should be added to a particular NLP.
+ * It is assumed that the new variables are added after the already existing variables.
+ * If NULL is given for the lower bounds arguments, -infinity is assumed as lower bound for each new variable.
+ * If NULL is given for the upper bounds arguments, +infinity is assumed as upper bound for each new variable.
+ * It is also permitted to use NULL for the names argument.
+ *
+ * @subsection NLPIADDCONSTRAINTS
+ *
+ * The NLPIADDCONSTRAINTS callback is executed if a set of constraints should be added to a particular NLP.
+ * Constraints are specified by providing left and right hand sides, linear and quadratic coefficients, expression trees, and constraint names.
+ * All these arguments are optional, giving NULL for left hand sides corresponds to -infinity, giving NULL for right hand sides corresponds to +infinity.
+ *
+ * @subsection NLPISETOBJECTIVE
+ *
+ * The NLPISETOBJECTIVE callback is executed to set the objective function of a particular NLP.
+ * 
+ * @subsection NLPICHGVARBOUNDS
+ *
+ * The NLPICHGVARBOUNDS callback is executed to change the bounds on a set of variables of an NLP.
+ *
+ * @subsection NLPICHGCONSSIDES
+ *
+ * The NLPICHGCONSSIDES callback is executed to change the sides on a set of constraints of an NLP.
+ *
+ * @subsection NLPIDELVARSET
+ *
+ * The NLPIDELVARSET callback is executed to delete a set of variables from an NLP.
+ * The caller provides an array in which for each variable it is marked whether it should be deleted.
+ * In the same array, the method should return the new position of each variable in the NLP, or -1 if it was deleted.
+ *
+ * @subsection NLPIDELCONSSET
+ *
+ * The NLPIDELCONSSET callback is executed to delete a set of constraints from an NLP.
+ * The caller provides an array in which for each constraint it is marked whether it should be deleted.
+ * In the same array, the method should return the new position of each constraint in the NLP, or -1 if it was deleted.
+ *
+ * @subsection NLPICHGLINEARCOEFS
+ *
+ * The NLPICHGLINEARCOEFS callback is executed to change the coefficients in the linear part of the objective function or an constraint of an NLP.
+ * 
+ * @subsection NLPICHGQUADCOEFS
+ *
+ * The NLPICHGQUADCOEFS callback is executed to change the coefficients in the quadratic part of the objective function or an constraint of an NLP.
+ * 
+ * @subsection NLPICHGEXPRTREE
+ *
+ * The NLPICHGEXPRTREE callback is executed to replace the expression tree of the objective function or an constraint of an NLP.
+ * 
+ * @subsection NLPICHGNONLINCOEF
+ *
+ * The NLPICHGNONLINCOEF callback is executed to change a single parameter in the (parametrized) expression tree of the objective function or an constraint of an NLP.
+ * 
+ * @subsection NLPICHGOBJCONSTANT
+ *
+ * The NLPICHGOBJCONSTANT callback is executed to change the constant offset of the objective function of an NLP.
+ * 
+ * @subsection NLPISETINITIALGUESS
+ *
+ * The NLPISETINITIALGUESS callback is executed to provide primal initial values for the variables of an NLP.
+ * For a local solver, these values can be used as a starting point for the search.
+ * 
+ * @subsection NLPISOLVE
+ *
+ * The NLPISOLVE callback is executed when an NLP should be solved.
+ * The solver may use the initial guess provided by \ref NLPISETINITIALGUESS as starting point.
+ * The status of the solving process and solution can be requested by
+ * \ref NLPIGETSOLSTAT, \ref NLPIGETTERMSTAT, \ref NLPIGETSOLUTION, and \ref NLPIGETSTATISTICS.
+ * 
+ * @subsection NLPIGETSOLSTAT
+ *
+ * The NLPIGETSOLSTAT callback can be used to request the solution status (solved, infeasible, ...) after an NLP has been solved.
+ * 
+ * @subsection NLPIGETTERMSTAT
+ *
+ * The NLPIGETTERMSTAT callback can be used to request the termination reason (normal, iteration limit, ...) after an NLP has been solved.
+ * 
+ * @subsection NLPIGETSOLUTION
+ *
+ * The NLPIGETSOLUTION callback can be used to request the primal solution values after an NLP solve.
+ * The method should pass a pointer to an array of variable values to the caller.
+ * 
+ * @subsection NLPIGETSTATISTICS
+ *
+ * The NLPIGETSTATISTICS callback can be used to request the statistical values (number of iterations, time, ...) after an NLP solve.
+ * The method should fill the provided NLPSTATISTICS data structure.
+ * 
+ * <!-- NLPIGETWARMSTARTSIZE, NLPIGETWARMSTARTMEMO, NLPISETWARMSTARTMEMO are not documented,
+      since they are currently not used, not implemented, and likely to change with a next version. -->
+ *
+ * @subsection NLPIGETINTPAR
+ *
+ * The NLPIGETINTPAR callback can be used to request the value of an integer valued NLP parameter.
+ *
+ * @subsection NLPISETINTPAR
+ *
+ * The NLPISETINTPAR callback is executed to set the value of an integer valued NLP parameter.
+ *
+ * @subsection NLPIGETREALPAR
+ *
+ * The NLPIGETREALPAR callback can be used to request the value of a real valued NLP parameter.
+ *
+ * @subsection NLPISETREALPAR
+ *
+ * The NLPISETREALPAR callback is executed to set the value of a real valued NLP parameter.
+ *
+ * @subsection NLPIGETSTRINGPAR
+ *
+ * The NLPIGETSTRINGPAR callback can be used to request the value of a string valued NLP parameter.
+ *
+ * @subsection NLPISETSTRINGPAR
+ *
+ * The NLPISETSTRINGPAR callback is executed to set the value of a string valued NLP parameter.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
