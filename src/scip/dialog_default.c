@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.119 2010/09/13 11:15:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.120 2010/09/15 14:56:50 bzfviger Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -2439,12 +2439,12 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    }
 
    /* display nlpi */
-   if( !SCIPdialogHasEntry(submenu, "nlpi") )
+   if( !SCIPdialogHasEntry(submenu, "nlpis") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecDisplayNlpi, NULL, NULL,
-            "nlpi", "display NLP solver interfaces", FALSE, NULL) );
+            "nlpis", "display NLP solver interfaces", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
