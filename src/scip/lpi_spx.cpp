@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.119 2010/09/14 07:43:25 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.120 2010/09/15 08:04:36 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -215,12 +215,9 @@ public:
 #endif
    }
 
-   void setAutoPricer(bool initialphase)
+   void setAutoPricer()
    {
-      if( initialphase )
-         setPricer(&m_price_devex);
-      else
-         setPricer(&m_price_steep);
+      setPricer(&m_price_devex);
       m_autopricing = true;
    }
 
@@ -470,22 +467,32 @@ public:
          writeState("spxcheck", NULL, NULL);
 #endif
 
-      /* in auto pricing, do the first 10000 iterations with devex, then switch to steepest edge */
+      /* in auto pricing, do the first iterations with devex, then switch to steepest edge */
+      int olditlim = terminationIter();
       if( m_autopricing )
       {
-	 int olditlim = terminationIter();
-	 
-	 setAutoPricer(true);
-	 setTerminationIter(AUTOPRICING_ITERSWITCH);
-
-	 trySolve(printwarning);
-
-	 m_autophase1iters += SPxSolver::iterations();
-	 setTerminationIter(olditlim);
-	 setAutoPricer(false);
+         if( olditlim > AUTOPRICING_ITERSWITCH )
+            setTerminationIter(AUTOPRICING_ITERSWITCH);
       }
 
       trySolve(printwarning);
+
+      if( m_autopricing )
+      {
+         if( m_stat == SPxSolver::ABORT_ITER && olditlim > AUTOPRICING_ITERSWITCH )
+         {
+            m_autophase1iters += SPxSolver::iterations();
+            assert(olditlim-m_autophase1iters >= 1);
+            setTerminationIter(olditlim-m_autophase1iters);
+            setPricer(&m_price_steep);
+
+            trySolve(printwarning);
+
+            setPricer(&m_price_devex);
+         }
+
+         setTerminationIter(olditlim);
+      }
 
       if( m_stat == OPTIMAL )
       {
@@ -3908,7 +3915,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       switch( lpi->pricing )
       {
       case SCIP_PRICING_AUTO:
-         lpi->spx->setAutoPricer(false);
+         lpi->spx->setAutoPricer();
          break;
       case SCIP_PRICING_FULL:
          lpi->spx->setFullPricer();
