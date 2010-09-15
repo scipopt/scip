@@ -12,10 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.9 2010/09/10 20:52:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.10 2010/09/15 15:36:24 bzfviger Exp $"
 
 /**@file   exprinterpret_none.c
- * @brief  function definitions for nonexisting expression interpreter to resolve linking references 
+ * @brief  function definitions for nonexisting expression interpreter to resolve linking references
+ * @group  EXPRINTS
  * @author Stefan Vigerske
  */
 
