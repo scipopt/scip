@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.h,v 1.5 2010/09/01 12:50:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.h,v 1.6 2010/09/15 19:41:41 bzfviger Exp $"
 
 /**@file   nlpioracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -232,6 +232,12 @@ const SCIP_Real* SCIPnlpiOracleGetVarUbs(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
+/** gives the variables names, or NULL if not set */
+extern
+char** SCIPnlpiOracleGetVarNames(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
 /** Gives maximum degree of a variable w.r.t. objective and all constraints.
  *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
  */ 
@@ -258,6 +264,12 @@ const SCIP_Real* SCIPnlpiOracleGetConstraintLhss(
 /** gives the constraints right-hand sides */
 extern
 const SCIP_Real* SCIPnlpiOracleGetConstraintRhss(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
+/** gives the constraint names, or NULL if not set */
+extern
+char** SCIPnlpiOracleGetConstraintNames(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 

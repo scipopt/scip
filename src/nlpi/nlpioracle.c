@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.20 2010/09/14 10:43:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.21 2010/09/15 19:41:41 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -2421,6 +2421,16 @@ const SCIP_Real* SCIPnlpiOracleGetVarUbs(
    return oracle->varubs;
 }
 
+/** gives the variables names, or NULL if not set */
+char** SCIPnlpiOracleGetVarNames(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+   
+   return oracle->varnames;
+}
+
 /** Gives maximum degree of a variable w.r.t. objective and all constraints.
  *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
  */ 
@@ -2470,6 +2480,16 @@ const SCIP_Real* SCIPnlpiOracleGetConstraintRhss(
    assert(oracle != NULL);
    
    return oracle->consrhss;
+}
+
+/** gives the constraint names, or NULL if not set */
+char** SCIPnlpiOracleGetConstraintNames(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+   
+   return oracle->consnames;
 }
 
 /** Gives maximum degree of a constraints.

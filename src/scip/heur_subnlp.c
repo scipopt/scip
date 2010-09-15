@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.35 2010/09/15 17:29:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.36 2010/09/15 19:41:41 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1762,7 +1762,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    /* add Nlp primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel",
          "verbosity level of NLP solver",
-         &heurdata->nlpverblevel, FALSE, 0, 0, 2, NULL, NULL) );
+         &heurdata->nlpverblevel, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpiterlimit",
          "iteration limit of NLP solver; 0 to use solver default",

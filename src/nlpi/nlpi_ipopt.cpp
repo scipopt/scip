@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.23 2010/09/15 14:57:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.24 2010/09/15 19:41:41 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -178,6 +178,18 @@ public:
       Index*             pos_nonlin_vars     /**< array to fill with indices of nonlinear variables */
    );
 
+   /** Method to return metadata about variables and constraints */
+   bool get_var_con_metadata(
+      Index              n,                  /**< number of variables */
+      StringMetaDataMapType& var_string_md,  /**< variable meta data of string type */
+      IntegerMetaDataMapType& var_integer_md,/**< variable meta data of integer type */
+      NumericMetaDataMapType& var_numeric_md,/**< variable meta data of numeric type */
+      Index              m,                  /**< number of constraints */
+      StringMetaDataMapType& con_string_md,  /**< constraint meta data of string type */
+      IntegerMetaDataMapType& con_integer_md,/**< constraint meta data of integer type */
+      NumericMetaDataMapType& con_numeric_md /**< constraint meta data of numeric type */
+   );
+   
    /** Method to return the objective value */
    bool eval_f(
       Index              n,                  /**< number of variables */ 
@@ -1118,7 +1130,7 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
          if( printlevel <= J_STRONGWARNING )
             *ival = 0;
          else if( printlevel >= J_DETAILED )
-            *ival = 2;
+            *ival = printlevel - J_ITERSUMMARY + 1;
          else /* J_SUMMARY or J_WARNING or J_ITERSUMMARY */
             *ival = 1;
          break;
@@ -1215,8 +1227,16 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
                problem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
                break;
             default:
-               SCIPerrorMessage("Value %d for parameter from verbosity level out of range {0, 1, 2}\n", ival);
-               return SCIP_PARAMETERWRONGVAL;
+               if( ival > 2 )
+               {
+                  problem->ipopt->Options()->SetIntegerValue("print_level", MIN(J_ITERSUMMARY + (ival-1), J_ALL));
+                  break;
+               }
+               else
+               {
+                  SCIPerrorMessage("Value %d for parameter from verbosity level out of range {0, 1, 2}\n", ival);
+                  return SCIP_PARAMETERWRONGVAL;
+               }
          }
          break;
       }
@@ -1934,6 +1954,66 @@ bool ScipNLP::get_list_of_nonlinear_variables(
       }
 
    assert(count == num_nonlin_vars);
+
+   return true;
+}
+
+/** Method to return metadata about variables and constraints */
+bool ScipNLP::get_var_con_metadata(
+   Index              n,                  /**< number of variables */
+   StringMetaDataMapType& var_string_md,  /**< variable meta data of string type */
+   IntegerMetaDataMapType& var_integer_md,/**< variable meta data of integer type */
+   NumericMetaDataMapType& var_numeric_md,/**< variable meta data of numeric type */
+   Index              m,                  /**< number of constraints */
+   StringMetaDataMapType& con_string_md,  /**< constraint meta data of string type */
+   IntegerMetaDataMapType& con_integer_md,/**< constraint meta data of integer type */
+   NumericMetaDataMapType& con_numeric_md /**< constraint meta data of numeric type */
+)
+{
+   assert(nlpiproblem != NULL);
+   assert(nlpiproblem->oracle != NULL);
+   assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
+   assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
+
+   char** varnames = SCIPnlpiOracleGetVarNames(nlpiproblem->oracle);
+   if( varnames != NULL )
+   {
+      std::vector<std::string>& varnamesvec(var_string_md["idx_names"]);
+      varnamesvec.reserve(n);
+      for( int i = 0; i < n; ++i )
+      {
+         if( varnames[i] != NULL )
+         {
+            varnamesvec.push_back(varnames[i]);
+         }
+         else
+         {
+            char buffer[20];
+            sprintf(buffer, "nlpivar%8d", i);
+            varnamesvec.push_back(buffer);
+         }
+      }
+   }
+
+   char** consnames = SCIPnlpiOracleGetConstraintNames(nlpiproblem->oracle);
+   if( consnames != NULL )
+   {
+      std::vector<std::string>& consnamesvec(con_string_md["idx_names"]);
+      consnamesvec.reserve(m);
+      for( int i = 0; i < m; ++i )
+      {
+         if( consnames[i] != NULL )
+         {
+            consnamesvec.push_back(consnames[i]);
+         }
+         else
+         {
+            char buffer[20];
+            sprintf(buffer, "nlpicons%8d", i);
+            consnamesvec.push_back(buffer);
+         }
+      }
+   }
 
    return true;
 }
