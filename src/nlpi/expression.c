@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.25 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.26 2010/09/15 21:09:56 bzfwinkm Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -1338,9 +1338,13 @@ SCIP_RETCODE SCIPexprCopyDeep(
    {
       case SCIP_EXPR_LINEAR:
       {
+         SCIP_Real* targetdata;
+
          /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
          assert(sourceexpr->data.data != NULL);
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, (SCIP_Real**)&(*targetexpr)->data.data, (SCIP_Real*)sourceexpr->data.data, sourceexpr->nchildren + 1) );  /*lint !e866*/
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &targetdata, (SCIP_Real*) sourceexpr->data.data, sourceexpr->nchildren + 1) );  /*lint !e866*/
+         (*targetexpr)->data.data = (void*) targetdata;
+
          break;
       }
       
@@ -1389,9 +1393,13 @@ void SCIPexprFreeDeep(
    {
       case SCIP_EXPR_LINEAR:
       {
+         SCIP_Real* freedata;
+
+         freedata = (*expr)->data.data;
+
          /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
          assert((*expr)->data.data != NULL);
-         BMSfreeBlockMemoryArray(blkmem, (SCIP_Real**)&(*expr)->data.data, (*expr)->nchildren + 1);  /*lint !e866*/
+         BMSfreeBlockMemoryArray(blkmem, &freedata, (*expr)->nchildren + 1);  /*lint !e866*/
          break;
       }
       
