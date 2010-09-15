@@ -12,12 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.19 2010/09/15 15:36:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.20 2010/09/15 16:17:08 bzfviger Exp $"
 
-/**@file   exprinterpret_cppad.cpp
- * @brief  methods to interpret (evaluate) an expression tree "fast" using CppAD
- * @group  EXPRINTS
- * @author Stefan Vigerske
+/**@file    exprinterpret_cppad.cpp
+ * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
+ * @ingroup EXPRINTS
+ * @author  Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
