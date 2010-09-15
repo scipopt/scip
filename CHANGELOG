@@ -215,6 +215,7 @@ performance improvements:
 - avoided restarting if LP solution is feasible
 - fasten check for common cliques in SCIPcliquelistsHaveCommonClique
 - SCIP with CPLEX as LP solver now uses quickstart steepest edge pricing as default instead of steepest edge pricing
+- avoid unnecessary domain propagation and LP resolve at nodes with infeasible LP relaxation
 
 fixed bugs:
 - fixed bug in lpi_clp.cpp: SCIPlpiChgBounds checks if the column status exists in Clp before using it
@@ -298,6 +299,7 @@ fixed bugs:
 - fixed bug in reader_fzn.c w.r.t. comment lines 
 - fixed bug in reader_opb.c w.r.t. comment lines 
 - fixed bug in sub-MIP heuristics with parameter change if some default plugins are not included
+- fixed bug with resolving LPs at infeasible root node
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

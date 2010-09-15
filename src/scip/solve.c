@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.312 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.313 2010/09/15 15:54:46 bzfschwa Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1560,9 +1560,11 @@ SCIP_RETCODE priceAndCutLoop(
          {
             SCIP_Real newlowerbound;
 
-            /* if the global lower bound changed, propagate domains again since this may trigger reductions */
+            /* if the global lower bound changed, propagate domains again since this may trigger reductions 
+             * propagation only has to be performed if the node is not cut off by bounding anyway 
+             */
             newlowerbound = SCIPtreeGetLowerbound(tree, set);
-            if( SCIPsetIsGT(set, newlowerbound, oldlowerbound) )
+            if( SCIPsetIsGT(set, newlowerbound, oldlowerbound) && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
             {
                SCIPdebugMessage(" -> global lower bound changed from %g to %g: propagate domains again\n",
                                 oldlowerbound, newlowerbound);
