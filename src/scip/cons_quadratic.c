@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.131 2010/09/14 12:05:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.132 2010/09/15 17:45:56 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -345,9 +345,9 @@ SCIP_Bool isValueChar(
 
    if( *hasexp == 1 )
    { /* we just had an 'e', 'E', 'd', or 'D', so we set *hasexp to 2
-        this is now the only case where an '-' is allowed */
+        this is now the only case where an '-' or '+' is allowed */
       *hasexp = 2;
-      if( (c == '-') && isdigit(nextc) )
+      if( (c == '-' || c == '+') && isdigit(nextc) )
          return TRUE;
    }
 
@@ -358,7 +358,7 @@ SCIP_Bool isValueChar(
       *hasdot = TRUE;
       return TRUE;
    }
-   else if( (*hasexp == 0) && (c == 'e' || c == 'E' || c == 'd' || c == 'D') && (isdigit(nextc) || nextc == '-') )
+   else if( (*hasexp == 0) && (c == 'e' || c == 'E' || c == 'd' || c == 'D') && (isdigit(nextc) || nextc == '-' || nextc == '+') )
    {
       *hasexp = 1;
       return TRUE;

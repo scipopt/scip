@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.383 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.384 2010/09/15 17:45:56 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -654,9 +654,9 @@ SCIP_Bool isValueChar(
 
    if( *hasexp == 1 )
    { /* we just had an 'e', 'E', 'd', or 'D', so we set *hasexp to 2
-        this is now the only case where an '-' is allowed */
+        this is now the only case where an '-' or '+' is allowed */
       *hasexp = 2;
-      if( (c == '-') && isdigit(nextc) )
+      if( (c == '-' || c == '+') && isdigit(nextc) )
          return TRUE;
    }
 
@@ -667,7 +667,7 @@ SCIP_Bool isValueChar(
       *hasdot = TRUE;
       return TRUE;
    }
-   else if( (*hasexp == 0) && (c == 'e' || c == 'E' || c == 'd' || c == 'D') && (isdigit(nextc) || nextc == '-') )
+   else if( (*hasexp == 0) && (c == 'e' || c == 'E' || c == 'd' || c == 'D') && (isdigit(nextc) || nextc == '-' || nextc == '+') )
    {
       *hasexp = 1;
       return TRUE;
@@ -9714,7 +9714,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
          }
          else if( sense == CIP_SENSE_LE ) 
             rhs = coefsign * coef;
-         if( sense == CIP_SENSE_GE ) 
+         else if( sense == CIP_SENSE_GE ) 
             lhs = coefsign * coef;
          
          continue;
