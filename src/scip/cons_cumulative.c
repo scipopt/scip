@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.12 2010/09/15 07:55:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.13 2010/09/16 17:30:16 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -33,7 +33,8 @@
  * - or by just separating relatively weak cuts on the start time variables
  *
  * Propagation: 
- * - time tabling, Klein & Scholl (1999) - Edge-finding from Petr Vilim, adjusted and simplified for dynamic propagation
+ * - time tabling, Klein & Scholl (1999) 
+ * - Edge-finding from Petr Vilim, adjusted and simplified for dynamic propagation
  *   (2009)
  * - energetic reasoning, see Baptiste, Le Pape, Nuijten (2001)
  */
@@ -82,6 +83,7 @@
 struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< array of variable representing the start time of each job */
+   
    SCIP_CONS**           linkingconss;       /**< array of linking constraints for the integer variables */
    SCIP_ROW**            demandrows;         /**< array of rows of linear relaxation of this problem */
    SCIP_ROW**            scoverrows;         /**< array of rows of small cover cuts of this problem */ 
