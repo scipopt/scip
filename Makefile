@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.375 2010/09/13 11:34:50 bzfheinz Exp $
+# $Id: Makefile,v 1.376 2010/09/16 12:28:13 bzfgleix Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -60,8 +60,9 @@ ZLIB		=	true
 GMP		=	auto
 ZIMPL		=	true
 IPOPT		=	false
-EXPRINT	=	none
-LPSOPT	=	opt
+EXPRINT		=	none
+LPSCHECK	=	false
+LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 
@@ -173,6 +174,8 @@ LPILIBOBJ	=
 LPSOPTIONS	=
 LPIINSTMSG	=
 
+LPSCHECKDEP	:=	$(SRCDIR)/depend.lpscheck
+LPSCHECKSRC	:=	$(shell cat $(LPSCHECKDEP))
 
 LPSOPTIONS	+=	cpx
 ifeq ($(LPS),cpx)
@@ -227,6 +230,15 @@ SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIB
 SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"../../soplex/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"../../soplex/lib/libsoplex.linux.x86.gnu.opt.a\""
+ifeq ($(LPSCHECK),true)
+FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/cpxinc
+LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+SOFTLINKS	+=	$(LIBDIR)/cpxinc
+SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+LPIINSTMSG	+=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.g., \"<CPLEX-path>/include/ilcplex\".\n"
+LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
+endif
 endif
 
 LPSOPTIONS	+=	spx132
@@ -839,6 +851,7 @@ ifeq ($(LINKER),CPP)
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(LPILIBDEP)'
 endif
+		@echo `grep -l "WITH_LPSCHECK" $(ALLSRC)` >$(LPSCHECKDEP)
 
 .PHONY: nlpidepend
 nlpidepend:
@@ -953,7 +966,7 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
@@ -966,11 +979,15 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
+ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
+		@-touch $(LPSCHECKSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
