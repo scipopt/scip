@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.136 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.137 2010/09/16 16:20:08 bzfgamra Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -126,9 +126,9 @@ typedef struct SparseMatrix SPARSEMATRIX;
 
 static
 SCIP_RETCODE mpsinputCreate(
-   SCIP*                 scip,
-   MPSINPUT**            mpsi,
-   SCIP_FILE*            fp
+   SCIP*                 scip,               /**< SCIP data structure */
+   MPSINPUT**            mpsi,               /**< mps input structure */
+   SCIP_FILE*            fp                  /**< file object for the input file */
    )
 {
    assert(mpsi != NULL);
@@ -158,8 +158,8 @@ SCIP_RETCODE mpsinputCreate(
 
 static
 void mpsinputFree(
-   SCIP*                 scip,
-   MPSINPUT**            mpsi
+   SCIP*                 scip,               /**< SCIP data structure */
+   MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
    SCIPfreeMemory(scip, mpsi);
@@ -167,7 +167,7 @@ void mpsinputFree(
 
 static
 MPSSECTION mpsinputSection(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -178,7 +178,7 @@ MPSSECTION mpsinputSection(
 #if 0
 static
 int mpsinputLineno(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -189,7 +189,7 @@ int mpsinputLineno(
 
 static
 const char* mpsinputField0(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -199,7 +199,7 @@ const char* mpsinputField0(
 
 static
 const char* mpsinputField1(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -209,7 +209,7 @@ const char* mpsinputField1(
 
 static
 const char* mpsinputField2(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -219,7 +219,7 @@ const char* mpsinputField2(
 
 static
 const char* mpsinputField3(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -229,7 +229,7 @@ const char* mpsinputField3(
 
 static
 const char* mpsinputField4(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -239,7 +239,7 @@ const char* mpsinputField4(
 
 static
 const char* mpsinputField5(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -250,7 +250,7 @@ const char* mpsinputField5(
 #if 0
 static
 const char* mpsinputProbname(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -261,7 +261,7 @@ const char* mpsinputProbname(
 
 static
 const char* mpsinputObjname(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -271,7 +271,7 @@ const char* mpsinputObjname(
 
 static
 SCIP_OBJSENSE mpsinputObjsense(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -281,7 +281,7 @@ SCIP_OBJSENSE mpsinputObjsense(
 
 static
 SCIP_Bool mpsinputHasError(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -291,7 +291,7 @@ SCIP_Bool mpsinputHasError(
 
 static
 SCIP_Bool mpsinputIsInteger(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -301,8 +301,8 @@ SCIP_Bool mpsinputIsInteger(
 
 static
 void mpsinputSetSection(
-   MPSINPUT*             mpsi,
-   MPSSECTION            section
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   MPSSECTION            section             /**< section that is set */
    )
 {
    assert(mpsi != NULL);
@@ -312,8 +312,8 @@ void mpsinputSetSection(
 
 static
 void mpsinputSetProbname(
-   MPSINPUT*             mpsi,
-   const char*           probname
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           probname            /**< name of the problem to set */
    )
 {
    assert(mpsi     != NULL);
@@ -325,8 +325,8 @@ void mpsinputSetProbname(
 
 static
 void mpsinputSetObjname(
-   MPSINPUT*             mpsi,
-   const char*           objname
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           objname             /**< name of the objective function to set */
    )
 {
    assert(mpsi != NULL);
@@ -338,8 +338,8 @@ void mpsinputSetObjname(
 
 static
 void mpsinputSetObjsense(
-   MPSINPUT*             mpsi,
-   SCIP_OBJSENSE         sense
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP_OBJSENSE         sense               /**< sense of the objective function */
    )
 {
    assert(mpsi != NULL);
@@ -349,7 +349,7 @@ void mpsinputSetObjsense(
 
 static
 void mpsinputSyntaxerror(
-   MPSINPUT*             mpsi
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -362,7 +362,7 @@ void mpsinputSyntaxerror(
 static
 void mpsinputEntryIgnored(
    SCIP*                 scip,               /**< SCIP data structure */
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    const char*           what,
    const char*           what_name,
    const char*           entity,
