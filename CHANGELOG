@@ -300,6 +300,7 @@ fixed bugs:
 - fixed bug in reader_opb.c w.r.t. comment lines 
 - fixed bug in sub-MIP heuristics with parameter change if some default plugins are not included
 - fixed bug with resolving LPs at infeasible root node
+- fixed bug in cons_knapsack.c: mergeMultiples() now detects whether a node can be cut off
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

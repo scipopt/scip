@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.210 2010/09/14 10:25:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.211 2010/09/16 13:09:01 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -3694,7 +3694,8 @@ SCIP_RETCODE removeZeroWeights(
 static
 SCIP_RETCODE mergeMultiples(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< knapsack constraint */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3703,9 +3704,12 @@ SCIP_RETCODE mergeMultiples(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(cutoff != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   *cutoff = FALSE;
 
    if( consdata->merged ) 
       return SCIP_OKAY;
@@ -3812,6 +3816,14 @@ SCIP_RETCODE mergeMultiples(
    }
 
    consdata->merged = TRUE;
+
+   /* check infeasibility */
+   if( consdata->onesweightsum > consdata->capacity )
+   {
+      SCIPdebugMessage("merge multiples detected cutoff.\n");
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
 
    return SCIP_OKAY;
 }
@@ -4310,8 +4322,10 @@ SCIP_RETCODE simplifyInequalities(
 
    *cutoff = FALSE;
 
-   SCIP_CALL( mergeMultiples(scip, cons) );
+   SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
    assert(consdata->merged);
+   if( *cutoff )
+      return SCIP_OKAY;
 
    /* check if capacity is odd */
    if( !(consdata->capacity % 2) )
@@ -4614,7 +4628,7 @@ SCIP_RETCODE applyFixings(
     */
    if( !(*cutoff) )
    {
-      SCIP_CALL( mergeMultiples(scip, cons) );
+      SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
       SCIPdebugMessage("after applyFixings and merging:\n");
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
    }
@@ -4759,7 +4773,8 @@ static
 SCIP_RETCODE tightenWeightsLift(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   int*                  nchgcoefs           /**< pointer to count total number of changed coefficients */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5279,7 +5294,7 @@ SCIP_RETCODE tightenWeightsLift(
    if( naddvars > 0 )
    {
       /* if new items were added, multiple entries of the same variable are possible and we have to clean up the constraint */
-      SCIP_CALL( mergeMultiples(scip, cons) );
+      SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
    }
 
    /* free temporary memory */
@@ -5332,7 +5347,8 @@ SCIP_RETCODE tightenWeights(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
-   int*                  nchgsides           /**< pointer to count number of side changes */
+   int*                  nchgsides,          /**< pointer to count number of side changes */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -5354,7 +5370,9 @@ SCIP_RETCODE tightenWeights(
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars > 0);
 
-   SCIP_CALL( mergeMultiples(scip, cons) );
+   SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
+   if( *cutoff )
+      return SCIP_OKAY;
 
    /* apply rule (1) */
    do
@@ -5590,7 +5608,7 @@ SCIP_RETCODE tightenWeights(
    }
 
    /* apply rule (3) */
-   SCIP_CALL( tightenWeightsLift(scip, cons, nchgcoefs) );
+   SCIP_CALL( tightenWeightsLift(scip, cons, nchgcoefs, cutoff) );
 
    /* check for redundancy */
    if( consdata->weightsum <= consdata->capacity )
@@ -5691,8 +5709,12 @@ SCIP_RETCODE addNegatedCliques(
    if( consdata->cliquesadded || nvars == 0 )
       return SCIP_OKAY;
 
-   /* make sure, the items are merged and sorted by non-increasing weight */
-   SCIP_CALL( mergeMultiples(scip, cons) );
+   /* make sure, the items are merged */
+   SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
+   if( *cutoff )
+      return SCIP_OKAY;
+
+   /* make sure, items are sorted by non-increasing weight */
    sortItems(consdata);
 
    assert(consdata->merged);
@@ -5888,8 +5910,12 @@ SCIP_RETCODE addCliques(
    if( consdata->cliquesadded || nvars == 0 )
       return SCIP_OKAY;
 
-   /* make sure, the items are merged and sorted by non-increasing weight */
-   SCIP_CALL( mergeMultiples(scip, cons) );
+   /* make sure, the items are merged */
+   SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
+   if( *cutoff )
+      return SCIP_OKAY;
+
+   /* make sure, the items are sorted by non-increasing weight */
    sortItems(consdata);
 
    assert(consdata->merged);
@@ -7222,8 +7248,10 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       thisnchgbds = *nchgbds;
 
       /* merge constraint, so propagation works better */
-      SCIP_CALL( mergeMultiples(scip, cons) );
-
+      SCIP_CALL( mergeMultiples(scip, cons, &cutoff) );
+      if( cutoff )
+         return SCIP_OKAY;
+      
       /* add cliques in the knapsack to the clique table */
       SCIP_CALL( addCliques(scip, cons, &cutoff, nchgbds) );
       if( cutoff )
@@ -7262,7 +7290,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          normalizeWeights(cons, nchgcoefs, nchgsides);
 
          /* tighten capacity and weights */
-         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides) );
+         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides, &cutoff) );
+         if( cutoff )
+            break;
 
          /* try to simplify inequalities */
          if( conshdlrdata->simplifyinequalities )
