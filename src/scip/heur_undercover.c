@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.97 2010/09/14 19:27:05 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.98 2010/09/16 07:26:07 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -2321,7 +2321,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                {
                   SCIP_RESULT nlpresult;
 
-                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, SCIP_LONGINT_MAX, timelimit, heurdata->minimprove, NULL) );
+                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1, timelimit, heurdata->minimprove, NULL) );
                   SCIPdebugMessage("nlp local search %s\n", nlpresult == SCIP_FOUNDSOL ? "successful" : "failed");
 
                   if( nlpresult == SCIP_FOUNDSOL )
