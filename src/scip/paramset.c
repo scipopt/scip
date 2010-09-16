@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.89 2010/09/14 18:28:18 bzfberth Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.90 2010/09/16 17:33:31 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -3497,7 +3497,13 @@ SCIP_RETCODE SCIPparamsetCopyParams(
 	 break;
 	 
       case SCIP_PARAMTYPE_STRING:
-	 SCIP_CALL( paramCopyString(sourceparamset->params[i], targetparam, targetscip) ); 
+         /* the vbc parameters are explicitly not copied to avoid that the vbc file of the original SCIP is over
+          * written; to avoid that hard coded comparison, each parameter could get a Bool flag which tells if the value
+          * of that parameter can be copied */
+         if( strncmp(sourceparamset->params[i]->name, "vbc/", 4) != 0 )
+         {
+            SCIP_CALL( paramCopyString(sourceparamset->params[i], targetparam, targetscip) ); 
+         }
 	 break;
 	 
       default:
