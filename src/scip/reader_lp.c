@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.102 2010/09/14 10:28:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.103 2010/09/16 14:43:09 bzfviger Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -3415,8 +3415,6 @@ SCIP_RETCODE SCIPwriteLp(
             rhs = 0;
             binvar = SCIPvarGetNegatedVar(binvar);
          }
-         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(binvar) );
-         SCIPinfoMessage(scip, file, " %s: %s = %d ->", consname, varname, rhs);
 
          /* collect linear constraint information (remove slack variable) */
          linvars = SCIPgetVarsLinear(scip, lincons);
@@ -3427,6 +3425,9 @@ SCIP_RETCODE SCIPwriteLp(
 
          if ( nLinvars > 0 && ! SCIPconsIsDeleted(lincons) )
          {
+            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(binvar) );
+            SCIPinfoMessage(scip, file, " %s: %s = %d ->", consname, varname, rhs);
+
             SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nLinvars-1) );
             SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nLinvars-1) );
 
@@ -3448,8 +3449,6 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPfreeBufferArray(scip, &consvars);
             SCIPfreeBufferArray(scip, &consvals);
          }
-         else
-            SCIPinfoMessage(scip, file, " 0 <= 0\n");
       }
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
