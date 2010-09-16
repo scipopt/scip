@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.37 2010/09/15 20:43:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.38 2010/09/16 09:25:58 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1361,7 +1361,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
             if( refpoint || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
             {
                SCIPdebugMessage("skip NLP heuristic because start candidate not integer feasible: var <%s> has value %g\n", SCIPvarGetName(var), fixval);
-               return SCIP_OKAY;
+               goto applyheurcleanup;
             }
             /* otherwise we desperately wanna run the NLP heur, so we continue and round what we have */
          }
@@ -1421,19 +1421,17 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    }
    assert(!SCIPisTransformed(heurdata->subscip));
    
-   if( *result == SCIP_CUTOFF && SCIPgetNActivePricers(scip) == 0 && !SCIPisInfinity(scip, cutoff) )
+   if( *result == SCIP_CUTOFF )
    {
       /* if the subNLP turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
-      if( heurdata->forbidfixings )
+      if( SCIPgetNActivePricers(scip) == 0 && !SCIPisInfinity(scip, cutoff) && heurdata->forbidfixings )
       {
          SCIP_CALL( forbidFixation(scip, heurdata) );
       }
       *result = SCIP_DIDNOTFIND;
    }
 
-if ( *result == SCIP_CUTOFF )
-  *result = SCIP_DIDNOTFIND;
- 
+applyheurcleanup:
    /* undo fixing of discrete variables in subSCIP */
    if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
    {
