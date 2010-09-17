@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.65 2010/09/06 17:52:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.66 2010/09/17 16:28:42 bzfpfets Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -742,6 +742,8 @@ public:
       SCIP_CONS*         sourcecons,         /**< source constraint of the source SCIP */
       SCIP_HASHMAP*      varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
+      SCIP_HASHMAP*      consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
       SCIP_Bool          initial,            /**< should the LP relaxation of constraint be in the initial LP? */
       SCIP_Bool          separate,           /**< should the constraint be separated during LP processing? */
       SCIP_Bool          enforce,            /**< should the constraint be enforced during node processing? */
@@ -753,6 +755,7 @@ public:
       SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
       SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
+      SCIP_Bool          global,             /**< create a global or a local copy? */
       SCIP_Bool*         success             /**< pointer to store whether the copying was successful or not */
       )
    {  /*lint --e{715}*/
