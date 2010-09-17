@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.118 2010/09/10 19:01:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.119 2010/09/17 16:32:04 bzfpfets Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -199,36 +199,40 @@ SCIP_RETCODE SCIPprobCopy(
 
    assert(prob != NULL);
 
-   targetdata = NULL;
    result = SCIP_DIDNOTRUN;
+   targetdata = NULL;
 
+   /* create problem and initialize callbacks with NULL */
+   SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
+   
    /* call user copy callback method */
-   if( sourceprob->probcopy != NULL )
+   if ( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
       SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, &result) );
 
       /* evaluate result */
-      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      if ( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
       {
          SCIPerrorMessage("prodata copying method returned invalid result <%d>\n", result);
          return SCIP_INVALIDRESULT;
       }
-      
+
       assert(targetdata == NULL || result == SCIP_SUCCESS);
    }
 
-   /* check if the copying process was successfully */
-   if( result == SCIP_DIDNOTRUN )
+   /* if copying was successfull, add data and callbacks */
+   if ( result == SCIP_SUCCESS )
    {
-      SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
+      assert( targetdata != NULL );
+      (*prob)->probdelorig = sourceprob->probdelorig;
+      (*prob)->probtrans = sourceprob->probtrans;
+      (*prob)->probdeltrans = sourceprob->probdeltrans;
+      (*prob)->probinitsol = sourceprob->probinitsol;
+      (*prob)->probexitsol = sourceprob->probexitsol;
+      (*prob)->probcopy = sourceprob->probcopy;
+      (*prob)->probdata = targetdata;
    }
-   else
-   {
-      SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, sourceprob->probdelorig, sourceprob->probtrans, 
-            sourceprob->probdeltrans, sourceprob->probinitsol, sourceprob->probexitsol, sourceprob->probcopy, 
-            targetdata, FALSE) );
-   }
-   
+
    return SCIP_OKAY;
 }
 
