@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.13 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.14 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -388,9 +388,6 @@ SCIP_DECL_BRANCHCOPY(branchCopyStrongcoloring)
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
 
-   /* call inclusion method of primal branchruleistic */
-   SCIP_CALL( SCIPincludeBranchruleStrongcoloring(scip) );
- 
    return SCIP_OKAY;
 }
 

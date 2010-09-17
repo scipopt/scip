@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.h,v 1.7 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.h,v 1.8 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   probdata_coloring.h
  * @brief  problem data for coloring algorithm
@@ -24,8 +24,12 @@
 #ifndef __SCIP_PROBDATA_COLORING__
 #define __SCIP_PROBDATA_COLORING__
 
+#include <assert.h>
+
 #include "scip/scip.h"
 #include "tclique/tclique.h"   /* def. of clique data structures */
+#include "scip/cons_setppc.h"
+#include "reader_col.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.c,v 1.11 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_coloring.c,v 1.12 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   branch_coloring.c
  * @brief  coloring branching rule
@@ -75,9 +75,6 @@ SCIP_DECL_BRANCHCOPY(branchCopyColoring)
    assert(scip != NULL);
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
-
-   /* call inclusion method of branchrule */
-   SCIP_CALL( SCIPincludeBranchruleColoring(scip) );
  
    return SCIP_OKAY;
 }
@@ -173,8 +170,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
       node1 = COLORconsGetRepresentative(scip, set1[i]);
       /* search for other set containing the node */
       cons1 = COLORprobGetConstraint(scip, node1);
-      vars = SCIPgetVarsLinear(scip, cons1);
-      nvars = SCIPgetNVarsLinear(scip, cons1);
+      vars = SCIPgetVarsSetppc(scip, cons1);
+      nvars = SCIPgetNVarsSetppc(scip, cons1);
       for ( j  = 0; j < nvars; j++ )
       {
          if ( vars[j] != s1 && !SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[j])) )

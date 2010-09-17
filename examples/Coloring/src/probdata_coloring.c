@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.11 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.12 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -43,13 +43,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "probdata_coloring.h"
-#include "reader_col.h"
-#include "tclique/tclique.h"
-#include "scip/cons_linear.h"
-#include "scip/scip.h"
-#include <assert.h>
-
-
 
 struct SCIP_ProbData
 {
@@ -501,6 +494,7 @@ SCIP_DECL_PROBDELTRANS(probdeltransColoring)
 }
 
 
+#define probcopyColoring NULL
 #define probinitsolColoring NULL
 #define probexitsolColoring NULL
 #define probcopyColoring NULL
@@ -598,7 +592,7 @@ SCIP_RETCODE SCIPcreateProbColoring(
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring, 
-         probinitsolColoring, probcopyColoring, NULL, probdata) );
+         probinitsolColoring, probexitsolColoring, probcopyColoring, probdata) );
 
    SCIP_CALL( preprocessGraph(scip) );
 
@@ -786,7 +780,7 @@ SCIP_Bool COLORprobStableSetsAreEqual(
 
 /** checks whether the given stable set is new
     returns TRUE if the stable is new, 
-            FALSE if it is part of or equal to an already existing stable set */
+            FALSE if it is equal to an already existing stable set */
 SCIP_Bool COLORprobStableSetIsNew(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  stablesetnodes,     /**< array of nodes in the stable set */
@@ -802,7 +796,7 @@ SCIP_Bool COLORprobStableSetIsNew(
    assert(probdata != NULL);
 
    /* sort the set */
-   COLORreaderBubbleSortIntInt(stablesetnodes, stablesetnodes, nstablesetnodes);
+   SCIPsortDownInt(stablesetnodes, nstablesetnodes);
 
    for ( i = 0; i < COLORprobGetNStableSets(scip); i++ )
    {
@@ -1142,8 +1136,7 @@ SCIP_RETCODE COLORprobSetUpArrayOfCons(
       /* create the constraint */
       sprintf(consname, "Node-Constraint%d", i+1);
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &constraints[i], consname, 0, NULL, NULL, -SCIPinfinity(scip), -1,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsSetcover(scip, &constraints[i], consname, 0, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, constraints[i]) );
    }
 

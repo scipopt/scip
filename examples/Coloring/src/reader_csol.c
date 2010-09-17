@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_csol.c,v 1.9 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_csol.c,v 1.10 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   reader_csol.c
  * @brief  CSOL file writer
@@ -90,9 +90,6 @@ SCIP_DECL_READERCOPY(readerCopyCsol)
    assert(scip != NULL);
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   /* call inclusion method of reader */
-   SCIP_CALL( SCIPincludeReaderCsol(scip) );
  
    return SCIP_OKAY;
 }
@@ -279,19 +276,20 @@ SCIP_DECL_READERREAD(readerReadCsol)
    /* sort the sets and add them to the problem, creating one variable for each set */
    for ( i = 0; i < nsets; i++ )
    {
-      COLORreaderBubbleSortIntInt(sets[i], sets[i], setlengths[i]);
+      SCIPsortDownInt(sets[i], setlengths[i]);
       COLORprobAddNewStableSet(scip, sets[i], setlengths[i], &setindex);
       assert(setindex == i);
 
-      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
+      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
             TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) );
       COLORprobAddVarForStableSet(scip, setindex, var);
       SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
 
       /* add variable to node constraints of nodes in the set */
       for ( j = 0; j < setlengths[i]; j++ )
       {
-         SCIP_CALL( SCIPaddCoefLinear(scip, constraints[sets[i][j]], var, -1) );
+         SCIP_CALL( SCIPaddCoefSetppc(scip, constraints[sets[i][j]], var) );
       }
 
    }

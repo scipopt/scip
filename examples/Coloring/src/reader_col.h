@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.h,v 1.4 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_col.h,v 1.5 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   reader_col.h
  * @brief  COL file reader
@@ -27,38 +27,13 @@
 #include "scip/scip.h"
 #include "tclique/tclique.h"
 #include "probdata_coloring.h"
-#include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 #include "scip/type_cons.h"
 #include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** bubble sort of two joint arrays of int, sorted s.t. the second array is in non-increasing order */
-extern
-void COLORreaderBubbleSortIntInt(
-   int*                  values,             /**< int array to be permuted in the same way */
-   int*                  keys,               /**< int array to be sorted */
-   int                   len                 /**< length of arrays */
-   );
-
-/** bubble sort of two joint arrays of int and reals, sorted s.t. the second array is in non-increasing order */
-extern
-void COLORreaderBubbleSortIntReal(
-   int*                  values,             /**< int array to be permuted in the same way */
-   SCIP_Real*            keys,               /**< SCIP_Real array to be sorted */
-   int                   len                 /**< length of arrays */
-   );
-
-
-/** creates the initial LP */
-extern
-SCIP_RETCODE COLORreaderCreateSetsForUncoveredNodes(
-   SCIP*                 scip,               /**< SCIP data structure */   
-   TCLIQUE_GRAPH*        graph               /**< pointer to graph data structure */
-   );
-
 
 /** includes the col file reader into SCIP */
 extern

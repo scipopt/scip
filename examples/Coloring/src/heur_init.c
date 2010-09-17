@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_init.c,v 1.8 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_init.c,v 1.9 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   heur_init.c
  * @brief  initial primal heuristic for coloring
@@ -69,7 +69,7 @@
 #include "pricer_coloring.h"
 #include "probdata_coloring.h"
 #include "reader_col.h"
-#include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 #include "cons_storeGraph.h"
 #include "tclique/tclique.h"
 
@@ -183,7 +183,7 @@ SCIP_RETCODE greedyStableSet(
    }
 
    /* sort the nodes w.r.t. the computed values */
-   COLORreaderBubbleSortIntInt(sortednodes, values, nnodes);
+   SCIPsortDownIntInt(values, sortednodes, nnodes);
 
    /* insert first node */
    stablesetnodes[0] = sortednodes[0];
@@ -528,9 +528,6 @@ SCIP_DECL_HEURCOPY(heurCopyInit)
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurInit(scip) );
- 
    return SCIP_OKAY;
 }
 
@@ -643,20 +640,21 @@ SCIP_DECL_HEUREXEC(heurExecInit)
             }
          }
          /* create variable for the stable set and add it to SCIP */
-         COLORreaderBubbleSortIntInt(colors, colors, nstablesetnodes);
+         SCIPsortDownInt(colors, nstablesetnodes);
          SCIP_CALL( COLORprobAddNewStableSet(scip, colors, nstablesetnodes, &setnumber) );
          assert(setnumber != -1);
          
          /* create variable for the stable set and add it to SCIP*/
-         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
-               TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
+               TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
          COLORprobAddVarForStableSet(scip, setnumber, var);
          SCIP_CALL( SCIPaddVar(scip, var) );
+         SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
          
          for ( j = 0; j < nstablesetnodes; j++ )
          {
             /* add variable to node constraints of nodes in the set */
-            SCIP_CALL( SCIPaddCoefLinear(scip, constraints[colors[j]], var, -1) );
+            SCIP_CALL( SCIPaddCoefSetppc(scip, constraints[colors[j]], var) );
          }
 
          

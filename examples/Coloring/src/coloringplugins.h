@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloringplugins.h,v 1.5 2010/01/04 20:35:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: coloringplugins.h,v 1.6 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   coloringplugins.h
  * @brief  SCIP plugins for coloring
@@ -28,7 +28,7 @@
 #include "scip/scip.h"
 
 /* include header files here, such that the user only has to include
- * scipdefplugins.h
+ * coloringplugins.h
  */
 #include "scip/branch_allfullstrong.h"
 #include "scip/branch_fullstrong.h"
@@ -38,22 +38,18 @@
 #include "scip/branch_pscost.h"
 #include "scip/branch_random.h"
 #include "scip/branch_relpscost.h"
-#include "scip/cons_and.h"
-#include "scip/cons_bounddisjunction.h"
-#include "scip/cons_conjunction.h"
+
 #include "scip/cons_integral.h"
-#include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_logicor.h"
-#include "scip/cons_or.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_xor.h"
+
 #include "scip/dialog_default.h"
 #include "scip/disp_default.h"
+
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
+#include "scip/heur_dins.h"
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
@@ -73,36 +69,25 @@
 #include "scip/heur_rounding.h"
 #include "scip/heur_shifting.h"
 #include "scip/heur_simplerounding.h"
+#include "scip/heur_trivial.h"
+#include "scip/heur_trysol.h"
+#include "scip/heur_twoopt.h"
+#include "scip/heur_undercover.h"
 #include "scip/heur_veclendiving.h"
+#include "scip/heur_zirounding.h"
+
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_estimate.h"
 #include "scip/nodesel_hybridestim.h"
 #include "scip/nodesel_restartdfs.h"
-#include "scip/presol_dualfix.h"
-#include "scip/presol_implics.h"
-#include "scip/presol_inttobinary.h"
-#include "scip/presol_probing.h"
-#include "scip/presol_trivial.h"
+
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_rootredcost.h"
-#include "scip/reader_cnf.h"
-#include "scip/reader_fix.h"
-#include "scip/reader_lp.h"
-#include "scip/reader_mps.h"
-#include "scip/reader_sol.h"
-#include "scip/reader_zpl.h"
-#include "scip/sepa_clique.h"
-#include "scip/sepa_cmir.h"
-#include "scip/sepa_flowcover.h"
-#include "scip/sepa_gomory.h"
-#include "scip/sepa_impliedbounds.h"
-#include "scip/sepa_intobj.h"
-#include "scip/sepa_mcf.h"
-#include "scip/sepa_redcost.h"
-#include "scip/sepa_strongcg.h"
-#include "scip/sepa_zerohalf.h"
+
 #include "scip/scipshell.h"
+
+/** project plugins */
 #include "cons_storeGraph.h"
 #include "branch_coloring.h"
 #include "branch_strongcoloring.h"

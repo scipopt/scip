@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.h,v 1.4 2010/01/04 20:35:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_coloring.h,v 1.5 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   branch_coloring.h
  * @brief  coloring branching rule
@@ -28,7 +28,7 @@
 #include "scip/scip.h"
 #include "probdata_coloring.h"
 #include "cons_storeGraph.h"
-#include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 
 #ifdef __cplusplus
 extern "C" {

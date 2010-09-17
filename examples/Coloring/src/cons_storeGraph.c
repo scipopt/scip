@@ -186,18 +186,7 @@ SCIP_RETCODE createConsStoreGraphAtRoot(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyStoreGraph)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* call inclusion method of constraint handler */
-   SCIP_CALL( COLORincludeConshdlrStoreGraph(scip) );
- 
-   return SCIP_OKAY;
-}
+#define conshdlrCopyStoreGraph NULL
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -686,10 +675,6 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
       }
    }
    
-   if ( propcount > 0 )
-   {  
-      COLORreaderCreateSetsForUncoveredNodes(scip, COLORconsGetCurrentGraph(scip));
-   }
    SCIPdebugMessage( "Finished propagation of store graph constraint <%s(%d,%d)>, %d vars fixed.\n", SCIPconsGetName(cons), (consdata->node1+1), (consdata->node2+1), propcount);
 
    consdata = SCIPconsGetData(COLORconsGetActiveStoreGraphCons(scip));

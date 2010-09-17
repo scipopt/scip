@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.h,v 1.5 2010/03/12 14:54:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.h,v 1.6 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   pricer_coloring.h
  * @brief  coloring variable pricer
@@ -24,7 +24,7 @@
 #ifndef __SCIP_PRICER_COLORING__
 #define __SCIP_PRICER_COLORING__
 
-#include "scip/scip.h"
+#include "probdata_coloring.h"
 
 #ifdef __cplusplus
 extern "C" {

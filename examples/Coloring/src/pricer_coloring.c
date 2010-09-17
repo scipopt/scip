@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.c,v 1.9 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.c,v 1.10 2010/09/17 17:02:52 bzfgamra Exp $"
 
 /**@file   pricer_coloring.c
  * @brief  coloring variable pricer
@@ -40,10 +40,7 @@
 #include <string.h>
 
 #include "pricer_coloring.h"
-#include "probdata_coloring.h"
 #include "reader_col.h"
-#include "scip/cons_linear.h"
-#include "scip/scip.h"
 #include "cons_storeGraph.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,26 +104,44 @@ struct SCIP_PricerData
  * Local methods
  */
 
+/** returns whether the graph has an uncolored node 
+ */
+static
+SCIP_Bool hasUncoloredNode(
+   TCLIQUE_GRAPH*        graph,              /**< the graph that should be colored */
+   SCIP_Bool*            colored             /**< array of booleans, colored[i] == TRUE iff node i is colored */
+   )
+{
+   int i;
+
+   assert(graph != NULL);
+   assert(colored != NULL);
+
+   for ( i = 0; i < tcliqueGetNNodes(graph); i++)
+   {
+      /* node not yet colored */
+      if (!colored[i])
+      {
+	return TRUE;
+      }
+   }
+   return FALSE;
+}
+
 /** sorts the nodes from 0 to nnodes-1 w.r.t. the given weights */
 static
 SCIP_RETCODE sortNodes(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer,             /**< the coloring pricer */
    SCIP_Real*            weights,            /**< the weights for sorting */
    int                   nnodes,             /**< the number of nodes */
    int*                  sortednodes         /**< the array that will be overwritten with the sorted node numbers */
    )
 {
-   SCIP_PRICERDATA* pricerdata;
    int i;
    SCIP_Real* values;
 
    assert(scip != NULL);
    assert(weights != NULL);
-   assert(pricer != NULL);
-
-   pricerdata = SCIPpricerGetData(pricer);
-   assert(pricerdata != NULL);
 
    /* create array with indices and copy the weights-array */
    SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) ); 
@@ -137,9 +152,82 @@ SCIP_RETCODE sortNodes(
    }
 
    /* sort the nodes w.r.t. the computed values */
-   COLORreaderBubbleSortIntReal(sortednodes, values, nnodes);
+   SCIPsortDownRealInt(values, sortednodes, nnodes);
    SCIPfreeBufferArray(scip, &values);
 
+   return SCIP_OKAY;
+}
+
+/** computes a stable set with a greedy-method.  attention: the weight of the maximum stable set is not computed! */
+static 
+SCIP_RETCODE greedyStableSet(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TCLIQUE_GRAPH*        graph,              /**< pointer to graph data structure */
+   SCIP_Bool*            colored,            /**< array for marking yet colored nodes */
+   int*                  maxstablesetnodes,  /**< pointer to store nodes of the maximum weight stableset */
+   int*                  nmaxstablesetnodes  /**< pointer to store number of nodes in the maximum weight stableset */
+   )
+{
+   SCIP_Bool indnode;
+   int nnodes;
+   int i;
+   int j;
+   int* degrees;
+   int* sortednodes;
+   SCIP_Real* values;    /* values for sorting the nodes: deg(v)+w(v)*nnodes  */
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(maxstablesetnodes != NULL);
+   assert(nmaxstablesetnodes != NULL);
+
+   /* get number of nodes */
+   nnodes = tcliqueGetNNodes(graph);
+   *nmaxstablesetnodes = 0;
+
+   /* get the  degrees for the nodes in the graph */
+   degrees = tcliqueGetDegrees(graph);
+   SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) );   
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortednodes, nnodes) );
+
+   /* set values to the nodes which are used for sorting them */
+   /* value = degree of the node + weight of the node * number of nodes, therefore the yet colored nodes
+      (which have weight 0) have lower values than the not yet colored nodes which have weight 1 */
+   for ( i = 0; i < nnodes; i++ )
+   {
+      sortednodes[i] = i;
+      values[i] = ( colored[i] == TRUE ? degrees[i] : degrees[i]+nnodes );
+   }
+
+   /* sort the nodes w.r.t. the computed values */
+   SCIPsortDownRealInt(values, sortednodes, nnodes);
+
+   /* insert first node */
+   maxstablesetnodes[0] = sortednodes[0];
+   (*nmaxstablesetnodes) = 1;
+   for ( i = 1; i < nnodes; i++)
+   {
+      /* check whether node is independent to nodes in the set */
+      indnode = TRUE;
+      for ( j = 0; j < (*nmaxstablesetnodes); j++ )
+      {
+         if ( tcliqueIsEdge(graph, sortednodes[i], maxstablesetnodes[j]) )
+         {
+            indnode = FALSE;
+            break;
+         }
+      }
+      if ( indnode == TRUE )
+      {
+         /* node is independent, thus add it to the set */
+         maxstablesetnodes[*nmaxstablesetnodes] = sortednodes[i];
+         (*nmaxstablesetnodes) = (*nmaxstablesetnodes)+1;
+      }
+
+   }
+   SCIPfreeBufferArray(scip, &sortednodes);
+   SCIPfreeBufferArray(scip, &values);   
+   
    return SCIP_OKAY;
 }
 
@@ -270,9 +358,6 @@ SCIP_DECL_PRICERCOPY(pricerCopyColoring)
    assert(pricer != NULL);
    assert(strcmp(SCIPpricerGetName(pricer), PRICER_NAME) == 0);
 
-   /* call inclusion method of pricer */
-   SCIP_CALL( SCIPincludePricerColoring(scip) );
- 
    return SCIP_OKAY;
 }
 
@@ -438,7 +523,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
    /* get dual solutions and save them in pi */
    for ( i = 0; i < nnodes; i++)
    {
-      pricerdata->pi[i] = -SCIPgetDualsolLinear(scip, pricerdata->constraints[i]);
+      pricerdata->pi[i] = SCIPgetDualsolSetppc(scip, pricerdata->constraints[i]);
    }
    pricerdata->nstablesetsfound = 0;
    /* ......greedy-heuristic........ */
@@ -446,7 +531,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &sortednodes, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &maxstablesetnodes, nnodes) );
-      SCIP_CALL( sortNodes(scip, pricer, pricerdata->pi, nnodes, sortednodes) );
+      SCIP_CALL( sortNodes(scip, pricerdata->pi, nnodes, sortednodes) );
 
       SCIPdebugMessage("starting greedy...\n");
 
@@ -492,16 +577,17 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          pricerdata->nstablesetsfound += 1;
          
          /* create variable for the stable set and add it to SCIP*/
-         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
-               TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
+               TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
          COLORprobAddVarForStableSet(scip, setnumber, var);
          SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
+         SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
          
          /* add variable to the constraints in which it appears */
          for ( i = 0; i < nmaxstablesetnodes; i++ )
          {
             /* add variable to node constraints of nodes in the set */
-            SCIP_CALL( SCIPaddCoefLinear(scip, pricerdata->constraints[maxstablesetnodes[i]], var, -1) );
+            SCIP_CALL( SCIPaddCoefSetppc(scip, pricerdata->constraints[maxstablesetnodes[i]], var) );
          }
       }
       
@@ -525,7 +611,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
       weightsIntegral = TRUE;
       for ( i = 0; i < nnodes; i++ )
       {
-         pricerdata->pi[i] = -SCIPgetDualsolLinear(scip, pricerdata->constraints[i]);
+         pricerdata->pi[i] = SCIPgetDualsolSetppc(scip, pricerdata->constraints[i]);
          
          if( !isIntegralScalar(pricerdata->pi[i], 1.0, -MINDELTA, MAXDELTA) )
          {
@@ -605,17 +691,19 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                if ( setnumber >= 0  )
                {
                   /* create variable for the stable set and add it to SCIP */
-                  SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0, SCIPinfinity(pricerdata->scip), 
-                        1, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+                  SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
+                        TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
                   COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var);
                   SCIP_CALL( SCIPaddPricedVar(pricerdata->scip, var, 1.0) );
+                  SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
+
                   pricerdata->nstablesetsfound += 1;
                   /* add variable to the constraints in which it appears */
                   for ( j = 0; j < pricerdata->nstablesetnodes[i]; j++ )
                   {
                      /* add variable to node constraints of nodes in the set */
-                     SCIP_CALL( SCIPaddCoefLinear(pricerdata->scip, 
-                           pricerdata->constraints[pricerdata->improvingstablesets[i][j]], var, -1) );
+                     SCIP_CALL( SCIPaddCoefSetppc(pricerdata->scip, 
+                           pricerdata->constraints[pricerdata->improvingstablesets[i][j]], var) );
                   }
                }
             }
@@ -639,10 +727,89 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
 {  
+   TCLIQUE_GRAPH* graph;
+   int nnodes;                  /* number of nodes */
+   int* maxstablesetnodes;      /* array containig the nodes of the max stable set */
+   int nmaxstablesetnodes;      /* number of nodes in stable set */
+   int setnumber;               /* number of already found stable sets */
+   SCIP_VAR* var;               /* var for the actual stable set */
+   SCIP_CONS** constraints;     /* array of added constraints */
+   SCIP_Bool* colored;          /* array for marking of yet colored nodes
+                                   colored_i = true iff node i is already colored */
+   int**              stablesets;
+   int*               nstablesetelements;
+   int                nstablesets;
+   int i;
+   int j;
+   assert(scip != NULL);
 
-   COLORreaderCreateSetsForUncoveredNodes(scip, COLORconsGetCurrentGraph(scip));
+   graph = COLORconsGetCurrentGraph(scip);
+   assert(graph != NULL);
 
+   nnodes = COLORprobGetNNodes(scip);
+   assert(nnodes > 0);
+
+   /* get the node-constraits */
+   constraints = COLORprobGetConstraints(scip);
+   assert(constraints != NULL);
+
+   /* get all yet computed stable sets */
+   COLORprobGetStableSets(scip, &stablesets, &nstablesetelements, &nstablesets);
+   assert(stablesets != NULL && nstablesetelements != NULL);
+   assert(nstablesets >= 0);
+   assert(nnodes == tcliqueGetNNodes(graph));
+
+   /* allocate memory for arrays */
+   SCIP_CALL( SCIPallocBufferArray( scip, &colored, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &maxstablesetnodes, nnodes) );
+   nmaxstablesetnodes = 0;
+
+   /* fill colored-array with FALSE */
+   BMSclearMemoryArray(colored, nnodes);
+
+   /* go through all stable sets and set colored to true for nodes in them */
+   for ( i = 0; i < nstablesets; i++ )
+   {
+      if ( !SCIPisFeasZero(scip, SCIPvarGetUbLocal( COLORprobGetVarForStableSet(scip, i))) 
+         && (SCIPgetNNodes(scip) == 0 || SCIPvarIsInLP(COLORprobGetVarForStableSet(scip, i))
+            || SCIPgetRootNode(scip) == SCIPgetCurrentNode(scip) ) )
+      {
+         for ( j = 0; j < nstablesetelements[i]; j++ )
+         {
+            colored[stablesets[i][j]] = TRUE;
+         }
+      }
+   }
+
+   /* create maximal Stable Sets until all Nodes are covered */
+   while ( hasUncoloredNode(graph, colored) )
+   {
+      greedyStableSet(scip, graph, colored, maxstablesetnodes, &nmaxstablesetnodes);
+      SCIPsortDownInt(maxstablesetnodes, nmaxstablesetnodes);
+      SCIP_CALL( COLORprobAddNewStableSet(scip, maxstablesetnodes, nmaxstablesetnodes, &setnumber) );
+      assert(setnumber != -1);
+      
+      /* create variable for the stable set and add it to SCIP*/
+      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
+            TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) );
+      COLORprobAddVarForStableSet(scip, setnumber, var);
+      SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
+
+      for ( i = 0; i < nmaxstablesetnodes; i++ )
+      {
+         /* add variable to node constraints of nodes in the set */
+         SCIP_CALL( SCIPaddCoefSetppc(scip, constraints[maxstablesetnodes[i]], var) );
+         /* mark node as colored */
+         colored[maxstablesetnodes[i]] = TRUE;
+      }
+
+   }
+   /* free memory */
+   SCIPfreeBufferArray(scip, &maxstablesetnodes);
+   SCIPfreeBufferArray(scip, &colored);
    return SCIP_OKAY;
+
 }
 
 
