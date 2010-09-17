@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.670 2010/09/17 17:21:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.671 2010/09/17 17:33:26 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -972,10 +972,10 @@ SCIP_RETCODE SCIPcopyParamSettings(
 }
 
 /** returns the copy of the source variable in the target SCIP; if the mapping is detected in the variable hash map the
- *  target variable is just returned; in the other case a new variable is creates and added to the target SCIP; the
- *  created variable is add to hash map;
+ *  target variable is just returned; in the other case a new variable is created and added to the target-SCIP; the
+ *  created variable is added to the hash map
  *
- *  @note if a new variable was created, this variable will be added to the target problem but it is not captured
+ *  @note if a new variable was created, this variable will be added to the target-SCIP, but it is not captured
  */
 SCIP_RETCODE SCIPgetVarCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -1170,10 +1170,10 @@ SCIP_RETCODE SCIPgetVarCopy(
    return SCIP_OKAY;
 }
 
-/** copies all active variables from source SCIP and adds these variable to the target SCIP; the mapping between these
- *  variables are stored in the variable hash map 
+/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
+ *  variables are stored in the variable hash map
  *
- *  @note the variables are added to the target SCIP but not captured in the target SCIP
+ *  @note the variables are added to the target-SCIP but not captured in the target-SCIP
  */
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -1197,13 +1197,13 @@ SCIP_RETCODE SCIPcopyVars(
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-  
+
    /* get active variables of the source SCIP */
    SCIP_CALL( SCIPgetVarsData(sourcescip, &sourcevars, &nsourcevars, NULL, NULL, NULL, NULL) );
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
-   
+
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
@@ -1215,17 +1215,17 @@ SCIP_RETCODE SCIPcopyVars(
       /* create the constraint mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
    }
-   
+
    /* create the variables of the target SCIP */
    for( i = 0; i < nsourcevars; ++i )
    {          
       SCIP_VAR* targetvar;
-      
+
       /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, varmap, consmap, global) );
       assert(targetvar != NULL);
    }
-   
+
    /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
 #ifndef NDEBUG
    {
@@ -1287,17 +1287,18 @@ SCIP_RETCODE SCIPcopyVars(
       /* free hash map */
       SCIPhashmapFree(&consmap);
    }
-   
+
    return SCIP_OKAY;
 }
 
-/** copies constraints from source SCIP and adds these to the target SCIP; for mapping the variables between the source
- *  and the target SCIP a hash map can be given; if the variable hash map is NULL or neccessary variable mapping is
- *  missing, the required variables are created in the target SCIP and the mapping is added to hash map if this one is
- *  not NULL; All variables which are created are added to the target SCIP but not (user) captured; if the constraint
- *  hash map is not NULL the mapping between the constraints of the source and target SCIP is stored;
+/** copies constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
+ *  variables between the source and the target SCIP a hash map can be given; if the variable hash
+ *  map is NULL or neccessary variable mapping is missing, the required variables are created in the
+ *  target-SCIP and added to the hash map, if not NULL; all variables which are created are added to
+ *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
+ *  between the constraints of the source and target-SCIP is stored
  *
- * @note the constraints are added to the target SCIP but ar not (user) captured in the target SCIP
+ *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP
  */
 SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -1430,7 +1431,7 @@ SCIP_RETCODE SCIPcopyConss(
          }
       }
    }
-  
+
    if( uselocalvarmap )
    {
       /* free hash map */
@@ -1446,7 +1447,7 @@ SCIP_RETCODE SCIPcopyConss(
    return SCIP_OKAY;
 }
 
-/** create a problem by copying the problem data of the sources SCIP */
+/** create a problem by copying the problem data of the source SCIP */
 SCIP_RETCODE SCIPcopyProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
@@ -1477,7 +1478,7 @@ SCIP_RETCODE SCIPcopyProb(
       sourceprob = sourcescip->transprob;
    else
       sourceprob = sourcescip->origprob;
-   
+
    /* create the statistics data structure */
    SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
 
@@ -1487,14 +1488,14 @@ SCIP_RETCODE SCIPcopyProb(
    return SCIP_OKAY;
 }
 
-/** copies source SCIP to target SCIP; therefore the copying process is done in the folloiing  order:
- *  1) the plugins are copyed
- *  2) create problem data in target SCIP and copys the problem data of the source SCIP
+/** copies source SCIP to target SCIP; the copying process is done in the following order:
+ *  1) the plugins are copied
+ *  2) create problem data in target-SCIP and copies the problem data of the source-SCIP
  *  3) copies all active variables
  *  4) copies all constraints
  *  5) copies the settings 
  *
- *  @note all variables and constraints which are created in the target SCIP are not (user) captured 
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured 
  */
 SCIP_RETCODE SCIPcopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -1506,9 +1507,9 @@ SCIP_RETCODE SCIPcopy(
    const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */          
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
-                                              * plugins will be copied and activated, and the modifiable flag of
-                                              * constraints will be respected. If FALSE, valid will be set to FALSE, when
-                                              * there are pricers present */
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
@@ -1534,6 +1535,8 @@ SCIP_RETCODE SCIPcopy(
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
 
+   SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
+
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
 
@@ -1552,7 +1555,7 @@ SCIP_RETCODE SCIPcopy(
    /* construct name for the target SCIP using the source problem name and the given suffix string */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
-   /* create problem in the target SCIP and copying the soruce problem data */
+   /* create problem in the target SCIP and copying the source problem data */
    SCIP_CALL( SCIPcopyProb(targetscip, name, sourcescip, varmap, consmap) );
 
    /* copy all active variables */
@@ -1560,6 +1563,8 @@ SCIP_RETCODE SCIPcopy(
 
    /* copy all constraints */
    SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, varmap, consmap, global, enablepricing, valid) );
+
+   SCIPdebugMessage("Copying constraints was%s valid.\n", *valid ? "" : " not");
 
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
