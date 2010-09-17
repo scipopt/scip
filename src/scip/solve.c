@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.313 2010/09/15 15:54:46 bzfschwa Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.314 2010/09/17 08:42:58 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1936,8 +1936,11 @@ SCIP_RETCODE solveNodeLP(
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
 
-      /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in separators */
-      if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror) )
+      /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in
+       * separators; in case the root LP is aborted, e.g, by hitting the time limit, we do not check the LP solution
+       * since the corresponding data structures have not been updated 
+       */
+      if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror) && !SCIPsolveIsStopped(set, stat, FALSE) )
       {
          SCIP_Bool checklprows;
          SCIP_Bool stored;
@@ -1950,9 +1953,24 @@ SCIP_RETCODE solveNodeLP(
          else
             checklprows = TRUE;
 
-         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, 
+#ifndef NDEBUG
+         /* in the debug mode we want to explizitly check if the solution is feasible if it was stored */
+         SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, sol, FALSE, TRUE, TRUE, 
                checklprows, &stored) );
 
+         if( stored )
+         {
+            SCIP_Bool feasible;
+
+            SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, prob, FALSE, TRUE, TRUE, TRUE, &feasible) );
+            assert(feasible);
+         }
+
+         SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
+#else
+         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, FALSE, TRUE, TRUE, 
+               checklprows, &stored) );
+#endif    
          /* if the solution was accepted, the root node can be cut off by bounding */
          if( stored && set->nactivepricers == 0 )
          {          
