@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.13 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.14 2010/09/17 19:14:08 bzfpfets Exp $"
 
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
@@ -155,13 +155,16 @@ SCIP_RETCODE LinearOrderingSeparate(
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
 {  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( valid != NULL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
  
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -1015,26 +1018,26 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
    sourcevars = sourcedata->vars;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, n) );
-   for (i = 0; i < n && *success; ++i)
+   for (i = 0; i < n; ++i)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) );
 
-      for (j = 0; j < n && *success; ++j)
+      for (j = 0; j < n; ++j)
       {
-	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, NULL, global) );
-	 assert( vars[i][j] != 0 );
+         if ( i != j )
+         {
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global) );
+            assert( vars[i][j] != 0 );
+         }
       }
    }
 
-   if ( *success )
-   {
-      /* create copied constraint */
-      if ( name == 0 )
-	 name = SCIPconsGetName(sourcecons);
-      
-      SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
-	    initial, separate, enforce, check, propagate, local, dynamic, modifiable, removable, stickingatnode) );
-   }
+   /* create copied constraint */
+   if ( name == 0 )
+      name = SCIPconsGetName(sourcecons);
+
+   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    for (i = 0; i < n; ++i)
       SCIPfreeBufferArray(scip, &vars[i]);
