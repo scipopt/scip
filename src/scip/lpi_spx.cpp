@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.120 2010/09/15 08:04:36 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.121 2010/09/17 14:39:14 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -647,7 +647,28 @@ public:
          unscaledlp = SPxLP(*this);
 
          /* perform scaling */
-         scaler.scale(*this);
+	 try
+	 {
+            scaler.scale(*this);
+	 }
+	 catch(SPxException x)
+	 {
+            /* reload unscaled lp */
+            try
+            {
+               SPxSolver::loadLP(unscaledlp);
+               m_sense = sense();
+            }
+            catch(SPxException e)
+            {
+               /* if the original lp cannot be reloaded, we are in trouble */
+               std::string s = e.what();      
+               SCIPerrorMessage("SoPlex threw an exception when restoring original lp after unsuccessful scaling: %s\n", s.c_str());
+               m_stat = SPxSolver::status();
+               return m_stat;
+            }
+            applyscaling = false;
+         }
       }
 
       /* solve */
@@ -669,8 +690,19 @@ public:
          m_autophase1iters += SPxSolver::iterations();
 
          /* reload unscaled lp */
-         SPxSolver::loadLP(unscaledlp);
-         m_sense = sense();
+         try
+         {
+            SPxSolver::loadLP(unscaledlp);
+            m_sense = sense();
+         }
+         catch(SPxException x)
+         {
+            /* if the original lp cannot be reloaded, we are in trouble */
+            std::string s = x.what();      
+            SCIPerrorMessage("SoPlex threw an exception when restoring original lp after scaling: %s\n", s.c_str());
+            m_stat = SPxSolver::status();
+            return m_stat;
+         }
 
          /* set basis from scaled lp and reoptimize */
          if( rstat != NULL && cstat != NULL )
