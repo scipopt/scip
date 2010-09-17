@@ -32,9 +32,9 @@
  * @version  2.0.0a
  *
  * <b>SCIP Authors:</b>
- * - <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#zib">Current developers at ZIB</a>
- * - <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#programmers">Other developers</a>
- * - <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#contributors">Contributors</a>
+ * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
+ * - <a class="el" href="AUTHORS.html#programmers">Other developers</a>
+ * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
  *
  *
  * <b>What is SCIP?</b>

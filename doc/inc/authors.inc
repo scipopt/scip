@@ -16,7 +16,7 @@
 		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=gamrath&amp;language=en">Gerald Gamrath</a>
 	      </td>
 	      <td>
-                Student assistant
+                Column generation, further development
 	      </td>
 	    </tr>
             <tr>	    
@@ -33,6 +33,14 @@
 	      </td>
 	      <td> Solution counting, further development
 	      </td>
+	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=hendel&amp;language=en">Gregor Hendel</a>
+	      </td>
+	      <td>
+                Student assistant
+              </td>
 	    </tr>
 	    <tr>
 	      <td>
@@ -199,6 +207,26 @@
 	      </td>
 	      <td>
                  SamplePricer example
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+                 <a href="http://www.math.unipd.it/~salvagni/">Domenico Salvagnin</a>
+	      </td>
+	      <td>
+                 Feasibility Pump 2.0
+	      </td>
+	      <td>
+	      </td>
+	    </tr>
+            <tr>
+	      <td>
+                 <a href="http://www.math.tu-berlin.de/coga/people/jschulz/">Jens Schulz</a>
+	      </td>
+	      <td>
+                 Scheduling plugins: cumulative and linking constraint handler, variable bounds propagator
 	      </td>
 	      <td>
 	      </td>
