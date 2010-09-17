@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.18 2010/09/13 11:16:17 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.19 2010/09/17 08:45:36 bzfberth Exp $"
 
 
 /**@file   heur_trivial.c
@@ -124,9 +124,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
       /* set infinite bounds to sufficient large value */
       if( SCIPisInfinity(scip, -lb) )
-         lb = -infinity;
+         lb = MIN(-infinity, ub);
       if( SCIPisInfinity(scip, ub) )
-         ub = infinity;
+         ub = MAX(SCIPvarGetLbLocal(vars[i]), infinity);
 
       SCIP_CALL( SCIPsetSolVal(scip, lbsol, vars[i], lb) );
       SCIP_CALL( SCIPsetSolVal(scip, ubsol, vars[i], ub) );
