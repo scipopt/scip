@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.25 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.26 2010/09/17 16:30:03 bzfpfets Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -153,7 +153,7 @@ public:
                                               *   target variables */
       SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding 
                                               *   target constraints */
-      ObjProbData**      objprobdata,        /**< pointer to store the copyed problem data object */
+      ObjProbData**      objprobdata,        /**< pointer to store the copied problem data object */
       SCIP_RESULT*       result              /**< pointer to store the result of the call */
       )
    {  /*lint --e{715}*/
