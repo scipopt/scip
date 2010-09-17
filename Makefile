@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.377 2010/09/17 08:49:33 bzfheinz Exp $
+# $Id: Makefile,v 1.378 2010/09/17 17:50:33 bzfberth Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -39,7 +39,7 @@ MEM		=	1536
 THREADS         =       1
 DISPFREQ	=	10000
 FEASTOL		=	default
-TEST		=	shortmiplib
+TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
