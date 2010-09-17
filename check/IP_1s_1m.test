@@ -120,9 +120,9 @@ IP/fctp/ran8x32.mps.gz
 IP/gap/b20200.mps.gz
 IP/gap/e05100.mps.gz
 IP/hohlleiter/net-5-3-6.lp.gz
-IP/holmberg_SSCFLP/p28.mps.gz
-IP/holmberg_SSCFLP/p56.mps.gz
-IP/holmberg_SSCFLP/p61.mps.gz
+IP/holmberg_SSCFLP/holmberg_p28.mps.gz
+IP/holmberg_SSCFLP/holmberg_p56.mps.gz
+IP/holmberg_SSCFLP/holmberg_p61.mps.gz
 IP/jtl/rlp2.mps.gz
 IP/lodi/neos20.mps.gz
 IP/lodi/nh97_tension.mps.gz

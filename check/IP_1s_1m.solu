@@ -119,9 +119,9 @@
 =opt= b20200                                   -9682
 =opt= e05100                                   12681
 =inf= net-5-3-6
-=opt= p28                                      13722
-=opt= p56                                      21103
-=opt= p61                                      24454
+=opt= holmberg_p28                             13722
+=opt= holmberg_p56                             21103
+=opt= holmberg_p61                             24454
 =opt= rlp2                                        19
 =opt= neos20                                    -434
 =opt= nh97_tension                              1418
