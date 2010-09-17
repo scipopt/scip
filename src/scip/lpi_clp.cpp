@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.74 2010/09/13 17:00:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.75 2010/09/17 19:36:52 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -3430,7 +3430,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /**@todo add BARRIERCONVTOL parameter */
-      return SCIP_PARAMETERUNKNOWN; // ?????????????????
+      return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
 	 *dval = lpi->clp->primalObjectiveLimit();
@@ -3475,7 +3475,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /**@todo add BARRIERCONVTOL parameter */
-      return SCIP_PARAMETERUNKNOWN; // ?????????????????
+      return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
 	 lpi->clp->setPrimalObjectiveLimit(dval);
