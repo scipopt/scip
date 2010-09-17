@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.30 2010/09/06 14:59:45 bzfwolte Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.31 2010/09/17 17:31:43 bzfviger Exp $"
 
-/**@file   intervalarith.h
+/**@file   scip/intervalarith.h
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.20 2010/09/15 16:17:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.21 2010/09/17 17:31:43 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -40,7 +40,7 @@ using std::vector;
  * we need to include the intervalarith.hpp very early and require the interval operations to be in the CppAD namespace */
 namespace CppAD
 {
-#include <nlpi/intervalarith.hpp>
+#include <nlpi/intervalarith.h>
 }
 SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using CppAD::SCIPInterval;

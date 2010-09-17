@@ -61,4 +61,4 @@ $(LIBOBJDIR)/nlpi/nlpi_ipopt_dummy.o: src/nlpi/nlpi_ipopt_dummy.c src/nlpi/nlpi_
 $(LIBOBJDIR)/nlpi/intervalarith.o: src/nlpi/intervalarith.cpp src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h \
- src/nlpi/intervalarith.hpp src/scip/intervalarith.h
+ src/nlpi/intervalarith.h src/scip/intervalarith.h
