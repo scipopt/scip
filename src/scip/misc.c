@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.120 2010/09/17 08:46:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.121 2010/09/17 12:23:43 bzfwolte Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -386,10 +386,10 @@ void* hashtablelistRetrieve(
    /* return element */
    if( h != NULL )
    {
-#ifndef NDEBEUG
+#ifndef NDEBUG
       if( hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key) != NULL )
       {
-         SCIPwarningMessage("hashkey with same value exists multiple times (i.e. duplicate constraint/variable names), so the return value is maybe not correct\n");
+         SCIPwarningMessage("hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
       }
 #endif
       
