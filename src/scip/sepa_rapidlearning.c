@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.31 2010/09/13 21:27:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.32 2010/09/17 16:36:43 bzfpfets Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -289,7 +289,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
    }
 
-   SCIPdebugMessage("Copying SCIP was %s successful.\n", success ? "" : "not");
+   SCIPdebugMessage("Copying SCIP was%s successful.\n", success ? "" : " not");
    
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
@@ -410,7 +410,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
       if( SCIPgetNConflictConssFound(subscip) > 0 )
       {
-         SCIPdebugMessage("   -  there were %lld conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
+         SCIPdebugMessage("   - there were %lld conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
       }
 
       /* set node limit to 100% */
