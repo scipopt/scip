@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.90 2010/09/13 09:41:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.91 2010/09/17 20:30:10 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -1668,7 +1668,7 @@ SCIP_RETCODE checkAltLPInfeasible(
       else
          retcode = SCIPlpiSolveDual(lp);    /* use dual simplex */
       
-      if( retcode == SCIP_LPERROR )
+      if ( retcode == SCIP_LPERROR )
       {
          /* reset parameters */
          SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
@@ -1726,11 +1726,11 @@ SCIP_RETCODE checkAltLPInfeasible(
          /* We have a status different from unbounded or optimal. This should not be the case ... */
          if (primal)
          {
-            SCIPerrorMessage("Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
+            SCIPwarningMessage("Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
          }
          else
          {
-            SCIPerrorMessage("Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
+            SCIPwarningMessage("Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
          }
          /* SCIP_CALL( SCIPlpiWriteLP(lp, "debug.lp") ); */
          *error = TRUE;
@@ -2508,9 +2508,10 @@ SCIP_RETCODE separateIISRounding(
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIndicator)
 {  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( valid != NULL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
@@ -2868,6 +2869,12 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->binvar, &(consdata->binvar)) );
    assert( consdata->binvar != NULL );
 
+   if ( SCIPvarGetType(consdata->binvar) != SCIP_VARTYPE_BINARY )
+   {
+      SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(consdata->binvar), SCIPvarGetType(consdata->binvar));
+      return SCIP_ERROR;
+   }
+
    /* if binary variable is fixed to be nonzero */
    if ( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
       ++(consdata->nFixedNonzero);
@@ -2877,12 +2884,6 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 
    SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->slackvar, &(consdata->slackvar)) );
    assert( consdata->slackvar != NULL );
-
-   if ( SCIPvarGetType(consdata->binvar) != SCIP_VARTYPE_BINARY )
-   {
-      SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(consdata->binvar), SCIPvarGetType(consdata->binvar));
-      return SCIP_ERROR;
-   }
 
    /* check if linear constraint has been transformed already - otherwise get it later */
    SCIP_CALL( SCIPgetTransformedCons(scip, sourcedata->lincons, &consdata->lincons) );
@@ -2896,6 +2897,32 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
       /* if slack variable is fixed to be nonzero */
       if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
          ++(consdata->nFixedNonzero);
+   }
+
+   /* check if slack variable can be made implicity integer. We repeat the check from
+    * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
+    * after creation of the constraint. */
+   if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
+   {
+      SCIP_Real* vals;
+      SCIP_VAR** vars;
+      SCIP_VAR* slackvar;
+      int nvars;
+      int i;
+      
+      vars = SCIPgetVarsLinear(scip, sourcedata->lincons);
+      vals = SCIPgetValsLinear(scip, sourcedata->lincons);
+      nvars = SCIPgetNVarsLinear(scip, sourcedata->lincons);
+      slackvar = sourcedata->slackvar;
+      for (i = 0; i < nvars; ++i)
+      {
+         if ( vars[i] != slackvar && (! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i])) )
+            break;
+      }
+      if ( i == nvars )
+      {
+         SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT) );
+      }
    }
 
    /* create transformed constraint with the same flags */
@@ -3786,23 +3813,23 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
 static
 SCIP_DECL_CONSCOPY(consCopyIndicator)
 {  /*lint --e{715}*/
-   char linconsname[SCIP_MAXSTRLEN];
    SCIP_CONSDATA* sourceconsdata;
    SCIP_VAR* sourcebinvar;
    SCIP_VAR* targetbinvar;
    SCIP_VAR* sourceslackvar;
    SCIP_VAR* targetslackvar;
+   SCIP_CONS* sourcelincons;
    SCIP_CONS* targetlincons;
    const char* consname;
 
-   assert(scip != NULL);
-   assert(sourcescip != NULL);
-   assert(sourcecons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0);
+   assert( scip != NULL );
+   assert( sourcescip != NULL );
+   assert( sourcecons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
 
    *success = TRUE;
 
-   if( name != NULL )
+   if ( name != NULL )
       consname = name;
    else
       consname = SCIPconsGetName(sourcecons);
@@ -3810,10 +3837,10 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    SCIPdebugMessage("Copying indicator constraint <%s> ...\n", consname);
 
    sourceconsdata = SCIPconsGetData(sourcecons);
-   assert(sourceconsdata != NULL);
+   assert( sourceconsdata != NULL );
 
    /* if the linear constraint is disabled or not active -> do not copy (may happen due to (multi-)aggregation) */
-   if( !SCIPconsIsEnabled(sourceconsdata->lincons) )
+   if ( !SCIPconsIsEnabled(sourceconsdata->lincons) )
    {
       SCIPdebugMessage("Linear constraint <%s> disabled! Do not copy indicator constraint <%s>.\n",
          SCIPconsGetName(sourceconsdata->lincons), SCIPconsGetName(sourcecons));
@@ -3822,31 +3849,35 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       return SCIP_OKAY;
    }
 
-   sourcebinvar = sourceconsdata->binvar;
-   sourceslackvar = sourceconsdata->slackvar;
-
-   /* find corresponding copied variables */
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, consmap, global) );
-
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, consmap, global) );
+   /* get copied version of linear constraint */
+   sourcelincons = sourceconsdata->lincons;
+   assert( sourcelincons != NULL );
+   SCIP_CALL( SCIPgetConsCopy(scip, &targetlincons, SCIPconsGetName(sourcelincons), sourcescip, sourceconshdlr, sourcelincons, varmap, consmap,
+         SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),
+         SCIPconsIsPropagated(sourcelincons), SCIPconsIsLocal(sourcelincons), SCIPconsIsModifiable(sourcelincons), SCIPconsIsDynamic(sourcelincons),
+         SCIPconsIsRemovable(sourcelincons), SCIPconsIsStickingAtNode(sourcelincons), global, success) );
    
-   /* @warning We require that the linear constraints are copied before the indicator constraints! */
-   /* construct linear constraint name */
-   (void) SCIPsnprintf(linconsname, SCIP_MAXSTRLEN, "indlin_%s", SCIPconsGetName(sourcecons)+2);
-
-   /* find copied linear constraint */
-   targetlincons = SCIPfindCons(scip, linconsname);
-
-   if( targetlincons == NULL )
+   if ( *success )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown linear constraint <%s>\n", linconsname);
-      *success = FALSE;
-      return SCIP_OKAY;
+      assert( targetlincons != NULL );
+
+      sourcebinvar = sourceconsdata->binvar;
+      sourceslackvar = sourceconsdata->slackvar;
+      assert( sourcebinvar != NULL );
+      assert( sourceslackvar != NULL );
+      
+      /* find copied variables corresponding to binvar and slackvar */
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, consmap, global) );
+
+      /* create indicator constraint */
+      SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
+            initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
    }
-   
-   /* create indicator constraint */
-   SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
-         initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
+   else
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
+   }
 
    return SCIP_OKAY;
 }
