@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.669 2010/09/17 08:49:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.670 2010/09/17 17:21:36 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1227,10 +1227,54 @@ SCIP_RETCODE SCIPcopyVars(
    }
    
    /* integer variables that are fixed to zero or one or have bounds [0,1] will be converted to binaries */
-   assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip));
-   assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) == SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip));
-   assert(SCIPgetNImplVars(sourcescip) == SCIPgetNImplVars(targetscip));
-   assert(SCIPgetNContVars(sourcescip) == SCIPgetNContVars(targetscip));
+#ifndef NDEBUG
+   {
+      SCIP_VAR** fixedvars;
+      int nfixedvars;
+      int nfixedbinvars;
+      int nfixedintvars;
+      int nfixedimplvars;
+      int nfixedcontvars;
+
+      fixedvars = SCIPgetFixedVars(sourcescip);
+      nfixedvars = SCIPgetNFixedVars(sourcescip);
+      nfixedbinvars = 0;
+      nfixedintvars = 0;
+      nfixedimplvars = 0;
+      nfixedcontvars = 0;
+      
+      /* count number of fixed variables for all variable types */
+      for( i = 0; i < nfixedvars; ++i )
+      {
+         switch( SCIPvarGetType(fixedvars[i]) )
+         {
+         case SCIP_VARTYPE_BINARY:
+            nfixedbinvars++;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            nfixedintvars++;
+            break;
+         case SCIP_VARTYPE_IMPLINT:
+            nfixedimplvars++;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            nfixedcontvars++;
+            break;
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            return SCIP_INVALIDDATA;
+         }
+      }
+      assert(nfixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
+      assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip));
+      assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip)
+         && SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip) <= SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) + nfixedbinvars + nfixedintvars );
+      assert(SCIPgetNImplVars(sourcescip) <= SCIPgetNImplVars(targetscip) 
+         && SCIPgetNImplVars(targetscip) <= SCIPgetNImplVars(sourcescip) + nfixedimplvars);     
+      assert(SCIPgetNContVars(sourcescip) <= SCIPgetNContVars(targetscip)
+         && SCIPgetNContVars(targetscip) <= SCIPgetNContVars(targetscip) + nfixedcontvars);
+   }
+#endif
 
    if( uselocalvarmap )
    {
