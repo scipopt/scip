@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.21 2010/09/15 19:41:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.22 2010/09/17 13:46:42 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -3110,6 +3110,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          SCIPmessageFPrintInfo(file, "%s, ", oracle->varnames[i]);
       else
          SCIPmessageFPrintInfo(file, "x%d, ", i);
+      if( i % 10 == 0 )
+         SCIPmessageFPrintInfo(file, "\n");
    }
    SCIPmessageFPrintInfo(file, "NLPIORACLEOBJVAR;\n\n");
    for( i = 0; i < oracle->nvars; ++i )
@@ -3160,6 +3162,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          SCIPmessageFPrintInfo(file, "%s, ", oracle->consnames[i]);
       else
          SCIPmessageFPrintInfo(file, "e%d, ", i);
+      if( i % 10 == 0 )
+         SCIPmessageFPrintInfo(file, "\n");
 
       if( oracle->conslhss[i] > -oracle->infinity && oracle->consrhss[i] < oracle->infinity && oracle->conslhss[i] != oracle->consrhss[i] )
       { /* ranged row: add second constraint */
