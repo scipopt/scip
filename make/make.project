@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.23 2010/09/16 16:58:37 bzfhende Exp $
+# $Id: make.project,v 1.24 2010/09/17 13:15:12 bzfwanie Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -33,6 +33,7 @@ include $(SCIPDIR)/make/make.detecthost
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	1536
+THREADS         =       1
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	shortmiplib
