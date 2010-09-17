@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.98 2010/09/06 12:40:24 bzfwanie Exp $
+# $Id: check.awk,v 1.99 2010/09/17 11:05:27 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -183,10 +183,10 @@ BEGIN {
       lpsname = "grb";
    else if( $13 == "NONE" )
       lpsname = "none";
+   else if( $13 == "QSopt" )
+      lpsname = "qso";
 #   else if( $13 == "???" )
 #      lpsname = "xprs";
-#   else if( $13 == "???" )
-#      lpsname = "qso";
 
     # get LP solver version 
    if( NF >= 14 ) {
