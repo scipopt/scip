@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.13 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.14 2010/09/17 19:14:32 bzfpfets Exp $"
 
 /**@file   probdata_lop.h
  * @brief  handling of data needed for solving linear ordering problems
@@ -72,7 +72,55 @@ SCIP_DECL_PROBDELORIG(probdelorigLOP)
 #define probdeltransLOP NULL
 #define probinitsolLOP NULL
 #define probexitsolLOP NULL
-#define probcopyLOP NULL
+
+
+/** copies user data of source SCIP for the target SCIP */
+static
+SCIP_DECL_PROBCOPY(probcopyLOP)
+{
+   int n;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( sourcescip != NULL );
+   assert( sourcedata != NULL );
+   assert( targetdata != NULL );
+
+   /* set up data */
+   SCIP_CALL( SCIPallocMemory(scip, targetdata) );
+
+   n = sourcedata->n;
+   (*targetdata)->n = n;
+
+   /* set matrices */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W), n) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars), n) );
+
+   for (i = 0; i < n; ++i)
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W[i]), n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars[i]), n) );
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( i != j )
+         {
+            SCIP_VAR* var;
+            
+	    SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->vars[i][j], &var) );
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->vars[i][j]), varmap, consmap, TRUE) );
+            SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->vars[i][j]) );
+         }
+         else
+            (*targetdata)->vars[i][j] = NULL;
+      }
+   }
+
+   *result = SCIP_SUCCESS;
+   
+   return SCIP_OKAY;
+}
 
 
 
