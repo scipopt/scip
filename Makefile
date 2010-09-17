@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.378 2010/09/17 17:50:33 bzfberth Exp $
+# $Id: Makefile,v 1.379 2010/09/17 18:55:09 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -851,7 +851,8 @@ ifeq ($(LINKER),CPP)
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(LPILIBDEP)'
 endif
-		@echo `grep -l "WITH_LPSCHECK" $(ALLSRC)` >$(LPSCHECKDEP)
+		@#we explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI, but contain all LPI's that use the WITH_LPSCHECK define
+		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/scip/lpi*` >$(LPSCHECKDEP)
 
 .PHONY: nlpidepend
 nlpidepend:
