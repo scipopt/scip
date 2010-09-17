@@ -1,6 +1,6 @@
-#--- $Id: make.sunos.x86_64.gnu.dbg,v 1.1 2010/09/17 20:11:49 bzfviger Exp $
+#--- $Id: make.sunos.x86_64.gnu.dbg,v 1.2 2010/09/17 20:19:56 bzfviger Exp $
 FLAGS		+=	-DNO_STRERROR_R -DROUNDING_FE
-OFLAGS		+=	-O0 -g
+OFLAGS		+=	-O0 -g -m64
 CFLAGS		+=	$(GCCWARN) -funit-at-a-time
 CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 ARFLAGS		=	crs

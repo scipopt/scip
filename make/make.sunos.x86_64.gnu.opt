@@ -1,6 +1,6 @@
-#--- $Id: make.sunos.x86_64.gnu.opt,v 1.1 2010/09/17 20:11:49 bzfviger Exp $
+#--- $Id: make.sunos.x86_64.gnu.opt,v 1.2 2010/09/17 20:19:56 bzfviger Exp $
 FLAGS		+=	-DNDEBUG -DNO_STRERROR_R -DROUNDING_FE
-OFLAGS		+=	-O3 -march=nocona -fomit-frame-pointer # -malign-double
+OFLAGS		+=	-m64 -O3 -march=nocona -fomit-frame-pointer # -malign-double
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
