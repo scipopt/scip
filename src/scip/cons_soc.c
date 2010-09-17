@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.55 2010/09/14 15:57:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.56 2010/09/17 19:37:26 bzfpfets Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3577,7 +3577,8 @@ SCIP_DECL_CONSCOPY(consCopySOC)
 }
 
 
-/** constraint parsing method of constraint handler @todo */
+/** constraint parsing method of constraint handler 
+ *  @todo Implement */
 #if 0
 static
 SCIP_DECL_CONSPARSE(consParseSOC)
