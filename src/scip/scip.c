@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.671 2010/09/17 17:33:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.672 2010/09/18 22:44:59 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2148,7 +2148,7 @@ SCIP_RETCODE SCIPincludePricer(
    SCIP_DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
    SCIP_DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    )
 {
@@ -2611,7 +2611,7 @@ int SCIPgetNRelaxs(
 /** sets the priority of a relaxator */
 SCIP_RETCODE SCIPsetRelaxPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< primal relaxistic */
+   SCIP_RELAX*           relax,              /**< relaxator */
    int                   priority            /**< new priority of the relaxator */
    )
 {
@@ -2702,7 +2702,7 @@ int SCIPgetNSepas(
 /** sets the priority of a separator */
 SCIP_RETCODE SCIPsetSepaPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPA*            sepa,               /**< primal sepaistic */
+   SCIP_SEPA*            sepa,               /**< separator */
    int                   priority            /**< new priority of the separator */
    )
 {
@@ -2790,7 +2790,7 @@ int SCIPgetNProps(
 /** sets the priority of a propagator */
 SCIP_RETCODE SCIPsetPropPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop,               /**< primal propistic */
+   SCIP_PROP*            prop,               /**< propagator */
    int                   priority            /**< new priority of the propagator */
    )
 {
@@ -6903,7 +6903,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
@@ -6975,7 +6975,7 @@ SCIP_RETCODE SCIPwriteVarName(
 SCIP_RETCODE SCIPwriteVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
-   SCIP_VAR**            vars,               /**< variable array to outpout */
+   SCIP_VAR**            vars,               /**< variable array to output */
    int                   nvars               /**< number of variables */
    )
 {
@@ -7038,7 +7038,7 @@ SCIP_RETCODE SCIPparseVar(
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -7527,7 +7527,7 @@ SCIP_Real SCIPgetVarRedcost(
    }
 }
 
-/** Returns the farkas coefficient of the variable in the current node's LP relaxation;
+/** Returns the Farkas coefficient of the variable in the current node's LP relaxation;
  *  the current node has to have an infeasible LP.
  *  Returns SCIP_INVALID if the variable is active but not in the current LP;
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
@@ -12898,7 +12898,7 @@ SCIP_Real SCIPgetColRedcost(
 }
 
 
-/** returns the farkas coefficient of a column in the last (infeasible) LP */
+/** returns the Farkas coefficient of a column in the last (infeasible) LP */
 SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
@@ -12908,7 +12908,7 @@ SCIP_Real SCIPgetColFarkasCoef(
 
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
-      SCIPerrorMessage("cannot get farkas coeff, because node LP is not processed\n");
+      SCIPerrorMessage("cannot get Farkas coeff, because node LP is not processed\n");
       SCIPABORT();
    }
 

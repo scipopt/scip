@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.431 2010/09/16 17:54:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.432 2010/09/18 22:44:59 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -317,7 +317,7 @@ SCIP_RETCODE SCIPcopyVars(
 
 /** copies constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
  *  variables between the source and the target SCIP a hash map can be given; if the variable hash
- *  map is NULL or neccessary variable mapping is missing, the required variables are created in the
+ *  map is NULL or necessary variable mapping is missing, the required variables are created in the
  *  target-SCIP and added to the hash map, if not NULL; all variables which are created are added to
  *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
  *  between the constraints of the source and target-SCIP is stored
@@ -829,7 +829,7 @@ SCIP_RETCODE SCIPincludePricer(
    SCIP_DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
    SCIP_DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    );
 
@@ -1082,7 +1082,7 @@ int SCIPgetNRelaxs(
 extern
 SCIP_RETCODE SCIPsetRelaxPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< primal relaxistic */
+   SCIP_RELAX*           relax,              /**< primal relaxator */
    int                   priority            /**< new priority of the relaxator */
    );
 
@@ -1132,7 +1132,7 @@ int SCIPgetNSepas(
 extern
 SCIP_RETCODE SCIPsetSepaPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPA*            sepa,               /**< primal sepaistic */
+   SCIP_SEPA*            sepa,               /**< primal separator */
    int                   priority            /**< new priority of the separator */
    );
 
@@ -1179,7 +1179,7 @@ int SCIPgetNProps(
 extern
 SCIP_RETCODE SCIPsetPropPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROP*            prop,               /**< primal propistic */
+   SCIP_PROP*            prop,               /**< primal propagator */
    int                   priority            /**< new priority of the propagator */
    );
 
@@ -1415,7 +1415,7 @@ SCIP_RETCODE SCIPincludeDisp(
    int                   width,              /**< width of display column (no. of chars used) */
    int                   priority,           /**< priority of display column */
    int                   position,           /**< relative position of display column */
-   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
+   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbor? */
    );
 
 /** returns the display column of the given name, or NULL if not existing */
@@ -1734,13 +1734,13 @@ SCIP_Real SCIPgetOrigObjscale(
    SCIP*                 scip                /**< SCIP data structure */
    ); 
 
-/** returns the objective offset of the tranformed problem */
+/** returns the objective offset of the transformed problem */
 extern
 SCIP_Real SCIPgetTransObjoffset(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the objective scale of the tranformed problem */
+/** returns the objective scale of the transformed problem */
 extern
 SCIP_Real SCIPgetTransObjscale(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2261,7 +2261,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 
@@ -2280,7 +2280,7 @@ extern
 SCIP_RETCODE SCIPwriteVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
-   SCIP_VAR**            vars,               /**< variable array to outpout */
+   SCIP_VAR**            vars,               /**< variable array to output */
    int                   nvars               /**< number of variables */
    );
 
@@ -2293,7 +2293,7 @@ extern
 SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
-   SCIP_VAR**            vars,               /**< variable array to outpout */
+   SCIP_VAR**            vars,               /**< variable array to output */
    SCIP_Real*            vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
    int                   nvars               /**< number of variables */
    );
@@ -2309,7 +2309,7 @@ SCIP_RETCODE SCIPparseVar(
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copys variable data if wanted to subscip, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -2395,7 +2395,7 @@ SCIP_RETCODE SCIPgetTransformedVar(
    );
 
 /** gets corresponding transformed variables for an array of variables;
- *  stores NULL in a transvars slot, if the transfored variable is not yet existing;
+ *  stores NULL in a transvars slot, if the transformed variable is not yet existing;
  *  it is possible to call this method with vars == transvars, but remember that variables that are not
  *  yet transformed will be replaced with NULL
  */
@@ -2462,7 +2462,7 @@ SCIP_Real SCIPgetVarRedcost(
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
 
-/** returns the farkas coefficients of the variable in the current node's LP relaxation, 
+/** returns the Farkas coefficients of the variable in the current node's LP relaxation, 
  *  if the variable is not in the current LP, SCIP_INVALID will be returned,
  *  the current node has to have an infeasible LP
  */
@@ -4374,7 +4374,7 @@ SCIP_Real SCIPgetColRedcost(
    SCIP_COL*             col                 /**< LP column */
    );
 
-/** returns the farkas coefficient of a column in the last (infeasible) LP */
+/** returns the Farkas coefficient of a column in the last (infeasible) LP */
 extern
 SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
