@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.103 2010/09/16 14:43:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.104 2010/09/18 19:29:44 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -3076,7 +3076,7 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.tokenbuf[0] = '\0';
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e{866}*/
    }
 
    lpinput.npushedtokens = 0;
@@ -3174,6 +3174,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    /* find indicator constraint handler */
    conshdlrInd = SCIPfindConshdlr(scip, "indicator");
+   consHidden = NULL;
 
    /* if indicator constraint handler is present */
    if ( conshdlrInd != NULL )
