@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_grb.c,v 1.9 2010/08/31 15:50:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_grb.c,v 1.10 2010/09/18 11:06:09 bzfviger Exp $"
 
 /**@file   lpi_grb.c
  * @ingroup LPIS
@@ -2064,6 +2064,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
    */
+   primalfeasible = FALSE;
+   dualfeasible = FALSE;
 
    if ( lpi->solstat == GRB_INF_OR_UNBD
       || (lpi->solstat == GRB_INFEASIBLE && !dualfeasible)
@@ -2631,6 +2633,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
 
    SCIPdebugMessage("checking for primal unboundness\n");
 
+   primalfeasible = FALSE; /* to fix compiler warning */
    SCIP_CALL_ABORT( SCIPlpiGetSolFeasibility(lpi, &primalfeasible, NULL) );
 
    /* Probably GRB_UNBOUNDED means that the problem has an unbounded ray, but not necessarily that a feasible primal solution exists. */
