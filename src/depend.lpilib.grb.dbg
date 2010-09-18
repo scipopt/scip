@@ -1,10 +1,7 @@
-$(LIBOBJDIR)/scip/lpi_msk.o: src/scip/lpi_msk.c lib/mskinc/mosek.h src/scip/lpi.h \
+$(LIBOBJDIR)/scip/lpi_grb.o: src/scip/lpi_grb.c lib/grbinc/gurobi_c.h src/scip/lpi.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
- src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
-$(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
- src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
- src/scip/pub_message.h src/scip/bitencode.h
+ src/blockmemshell/memory.h src/scip/type_lpi.h
 $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_message.h \
