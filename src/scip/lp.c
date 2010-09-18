@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.358 2010/09/18 19:13:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.359 2010/09/18 19:26:24 bzfpfets Exp $"
 
 /**@file   lp.c
- * @brief  LP management methods and datastructures
+ * @brief  LP management methods and data structures
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Marc Pfetsch
@@ -2971,10 +2971,10 @@ SCIP_Real SCIPcolGetFeasibility(
    }
 }
 
-/** calculates the farkas coefficient y^T A_i of a column i using the given dual farkas vector y */
+/** calculates the Farkas coefficient y^T A_i of a column i using the given dual Farkas vector y */
 SCIP_Real SCIPcolCalcFarkasCoef(
    SCIP_COL*             col,                /**< LP column */
-   SCIP_Real*            dualfarkas          /**< dense dual farkas vector for current LP rows */
+   SCIP_Real*            dualfarkas          /**< dense dual Farkas vector for current LP rows */
    )
 {
    SCIP_ROW* row;
@@ -3022,7 +3022,7 @@ SCIP_Real SCIPcolCalcFarkasCoef(
    return farkas;
 }
 
-/** gets the farkas coefficient y^T A_i of a column i in last LP (which must be infeasible) */
+/** gets the Farkas coefficient y^T A_i of a column i in last LP (which must be infeasible) */
 static
 SCIP_Real colCalcInternalFarkasCoef(
    SCIP_COL*             col                 /**< LP column */
@@ -3076,7 +3076,7 @@ SCIP_Real colCalcInternalFarkasCoef(
    return farkas;
 }
 
-/** gets the farkas coefficient of a column in last LP (which must be infeasible) */
+/** gets the Farkas coefficient of a column in last LP (which must be infeasible) */
 SCIP_Real SCIPcolGetFarkasCoef(
    SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -3100,7 +3100,7 @@ SCIP_Real SCIPcolGetFarkasCoef(
    return col->farkascoef;
 }
 
-/** gets the farkas value of a column in last LP (which must be infeasible), i.e. the farkas coefficient y^T A_i times
+/** gets the Farkas value of a column in last LP (which must be infeasible), i.e. the Farkas coefficient y^T A_i times
  *  the best bound for this coefficient, i.e. max{y^T A_i x_i | lb <= x_i <= ub}
  */
 SCIP_Real SCIPcolGetFarkasValue(
@@ -3159,7 +3159,7 @@ SCIP_RETCODE colStrongbranch(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -3259,7 +3259,7 @@ SCIP_RETCODE colStrongbranchesFrac(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -3391,7 +3391,7 @@ SCIP_RETCODE colStrongbranchesInt(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -3527,7 +3527,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchFrac(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    assert(col != NULL);
@@ -3603,7 +3603,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchInt(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    assert(col != NULL);
@@ -3680,7 +3680,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesFrac(
                                               *   otherwise, they can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
                                               *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_COL** subcols;
@@ -3781,7 +3781,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesInt(
                                               *   otherwise, they can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
                                               *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_COL** subcols;
@@ -3948,7 +3948,7 @@ void SCIPcolPrint(
  * Row methods
  */
 
-/** calculates row norms and min/maxidx from scratch, and checks for sortation */
+/** calculates row norms and min/maxidx from scratch, and checks for sorting */
 static
 void rowCalcNorms(
    SCIP_ROW*             row,                /**< LP row */
@@ -4918,7 +4918,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       return SCIP_OKAY;
    }
 
-   /* convert each coefficient into a rational number, calculate the greatest common divisor of the nominators
+   /* convert each coefficient into a rational number, calculate the greatest common divisor of the numerators
     * and the smallest common multiple of the denominators
     */
    gcd = 1;
@@ -5773,7 +5773,7 @@ int SCIProwGetDiscreteScalarProduct(
 
 /** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
  *  p = |v*w|/(|v|*|w|);
- *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
+ *  the hyperplanes are parallel, iff p = 1, they are orthogonal, iff p = 0
  */
 SCIP_Real SCIProwGetParallelism(
    SCIP_ROW*             row1,               /**< first LP row */
@@ -5816,7 +5816,7 @@ SCIP_Real SCIProwGetOrthogonality(
    return 1.0 - SCIProwGetParallelism(row1, row2, orthofunc);
 }
 
-/** gets parallelism of row with objective function: if the returned value is 1, the row is parellel to the objective
+/** gets parallelism of row with objective function: if the returned value is 1, the row is parallel to the objective
  *  function, if the value is 0, it is orthogonal to the objective function
  */
 SCIP_Real SCIProwGetObjParallelism(
@@ -7737,7 +7737,7 @@ SCIP_Real getMaxAbsWeightCalcSparsity(
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
    int*                  nrowinds,           /**< pointer to store number of used rows */
-   int*                  rowlensum           /**< pointer to store total numer of non-zeros in used rows */
+   int*                  rowlensum           /**< pointer to store total number of non-zeros in used rows */
    )
 {
    SCIP_Real maxabsweight;
@@ -8685,7 +8685,7 @@ void roundMIRRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
-   SCIP_Real             f0                  /**< fracional value of rhs */
+   SCIP_Real             f0                  /**< fractional value of rhs */
    )
 {
    SCIP_Real onedivoneminusf0;
@@ -8876,7 +8876,7 @@ void substituteMIRRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  rowinds,            /**< sparsity pattern of used rows */
    int                   nrowinds,           /**< number of used rows */
-   SCIP_Real             f0                  /**< fracional value of rhs */
+   SCIP_Real             f0                  /**< fractional value of rhs */
    )
 {  /*lint --e{715}*/
    SCIP_Real onedivoneminusf0;
@@ -9799,7 +9799,7 @@ void roundStrongCGRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
-   SCIP_Real             f0,                 /**< fracional value of rhs */
+   SCIP_Real             f0,                 /**< fractional value of rhs */
    SCIP_Real             k                   /**< factor to strengthen strongcg cut */
    )
 {
@@ -9982,7 +9982,7 @@ void substituteStrongCGRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  rowinds,            /**< sparsity pattern of used rows */
    int                   nrowinds,           /**< number of used rows */
-   SCIP_Real             f0,                 /**< fracional value of rhs */
+   SCIP_Real             f0,                 /**< fractional value of rhs */
    SCIP_Real             k                   /**< factor to strengthen strongcg cut */
    )
 {  /*lint --e{715}*/
@@ -10453,7 +10453,7 @@ SCIP_RETCODE lpPrimalSimplex(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -10554,7 +10554,7 @@ SCIP_RETCODE lpDualSimplex(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -10689,7 +10689,7 @@ SCIP_RETCODE lpLexDualSimplex(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -11225,7 +11225,7 @@ SCIP_RETCODE lpBarrier(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             crossover,          /**< should crossover be performed? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -11323,7 +11323,7 @@ SCIP_RETCODE lpAlgorithm(
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    SCIP_Bool*            timelimit,          /**< pointer to store whether the time limit was hit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_Real lptimelimit;
@@ -11405,7 +11405,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    SCIP_Bool*            timelimit,          /**< pointer to store whether the time limit was hit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_Bool success;
@@ -11754,7 +11754,7 @@ SCIP_RETCODE lpSolve(
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_Bool solvedprimal;
@@ -11915,7 +11915,7 @@ SCIP_RETCODE lpFlushAndSolve(
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_Bool resolve;
@@ -12061,7 +12061,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -12079,7 +12079,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    retcode = SCIP_OKAY;
    *lperror = FALSE;
 
-   /* check whether we need a proof of unboundness or infeasibility by a primal or dual ray */
+   /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
    needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve
       || (set->conf_enable && set->conf_useinflp));
@@ -12429,7 +12429,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    assert(!(*lperror) || !lp->solved);
 
  TERMINATE:
-   /* if the LP had to be solved from scratch, we have to reset this flag since it is stored in the LPi; otherwise it
+   /* if the LP had to be solved from scratch, we have to reset this flag since it is stored in the LPI; otherwise it
     * may happen that we continue to solve from scratch during strong branching */
    if( lp->lpifromscratch )
    {
@@ -13560,7 +13560,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    return SCIP_OKAY;
 }
 
-/** stores the dual farkas multipliers for infeasibility proof in rows */
+/** stores the dual Farkas multipliers for infeasibility proof in rows */
 SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -14535,7 +14535,7 @@ static
 SCIP_RETCODE provedBound(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             usefarkas,          /**< use y = dual farkas and c = 0 instead of y = dual solution and c = obj? */
+   SCIP_Bool             usefarkas,          /**< use y = dual Farkas and c = 0 instead of y = dual solution and c = obj? */
    SCIP_Real*            bound               /**< result of interval arithmetic minimization */
    )
 {
@@ -14670,7 +14670,7 @@ SCIP_RETCODE SCIPlpIsInfeasibilityProved(
 
    *proved = (bound > 0.0);
 
-   SCIPdebugMessage("proved farkas value of LP: %g -> infeasibility %sproved\n", bound, *proved ? "" : "not ");
+   SCIPdebugMessage("proved Farkas value of LP: %g -> infeasibility %sproved\n", bound, *proved ? "" : "not ");
 
    return SCIP_OKAY;
 }
@@ -14702,7 +14702,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Bool             origobj,            /**< should the original objective function be used? */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    
-   SCIP_Real             objscale,           /**< objective scaling faktor */
+   SCIP_Real             objscale,           /**< objective scaling factor */
    SCIP_Real             objoffset           /**< objective offset, e.g., caused by variable fixings in presolving */
    )
 {
@@ -14736,7 +14736,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 
    if( origobj && objoffset != 0.0 )
    {
-      SCIPmessageFPrintInfo(file, "\\ An artifical variable 'objoffset' has been added and fixed to 1.\n"); 
+      SCIPmessageFPrintInfo(file, "\\ An artificial variable 'objoffset' has been added and fixed to 1.\n"); 
       SCIPmessageFPrintInfo(file, "\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
    }
    
@@ -15277,7 +15277,7 @@ SCIP_Real SCIProwGetConstant(
    return row->constant;
 }
 
-/** gets euclidean norm of row vector */
+/** gets Euclidean norm of row vector */
 SCIP_Real SCIProwGetNorm(
    SCIP_ROW*             row                 /**< LP row */
    )
@@ -15330,7 +15330,7 @@ SCIP_Real SCIProwGetDualsol(
       return 0.0;
 }
 
-/** gets the dual farkas coefficient of a row in an infeasible LP */
+/** gets the dual Farkas coefficient of a row in an infeasible LP */
 SCIP_Real SCIProwGetDualfarkas(
    SCIP_ROW*             row                 /**< LP row */
    )
@@ -15543,7 +15543,7 @@ int SCIPlpGetNNewrows(
    return lp->nrows - lp->firstnewrow;
 }
 
-/** recalculates euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
+/** recalculates Euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
 void SCIPlpRecalculateObjSqrNorm(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< LP data */
@@ -15572,7 +15572,8 @@ void SCIPlpRecalculateObjSqrNorm(
    }
    return;
 }
-/** gets euclidean norm of objective function vector of column variables, only use this method if
+
+/** gets Euclidean norm of objective function vector of column variables, only use this method if
  *  lp->objsqrnormunreliable == FALSE, so probably you have to call SCIPlpRecalculateObjSqrNorm before */
 SCIP_Real SCIPlpGetObjNorm(
    SCIP_LP*              lp                  /**< LP data */

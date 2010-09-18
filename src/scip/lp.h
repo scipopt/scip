@@ -12,11 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.142 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.143 2010/09/18 19:26:25 bzfpfets Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  * @author Kati Wolter
  */
 
@@ -171,14 +172,14 @@ SCIP_Real SCIPcolGetFeasibility(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** calculates the farkas coefficient y^T A_i of a column i using the given dual farkas vector y */
+/** calculates the Farkas coefficient y^T A_i of a column i using the given dual Farkas vector y */
 extern
 SCIP_Real SCIPcolCalcFarkasCoef(
    SCIP_COL*             col,                /**< LP column */
-   SCIP_Real*            dualfarkas          /**< dense dual farkas vector for current LP rows */
+   SCIP_Real*            dualfarkas          /**< dense dual Farkas vector for current LP rows */
    );
 
-/** gets the farkas coefficient y^T A_i of a column i in last LP (which must be infeasible) */
+/** gets the Farkas coefficient y^T A_i of a column i in last LP (which must be infeasible) */
 extern
 SCIP_Real SCIPcolGetFarkasCoef(
    SCIP_COL*             col,                /**< LP column */
@@ -186,7 +187,7 @@ SCIP_Real SCIPcolGetFarkasCoef(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** gets the farkas value of a column in last LP (which must be infeasible), i.e. the farkas coefficient y^T A_i times
+/** gets the Farkas value of a column in last LP (which must be infeasible), i.e. the Farkas coefficient y^T A_i times
  *  the best bound for this coefficient, i.e. max{y^T A_i x_i | lb <= x_i <= ub}
  */
 extern
@@ -221,7 +222,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchFrac(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
 /** gets strong branching information on a column variable with integral value */
@@ -237,7 +238,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchInt(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
 /** gets strong branching information on column variables with fractional values */
@@ -255,7 +256,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesFrac(
                                               *   otherwise, they can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
                                               *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
 /** gets strong branching information on column variables with integral values */
@@ -273,7 +274,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesInt(
                                               *   otherwise, they can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
                                               *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
 /** gets last strong branching information available for a column variable;
@@ -650,7 +651,7 @@ SCIP_Bool SCIProwIsSolEfficacious(
    SCIP_Bool             root                /**< should the root's minimal cut efficacy be used? */
    );
 
-/** gets parallelism of row with objective function: if the returned value is 1, the row is parellel to the objective
+/** gets parallelism of row with objective function: if the returned value is 1, the row is parallel to the objective
  *  function, if the value is 0, it is orthogonal to the objective function
  */
 extern
@@ -976,7 +977,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
 /** gets solution status of current LP */
@@ -1155,7 +1156,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
-/** stores the dual farkas multipliers for infeasibility proof in rows */
+/** stores the dual Farkas multipliers for infeasibility proof in rows */
 extern
 SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1303,11 +1304,11 @@ SCIP_RETCODE SCIPlpWriteMip(
                                               *   troubles with reserved symbols? */
    SCIP_Bool             origobj,            /**< should the original objective function be used? */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
-   SCIP_Real             objscale,           /**< objective scaling faktor */
+   SCIP_Real             objscale,           /**< objective scaling factor */
    SCIP_Real             objoffset           /**< objective offset, eg. caused by variable fixings in presolving */
 );
 
-/** recalculates euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
+/** recalculates Euclidean norm of objective function vector of column variables if it have gotten unreliable during calculation */
 extern
 void SCIPlpRecalculateObjSqrNorm(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1368,7 +1369,7 @@ int SCIPlpGetNNewrows(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** gets euclidean norm of objective function vector of column variables, only use this method if
+/** gets Euclidean norm of objective function vector of column variables, only use this method if
  *  lp->objsqrnormunreliable == FALSE, so probably you have to call SCIPlpRecalculateObjSqrNorm before */
 extern
 SCIP_Real SCIPlpGetObjNorm(
