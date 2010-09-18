@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.256 2010/09/17 16:32:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.257 2010/09/18 19:35:29 bzfpfets Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -424,7 +424,9 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPpricerCopyInclude(sourceset->pricers[p], targetset, &valid) );
          *allvalid = *allvalid && valid;
          if( SCIPpricerIsActive(sourceset->pricers[p]) )
-            SCIPactivatePricer(targetset->scip, targetset->pricers[p]);
+         {
+            SCIP_CALL( SCIPactivatePricer(targetset->scip, targetset->pricers[p]) );
+         }
       }
    }
 
@@ -1947,7 +1949,7 @@ void SCIPsetSetNodeLimit(
    SCIP_Longint          limit               /**< node limit */
    )
 {
-   assert(SCIPsetIsGE(set, limit, -1LL));
+   assert( limit >= -1LL );
    set->limit_nodes = limit;
 }
 
@@ -1957,7 +1959,7 @@ void SCIPsetSetStallnodeLimit(
    SCIP_Longint          limit               /**< stall node limit */
    )
 {
-   assert(SCIPsetIsGE(set, limit, -1LL));
+   assert( limit >= -1LL );
    set->limit_stallnodes = limit;
 }
 
@@ -1967,7 +1969,7 @@ void SCIPsetSetSolutionLimit(
    int                   limit               /**< solution limit */
    )
 {
-   assert(SCIPsetIsGE(set, limit, -1));
+   assert( limit >= -1 );
    set->limit_solutions = limit;
 }
 
@@ -1977,7 +1979,7 @@ void SCIPsetSetBestsolutionLimit(
    int                   limit               /**< best solution limit */
    )
 {
-   assert(SCIPsetIsGE(set, limit, -1));
+   assert( limit >= -1 );
    set->limit_bestsol = limit;
 }
 
@@ -1987,7 +1989,7 @@ void SCIPsetSetMaxsolutionStored(
    int                   limit               /**< maximum number of solution stored */
    )
 {
-   assert(SCIPsetIsGE(set, limit, -1));
+   assert( limit >= -1 );
    set->limit_maxsol = limit;
 }
    
@@ -1997,7 +1999,7 @@ void SCIPsetSetRestartLimit(
    int                   limit               /**< maximum number of solution stored */
    )
 {
-   assert(SCIPsetIsGE(set, limit, -1));
+   assert( limit >= -1 );
    set->limit_restarts = limit;
 }
 
