@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.385 2010/09/15 18:59:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.386 2010/09/18 11:19:39 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4878,7 +4878,7 @@ SCIP_RETCODE tightenSides(
 #define MAXVALRECOMP 1e+06
 
 /** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
- *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continouos variable  li <= xi <= ui
+ *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continuous variable  li <= xi <= ui
  *  let minact := min{a*x + ai*xi}, maxact := max{a*x + ai*xi}
  *  (i) ai >= 0:
  *      if  minact + ai >= lhs  and  maxact - ai <= rhs: (**)
