@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.314 2010/09/17 08:42:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.315 2010/09/18 19:36:13 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -241,7 +241,7 @@ SCIP_RETCODE propagationRound(
    SCIP_Bool*            propagain,          /**< pointer to store whether propagation should be applied again */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
-{
+{  /*lint --e{715}*/
    SCIP_RESULT result;
    SCIP_Bool abortoncutoff;
    int i;
