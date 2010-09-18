@@ -1909,6 +1909,14 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    return SCIP_OKAY;
 }
 
+#if (XPVERSION >= 18)
+extern
+int XPRS_CC XPRSstrongbranch
+( XPRSprob prob, const int _nbnd, const int *_mbndind,
+   const char *_cbndtype, const double *_dbndval,
+   const int _itrlimit, double *_dsbobjval, int *_msbstatus );
+#endif
+
 /** performs strong branching iterations on one candidate */
 static
 SCIP_RETCODE lpiStrongbranch(
@@ -1957,10 +1965,6 @@ SCIP_RETCODE lpiStrongbranch(
       double dobjval[2];
       int    mstatus[2];
 
-      int XPRS_CC XPRSstrongbranch
-        ( XPRSprob prob, const int _nbnd, const int *_mbndind, 
-	  const char *_cbndtype, const double *_dbndval,
-          const int _itrlimit, double *_dsbobjval, int *_msbstatus );
 
       /* Set the branching bounds (down first, up second). */
       mbndind[0]  = col;
@@ -2131,25 +2135,20 @@ SCIP_RETCODE lpiStrongbranches(
       double* dobjval;
       int*    mstatus;
 
-      int XPRS_CC XPRSstrongbranch
-        ( XPRSprob prob, const int _nbnd, const int *_mbndind, 
-	  const char *_cbndtype, const double *_dbndval,
-          const int _itrlimit, double *_dsbobjval, int *_msbstatus );
-
       /* Set the branching bounds (down first, up second). */
-      BMSallocMemoryArray(mbndind, 2*ncols;)
-      BMSallocMemoryArray(dbndval, 2*ncols);
-      BMSallocMemoryArray(cbndtype, 2*ncols);
-      BMSallocMemoryArray(dobjval, 2*ncols);
-      BMSallocMemoryArray(mstatus, 2*ncols);
+      BMSallocMemoryArray(&mbndind, 2*ncols);
+      BMSallocMemoryArray(&dbndval, 2*ncols);
+      BMSallocMemoryArray(&cbndtype, 2*ncols);
+      BMSallocMemoryArray(&dobjval, 2*ncols);
+      BMSallocMemoryArray(&mstatus, 2*ncols);
 
       for (j = 0; j < ncols; ++j)
       {
-         mbndind[2*j]  = col;
+         mbndind[2*j]  = cols[j];
          dbndval[2*j]  = EPSCEIL(psols[j] - 1.0, 1e-06);
          cbndtype[2*j] = 'U';
 
-         mbndind[2*j+1]  = col;
+         mbndind[2*j+1]  = cols[j];
          dbndval[2*j+1]  = EPSFLOOR(psols[j] + 1.0, 1e-06);
          cbndtype[2*j+1] = 'L';
       }
@@ -2190,11 +2189,11 @@ SCIP_RETCODE lpiStrongbranches(
       if (iter) 
          *iter = -1;
 
-      BMSfreeMemoryArray(mstatus);
-      BMSfreeMemoryArray(dobjval);
-      BMSfreeMemoryArray(cbndtype);
-      BMSfreeMemoryArray(dbndval);
-      BMSfreeMemoryArray(mbndind)
+      BMSfreeMemoryArray(&mstatus);
+      BMSfreeMemoryArray(&dobjval);
+      BMSfreeMemoryArray(&cbndtype);
+      BMSfreeMemoryArray(&dbndval);
+      BMSfreeMemoryArray(&mbndind)
    }
 #else
    {
@@ -2334,7 +2333,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    )
 {
    /* pass call on to lpiStrongbranches() */
-   SCIP_CALL( lpiStrongbranches(lpi, cols, psols, itlim, down, up, downvalid, upvalid, iter) );
+   SCIP_CALL( lpiStrongbranches(lpi, cols, ncols, psols, itlim, down, up, downvalid, upvalid, iter) );
 
    return SCIP_OKAY;
 }
@@ -2377,7 +2376,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    )
 {
    /* pass call on to lpiStrongbranches() */
-   SCIP_CALL( lpiStrongbranches(lpi, cols, psols, itlim, down, up, downvalid, upvalid, iter) );
+   SCIP_CALL( lpiStrongbranches(lpi, cols, ncols, psols, itlim, down, up, downvalid, upvalid, iter) );
 
    return SCIP_OKAY;
 }
