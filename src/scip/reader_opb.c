@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.59 2010/09/18 19:39:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.60 2010/09/18 22:08:13 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -2031,7 +2031,7 @@ SCIP_RETCODE computeAndConstraintInfos(
                
                /* try to resolve containing ands */
                (*nandvars)[r] = (*nandvars)[r] + (*nandvars)[pos] - 1;
-               SCIP_CALL( SCIPreallocMemoryArray(scip, &((*andvars)[r]), (*nandvars)[r]) );  /*lint !e{866}*/
+               SCIP_CALL( SCIPreallocMemoryArray(scip, &((*andvars)[r]), (*nandvars)[r]) );  /*lint !e866 */
                
                for( a = (*nandvars)[pos] - 1; a >= 0; --a )
                   (*andvars)[r][(*nandvars)[r] - a - 1] = (*andvars)[pos][a];

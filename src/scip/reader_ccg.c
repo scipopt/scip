@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.15 2010/09/18 19:29:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.16 2010/09/18 22:08:13 bzfpfets Exp $"
 
 /**@file   reader_ccg.c
  * @ingroup FILEREADERS 
@@ -95,8 +95,8 @@ SCIP_RETCODE initGraph(
       G->deg[i] = 0;
       G->size[i] = initSize;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &(G->A[i]), (int) initSize) );   /*lint !e{866}*/
-      SCIP_CALL( SCIPallocBufferArray(scip, &(G->W[i]), (int) initSize) );   /*lint !e{866}*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(G->A[i]), (int) initSize) );   /*lint !e866 */
+      SCIP_CALL( SCIPallocBufferArray(scip, &(G->W[i]), (int) initSize) );   /*lint !e866 */
 
       G->A[i][0] = -1;
    }
@@ -139,8 +139,8 @@ SCIP_RETCODE ensureEdgeCapacity(
    {
       unsigned int newSize;
       newSize = G->size[node] * 2;
-      SCIP_CALL( SCIPreallocBufferArray(scip, &(G->A[node]), (int) newSize) );  /*lint !e{866}*/
-      SCIP_CALL( SCIPreallocBufferArray(scip, &(G->W[node]), (int) newSize) );  /*lint !e{866}*/
+      SCIP_CALL( SCIPreallocBufferArray(scip, &(G->A[node]), (int) newSize) );  /*lint !e866 */
+      SCIP_CALL( SCIPreallocBufferArray(scip, &(G->W[node]), (int) newSize) );  /*lint !e866 */
       G->size[node] = newSize;
    }
 
