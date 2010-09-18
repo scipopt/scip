@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.90 2010/09/16 17:33:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.91 2010/09/18 19:28:43 bzfpfets Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2424,12 +2424,12 @@ SCIP_RETCODE paramsetSetDefault(
 {
    SCIP_PARAM* param;
    int nparams;
-   int prefixlen;
+   size_t prefixlen;
    int p;
 
    nparams = paramset->nparams;
    prefixlen = strlen(prefix);
-   
+
    for( p = 0; p < nparams; ++p )
    {
       param = paramset->params[p];
@@ -2450,7 +2450,7 @@ SCIP_RETCODE paramsetSetHeuristicsDefault(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
-{
+{  /*lint --e{715}*/
    /* reset all parameter which start with "heuristics" in their name to default */
    SCIP_CALL( paramsetSetDefault(paramset, scip, "heuristics") );
 
@@ -2622,7 +2622,7 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLR** conshdlrs;
    SCIP_PARAM* param;
    char paramname[SCIP_MAXSTRLEN];
@@ -2826,7 +2826,7 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLR** conshdlrs;
    char paramname[SCIP_MAXSTRLEN];
    int nconshdlrs;
@@ -3231,7 +3231,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramsetSetPresolvingFast(paramset, scip, quiet) );
       
       /* reduce the amount of strong branching */
-      SCIP_CALL( paramSetReal(scip, paramset, "branching/relpscost/maxreliable", 1, quiet) );
+      SCIP_CALL( paramSetReal(scip, paramset, "branching/relpscost/maxreliable", 1.0, quiet) );
       SCIP_CALL( paramSetInt(scip, paramset, "branching/relpscost/inititer", 10, quiet) );
       
       /* reduce the amount of separation rounds */
@@ -3246,8 +3246,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* increase the amount of strong branching */
       SCIP_CALL( paramSetInt(scip, paramset, "branching/fullstrong/maxdepth", 10, quiet) );
-      SCIP_CALL( paramSetReal(scip, paramset, "branching/fullstrong/maxbounddist", 0, quiet) );
-      SCIP_CALL( paramSetReal(scip, paramset, "branching/relpscost/sbiterquot", 1, quiet) );
+      SCIP_CALL( paramSetReal(scip, paramset, "branching/fullstrong/maxbounddist", 0.0, quiet) );
+      SCIP_CALL( paramSetReal(scip, paramset, "branching/relpscost/sbiterquot", 1.0, quiet) );
       SCIP_CALL( paramSetInt(scip, paramset, "branching/relpscost/sbiterofs", 1000000, quiet) );
 
       break;
