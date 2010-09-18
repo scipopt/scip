@@ -21,7 +21,8 @@ do
     do
         # check if the header for the LP solver are available,
         # or we are in the special case "none"
-        if test -e lib/$LPS"inc" -o "$LPS" == "none"
+        # in the case "qso", the include directory is called qsinc
+        if [ -e lib/$LPS"inc" ] || [ "$LPS" == "none" ] || [ "$LPS" == "qso" -a -e lib/qsinc ]
         then
              make LPS=$LPS OPT=$OPT lpidepend
         fi
