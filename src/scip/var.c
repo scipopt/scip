@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.302 2010/09/17 16:34:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.303 2010/09/18 19:38:02 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2560,7 +2560,7 @@ void printHolelist(
    SCIP_HOLELIST*        holelist,           /**< hole list pointer to hole of interest */
    const char*           name                /**< hole type name */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real left;
    SCIP_Real right;
 
