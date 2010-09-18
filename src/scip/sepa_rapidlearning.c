@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.32 2010/09/17 16:36:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.33 2010/09/18 19:36:52 bzfpfets Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -592,7 +592,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPdebugMessage("Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n", nconflicts, nbdchgs, soladded ? "found" : "no", 
       dualboundchg ? "found" : "no");
 
-   SCIPdebugMessage("Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", 100*n1startinfers/(SCIP_Real)nvars, 100*n2startinfers/(SCIP_Real)nvars);
+   SCIPdebugMessage("Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", 
+      100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
 
    /* change result pointer */
    if( nconflicts > 0 || dualboundchg )
