@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.58 2010/09/14 10:25:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.59 2010/09/18 19:39:12 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1525,7 +1525,7 @@ SCIP_RETCODE readConstraints(
          if( created )
          {
             /* we have already created one indicator constraint with the same indicator variable */
-            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );  /*lint !e{644}*/
             SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1749,8 +1749,8 @@ SCIP_RETCODE readOPBFile(
       else
          topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost);
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, "topcost", ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip), topcostrhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, "topcost", ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip),
+            (SCIP_Real) topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, topcostcons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, topcostcons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &topcostcons) );
@@ -1762,7 +1762,7 @@ SCIP_RETCODE readOPBFile(
    for( i = opbinput->nconsanddata - 1; i >= 0; --i )
    {
       SCIPfreeMemoryArray(scip, &((opbinput->consanddata)[i]->vars) );
-      SCIPfreeBlockMemory(scip, &(opbinput->consanddata)[i] );
+      SCIPfreeBlockMemory(scip, &((opbinput->consanddata)[i]) );
    }
 
    /* free dynamically allocated memory */
@@ -2031,7 +2031,7 @@ SCIP_RETCODE computeAndConstraintInfos(
                
                /* try to resolve containing ands */
                (*nandvars)[r] = (*nandvars)[r] + (*nandvars)[pos] - 1;
-               SCIP_CALL( SCIPreallocMemoryArray(scip, &((*andvars)[r]), (*nandvars)[r]) );
+               SCIP_CALL( SCIPreallocMemoryArray(scip, &((*andvars)[r]), (*nandvars)[r]) );  /*lint !e{866}*/
                
                for( a = (*nandvars)[pos] - 1; a >= 0; --a )
                   (*andvars)[r][(*nandvars)[r] - a - 1] = (*andvars)[pos][a];
@@ -2279,8 +2279,7 @@ SCIP_RETCODE printNLRow(
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
    int const*const       nandvars,           /**< array of numbers of corresponding and-variables */
    SCIP_Longint*const    mult,               /**< multiplier for the coefficients */  
-   char const*const      multisymbol,        /**< the multiplication symbol to use between coefficient and variable */
-   SCIP_Bool const       transformed         /**< transformed constraint? */
+   char const*const      multisymbol         /**< the multiplication symbol to use between coefficient and variable */
    )
 {
    SCIP_VAR* var;
@@ -2440,7 +2439,7 @@ SCIP_RETCODE printNonLinearCons(
 
       /* equal constrain */
       SCIP_CALL( printNLRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, resvars, nresvars,
-            andvars, nandvars, &mult, multisymbol, transformed) );
+            andvars, nandvars, &mult, multisymbol) );
    }
    else
    { 
@@ -2448,7 +2447,7 @@ SCIP_RETCODE printNonLinearCons(
       {
          /* print inequality ">=" */
          SCIP_CALL( printNLRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, resvars, nresvars,
-               andvars, nandvars, &mult, multisymbol, transformed) );
+               andvars, nandvars, &mult, multisymbol) );
       }
 
       
@@ -2458,7 +2457,7 @@ SCIP_RETCODE printNonLinearCons(
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
          SCIP_CALL( printNLRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, resvars, nresvars,
-               andvars, nandvars, &mult, multisymbol, transformed) );
+               andvars, nandvars, &mult, multisymbol) );
       }
    }
    
@@ -3155,7 +3154,7 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_Bool          genericnames,       /**< should generic variable and constraint names be used */
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    )
-{
+{  /*lint --e{715}*/
    if( nvars != nbinvars )
    {
       SCIPwarningMessage("OPB format is only capable for binary problems.\n");
