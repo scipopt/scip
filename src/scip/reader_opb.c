@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.60 2010/09/18 22:08:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.61 2010/09/18 22:19:16 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1525,7 +1525,7 @@ SCIP_RETCODE readConstraints(
          if( created )
          {
             /* we have already created one indicator constraint with the same indicator variable */
-            SCIP_CALL( SCIPaddCons(scip, cons) );  /*lint !e{644}*/
+            SCIP_CALL( SCIPaddCons(scip, cons) );  /*lint !e644*/
             SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
