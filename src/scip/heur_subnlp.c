@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.38 2010/09/16 09:25:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.39 2010/09/18 19:09:35 bzfpfets Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -865,7 +865,7 @@ SCIP_RETCODE solveSubNLP(
 
    /* presolve subSCIP */
    /* set node limit to 1 so that presolve can go */
-   SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1) );
+   SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
    if( SCIPpressedCtrlC(heurdata->subscip) )
    {
@@ -889,14 +889,14 @@ SCIP_RETCODE solveSubNLP(
       SCIPmarkRequireNLP(heurdata->subscip);
 
       /* do init solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
-      SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0) );
+      SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
       SCIP_CALL( SCIPsolve(heurdata->subscip) );
       
       /* If no NLP was constructed, then there were no nonlinearities after presolve.
        * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem. */
       if( !SCIPisNLPConstructed(heurdata->subscip) )
       {
-         SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1) );
+         SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
          SCIP_CALL( SCIPsolve(heurdata->subscip) );
       }
    }
