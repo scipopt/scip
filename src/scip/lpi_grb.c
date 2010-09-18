@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_grb.c,v 1.10 2010/09/18 11:06:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_grb.c,v 1.11 2010/09/18 11:18:48 bzfviger Exp $"
 
 /**@file   lpi_grb.c
  * @ingroup LPIS
@@ -1163,8 +1163,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    CHECK_ZERO( GRBfreemodel(lpi->grbmodel) );
 
    /* load model - all variables are continuous */
-   CHECK_ZERO( GRBloadmodel(grbenv, &(lpi->grbmodel), NULL, ncols, nrows, objsen, 0.0, obj,
-	 lpi->senarray, lpi->rhsarray, beg, cnt, ind, val, lb, ub, NULL, colnames, rownames) );
+   CHECK_ZERO( GRBloadmodel(grbenv, &(lpi->grbmodel), NULL, ncols, nrows, objsen, 0.0, (SCIP_Real*)obj,
+	 lpi->senarray, lpi->rhsarray, (int*)beg, cnt, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames, rownames) );
    CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
 
    /* free temporary memory */
@@ -1211,7 +1211,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    invalidateSolution(lpi);
 
    /* add columns - all new variables are continuous */
-   CHECK_ZERO( GRBaddvars(lpi->grbmodel, ncols, nnonz, beg, ind, val, obj, lb, ub, NULL, colnames) )
+   CHECK_ZERO( GRBaddvars(lpi->grbmodel, ncols, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)obj, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames) )
    CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
@@ -1323,7 +1323,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert( rngcount == 0 );
 
    /* add rows to LP */
-   CHECK_ZERO( GRBaddconstrs(lpi->grbmodel, nrows, nnonz, beg, ind, val, lpi->senarray, lpi->rhsarray, rownames) );
+   CHECK_ZERO( GRBaddconstrs(lpi->grbmodel, nrows, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val, lpi->senarray, lpi->rhsarray, rownames) );
    CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
@@ -1461,8 +1461,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_LB, ncols, ind, lb) );
-   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_UB, ncols, ind, ub) );
+   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_LB, ncols, (int*)ind, (SCIP_Real*)lb) );
+   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_UB, ncols, (int*)ind, (SCIP_Real*)ub) );
 
    CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
 
@@ -1494,8 +1494,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert( rngcount == 0 );
 
    /* change row sides */
-   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_RHS, nrows, ind, lpi->rhsarray) );
-   CHECK_ZERO( GRBsetcharattrlist(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, nrows, ind, lpi->senarray) );
+   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_RHS, nrows, (int*)ind, lpi->rhsarray) );
+   CHECK_ZERO( GRBsetcharattrlist(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, nrows, (int*)ind, lpi->senarray) );
 
    CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
 
