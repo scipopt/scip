@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.48 2010/09/13 07:16:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.49 2010/09/18 19:08:20 bzfpfets Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -423,7 +423,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
-      SCIPincludeDefaultPlugins(subscip);
+      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
       /* get name of the original problem and add the string "_renssub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
