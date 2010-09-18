@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.91 2010/09/17 20:30:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.92 2010/09/18 22:12:57 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3029,8 +3029,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
       }
 
-      /* only run if sucess is possible */
-      if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+      /* only run if success is possible */
+      if ( nrounds == 0 || nnewfixedvars > 0 || nnewchgbds > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
       {
          SCIP_Bool infeasible;
          SCIP_Bool fixed;
