@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.29 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.30 2010/09/18 21:14:38 bzfheinz Exp $"
 
 /**@file   heur_intdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -419,7 +419,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
          /* get the LP solution value */
          solval = SCIPvarGetLPSol(var);
 
-#if 0 /*??????????????????*/
+#if 0 
          /* ignore binary variables that are currently integral */
          if( SCIPisFeasIntegral(scip, solval) )
             continue;
@@ -469,11 +469,9 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
             solval = SCIPvarGetLPSol(var);
             frac = SCIPfrac(scip, solval);
 
-#if 1 /*??????????????????*/
             /* ignore integer variables that are currently integral */
             if( SCIPisFeasFracIntegral(scip, frac) )
                continue;
-#endif
 
             if( frac < bestfrac )
             {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.159 2010/09/14 10:43:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.160 2010/09/18 21:14:38 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1131,8 +1131,9 @@ SCIP_RETCODE conflictInsertConflictset(
          conflictsetFree(conflictset, blkmem);
          return SCIP_OKAY;
       }
+
       /**@todo like in sepastore.c: calculate overlap between conflictsets -> large overlap reduces score */
-      /*???????????????????????? like in sepastore.c: calculate overlap between conflictsets -> large overlap reduces score */
+      
    }
 
    /* insert conflictset into the sorted conflictsets array*/

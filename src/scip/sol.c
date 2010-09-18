@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.95 2010/08/06 13:25:55 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.96 2010/09/18 21:14:38 bzfheinz Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1201,7 +1201,6 @@ SCIP_RETCODE SCIPsolRetransform(
    }
 
    /**@todo remember the variables without original counterpart (priced variables) in the solution */
-   /*???????????????????????? remember the variables without original counterpart (priced variables) in the solution */
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &solvals);

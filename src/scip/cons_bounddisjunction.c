@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.40 2010/09/13 20:08:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.41 2010/09/18 21:14:38 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -55,7 +55,7 @@
 
 
 /**@todo make this a parameter setting */
-#if 1 /*???????????????? test which AGEINCREASE formula is better! */
+#if 1 /**@todo test which AGEINCREASE formula is better! */
 #define AGEINCREASE(n) (1.0 + 0.2*n)
 #else
 #define AGEINCREASE(n) (0.1*n)
