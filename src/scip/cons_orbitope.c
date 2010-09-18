@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.18 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.19 2010/09/18 19:30:18 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -128,10 +128,10 @@ SCIP_RETCODE consdataFree(
    q = (*consdata)->nblocks;
    for (i = 0; i < p; ++i)
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);    /*lint !e{866}*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);     /*lint !e{866}*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);  /*lint !e{866}*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);     /*lint !e{866}*/
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
@@ -172,10 +172,10 @@ SCIP_RETCODE consdataCreate(
 
    for (i = 0; i < nspcons; ++i)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals[i], nblocks) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals[i], nblocks) );                 /*lint !e{866}*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );              /*lint !e{866}*/
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );    /*lint !e{866}*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e{866}*/
    }
 
    (*consdata)->tmpvals = NULL;
@@ -1959,7 +1959,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nspcons) );
    for (i = 0; i < nspcons; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), nblocks) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), nblocks) );  /*lint !e{866}*/
 
       for (j = 0; j < nblocks; ++j)
       {
@@ -1987,7 +1987,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseOrbitope)
-{
+{  /*lint --e{715}*/
    const char* s;
    SCIP_Bool ispart;
    char varname[SCIP_MAXSTRLEN];
@@ -2062,7 +2062,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
 
 	 nblocks = j;
 	 newsize = SCIPcalcMemGrowSize(scip, nblocks);
-	 SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );
+	 SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );    /*lint !e{866}*/
 	 maxnblocks = newsize;
 	 assert( nblocks <= maxnblocks );
       }
@@ -2087,7 +2087,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
 	 }
 	 assert( nspcons <= maxnspcons );
 
-	 SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons]), nblocks) );
+	 SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons]), nblocks) );  /*lint !e{866}*/
 	 j = 0;
       }
    }

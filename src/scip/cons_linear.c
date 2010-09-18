@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.386 2010/09/18 11:19:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.387 2010/09/18 19:30:18 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9671,8 +9671,9 @@ SCIP_DECL_CONSPARSE(consParseLinear)
                lhs = coefsign * coef;
                rhs = coefsign * coef;
                break;
+            case CIP_SENSE_NOTHING:
             default:
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected unknown sense <%d>)\n", sense);
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: unknown sense <%d>)\n", sense);
                (*success) = FALSE;
             }
             sense = CIP_SENSE_NOTHING;

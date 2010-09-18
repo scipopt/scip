@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.22 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.23 2010/09/18 19:30:18 bzfpfets Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -158,7 +158,7 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
    assert(branchruledata != NULL);
 
    /* set the seed value to the initial random seed value */
-   branchruledata->seed = branchruledata->initseed;
+   branchruledata->seed = (unsigned int) branchruledata->initseed;
    
    return SCIP_OKAY;
 }
