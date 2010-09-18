@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.14 2010/09/18 19:30:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.15 2010/09/18 22:18:07 bzfpfets Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -460,7 +460,7 @@ SCIP_Bool checkConstraintMatching(
     * for each variable 
     */
    return ( SCIPisFeasLE(scip, matchingrate, (nnonzeros1 - nrows1not2) / (SCIP_Real)(nnonzeros1)) ||
-      SCIPisFeasLE(scip, matchingrate, (nnonzeros2 - nrows2not1) / (SCIP_Real)(nnonzeros2)) );  /*lint !e{795}*/
+      SCIPisFeasLE(scip, matchingrate, (nnonzeros2 - nrows2not1) / (SCIP_Real)(nnonzeros2)) );  /*lint !e795 */
 }
 
 /** determines a bound by which the absolute solution value of two integer variables can be shifted at most.
@@ -620,14 +620,14 @@ SCIP_Real determineBound(
 	 if( !SCIPisInfinity(scip, -lhs) && SCIPisFeasLT(scip, activity + effect * bound, lhs) )
          {
             assert(SCIPisNegative(scip, effect));
-            bound = SCIPfeasFloor(scip, (lhs - activity)/effect);             
+            bound = SCIPfeasFloor(scip, (lhs - activity)/effect); /*lint !e795 */
          }
 	 
 	 /* if the row has an upper bound, ensure that shifting preserves feasibility of this "<="-constraint */
          if( !SCIPisInfinity(scip, rhs) && SCIPisFeasGT(scip, activity + effect * bound, rhs) )
          {
             assert(SCIPisPositive(scip, effect));
-            bound = SCIPfeasFloor(scip, (rhs - activity)/effect);
+            bound = SCIPfeasFloor(scip, (rhs - activity)/effect); /*lint !e795 */
          }
       }
       
@@ -823,7 +823,7 @@ SCIP_RETCODE presolveTwoOpt(
 
    heurdata->nbinvars = nbinvars;
 
-   heurdata->execute = nbinvars > 1 && !equalcoeffs && heurdata->nbinblocks > 0;  /*lint !e{644}*/   
+   heurdata->execute = nbinvars > 1 && !equalcoeffs && heurdata->nbinblocks > 0;  /*lint !e644 */   
 
 #ifdef STATISTIC_INFORMATION        
    if( !equalcoeffs )
