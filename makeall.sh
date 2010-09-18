@@ -3,6 +3,7 @@
 # This scripts compiles SCIP for all LP solver for which the links exit
 #
 
+MAKEFLAG=$1
 
 LPSS=(cpx spx spx132 xprs msk clp grb qso)
 OPTS=(opt dbg prf)
@@ -24,7 +25,7 @@ do
         # check if the header for the LP solver are available
         if test -e lib/$LPS"inc"
         then
-            make LPS=$LPS OPT=$OPT ZIMPL=$ZIMPL $@
+            make LPS=$LPS OPT=$OPT ZIMPL=$ZIMPL $MAKEFLAG $@
         fi
     done
 done
