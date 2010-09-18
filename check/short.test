@@ -25,6 +25,10 @@ instances/MIQCP/sep1.mps.gz
 instances/MIQCP/shortfall_20_0.mps.gz
 instances/MIQCP/tltr.mps.gz
 instances/MIQCP/util.mps.gz
+instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb.gz
+instances/PseudoBoolean/normalized-bsg_10_4_5.opb.gz
+instances/PseudoBoolean/normalized-mds_10_4_3.opb.gz
+instances/PseudoBoolean/normalized-mds_50_25_5.opb.gz
 instances/Semicontinuous/meanvarxsc.lp.gz
 instances/Semicontinuous/semicon1.mps.gz
 instances/SOS/findRoot.lp.gz
