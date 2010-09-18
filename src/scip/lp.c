@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.357 2010/09/14 08:24:20 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.358 2010/09/18 19:13:22 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Marc Pfetsch
  * @author Kati Wolter
  *
  *  In LP management, we have to differ between the current LP and the SCIP_LP
@@ -662,7 +663,7 @@ void colSwapCoefs(
    col->vals[pos1] = tmpval;
    col->linkpos[pos1] = tmplinkpos;
 
-   /* update link position in rowumns */
+   /* update link position in rows */
    if( col->linkpos[pos1] >= 0 )
    {
       assert(col->rows[pos1]->cols[col->linkpos[pos1]] == col);
@@ -1248,7 +1249,7 @@ void rowAddNorms(
    row->minidx = MIN(row->minidx, col->index);
    row->maxidx = MAX(row->maxidx, col->index);
 
-   /* update squared euclidean norm and sum norm */
+   /* update squared Euclidean norm and sum norm */
    row->sqrnorm += SQR(absval);
    row->sumnorm += absval;
 
@@ -1305,7 +1306,7 @@ void rowDelNorms(
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
       row->validminmaxidx = FALSE;
 
-   /* update squared euclidean norm and sum norm */
+   /* update squared Euclidean norm and sum norm */
    row->sqrnorm -= SQR(absval);
    row->sqrnorm = MAX(row->sqrnorm, 0.0);
    row->sumnorm -= absval;
@@ -2585,7 +2586,7 @@ SCIP_RETCODE SCIPcolChgCoef(
    }
    else
    {
-      /* modifify already existing coefficient */
+      /* modify already existing coefficient */
       assert(0 <= pos && pos < col->len);
       assert(col->rows[pos] == row);
 
@@ -2639,7 +2640,7 @@ SCIP_RETCODE SCIPcolIncCoef(
    }
    else
    {
-      /* modifify already existing coefficient */
+      /* modify already existing coefficient */
       assert(0 <= pos && pos < col->len);
       assert(col->rows[pos] == row);
 
@@ -3225,7 +3226,7 @@ SCIP_RETCODE colStrongbranch(
       /* update strong branching statistics */
       if( iter == -1 )
       {
-         /* calculate avergate iteration number */
+         /* calculate average iteration number */
          iter = stat->ndualresolvelps > 0 ? (int)(2*stat->ndualresolvelpiterations / stat->ndualresolvelps)
             : stat->nduallps > 0 ? (int)((stat->nduallpiterations / stat->nduallps) / 5)
             : stat->nprimalresolvelps > 0 ? (int)(2*stat->nprimalresolvelpiterations / stat->nprimalresolvelps)
@@ -3350,7 +3351,7 @@ SCIP_RETCODE colStrongbranchesFrac(
       /* update strong branching statistics */
       if ( iter == -1 )
       {
-         /* calculate avergate iteration number */
+         /* calculate average iteration number */
          iter = stat->ndualresolvelps > 0 ? (int)(2*stat->ndualresolvelpiterations / stat->ndualresolvelps)
             : stat->nduallps > 0 ? (int)((stat->nduallpiterations / stat->nduallps) / 5)
             : stat->nprimalresolvelps > 0 ? (int)(2*stat->nprimalresolvelpiterations / stat->nprimalresolvelps)
@@ -3482,7 +3483,7 @@ SCIP_RETCODE colStrongbranchesInt(
       /* update strong branching statistics */
       if ( iter == -1 )
       {
-         /* calculate avergate iteration number */
+         /* calculate average iteration number */
          iter = stat->ndualresolvelps > 0 ? (int)(2*stat->ndualresolvelpiterations / stat->ndualresolvelps)
             : stat->nduallps > 0 ? (int)((stat->nduallpiterations / stat->nduallps) / 5)
             : stat->nprimalresolvelps > 0 ? (int)(2*stat->nprimalresolvelpiterations / stat->nprimalresolvelps)
@@ -4530,7 +4531,7 @@ SCIP_RETCODE SCIProwChgCoef(
    }
    else
    {
-      /* modifify already existing coefficient */
+      /* modify already existing coefficient */
       assert(0 <= pos && pos < row->len);
       assert(row->cols[pos] == col);
       assert(row->cols_index[pos] == col->index);
@@ -4584,7 +4585,7 @@ SCIP_RETCODE SCIProwIncCoef(
    }
    else
    {
-      /* modifify already existing coefficient */
+      /* modify already existing coefficient */
       assert(0 <= pos && pos < row->len);
       assert(row->cols[pos] == col);
       assert(row->cols_index[pos] == col->index);
@@ -5110,7 +5111,7 @@ void rowMerge(
       row->len = t;
       row->nunlinked = t;
 
-      /* if equal entries were merged, we have to recalculate the norms, since the squared euclidean norm is wrong */
+      /* if equal entries were merged, we have to recalculate the norms, since the squared Euclidean norm is wrong */
       if( t < s )
          rowCalcNorms(row, set);
    }
@@ -11779,7 +11780,7 @@ SCIP_RETCODE lpSolve(
    solvedprimal = solvedprimal || (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
    solveddual = solveddual || (lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
 
-   /* check, if an error occured */
+   /* check, if an error occurred */
    if( *lperror )
    {
       SCIPdebugMessage("unresolved error while solving LP with %s\n", lpalgoName(lp->lastlpalgo));
@@ -12296,7 +12297,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                tmpcutoff = lp->cutoffbound;
                lp->cutoffbound = SCIPlpiInfinity(lpi);
 
-               /* set lp pricing strategie to steepest edge */
+               /* set lp pricing strategy to steepest edge */
                SCIP_CALL( SCIPsetGetCharParam(set, "lp/pricing", &tmppricingchar) );
                SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's') );
 
@@ -12305,7 +12306,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, FALSE, FALSE, FALSE, 
                      fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
-               /* reinstall old cutoff bound, iteration limit and lp pricing strategie */
+               /* reinstall old cutoff bound, iteration limit and lp pricing strategy */
                lp->cutoffbound = tmpcutoff;
                SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
                SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", tmppricingchar) );
@@ -13587,7 +13588,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
 
-   /* get dual farkas infeasibility proof */
+   /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
 
    lpirows = lp->lpirows;
