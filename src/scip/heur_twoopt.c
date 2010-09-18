@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.13 2010/09/14 10:25:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.14 2010/09/18 19:30:53 bzfpfets Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -123,7 +123,7 @@ SCIP_RETCODE shiftValues(
    int                   nrows,              /**< size of activities array */
    SCIP_Bool*            feasible            /**< set to true if method has successfully switched the variable values */
    )
-{
+{  /*lint --e{715}*/
    SCIP_COL* col;
    SCIP_ROW** rows1;
    SCIP_ROW** rows2;
@@ -460,7 +460,7 @@ SCIP_Bool checkConstraintMatching(
     * for each variable 
     */
    return ( SCIPisFeasLE(scip, matchingrate, (nnonzeros1 - nrows1not2) / (SCIP_Real)(nnonzeros1)) ||
-      SCIPisFeasLE(scip, matchingrate, (nnonzeros2 - nrows2not1) / (SCIP_Real)(nnonzeros2)) );
+      SCIPisFeasLE(scip, matchingrate, (nnonzeros2 - nrows2not1) / (SCIP_Real)(nnonzeros2)) );  /*lint !e{795}*/
 }
 
 /** determines a bound by which the absolute solution value of two integer variables can be shifted at most.
@@ -479,7 +479,7 @@ SCIP_Real determineBound(
    SCIP_Real*            activities,         /**< array of LP row activities */
    int                   nrows               /**< the number of rows in LP and the size of the activities array */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real masterbound;
    SCIP_Real slavebound;
    SCIP_Real bound;
@@ -823,7 +823,7 @@ SCIP_RETCODE presolveTwoOpt(
 
    heurdata->nbinvars = nbinvars;
 
-   heurdata->execute = nbinvars > 1 && !equalcoeffs && heurdata->nbinblocks > 0;   
+   heurdata->execute = nbinvars > 1 && !equalcoeffs && heurdata->nbinblocks > 0;  /*lint !e{644}*/   
 
 #ifdef STATISTIC_INFORMATION        
    if( !equalcoeffs )
@@ -992,7 +992,7 @@ SCIP_RETCODE optimize(
    SCIP_Bool*           varboundserr,       /**< has the current incumbent already been cut off */
    SCIP_HEURDATA*       heurdata            /**< the heuristic data */
    )
-{
+{  /*lint --e{715}*/
    int b;
    
    assert(scip != NULL);
