@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.41 2010/09/18 21:14:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.42 2010/09/19 12:15:58 bzfpfets Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -54,8 +54,8 @@
 #define CONFLICTHDLR_PRIORITY  -3000000
 
 
-/**@todo make this a parameter setting */
-#if 1 /**@todo test which AGEINCREASE formula is better! */
+/* @todo make this a parameter setting */
+#if 1 /* @todo test which AGEINCREASE formula is better! */
 #define AGEINCREASE(n) (1.0 + 0.2*n)
 #else
 #define AGEINCREASE(n) (0.1*n)

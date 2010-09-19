@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.149 2010/09/18 21:14:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.150 2010/09/19 12:15:58 bzfpfets Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -64,8 +64,8 @@
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
 
 
-/**@todo make this a parameter setting */
-#if 1 /**@todo test which AGEINCREASE formula is better! */
+/* @todo make this a parameter setting */
+#if 1 /* @todo test which AGEINCREASE formula is better! */
 #define AGEINCREASE(n) (1.0 + 0.2*n)
 #else
 #define AGEINCREASE(n) (0.1*n)
