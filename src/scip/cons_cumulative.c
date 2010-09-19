@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.13 2010/09/16 17:30:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.14 2010/09/19 13:47:27 bzfpfets Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -22,11 +22,11 @@
  * @author Jens Schulz
  *
  * Given:
- * - a set of jobs, represented by their integer start time variables S_j, their array of processing times p_j and of
- *   their demands d_j.
- * - an integer resource capacity C
+ * - a set of jobs, represented by their integer start time variables \f$S_j\f$, their array of processing times \f$p_j\f$ and of
+ *   their demands \f$d_j\f$.
+ * - an integer resource capacity \f$C\f$
  *
- * The cumulative constraint ensures that for each point in time t \sum_{j: S_j \leq t < S_j + p_j} d_j \leq C holds.
+ * The cumulative constraint ensures that for each point in time \f$t\f$ \f$\sum_{j: S_j \leq t < S_j + p_j} d_j \leq C\f$ holds.
  *
  * Separation: 
  * - can be done using binary start time model, see Pritskers, Watters and Wolfe 
