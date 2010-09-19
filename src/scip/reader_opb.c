@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.61 2010/09/18 22:19:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.62 2010/09/19 11:04:51 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -388,6 +388,8 @@ SCIP_Bool getNextLine(
    /* if we previously detected a comment we have to parse the remaining line away if there is something left */
    if( !opbinput->endline && opbinput->comment )
    { 
+      SCIPdebugMessage("Throwing rest of comment away.\n");
+   
       do
       {
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
@@ -448,6 +450,8 @@ SCIP_Bool getNextLine(
    
    opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0';
    opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+
+   opbinput->comment = FALSE;
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
