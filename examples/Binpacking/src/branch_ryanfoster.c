@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_ryanfoster.c,v 1.1 2010/09/09 12:21:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_ryanfoster.c,v 1.2 2010/09/19 09:28:37 bzfheinz Exp $"
 
 /**@file   branch_ryanfoster.c
  * @ingroup BRANCHINGRULES
@@ -55,6 +55,7 @@ struct SCIP_BranchruleData
  */
 
 /** copy method for branchrule plugins (called when SCIP copies plugins) */
+#if 0
 static
 SCIP_DECL_BRANCHCOPY(branchCopyRyanFoster)
 {  /*lint --e{715}*/
@@ -67,6 +68,9 @@ SCIP_DECL_BRANCHCOPY(branchCopyRyanFoster)
  
    return SCIP_OKAY;
 }
+#else
+#define branchCopyRyanFoster NULL
+#endif
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 #define branchFreeRyanFoster NULL

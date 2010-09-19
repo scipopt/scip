@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_samediff.c,v 1.1 2010/09/09 12:21:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_samediff.c,v 1.2 2010/09/19 09:28:37 bzfheinz Exp $"
 
 /**@file   cons_samediff.h
  * @brief  constraint handler stores the local branching decision data 
@@ -309,6 +309,7 @@ SCIP_RETCODE consdataFree(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
+#if 0
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopySamediff)
 {  /*lint --e{715}*/
@@ -321,6 +322,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySamediff)
  
    return SCIP_OKAY;
 }
+#else
+#define conshdlrCopySamediff NULL
+#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #define consFreeSamediff NULL
@@ -568,8 +572,11 @@ SCIP_DECL_CONSPRINT(consPrintSamediff)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopySamediff NULL
 
-
+/** constraint parsing method of constraint handler */
+#define consParseSamediff NULL
 
 /*
  * constraint specific interface methods
@@ -599,7 +606,7 @@ SCIP_RETCODE SCIPincludeConshdlrSamediff(
          consPropSamediff, consPresolSamediff, consRespropSamediff, consLockSamediff,
          consActiveSamediff, consDeactiveSamediff, 
          consEnableSamediff, consDisableSamediff, 
-         consPrintSamediff, NULL, NULL,
+         consPrintSamediff, consCopySamediff, consParseSamediff,
          conshdlrdata) );
 
    return SCIP_OKAY;

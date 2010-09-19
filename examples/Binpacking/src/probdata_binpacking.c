@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_binpacking.c,v 1.2 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: probdata_binpacking.c,v 1.3 2010/09/19 09:28:37 bzfheinz Exp $"
 
 /**@file   probdata_binpacking.c
  * @brief  problem data for binpacking problem 
@@ -296,6 +296,9 @@ SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
    return SCIP_OKAY;
 }
 
+/** copies user data of source SCIP for the target SCIP */
+#define probcopyBinpacking NULL
+
 /*
  * probdata specific interface methods
  */
@@ -326,7 +329,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigBinpacking, probtransBinpacking, probdeltransBinpacking,
-         probinitsolBinpacking, probexitsolBinpacking, NULL, NULL) );
+         probinitsolBinpacking, probexitsolBinpacking, probcopyBinpacking, NULL) );
    
    /* set objective sense */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );

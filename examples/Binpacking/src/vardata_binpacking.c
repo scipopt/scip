@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vardata_binpacking.c,v 1.2 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: vardata_binpacking.c,v 1.3 2010/09/19 09:28:37 bzfheinz Exp $"
 
 /**@file   vardata_binpacking.c
  * @brief  variable data containing the ids of constraints in which the variable appears 
@@ -94,6 +94,9 @@ SCIP_DECL_VARDELTRANS(vardataDelTrans)
    return SCIP_OKAY;
 }
 
+/** copies variable data of source SCIP variable for the target SCIP variable */
+#define vardataCopy NULL
+
 /** create variable data */
 SCIP_RETCODE SCIPvardataCreateBinpacking(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -145,7 +148,7 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
    )
 {
    SCIP_CALL( SCIPcreateVar(scip, var, name, 0.0, 1.0, obj, SCIP_VARTYPE_BINARY,
-         initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, NULL, vardata) );
+         initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, vardataCopy, vardata) );
    
    SCIPdebug(SCIPprintVar(scip, *var, NULL) );
 
