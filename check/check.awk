@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.99 2010/09/17 11:05:27 bzfwanie Exp $
+# $Id: check.awk,v 1.100 2010/09/19 10:59:31 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -125,6 +125,7 @@ BEGIN {
    implvars = 0;
    contvars = 0;
    cons = 0;
+   lincons = 0;
    origvars = 0;
    origcons = 0;
    timeout = 0;
@@ -159,6 +160,7 @@ BEGIN {
    endtime = 0.0;
    timelimit = 0.0;
    inoriginalprob = 1;
+   incons = 0;
 }
 
 /@03/ { starttime = $2; }
@@ -259,6 +261,48 @@ BEGIN {
    else
       cons = $3;
 }
+
+#
+# count number of linear constraints 
+#
+/^Constraints        :/ {
+   incons = 1;
+   lincons = 0;
+}
+/^  knapsack         :/ {
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      lincons += a[1];
+   }
+}
+/^  setppc           :/ {
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      lincons += a[1];
+   }
+}
+/^  linear           :/ { 
+   if( incons  == 1 ) {
+      n  = split ($3, a, "+");
+      lincons += a[1];
+   }
+}
+/^  logicor          :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      lincons += a[1];
+   }
+}
+/^  varbound         :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      lincons += a[1];
+   }
+}
+/^Constraint Timings :/ {
+   incons = 1; 
+}
+
 #
 # solution
 #
@@ -425,6 +469,8 @@ BEGIN {
 
       if( vars == 0 )
          probtype = "--";
+      else if( lincons < cons )
+         probtype = "CIP";
       else if( binvars == 0 && intvars == 0 )
          probtype = "LP";
       else if( contvars == 0 ) {
