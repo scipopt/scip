@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.672 2010/09/18 22:44:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.673 2010/09/19 11:45:20 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3755,7 +3755,7 @@ SCIP_RETCODE writeProblem(
       }
 
       /* get extension from filename,
-       * if an error occured, close the file before returning */
+       * if an error occurred, close the file before returning */
       if( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) == NULL )
       {
          (void) fclose(file);
@@ -3788,7 +3788,7 @@ SCIP_RETCODE writeProblem(
       success = fclose(file);
       if( success != 0 )
       {
-         SCIPerrorMessage("An error occured while closing file <%s>\n", filename);
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", filename);
          return SCIP_FILECREATEERROR;
       }         
    }
@@ -7856,7 +7856,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
                                               *   infeasible downwards branch, or NULL */
    SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible upwards branch, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured or the
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
    )
 {
@@ -7957,7 +7957,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
                                               *   infeasible downwards branch, or NULL */
    SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible upwards branch, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured or the
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
    )
 {
@@ -8059,7 +8059,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
                                               *   infeasible downward branches, or NULL */
    SCIP_Bool*            upconflict,         /**< array to store whether conflict constraints were created for
                                               *   infeasible upward branches, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured or the
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
    )
 {
@@ -8188,7 +8188,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
                                               *   infeasible downward branches, or NULL */
    SCIP_Bool*            upconflict,         /**< array to store whether conflict constraints were created for
                                               *   infeasible upward branches, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured or the
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred or the
                                               *   solving process should be stopped (e.g., due to a time limit) */
    )
 {
@@ -9861,7 +9861,7 @@ SCIP_RETCODE SCIPaddClique(
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
  *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
- *  the preceeding variables was assigned to clique i-1;
+ *  the preceding variables was assigned to clique i-1;
  *  for each clique at most 1 variables can be set to TRUE in a feasible solution;
  */
 SCIP_RETCODE SCIPcalcCliquePartition(
@@ -9989,7 +9989,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same negated clique;
  *  the first variable is always assigned to clique 0 and a variable can only be assigned to clique i if at least one of
- *  the preceeding variables was assigned to clique i-1;
+ *  the preceding variables was assigned to clique i-1;
  *  for each clique with n_c variables at least n_c-1 variables can be set to TRUE in a feasible solution;
  */
 SCIP_RETCODE SCIPcalcNegatedCliquePartition(
@@ -10488,7 +10488,7 @@ SCIP_RETCODE aggregateActiveIntVars(
 }
 
 /** performs second step of SCIPaggregateVars():
- *  the variable to be aggregated is chosen among active problem variables x' and y', prefering a less strict variable
+ *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
  *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
  *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
  *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
@@ -11136,7 +11136,7 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
 }
 
-/** initializes the upwards and downards pseudocosts, conflict scores, conflict lengths, inference scores, cutoff scores
+/** initializes the upwards and downwards pseudocosts, conflict scores, conflict lengths, inference scores, cutoff scores
  *  of a variable to the given values 
  */
 SCIP_RETCODE SCIPinitVarBranchStats(
@@ -11533,7 +11533,7 @@ SCIP_RETCODE SCIPcreateCons(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -11682,7 +11682,7 @@ SCIP_RETCODE SCIPparseCons(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -12852,7 +12852,7 @@ SCIP_RETCODE SCIPwriteMIP(
  *  with the LPI you can use all of the methods defined in scip/lpi.h;
  *  Warning! You have to make sure, that the full internal state of the LPI does not change or is recovered completely after
  *  the end of the method that uses the LPI. In particular, if you manipulate the LP or its solution (e.g. by calling one of the
- *  SCIPlpiAdd...() or one of the SCIPlpiSolve...() methods), you have to check in advance whith SCIPlpiWasSolved() whether the LP
+ *  SCIPlpiAdd...() or one of the SCIPlpiSolve...() methods), you have to check in advance with SCIPlpiWasSolved() whether the LP
  *  is currently solved. If this is the case, you have to make sure, the internal solution status is recovered completely at the
  *  end of your method. This can be achieved by getting the LPI state before applying any LPI manipulations with SCIPlpiGetState()
  *  and restoring it afterwards with SCIPlpiSetState() and SCIPlpiFreeState(). Additionally you have to resolve the LP with
@@ -13591,10 +13591,10 @@ SCIP_RETCODE SCIPaddNlRow(
    return SCIP_OKAY;
 }
 
-/** sets or clears initial primal guess for NLP solution (startpoint for NLP solver) */
+/** sets or clears initial primal guess for NLP solution (start point for NLP solver) */
 SCIP_RETCODE SCIPsetNLPInitialGuess(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            initialguess        /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no startpoint */
+   SCIP_Real*            initialguess        /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no start point */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNLPInitialGuess", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -13612,7 +13612,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
    return SCIP_OKAY;
 }
 
-/** sets initial primal guess for NLP solution (startpoint for NLP solver) */
+/** sets initial primal guess for NLP solution (start point for NLP solver) */
 SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< solution which values should be taken as initial guess, or NULL for LP solution */
@@ -14162,7 +14162,7 @@ SCIP_RETCODE SCIPsetNlRowExprtree(
 SCIP_RETCODE SCIPsetNlRowExprtreeParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   paramidx,           /**< index of paramater in expression tree */
+   int                   paramidx,           /**< index of parameter in expression tree */
    SCIP_Real             paramval            /**< new value of parameter in expression tree */
    )
 {
@@ -14311,7 +14311,7 @@ SCIP_RETCODE SCIPrecalcNlRowActivity(
 SCIP_RETCODE SCIPgetNlRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   SCIP_Real*            activity            /**< buffer to store activitiy value */
+   SCIP_Real*            activity            /**< buffer to store activity value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -14354,7 +14354,7 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for NLP solution of pseudo solution */
-   SCIP_Real*            activity            /**< buffer to store activitiy value */
+   SCIP_Real*            activity            /**< buffer to store activity value */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNlRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -14992,7 +14992,7 @@ SCIP_Real SCIPgetVarUbDive(
 SCIP_RETCODE SCIPsolveDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsolveDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -15316,7 +15316,7 @@ SCIP_RETCODE solveProbingLP(
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit) */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    assert(lperror != NULL);
@@ -15381,7 +15381,7 @@ SCIP_RETCODE solveProbingLP(
 SCIP_RETCODE SCIPsolveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsolveProbingLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -15400,7 +15400,7 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
                                               *   a finite limit means that the LP might not be solved to optimality! */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsolveProbingLPWithPricing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -20368,7 +20368,7 @@ SCIP_Bool SCIPisFeasEQ(
    return SCIPsetIsFeasEQ(scip->set, val1, val2);
 }
 
-/** checks, if relative difference val1 and val2 is lower than feasiblity tolerance */
+/** checks, if relative difference val1 and val2 is lower than feasibility tolerance */
 SCIP_Bool SCIPisFeasLT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< first value to be compared */
