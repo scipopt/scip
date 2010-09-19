@@ -62,7 +62,6 @@ Here is what you have to do to get SCIP running:
 1. Compile the library and the solver program:
    In your SCIP main directory, enter "make [options]" with the following options:
    - "OPT=opt"         to use optimized compilation mode (default)
-   - "OPT=opt-gcc42"   to use if compiler gcc4.2 or greater is available
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
 
