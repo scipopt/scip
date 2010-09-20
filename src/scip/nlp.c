@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.28 2010/09/14 09:26:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.29 2010/09/20 09:51:33 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -1620,7 +1620,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    assert(nquadvars  == 0 || quadvars  != NULL);
    assert(nquadelems == 0 || quadelems != NULL);
    assert(nquadelems == 0 || nquadvars > 0);
-   assert(SCIPsetIsLE(set, lhs, rhs));
+   assert(SCIPsetIsRelLE(set, lhs, rhs));
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, nlrow) );
 
@@ -1708,10 +1708,9 @@ SCIP_RETCODE SCIPnlrowCreate(
       (*nlrow)->exprtree = NULL;
    }
 
-   /* left and right hand sides */
-   assert(SCIPsetIsLE(set, lhs, rhs));
-   (*nlrow)->lhs = lhs;
-   (*nlrow)->rhs = rhs;
+   /* left and right hand sides, asserted above that lhs is relle than rhs */
+   (*nlrow)->lhs = MIN(lhs, rhs);
+   (*nlrow)->rhs = MAX(rhs, rhs);
 
    /* miscellaneous */
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->name, name, strlen(name)+1) );
