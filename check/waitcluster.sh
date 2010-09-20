@@ -4,21 +4,22 @@ QUEUE=$2
 
 while true
 do
-  ALLQUEUE=`qstat | grep -c ""`
-  QUEUE=`qstat -q $QUEUE | grep -c $USER`
+  ALLQUEUED=`qstat | grep -c ""`
+  QUEUED=`qstat -u $USER | grep -c " $QUEUE "`
   RUNNING=`qstat -u $USER | grep -c " R "`
 
   # display current user load and total load 
-  echo jobs in progress: $RUNNING / $QUEUE "("$ALLQUEUE")"
+  echo jobs in progress: $RUNNING / $QUEUED "("$ALLQUEUED")"
  
-  if test $ALLQUEUE -le 1990
+  if test $ALLQUEUED -le 1990
       then
-      if test $QUEUE -le 400
+
+      if test $QUEUED -le 400
 	  then
 	  break
       fi
 
-      if test $ALLQUEUE -le $LIMIT
+      if test $ALLQUEUED -le $LIMIT
 	  then
 	  break
       fi
