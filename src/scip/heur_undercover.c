@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.99 2010/09/18 19:12:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.100 2010/09/20 15:47:13 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -143,18 +143,18 @@ SCIP_Bool termIsConstant(
    SCIP_Bool             global              /**< should global bounds be used? */
    )
 {
-   SCIP_Bool isconstant;
-
    /* if the variable has zero coefficient in the original problem, the term is linear */
-   isconstant = SCIPisZero(scip, coeff);
+   if( SCIPisZero(scip, coeff) )
+      return TRUE;
 
    /* if the variable is fixed in the original problem, the term is linear */
    if( global )
-      isconstant = isconstant || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      return SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    else
-      isconstant = isconstant || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+      return SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
-   return isconstant;
+   /* fall through */
+   return FALSE;
 }
 
 
@@ -535,15 +535,15 @@ SCIP_RETCODE createCoveringProblem(
             goto TERMINATE;
          }
 
-         /* if less than 2 variables are unfixed or the resultant variable is fixed to 1, the entire constraint can be linearized anyway */
-         if( ntofix >= 2 && !varIsFixed(scip, vars[probindex], 1.0, heurdata->globalbounds) )
+         /* if less than 2 variables are unfixed or the resultant variable is fixed, the entire constraint can be linearized anyway */
+         if( ntofix >= 2 && !termIsConstant(scip, vars[probindex], 1.0, heurdata->globalbounds) )
          {
             assert(ntofix <= SCIPgetNVarsAnd(scip, andcons));
 
             /* add covering variable for unfixed resultant */
             coveringconsvars[ntofix] = coveringvars[probindex];
+            coveringconsvals[ntofix] = (SCIP_Real)(ntofix - 1);
             ntofix++;
-            coveringconsvals[ntofix] = (SCIP_Real)(ntofix - 2);
 
             /* create covering constraint */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPconsGetName(andcons));
@@ -565,7 +565,7 @@ SCIP_RETCODE createCoveringProblem(
 
             /* update counters */
             for( v = ntofix-1; v >= 0; v-- )
-               incCounters(termcounter, conscounter, consmarker, SCIPvarGetProbindex(coveringconsvars[ntofix]));
+               incCounters(termcounter, conscounter, consmarker, SCIPvarGetProbindex(coveringconsvars[v]));
          }
 
          /* free memory for covering constraint */
