@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.379 2010/09/17 18:55:09 bzfviger Exp $
+# $Id: Makefile,v 1.380 2010/09/20 12:59:40 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -852,7 +852,7 @@ ifeq ($(LINKER),CPP)
 		>$(LPILIBDEP)'
 endif
 		@#we explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI, but contain all LPI's that use the WITH_LPSCHECK define
-		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/scip/lpi*` >$(LPSCHECKDEP)
+		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/scip/lpi*.{c,cpp}` >$(LPSCHECKDEP)
 
 .PHONY: nlpidepend
 nlpidepend:
