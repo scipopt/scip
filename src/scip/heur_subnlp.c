@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.39 2010/09/18 19:09:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.40 2010/09/20 12:48:29 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -382,6 +382,13 @@ SCIP_RETCODE addLinearConstraints(
       if( !SCIPconsIsEnabled(conss[i]) )
          continue;
       
+      /* under some circumstances, this method may be called even though the problem has been shown to be infeasible in presolve already
+       * this infeasibility may come from a linear constraint with lhs > rhs
+       * the NLP does not allow such constraints, so we skip them here
+       */
+      if( !SCIPisRelLE(scip, SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i])) )
+         continue;
+
       nvars = SCIPgetNVarsLinear(scip, conss[i]);
       vars  = SCIPgetVarsLinear(scip, conss[i]);
       
