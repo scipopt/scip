@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.75 2010/09/17 19:36:52 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.76 2010/09/20 21:19:06 bzfviger Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -596,7 +596,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    ClpSimplex* clp = lpi->clp;
 
    // copy beg-array
-   int* mybeg;
+   int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&mybeg, ncols + 1) );
    BMScopyMemoryArray(mybeg, beg, ncols);
    mybeg[ncols] = nnonz;   // add additional entry at end
@@ -663,7 +663,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    int numCols = lpi->clp->getNumCols();
 
    // copy beg-array (if not 0)
-   int* mybeg;
+   int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&mybeg, ncols + 1) );
 
    // if columns are not empty
@@ -714,7 +714,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    // Current Clp version (1.8) can't delete a range of columns; we have to use deleteColumns (see SCIPlpiDelColset)
    int num = lastcol-firstcol+1;
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, num) );;
 
    // fill array with interval
@@ -746,7 +746,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    // transform dstat information
    int ncols = lpi->clp->getNumCols();
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, ncols) );
    int cnt = 0;
    for (int j = 0; j < ncols; ++j)
@@ -802,7 +802,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    // store number of rows for later use
    int numRows = lpi->clp->getNumRows();
 
-   int* mybeg;
+   int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &mybeg, nrows + 1) );
 
    if ( nnonz != 0 )
@@ -853,7 +853,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    // Current Clp version (1.8) can't delete a range of rows; we have to use deleteRows (see SCIPlpiDelRowset)
    int num = lastrow-firstrow+1;
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, num) );
 
    // fill array with interval
@@ -886,7 +886,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    // transform dstat information
    int nrows = lpi->clp->getNumRows();
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, nrows) );
    int cnt = 0;
    for (int i = 0; i < nrows; ++i)
@@ -1841,15 +1841,15 @@ SCIP_RETCODE lpiStrongbranch(
    // set up output arrays
    int ncols = clp->numberColumns();
    assert( 0 <= col && col < ncols );
-   double** outputSolution;
+   double** outputSolution = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution, 2) );
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution[0], ncols) );
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution[1], ncols) );
 
-   int* outputStatus;
+   int* outputStatus = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &outputStatus, 2) );
 
-   int* outputIterations;
+   int* outputIterations = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &outputIterations, 2) );
 
    // set iteration limit
@@ -2003,17 +2003,17 @@ SCIP_RETCODE lpiStrongbranches(
    // set up output arrays
    int n = clp->numberColumns();
    assert( 0 < ncols && ncols <= n );
-   double** outputSolution;
+   double** outputSolution = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution, 2*ncols) );
    for (int j = 0; j < 2*ncols; ++j)
    {
       SCIP_ALLOC( BMSallocMemoryArray( &(outputSolution[j]), n) );
    }
 
-   int* outputStatus;
+   int* outputStatus = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&outputStatus, 2*ncols) );
 
-   int* outputIterations;
+   int* outputIterations = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&outputIterations, 2*ncols) );
 
    // set iteration limit
@@ -2310,11 +2310,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
-#ifdef CLP_IS_TRUNK
    return ( lpi->clp->status() == 2 );
-#else
-   return ( lpi->clp->status() == 2 && lpi->clp->unboundedRay() );
-#endif
 }
 
 
@@ -2332,11 +2328,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
 
    /* Clp seems to have a primal ray whenever it concludes "dual infeasible" (status == 2)
     * (but is not necessarily primal feasible), see ClpModel::unboundedRay(). */
-#ifdef CLP_IS_TRUNK
    return ( lpi->clp->status() == 2 );
-#else
-   return ( lpi->clp->status() == 2 && lpi->clp->unboundedRay() );
-#endif
 }
 
 
@@ -2417,7 +2409,6 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-#ifdef CLP_IS_TRUNK
    /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
     * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
    if ( lpi->clp->rayExists() )
@@ -2433,9 +2424,6 @@ SCIP_Bool SCIPlpiHasDualRay(
    } 
    else
       return FALSE;
-#else
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->infeasibilityRay() );
-#endif
 }
 
 
@@ -2975,7 +2963,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int nrows = clp->numberRows();
    int ncols = clp->numberColumns();
 
-   int* idx;
+   int* idx = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&idx, nrows) );
 
    /* If secondaryStatus == 6, clp says the LP is empty. Mose likely this happened, because the
