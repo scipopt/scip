@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.100 2010/09/19 10:59:31 bzfheinz Exp $
+# $Id: check.awk,v 1.101 2010/09/20 16:11:19 bzfschwa Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -300,7 +300,7 @@ BEGIN {
    }
 }
 /^Constraint Timings :/ {
-   incons = 1; 
+   incons = 0;
 }
 
 #
@@ -466,7 +466,7 @@ BEGIN {
          gapstr = sprintf("%6.1f", gap);
       else
          gapstr = " Large";
-
+      
       if( vars == 0 )
          probtype = "--";
       else if( lincons < cons )
