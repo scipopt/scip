@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.674 2010/09/19 13:46:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.675 2010/09/20 14:02:54 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1391,7 +1391,13 @@ SCIP_RETCODE SCIPcopyConss(
          if( !SCIPconsIsActive(sourceconss[c]) || SCIPconsIsDeleted(sourceconss[c]) )
          {
             *valid = FALSE;
-            SCIPdebugMessage("did not copy inactive or deleted constraint %s\n", SCIPconsGetName(sourceconss[c]));
+            SCIPdebugMessage("did not copy inactive or deleted constraint <%s>\n", SCIPconsGetName(sourceconss[c]));
+            continue;
+         }
+         /* skip copying local constraints when creating a global copy */
+         if( global && SCIPconsIsLocal(sourceconss[c]) )
+         {
+            SCIPdebugMessage("did not copy active local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
             continue;
          }
          assert(SCIPconsIsActive(sourceconss[c]));
