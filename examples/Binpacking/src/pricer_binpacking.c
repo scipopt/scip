@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.2 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.3 2010/09/20 10:18:44 bzfheinz Exp $"
 
 /**@file   pricer_binpacking.c
  * @brief  binpacking variable pricer
@@ -469,15 +469,13 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    ids = pricerdata->ids;
    nitems = pricerdata->nitems;
 
-   /* check whether there is enough time and memory left */
+   /* get the remaining time and memory limit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&subscip) );

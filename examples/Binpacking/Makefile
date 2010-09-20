@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.2 2010/09/13 15:29:27 bzfberth Exp $
+# $Id: Makefile,v 1.3 2010/09/20 10:18:44 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for SCIP project
@@ -106,6 +106,15 @@ ifneq ($(OBJDIR),)
 endif
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 		@echo "-> remove binary"
+
+.PHONY: test
+test:           
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastproblem.awk);
+		cd check; \
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: tags
 tags:
