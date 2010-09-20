@@ -94,7 +94,7 @@ MINLP/instances/MINLPLib/zpl/tloss.zpl
 MINLP/instances/MINLPLib/zpl/tltr.zpl
 MINLP/instances/MINLPLib/zpl/util.zpl
 MINLP/instances/MINLPLib/zpl/waste.zpl
-MINLP/instances/MINLPLib/lp/meanvarxsc.lp.gz
+MINLP/instances/MINLPLib/lp/meanvarxsc.lp
 MINLP/instances/CLay/zpl/clay0203m.zpl
 MINLP/instances/CLay/zpl/clay0204m.zpl
 MINLP/instances/CLay/zpl/clay0205m.zpl
