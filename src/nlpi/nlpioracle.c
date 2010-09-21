@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.22 2010/09/17 13:46:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.23 2010/09/21 19:29:05 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -736,7 +736,7 @@ SCIP_RETCODE evalFunctionGradient(
       }
       
       SCIPdebugMessage("eval gradient of ");
-      SCIPdebug( SCIPexprtreePrint(exprtree, NULL) );
+      SCIPdebug( SCIPexprtreePrint(exprtree, NULL, NULL, NULL) );
       SCIPdebug( printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); printf("\n"); )
       
       SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, exprtree, xx, newx, &nlval, g) );
