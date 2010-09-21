@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.14 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.15 2010/09/21 09:52:59 bzfheinz Exp $"
 
 /**@file   reader_rlp.c
  * @ingroup FILEREADERS 
@@ -28,7 +28,7 @@
 #include "scip/reader_rlp.h"
 
 #define READER_NAME             "rlpreader"
-#define READER_DESC             "file reader for MIPs in ILOG's RLP file format"
+#define READER_DESC             "file reader for MIPs in IBM CPLEX's RLP file format"
 #define READER_EXTENSION        "rlp"
 
 

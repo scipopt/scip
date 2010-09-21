@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.105 2010/09/18 22:08:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.106 2010/09/21 09:52:59 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -51,7 +51,7 @@
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "lpreader"
-#define READER_DESC             "file reader for MIPs in ILOG's LP file format"
+#define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
 #define READER_EXTENSION        "lp"
 
 
