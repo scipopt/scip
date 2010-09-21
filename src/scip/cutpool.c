@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.65 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.66 2010/09/21 20:09:24 bzfwinkm Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -132,7 +132,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    if( maxval > INT_MAX )
       maxabsval = 0;
    else if( maxval < 1.0 )
-      maxabsval = (int) 10000*maxval;
+      maxabsval = (int) 10000*maxval; /*lint !e524*/
    else
       maxabsval = (int) maxval;
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.434 2010/09/19 13:46:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.435 2010/09/21 20:09:25 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -293,9 +293,9 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_VAR*             sourcevar,          /**< source variable */
    SCIP_VAR**            targetvar,          /**< pointer to store the target variable */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables */
+                                              *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints */
+                                              *   target constraints, or NULL */
    SCIP_Bool             global              /**< should global or local bounds be used? */
    );
 
@@ -341,13 +341,13 @@ SCIP_RETCODE SCIPcopyConss(
 /** create a problem by copying the problem data of the source-SCIP */
 extern
 SCIP_RETCODE SCIPcopyProb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< problem name */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables */
-   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints */
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           name                /**< problem name */
    );
 
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
@@ -3728,16 +3728,16 @@ SCIP_RETCODE SCIPcreateCons(
  */
 extern
 SCIP_RETCODE SCIPgetConsCopy(
-   SCIP*                 scip,               /**< target SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
-   const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint handler for this constraint */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
+   SCIP_CONS**           targetcons,         /**< pointer to store the created target constraint */
+   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint handler for this constraint */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
-                                              *   variables of the target SCIP */
+                                              *   variables of the target SCIP, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints */
+                                              *   target constraints, or NULL */
+   const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */

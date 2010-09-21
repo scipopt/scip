@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.32 2010/04/27 12:11:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.33 2010/09/21 20:09:24 bzfwinkm Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -194,7 +194,7 @@ SCIP_Longint SCIPhistoryGetNBranchings(
 
 /** get number of inferences counter */
 extern
-SCIP_Longint SCIPhistoryGetInferenceSum(
+SCIP_Real SCIPhistoryGetInferenceSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
@@ -208,7 +208,7 @@ SCIP_Real SCIPhistoryGetAvgInferences(
 
 /** get number of cutoffs counter */
 extern
-SCIP_Longint SCIPhistoryGetCutoffSum(
+SCIP_Real SCIPhistoryGetCutoffSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );

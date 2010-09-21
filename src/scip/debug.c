@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.42 2010/09/04 00:43:04 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.43 2010/09/21 20:09:24 bzfwinkm Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -67,8 +67,13 @@ SCIP_RETCODE readSolfile(
    int nonvalues;
    int i;
 
+   assert(set != NULL);
+   assert(solfilename != NULL);
+   assert(names != NULL);
    assert(*names == NULL);
+   assert(vals != NULL);
    assert(*vals == NULL);
+   assert(nvals != NULL);
 
    printf("***** debug: reading solution file <%s>\n", solfilename);
 
@@ -174,6 +179,8 @@ SCIP_RETCODE readSolution(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   assert(set != NULL);
+
    if( nsolvals > 0 )
       return SCIP_OKAY;
 
@@ -199,6 +206,8 @@ SCIP_RETCODE getSolutionValue(
    int middle;
    int cmp;
    
+   assert(set != NULL);
+   assert(var != NULL);
    assert(val != NULL);
 
    SCIP_CALL( readSolution(set) );
@@ -312,6 +321,11 @@ SCIP_RETCODE isSolutionInNode(
 {
    SCIP_Bool* boolptr;
 
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
+   assert(solcontained != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
    {
@@ -403,6 +417,8 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
 {
    int s;
 
+   assert(set != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -439,6 +455,9 @@ SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_Real minactivity;
    SCIP_Real maxactivity;
    SCIP_Real solval;
+
+   assert(set != NULL);
+   assert(row != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -527,6 +546,9 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
 {
    SCIP_Real varsol;
 
+   assert(set != NULL);
+   assert(var != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -557,6 +579,9 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
    )
 {
    SCIP_Real varsol;
+
+   assert(set != NULL);
+   assert(var != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -592,6 +617,11 @@ SCIP_RETCODE SCIPdebugCheckInference(
 {
    SCIP_Real varsol;
    SCIP_Bool solcontained;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
+   assert(var != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -634,6 +664,10 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    SCIP_NODE*            node                /**< node that will be freed */
    )
 {
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -682,6 +716,9 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    SCIP_Real vbvarsol;
    SCIP_Real vb;
 
+   assert(set != NULL);
+   assert(var != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -723,6 +760,8 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 {
    SCIP_Real solval;
 
+   assert(set != NULL);
+   assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
    /* check if we are in the original problem and not in a sub MIP */
@@ -783,6 +822,9 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    SCIP_Bool solcontained;
    int i;
 
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
    assert(nbdchginfos == 0 || bdchginfos != NULL);
    
    /* check if we are in the original problem and not in a sub MIP */
@@ -838,6 +880,9 @@ SCIP_DECL_PROPEXEC(propExecDebug)
    SCIP_VAR** vars;
    int nvars;
    int i;
+
+   assert(scip != NULL);
+   assert(result != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -899,6 +944,8 @@ SCIP_RETCODE SCIPdebugIncludeProp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, "debug", "debugging propagator", 99999999, -1, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, propExecDebug, NULL, NULL) );
@@ -938,6 +985,8 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
    int idx;
    int i;
    int k;
+
+   assert(scip != NULL);
 
    nrows = SCIPgetNLPRows(scip);
 

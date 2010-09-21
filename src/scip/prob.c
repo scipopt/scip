@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.119 2010/09/17 16:32:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.120 2010/09/21 20:09:24 bzfwinkm Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -198,6 +198,12 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_RESULT result;
 
    assert(prob != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(sourcescip != NULL);
+   assert(sourceprob != NULL);
+   assert(varmap != NULL);
+   assert(consmap != NULL);
 
    result = SCIP_DIDNOTRUN;
    targetdata = NULL;
