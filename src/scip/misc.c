@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.121 2010/09/17 12:23:43 bzfwolte Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.122 2010/09/21 14:20:32 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -426,7 +426,6 @@ SCIP_RETCODE hashtablelistRemove(
    return SCIP_OKAY;
 }
 
-   
 /** creates a hash table */
 SCIP_RETCODE SCIPhashtableCreate(
    SCIP_HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
@@ -3156,6 +3155,13 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
+/* SCIPsortDownIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
 
 /* SCIPsortDownIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownIntPtr

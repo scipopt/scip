@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.74 2010/08/23 21:09:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.75 2010/09/21 14:20:32 bzfwinkm Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -573,7 +573,7 @@ extern
 void SCIPsortIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -921,16 +921,16 @@ void SCIPsortDownIntIntPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of three joint arrays of ints/ints/reals, sorted by first array in non-increasing order */
+/** sort of three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
-/** sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
+/** sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownIntPtrIntReal(
    int*                  intarray1,           /**< int array to be sorted */
@@ -1337,7 +1337,7 @@ void SCIPsortedvecInsertIntIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
-/** insert a new element into three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order */
+/** insert a new element into three joint arrays of ints/ints/Reals, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecInsertIntIntReal(
    int*                  intarray1,          /**< first int array where an element is to be inserted */
@@ -1778,7 +1778,7 @@ void SCIPsortedvecInsertDownIntIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
-/** insert a new element into three joint arrays of ints/ints/reals, sorted by first array in non-increasing order */
+/** insert a new element into three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecInsertDownIntIntReal(
    int*                  intarray1,          /**< int array where an element is to be inserted */
@@ -2171,7 +2171,7 @@ void SCIPsortedvecDelPosIntIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
-/** delete the element at the given position from three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order */
+/** delete the element at the given position from three joint arrays of ints/ints/Reals, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecDelPosIntIntReal(
    int*                  intarray1,          /**< int array where an element is to be deleted */
@@ -2553,7 +2553,7 @@ void SCIPsortedvecDelPosDownIntIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
-/** delete the element at the given position from three joint arrays of ints/ints/reals, sorted by first array in non-increasing order */
+/** delete the element at the given position from three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecDelPosDownIntIntReal(
    int*                  intarray1,          /**< int array where an element is to be deleted */
