@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.56 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.57 2010/09/21 14:34:41 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -580,6 +580,8 @@ SCIP_Bool getNextLine(
    /* if we previously detected a comment we have to parse the remaining line away if there is something left */
    if( !fzninput->endline && fzninput->comment )
    { 
+      SCIPdebugMessage("Throwing rest of comment away.\n");
+
       do
       {
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
@@ -640,6 +642,8 @@ SCIP_Bool getNextLine(
    
    fzninput->linebuf[FZN_BUFFERLEN-1] = '\0';
    fzninput->linebuf[FZN_BUFFERLEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+
+   fzninput->comment = FALSE;
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
