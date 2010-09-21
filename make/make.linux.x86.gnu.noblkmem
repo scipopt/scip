@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86.gnu.noblkmem,v 1.7 2009/07/23 12:52:51 bzfviger Exp $
+#--- $Id: make.linux.x86.gnu.noblkmem,v 1.8 2010/09/21 13:15:44 bzfwinkm Exp $
 FLAGS		+=	-DNDEBUG -DBMS_NOBLOCKMEM -DROUNDING_FE
-OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs

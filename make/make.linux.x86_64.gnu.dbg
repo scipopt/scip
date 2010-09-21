@@ -1,8 +1,8 @@
-#--- $Id: make.linux.x86_64.gnu.dbg,v 1.10 2009/07/23 12:52:51 bzfviger Exp $
-FLAGS		+=	-funit-at-a-time -DROUNDING_FE
+#--- $Id: make.linux.x86_64.gnu.dbg,v 1.11 2010/09/21 13:15:44 bzfwinkm Exp $
+FLAGS		+=	-DROUNDING_FE
 OFLAGS		+=	-O0 -g -m64
-CFLAGS		+=	$(GCCWARN) 
-CXXFLAGS	+=	$(GXXWARN)
+CFLAGS		+=	$(GCCWARN) -funit-at-a-time 
+CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time 
 ARFLAGS		=	crs
 LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
