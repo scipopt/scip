@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 LIMIT=$1
 QUEUE=$2
+LIMITQUEUE=$3
 
 while true
 do
@@ -14,7 +15,7 @@ do
   if test $ALLQUEUED -le 1990
       then
 
-      if test $QUEUED -le 400
+      if test $QUEUED -le $LIMITQUEUE
 	  then
 	  break
       fi

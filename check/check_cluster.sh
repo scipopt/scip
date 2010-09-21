@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.37 2010/09/13 11:28:45 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.38 2010/09/21 16:48:56 bzfberth Exp $
 #
 # Call with "make testcluster"
 #
@@ -123,7 +123,7 @@ do
   # reached the submitted jobs are dumped; to avoid that we check the total
   # load of the cluster and wait until it is save (total load not more than
   # 1900 jobs) to submit the next job.
-  ./waitcluster.sh 1500 $QUEUE
+  ./waitcluster.sh 1500 $QUEUE 10
 
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
@@ -138,8 +138,10 @@ do
   
   echo $BASENAME >> $EVALFILE
 
+  COUNT=`expr $COUNT + 1`
+
   # in case we want to continue we check if the job was already performed 
-  if test "$CONTINUE" = "true"
+  if test "$CONTINUE" != "false"
       then
       if test -e results/$FILENAME.out
 	  then 
@@ -174,7 +176,5 @@ do
   echo quit                              >> $TMPFILE
 
   qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
-
-  COUNT=`expr $COUNT + 1`
 done
 
