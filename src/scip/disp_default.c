@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.75 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.76 2010/09/21 12:27:54 bzfheinz Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -375,11 +375,17 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpavgiters)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPAVGITERS) == 0);
    assert(scip != NULL);
    
+   /**@todo Currently we are using the total number of nodes to compute the average LP iterations number. The reason for
+    *       that is, that for the LP iterations only the total number (over all runs) are stored in the statistics. It
+    *       would be nicer if the statistic also stores the number of LP iterations for the current run similar to the
+    *       nodes.
+    */
+   
    if( SCIPgetNNodes(scip) < 2 )
       SCIPinfoMessage(scip, file, "     - ");
    else
       SCIPinfoMessage(scip, file, "%6.1f ", 
-         (SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)(SCIPgetNNodes(scip) - 1) );
+         (SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)(SCIPgetNTotalNodes(scip) - 1) );
    
    return SCIP_OKAY;
 }
