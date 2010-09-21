@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.14 2010/09/19 13:47:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.15 2010/09/21 10:13:36 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -1668,134 +1668,6 @@ SCIP_RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
-/*
- * local methods for cumulative profiles 
- */
-
-/** subtracts the demand from the profile during core time of the job */
-static
-void profileDeleteCore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   SCIP_VAR*             var,                /**< infeger variable which corresponds to the starting pint of the job */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core                /**< pointer to store if the corresponds job has a core, or NULL */       
-   )
-{
-   int begin;
-   int end; 
-   SCIP_Bool infeasible;
-
-   begin = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
-   end = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
-   
-   if( begin >= end )
-   {
-      if(core != NULL)
-         *core = FALSE;
-
-      return;
-   }
-
-   if( core != NULL )
-      *core = TRUE;
-	
-#ifndef NDEBUG
-   {
-      /* check if the begin and end time points of the core correspond to a time point in the profile; this should be
-       * the case since we added the core before to the profile */
-      int pos;
-      assert(SCIPprofileFindLowerBound(profile, begin, &pos));
-      assert(SCIPprofileFindLowerBound(profile, end, &pos));
-   }
-#endif
-
-   /* remove the core of the job from the current profile */
-#ifdef PROFILE_DEBUG
-   SCIPdebugMessage("before deleting:\n");
-   SCIPprofilePrintOut(profile);
-
-   SCIPdebugMessage("delete core from var <%s>: [%d,%d] [%d]\n", 
-      SCIPvarGetName(var), begin, end, demand);
-#endif
-
-   SCIPprofileUpdate(profile, begin, end, -demand, &infeasible);
-
-#ifdef PROFILE_DEBUG
-   SCIPdebugMessage("after deleting: %u\n", infeasible);
-   SCIPprofilePrintOut(profile);
-#endif
-   assert(!infeasible);
-}
-
-/** from the given job, the core time is computed. If core is non-empty the cumulative profile will be updated otherwise
- *  nothing happens 
- */
-static
-void profileInsertCore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   SCIP_VAR*             var,                /**< infeger variable which corresponds to the starting pint of the job */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */       
-   SCIP_Bool*	         fixed,              /**< poiner to store if the job is fixed due to its bounds */ 
-   SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
-   )
-{
-   int begin;
-   int end; 
-   int lb;
-   int ub;
-	
-   assert(core != NULL);
-   assert(fixed != NULL);
-   assert(infeasible != NULL);
-
-   (*infeasible) = FALSE;
-   (*fixed) = FALSE;
-   (*core) = FALSE;
-   
-   lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-   ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
-	
-   if( ub - lb == 0 )
-      (*fixed) = TRUE;
-
-   begin = ub;
-   end = lb + duration;
-   
-   /* check if a core exists */
-   if( begin < end )
-   {
-      /* job has a nonempty core and will be inserted */
-      (*core) = TRUE;
-
-      /* insert core into the profile */
-#ifdef PROFILE_DEBUG
-      SCIPdebugMessage("before inserting: \n");
-      SCIPprofilePrintOut(profile);
-      SCIPdebugMessage("insert core from var <%s>: [%d,%d] [%d]\n", SCIPvarGetName(var), begin, end, demand);
-#endif
-
-      SCIPprofileUpdate(profile, begin, end, demand, infeasible);
-
-#ifdef PROFILE_DEBUG
-      {
-         int i;
-         SCIPdebugMessage("after inserting: %u\n", *infeasible);
-         SCIPprofilePrintOut(profile);
-         
-         for( i =0; i < profile->ntimepoints-1; ++i )
-         {
-            assert(profile->timepoints[i] < profile->timepoints[i+1]);
-         }
-      }
-#endif
-   }
-}
-
 /** check if the given constraiviont is valid; checks each starting point of a job whether the remaining capacity is at
  *  least zero or not. If not (*violated) is set to TRUE
  */
@@ -2560,7 +2432,7 @@ SCIP_RETCODE propagateCores(
       assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
       assert(SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)));
 
-      profileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
+      SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
 
       if( infeasible )
       {
@@ -2592,7 +2464,9 @@ SCIP_RETCODE propagateCores(
             continue;
          
          if( cores[j] )
-            profileDeleteCore(scip, profile, var, duration, demand, NULL);
+         {
+            SCIPprofileDeleteCore(scip, profile, var, duration, demand, NULL);
+         }
          
          /* try to improve bounds */
          SCIP_CALL( updateBounds(scip, cons, profile, var, duration, demand, cutoff, nbdchgs) );
@@ -2603,7 +2477,7 @@ SCIP_RETCODE propagateCores(
          /* after updating we might have a new core */
          if( cores[j] || SCIPvarGetLbLocal(var) + duration > convertBoundToInt(scip, SCIPvarGetUbLocal(var)) )
          {
-            profileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
+            SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
             assert(cores[j]);
             assert(!infeasible);
          }
@@ -2759,7 +2633,7 @@ SCIP_RETCODE propagateCoresForHoles(
       assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
       assert(SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)));
 
-      profileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
+      SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
       assert(!infeasible);
       
       if( cores[j] ) 
@@ -2782,7 +2656,7 @@ SCIP_RETCODE propagateCoresForHoles(
          
          if( cores[j] )
          {
-            profileDeleteCore(scip, profile, var, duration, demand, NULL);
+            SCIPprofileDeleteCore(scip, profile, var, duration, demand, NULL);
          }
          
          /* try to improve bounds */
@@ -2794,7 +2668,7 @@ SCIP_RETCODE propagateCoresForHoles(
          /* after updating we might have a new core */
          if( cores[j] )
          {
-            profileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
+            SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
             assert(cores[j]);
             assert(!infeasible); /* cannot be infeasible; otherwise cutoff in checkForHoles() */
          }
@@ -6754,6 +6628,128 @@ SCIP_RETCODE SCIPprofileResize(
    profile->arraysize = newminsize;
 
    return SCIP_OKAY;
+}
+
+/** from the given job, the core time is computed. If core is non-empty the cumulative profile will be updated otherwise
+ *  nothing happens
+ */
+void SCIPprofileInsertCore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CUMULATIVEPROFILE*    profile,            /**< profile to use */
+   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
+   int                   duration,           /**< duration of the job */
+   int                   demand,             /**< demand of the job */
+   SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */       
+   SCIP_Bool*	         fixed,              /**< poiner to store if the job is fixed due to its bounds */ 
+   SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
+   )
+{
+   int begin;
+   int end; 
+   int lb;
+   int ub;
+	
+   assert(core != NULL);
+   assert(fixed != NULL);
+   assert(infeasible != NULL);
+
+   (*infeasible) = FALSE;
+   (*fixed) = FALSE;
+   (*core) = FALSE;
+   
+   lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+   ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+	
+   if( ub - lb == 0 )
+      (*fixed) = TRUE;
+
+   begin = ub;
+   end = lb + duration;
+   
+   /* check if a core exists */
+   if( begin < end )
+   {
+      /* job has a nonempty core and will be inserted */
+      (*core) = TRUE;
+
+      /* insert core into the profile */
+#ifdef PROFILE_DEBUG
+      SCIPdebugMessage("before inserting: \n");
+      SCIPprofilePrintOut(profile);
+      SCIPdebugMessage("insert core from var <%s>: [%d,%d] [%d]\n", SCIPvarGetName(var), begin, end, demand);
+#endif
+
+      SCIPprofileUpdate(profile, begin, end, demand, infeasible);
+
+#ifdef PROFILE_DEBUG
+      {
+         int i;
+         SCIPdebugMessage("after inserting: %u\n", *infeasible);
+         SCIPprofilePrintOut(profile);
+         
+         for( i =0; i < profile->ntimepoints-1; ++i )
+         {
+            assert(profile->timepoints[i] < profile->timepoints[i+1]);
+         }
+      }
+#endif
+   }
+}
+
+/** subtracts the demand from the profile during core time of the job */
+void SCIPprofileDeleteCore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CUMULATIVEPROFILE*    profile,            /**< profile to use */
+   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
+   int                   duration,           /**< duration of the job */
+   int                   demand,             /**< demand of the job */
+   SCIP_Bool*            core                /**< pointer to store if the corresponds job has a core, or NULL */       
+   )
+{
+   int begin;
+   int end; 
+   SCIP_Bool infeasible;
+
+   begin = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+   end = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
+   
+   if( begin >= end )
+   {
+      if(core != NULL)
+         *core = FALSE;
+
+      return;
+   }
+
+   if( core != NULL )
+      *core = TRUE;
+	
+#ifndef NDEBUG
+   {
+      /* check if the begin and end time points of the core correspond to a time point in the profile; this should be
+       * the case since we added the core before to the profile */
+      int pos;
+      assert(SCIPprofileFindLowerBound(profile, begin, &pos));
+      assert(SCIPprofileFindLowerBound(profile, end, &pos));
+   }
+#endif
+
+   /* remove the core of the job from the current profile */
+#ifdef PROFILE_DEBUG
+   SCIPdebugMessage("before deleting:\n");
+   SCIPprofilePrintOut(profile);
+
+   SCIPdebugMessage("delete core from var <%s>: [%d,%d] [%d]\n", 
+      SCIPvarGetName(var), begin, end, demand);
+#endif
+
+   SCIPprofileUpdate(profile, begin, end, -demand, &infeasible);
+
+#ifdef PROFILE_DEBUG
+   SCIPdebugMessage("after deleting: %u\n", infeasible);
+   SCIPprofilePrintOut(profile);
+#endif
+   assert(!infeasible);
 }
 
 

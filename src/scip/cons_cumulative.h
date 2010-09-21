@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.h,v 1.1 2010/09/01 16:51:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.h,v 1.2 2010/09/21 10:13:36 bzfheinz Exp $"
 
 /**@file   cons_cumulative.h
  * @brief  constraint handler for cumulative constraints
@@ -142,6 +142,32 @@ SCIP_RETCODE SCIPprofileResize(
    SCIP*                 scip,               /**< SCIP data structure */
    CUMULATIVEPROFILE*    profile,            /**< cumulative profile to resize */
    int                   newminsize          /**< minimum size to ensure */
+   );
+
+/** from the given job, the core time is computed. If core is non-empty the cumulative profile will be updated otherwise
+ *  nothing happens
+ */
+extern
+void SCIPprofileInsertCore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CUMULATIVEPROFILE*    profile,            /**< profile to use */
+   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
+   int                   duration,           /**< duration of the job */
+   int                   demand,             /**< demand of the job */
+   SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */       
+   SCIP_Bool*	         fixed,              /**< poiner to store if the job is fixed due to its bounds */ 
+   SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
+   );
+
+/** subtracts the demand from the profile during core time of the job */
+extern
+void SCIPprofileDeleteCore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CUMULATIVEPROFILE*    profile,            /**< profile to use */
+   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
+   int                   duration,           /**< duration of the job */
+   int                   demand,             /**< demand of the job */
+   SCIP_Bool*            core                /**< pointer to store if the corresponds job has a core, or NULL */       
    );
 
 /** print profile to the given file stream (for debugging) */
