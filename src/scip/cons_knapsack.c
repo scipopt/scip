@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.211 2010/09/16 13:09:01 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.212 2010/09/21 14:23:39 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -1657,10 +1657,10 @@ SCIP_RETCODE getLiftingSequence(
    }
    
    /* frees temporary memory */
-   SCIPfreeBufferArray(scip, &sortkeysR);
-   SCIPfreeBufferArray(scip, &sortkeysC2);
    for( j = nvarsF-1; j >= 0; j-- )
       SCIPfreeBuffer(scip, &sortkeypairsF[j]);
+   SCIPfreeBufferArray(scip, &sortkeysR);
+   SCIPfreeBufferArray(scip, &sortkeysC2);
    SCIPfreeBufferArray(scip, &sortkeypairsF);
    
    return SCIP_OKAY;
