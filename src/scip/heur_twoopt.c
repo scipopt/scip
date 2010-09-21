@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.15 2010/09/18 22:18:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.16 2010/09/21 18:20:45 bzfberth Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -1474,13 +1474,19 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
     * some of the variables' objective function coefficient differ. */
    if( !heurdata->execute )
       return SCIP_OKAY;
-      
-   /* problem satisfies all necessary conditions for 2-optimization heuristic, execute heuristic! */
-   *result = SCIP_DIDNOTFIND;
 
    nbinvars = heurdata->nbinvars;
    nintvars = heurdata->nintvars;
    ndiscvars = nbinvars+nintvars;
+
+   /* we need to be able to start diving from current node in order to resolve the LP
+    * with continuous or implicit integer variables
+    */
+   if( SCIPgetNVars(scip) > ndiscvars && ( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL ) )
+      return SCIP_OKAY;
+
+   /* problem satisfies all necessary conditions for 2-optimization heuristic, execute heuristic! */
+   *result = SCIP_DIDNOTFIND;
 
    /* initialize a working solution as a copy of the current incumbent to be able to store 
     * possible improvements obtained by 2-optimization */
