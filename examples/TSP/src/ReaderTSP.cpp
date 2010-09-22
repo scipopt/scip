@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.15 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.16 2010/09/22 16:50:42 bzfberth Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -74,6 +74,28 @@ void ReaderTSP::getNodesFromFile(
    assert( i == graph->nnodes );
 }
 
+/** adds a variable to both halfedges and captures it for usage in the graph */
+SCIP_RETCODE ReaderTSP::addVarToEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPHEDGE*            edge,               /**< an edge of the graph */
+   SCIP_VAR*             var                 /**< variable corresponding to that edge */
+   )
+{
+   assert(scip != NULL);
+   assert(edge != NULL);
+   assert(var != NULL);
+
+   /* add variable to forward edge and capture it for usage in graph */
+   edge->var = var;
+   SCIP_CALL( SCIPcaptureVar(scip, edge->var) );
+
+   /* two parallel halfedges have the same variable,
+    * add variable to backward edge and capture it for usage in graph */
+   edge->back->var = edge->var;
+   SCIP_CALL( SCIPcaptureVar(scip, edge->back->var) );
+
+   return SCIP_OKAY;
+}
 
 /** method asserting, that the file has had the correct format and everything was set correctly */
 bool ReaderTSP::checkValid(
@@ -368,18 +390,23 @@ SCIP_RETCODE ReaderTSP::scip_read(
    // add variables to problem and link them for parallel halfedges
    for( i = 0; i < nedges/2; i++ )
    {
+      SCIP_VAR* var;
+
       stringstream varname;
       edge = &graph->edges[i];
 
       // the variable is named after the two nodes connected by the edge it represents
       varname << "x_e_" << edge->back->adjac->id+1 << "-" << edge->adjac->id+1;
-      SCIP_CALL( SCIPcreateVar(scip, &edge->var, varname.str().c_str(), 0.0, 1.0, edge->length,
+      SCIP_CALL( SCIPcreateVar(scip, &var, varname.str().c_str(), 0.0, 1.0, edge->length,
             SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-      
-      //two parallel halfedges have the same variable
-      edge->back->var = edge->var;
-      SCIP_CALL( SCIPcaptureVar(scip, edge->var) );
-      SCIP_CALL( SCIPaddVar(scip, edge->var) );
+
+      /* add variable to SCIP and to the graph */
+      SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIP_CALL( addVarToEdges(scip, edge, var) );
+
+      /* release variable for the reader. */
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );      
+
    }
 
    // add all n node degree constraints

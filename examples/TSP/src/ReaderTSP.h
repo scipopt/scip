@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.h,v 1.11 2010/03/24 20:35:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.h,v 1.12 2010/09/22 16:50:42 bzfberth Exp $"
 
 /**@file   ReaderTSP.h
  * @brief  C++ file reader for TSP data files
@@ -135,6 +135,14 @@ private:
       std::string        edgeweighttype,     /**< type of the edgeweights, should be "EUC_2D", "MAX_2D", or "MAN_2D" */
       int                nnodes              /**< dimension of the problem, should at least be one */
       );
+   
+   /** adds a variable to both halfedges and captures it for usage in the graph */
+   SCIP_RETCODE addVarToEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPHEDGE*            edge,               /**< an edge of the graph */
+   SCIP_VAR*             var                 /**< variable corresponding to that edge */
+      );
+
 };
 
 } /* namespace tsp */
