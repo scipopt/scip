@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.27 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.28 2010/09/22 10:11:11 bzfviger Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -362,6 +362,8 @@ SCIP_RETCODE getFixedVariables(
    
    SCIPdebugMessage("parse fixed variables\n");
    
+   /* @todo implement parsing of fixed variables, in case of some constraints that use these variables */
+
    return SCIP_OKAY;
 }
 
