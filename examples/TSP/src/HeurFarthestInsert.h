@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.h,v 1.12 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.h,v 1.13 2010/09/22 13:37:16 bzfschwa Exp $"
 
 /**@file   HeurFarthestInsert.h
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -107,6 +107,20 @@ namespace tsp
          SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
          SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
          );
+
+      /** clone method which will be used to copy a objective plugin */
+      virtual ObjCloneable* clone(
+         SCIP*                 scip,               /**< SCIP data structure */
+         SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+         ) const;
+
+      /** returns whether the objective plugin is copyable */
+      virtual SCIP_Bool iscloneable(
+         void
+         ) const
+      {
+         return true;
+      }
    };
 
 }

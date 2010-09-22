@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.10 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.11 2010/09/22 13:37:16 bzfschwa Exp $"
 
 /**@file   Heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -209,9 +209,15 @@ SCIP_RETCODE Heur2opt::scip_exec(
       edges2test[1] = tour_[i];
       edges2test[2] = findEdge( nodes, edges2test[0]->back->adjac, edges2test[1]->back->adjac );  
       edges2test[3] = findEdge( nodes, edges2test[0]->adjac, edges2test[1]->adjac );
+      assert( edges2test[2] != NULL );
+      assert( edges2test[3] != NULL );
              
-      // if the new solution is better, update and end
-      if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length )
+      // if the new solution is better and variables are not fixed, update and end
+      if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length 
+	  &&  SCIPvarGetLbGlobal(edges2test[0]->var) == 0.0
+	  &&  SCIPvarGetLbGlobal(edges2test[1]->var) == 0.0
+	  &&  SCIPvarGetUbGlobal(edges2test[2]->var) == 1.0
+	  &&  SCIPvarGetUbGlobal(edges2test[3]->var) == 1.0 )
       {
 
          SCIP_Bool success;
@@ -241,4 +247,13 @@ SCIP_RETCODE Heur2opt::scip_exec(
    SCIPfreeBufferArray(scip, &edges2test);
 
    return SCIP_OKAY;
+}
+
+/** clone method which will be used to copy a objective plugin */
+scip::ObjCloneable* Heur2opt::clone(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+   ) const
+{
+   return new Heur2opt(scip);
 }

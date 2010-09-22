@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.21 2010/09/13 15:29:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.22 2010/09/22 13:37:16 bzfschwa Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -39,69 +39,6 @@ struct SCIP_ConsData
 {
    GRAPH* graph;
 };
-
-// static
-// bool findSubtour( 
-//    SCIP*              scip,               /**< SCIP data structure */
-//    GRAPH*             graph,              /**< underlying graph */
-//    SCIP_SOL*          sol                 /**< proposed solution */
-//    )
-// {  
-//    GRAPHNODE* node;
-//    GRAPHNODE* startnode;
-//    GRAPHEDGE* lastedge;
-//    GRAPHEDGE* edge;
-//    int tourlength;
-
-//    if(graph->nnodes <= 1)
-//       return FALSE;
-//    startnode = &graph->nodes[0];
-
-//    tourlength = 0;
-//    lastedge = NULL;
-//    node = startnode;
-
-//    // follow the (sub?)tour until you come back to the startnode
-//    do
-//    {
-//       edge = node->first_edge;
-
-//       // look for an outgoing edge to proceed
-//       while( edge != NULL )
-//       {
-//          // if a new edge with value numerical equal to one is found, we proceed
-//          if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
-//          {
-//             tourlength++;
-//             node = edge->adjac;
-//             lastedge = edge;
-               
-//             if( tourlength > graph->nnodes )
-//             {
-//                /* we found a subtour without the starting node, e.g. 0 - 1 - 2 - 3 - 1 - 2 - ...;
-//                 * this can only happen, if the degree constraints are violated;
-//                 * start again with the last visited node as starting node, because this must be member of the subtour;
-//                 * thus, in the second run we will find the subtour!
-//                 */
-//                return TRUE;
-//             }
-//             break;
-//          }    
-//          edge = edge->next;        
-//       }
-
-//       /* we didn't find an outgoing edge in the solution: the degree constraints must be violated; abort! */
-//       if( edge == NULL )
-//          return TRUE;
-//    }
-//    while( node != startnode );
-
-//    assert(tourlength <= graph->nnodes);
-
-//    return ( graph->nnodes != tourlength );
-// }
-
-
 
 static
 SCIP_Bool findSubtour( 
@@ -306,10 +243,11 @@ SCIP_RETCODE ConshdlrSubtour::scip_trans(
    SCIP_CONS**        targetcons          /**< pointer to store created target constraint */
    )
 {
-   SCIP_CONSDATA* sourcedata;
-   SCIP_CONSDATA* targetdata;
+   SCIP_CONSDATA* sourcedata = NULL;
+   SCIP_CONSDATA* targetdata = NULL;
 
    sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
 
    SCIP_CALL( SCIPallocMemory(scip, &targetdata) );
    targetdata->graph = sourcedata->graph;
@@ -709,7 +647,75 @@ SCIP_RETCODE ConshdlrSubtour::scip_print(
    return SCIP_OKAY;
 }
 
+/** clone method which will be used to copy a objective plugin */
+ObjCloneable* ConshdlrSubtour::clone(
+         SCIP*           scip,               /**< SCIP data structure */
+         SCIP_Bool*      valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+         ) const
+{
+   *valid = true;
+   return new ConshdlrSubtour(scip);
+}
 
+/** constraint copying method of constraint handler
+ *
+ *  The constraint handler can provide a copy method, which copies a constraint from one SCIP data structure into a other
+ *  SCIP data structure.
+ */
+SCIP_RETCODE ConshdlrSubtour::scip_copy(
+   SCIP*              scip,               /**< target SCIP data structure */
+   SCIP_CONS**        cons,               /**< pointer to store the created target constraint */
+   const char*        name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
+   SCIP*              sourcescip,         /**< source SCIP data structure */
+   SCIP_CONSHDLR*     sourceconshdlr,     /**< source constraint handler of the source SCIP */
+   SCIP_CONS*         sourcecons,         /**< source constraint of the source SCIP */
+   SCIP_HASHMAP*      varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+					   *   variables of the target SCIP */
+   SCIP_HASHMAP*      consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+					   *   target constraints, or NULL */
+   SCIP_Bool          initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool          separate,           /**< should the constraint be separated during LP processing? */
+   SCIP_Bool          enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool          check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool          propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool          local,              /**< is constraint only valid locally? */
+   SCIP_Bool          modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool          dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+					   *   if it may be moved to a more global node? */
+   SCIP_Bool          global,             /**< create a global or a local copy? */
+   SCIP_Bool*         success             /**< pointer to store whether the copying was successful or not */
+   )
+{
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSDATA* consdata = NULL;
+
+   /* find the subtour constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "subtour");
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("subtour constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* create constraint data */
+   SCIP_CALL( SCIPallocMemory( scip, &consdata) );
+   ProbDataTSP * probdatatsp = NULL;
+   probdatatsp = dynamic_cast<ProbDataTSP *>(SCIPgetObjProbData(scip));
+   assert( probdatatsp != NULL );
+   GRAPH * graph = probdatatsp->getGraph();
+   consdata->graph = graph;
+   capture_graph( consdata->graph );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, (name == NULL) ? SCIPconsGetName(sourcecons) : name, 
+			     conshdlr, consdata, initial, separate, enforce, check, 
+			     propagate, local, modifiable, dynamic, removable, FALSE) );
+
+   *success = true;
+   return SCIP_OKAY;
+}
 
 /** creates and captures a TSP subtour constraint */
 SCIP_RETCODE tsp::SCIPcreateConsSubtour(
@@ -728,8 +734,8 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSDATA* consdata = NULL;
 
    /* find the subtour constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "subtour");

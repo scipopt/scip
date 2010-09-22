@@ -1,3 +1,5 @@
+# SCIP version 2.0.0
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/logicor/sepafreq = 10
@@ -9,6 +11,14 @@ nodeselection/bfs/minplungedepth = 20
 # frequency for calling primal heuristic <octane> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/octane/freq = -1
+
+# should subproblem be created out of the rows in the LP rows?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/crossover/uselprows = FALSE
+
+# should subproblem be created out of the rows in the LP rows?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/rens/uselprows = FALSE
 
 # frequency for calling primal heuristic <simplerounding> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -29,6 +39,10 @@ separating/gomory/freq = 10
 # frequency for calling separator <impliedbounds> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 separating/impliedbounds/freq = 10
+
+# frequency for calling separator <rapidlearning> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/rapidlearning/freq = 0
 
 # frequency for calling separator <strongcg> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
