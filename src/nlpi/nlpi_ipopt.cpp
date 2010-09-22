@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.24 2010/09/15 19:41:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.25 2010/09/22 16:05:46 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -1750,6 +1750,16 @@ void* SCIPgetIpoptApplicationPointerIpopt(
    assert(nlpiproblem != NULL);
    
    return (void*)GetRawPtr(nlpiproblem->ipopt);
+}
+
+/** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
+void* SCIPgetNlpiOracleIpopt(
+   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
+   )
+{
+   assert(nlpiproblem != NULL);
+
+   return nlpiproblem->oracle;
 }
 
 /** Method to return some info about the nlp */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.10 2010/09/15 14:57:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.h,v 1.11 2010/09/22 16:05:46 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.h
  * @brief   Ipopt NLP interface
@@ -54,6 +54,12 @@ SCIP_Bool SCIPisIpoptAvailableIpopt(void);
 /** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
 extern
 void* SCIPgetIpoptApplicationPointerIpopt(
+   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
+   );
+
+/** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
+extern
+void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );
 
