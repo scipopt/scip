@@ -4,25 +4,26 @@ Notes for SCIP Release 2.0
 Features
 ========
 
-- Better support for non-convex MIQPs and MIQCPs: Improved constraint handler
-  for quadratic constraints, new constraint handler for second order cone
-  constraints, new MINLP heuristics, automatic branching on solutions of
-  arbitrary relaxations, branching on continuous variables, preliminary support
-  for non-linear relaxations (via expression trees), support of quadratic
-  extensions in file formats .lp and .mps
+- SCIP can now copy instances (e.g. for heuristics).
+
+- New rounding and propagation heuristics, rapid learning
+
+- Preliminary support of domain holes
 
 - New constraint handlers for linking constraints, cumulative constraints,
   and for breaking orbitopal symmetries
 
-- New rounding and propagation heuristics and rapid learning
-
-- New separators for Chvatal-Gomory cuts using sub-MIPs and oddcycle cuts
-
-- Preliminary version of copying SCIP instances
-
-- Preliminary support of domain holes
+- New separators for oddcycle cuts and Chvatal-Gomory cuts using sub-MIPs
 
 - Solution counting extended to MIPs
+
+- Better support for non-convex MIQPs and MIQCPs:
+  + Improved constraint handler for quadratic constraints
+  + support of quadratic extensions in file formats .lp and .mps
+  + New constraint handler for second order cone constraints
+  + new MINLP heuristics
+  + automatic branching on solutions of arbitrary relaxations and on continuous variables
+  + preliminary support for non-linear relaxations (via expression trees)
 
 
 Interfaces
@@ -32,10 +33,8 @@ Interfaces
 
 - NLP solver interface (NLPI) now independent of SCIP like LPI
 
-- Enhanced user interface for callable library: manual restarts and
-  predefined settings
-
-- Test scripts for Gurobi, BLIS, Symphony, and GLPK
+- Enhanced user interface for callable library: manual restarts,
+  predefined settings, and many other features
 
 - Support of wbo format for weighted PBO problems, IBM's xml-solution
   format, and pip format for polynomial mixed-integer programs
@@ -43,6 +42,8 @@ Interfaces
 - Extended reader for Flatzinc models
 
 - Extended reader for .lp and .mps files for semicontinuous variables
+
+
 
 
 Performance Improvements and Bug Fixes
@@ -57,8 +58,10 @@ Performance Improvements and Bug Fixes
 - Many bug fixes
 
 
-Additional Note
-===============
+
+
+Additional Notes
+================
 
 - A bug in the Makefiles of older versions of the SCIP examples may cause
   data loss. If you have a custom Makefile, please ensure that the target
@@ -69,8 +72,8 @@ Additional Note
   The $(MAINFILE) target now has $(NLPILIBFILE) as additional dependency and the linking
   command requires $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) as additional argument.
 
-For details see the CHANGELOG file. Some of the interface functions were
-changed. See "Changes between version 1.2 and 2.0" in the doxygen
-documentation for additional information.
-
-
+- The interface contains several additional callback functions and
+  parameters for plugins. Some work might be required to compile your
+  own projects with SCIP 2.0. For details see the CHANGELOG file. See
+  also "Changes between version 1.2 and 2.0" in the doxygen
+  documentation for additional information.
