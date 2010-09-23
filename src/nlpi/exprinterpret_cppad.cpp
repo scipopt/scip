@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.21 2010/09/17 17:31:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.22 2010/09/23 12:29:40 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -981,7 +981,7 @@ SCIP_RETCODE SCIPexprintGrad(
       gradient[i] = jac[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("GradDense for "); SCIPexprtreePrint(tree, NULL); printf("\n");
+   SCIPdebugMessage("GradDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t %g", gradient[i]); printf("\n");
 #endif
@@ -1022,7 +1022,7 @@ SCIP_RETCODE SCIPexprintGradInt(
       gradient[i] = jac[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("IntGradDense for "); SCIPexprtreePrint(NULL, tree); printf("\n");
+   SCIPdebugMessage("IntGradDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(data->int_x[i]), SCIPintervalGetSup(data->int_x[i])); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(gradient[i]), SCIPintervalGetSup(gradient[i])); printf("\n");
 #endif
@@ -1060,7 +1060,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
          sparsity[i] = TRUE;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("HessianSparsityDense for "); SCIPexprtreePrint(tree, NULL); printf("\n");
+      SCIPdebugMessage("HessianSparsityDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
       SCIPdebugMessage("sparsity = all elements, due to discontinuouities\n");
 #endif
 
@@ -1085,7 +1085,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
       sparsity[i] = sparsehes[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("HessianSparsityDense for "); SCIPexprtreePrint(tree, NULL); printf("\n");
+   SCIPdebugMessage("HessianSparsityDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("sparsity ="); for (int i = 0; i < n; ++i) for (int j = 0; j < n; ++j) if (sparsity[i*n+j]) printf(" (%d,%d)", i, j); printf("\n");
 #endif
 
@@ -1129,7 +1129,7 @@ SCIP_RETCODE SCIPexprintHessianDense(
       hessian[i] = hess[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("HessianDense for "); SCIPexprtreePrint(tree, NULL); printf("\n");
+   SCIPdebugMessage("HessianDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("hess ="); for (int i = 0; i < n*n; ++i) printf("\t %g", hessian[i]); printf("\n");
 #endif
