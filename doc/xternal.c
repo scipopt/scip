@@ -93,6 +93,7 @@
  * <b>Changes between different versions of SCIP</b>
  *
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
  * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
  * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
@@ -4817,6 +4818,108 @@
  * For further release notes we refer the \ref RELEASENOTES "Release notes".
  */
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG4 Interface changes between SCIP 1.2 and SCIP 2.0
+ *
+ *
+ * <br>
+ * @section CHGCALLBACKS4 New and changed callbacks
+ *
+ *
+ * - <b>Copying a SCIP instance</b>:
+ *      <br><br>
+ *    - All plugins, like \ref BRANCH "branching rules" and \ref HEUR "primal heuristics", have a new callback method (see, e.g.,
+ *      type_branch.h and type_heur.h for more details): 
+ *       - SCIP_DECL_BRANCHCOPY(x), SCIP_DECL_HEURCOPY(x) etc. - When copying a SCIP instance, these methods are called to copy the plugins.
+ *      <br><br>
+ *    - Variables have a new callback method (see type_var.h for more details):
+ *       - SCIP_DECL_VARCOPY(x) - When copying a SCIP instance, this method is called to copy the variables' data.
+ *      <br><br>
+ *    - The main problem has a new callback method (see type_prob.h for more details):
+ *       - SCIP_DECL_PROBCOPY(x) - When copying a SCIP instance, this method is called to copy the problem's data.
+ *
+ * - <b>Branching on solutions of arbitrary relaxations</b>:
+ *      <br><br>
+ *    - The \ref BRANCH "branching rules" have a second new callback method (see type_branch.h for more details):
+ *       - SCIP_DECL_BRANCHEXECREL(x) - This method can be used to branch on relaxation solutions.
+ * 
+ * - <b>Restarts</b>:
+ *      <br><br>
+ *    - The callback SCIP_DECL_PROBEXITSOL(x) in the main problem has one new parameter (see type_prob.h for more details): 
+ *       - The parameter <code>restart</code> is <code>TRUE</code> if the callback method was triggered by a restart.
+ *
+ *
+ * <br>
+ * @section CHGINTERFUNC4 Changed interface methods
+ *
+ * - <b>Copying a SCIP instance</b>:
+ *      <br><br>
+ *    - Every new callback method resulted in a new parameter of the include function for the corresponding plugin,
+ *      e.g., SCIPincludeBranchrule() has two new parameters <code>SCIP_DECL_BRANCHCOPY((*branchcopy))</code> and
+ *      <code>SCIP_DECL_BRANCHEXECREL((*branchexecrel))</code>.  In the same fashion, the new callbacks
+ *      SCIP_DECL_VARCOPY and SCIP_DECL_PROBCOPY led to new parameters in SCIPcreateVar() and SCIPcreateProb() in
+ *      scip.c, respectively.
+ *      <br><br>
+ *    - SCIPincludeHeur() and SCIPincludeSepa() in scip.c, as well as ObjSepa() and ObjHeur(), have a new parameter:
+ *       - <code>usessubscip</code> - It can be used to inform SCIP that the heuristic/separator to be included uses a secondary SCIP instance. 
+ *      <br><br>
+ *    - SCIPapplyRens() in heur_rens.c has a new parameter <code>uselprows</code>. It can be used to switch from LP rows
+ *      to constraints as basis of the sub-SCIP constructed in the RENS heuristic.
+ *      <br><br>
+ *    - <code>ObjCloneable::clone()</code> has a new parameter <code>scip</code>.
+ *
+ * - <b>Branching</b>:
+ *      <br><br>
+ *    - The method SCIPgetVarStrongbranch() has been replaced by two methods SCIPgetVarStrongbranchFrac() and
+ *      SCIPgetVarStrongbranchInt(). 
+ *      <br><br>
+ *    - The methods SCIPgetVarPseudocost() and SCIPgetVarPseudocostCurrentRun() in var.c now return the pseudocost value of
+ *      one branching direction, scaled to a unit interval. The former versions of SCIPgetVarPseudocost() and
+ *      SCIPgetVarPseudocostCurrentRun() are now called SCIPgetVarPseudocostVal() and SCIPgetVarPseudocostValCurrentRun(), respectively.
+ *      <br><br>
+ *    - The methods SCIPgetVarConflictScore() and SCIPgetVarConflictScoreCurrentRun() in var.c are now called
+ *      SCIPgetVarVSIDS() and SCIPgetVarVSIDSCurrentRun(), respectively.
+ *      <br><br>
+ *    - The methods SCIPvarGetNInferences(), SCIPvarGetNInferencesCurrentRun(), SCIPvarGetNCutoffs(), and
+ *      SCIPvarGetNCutoffsCurrentRun() are now called SCIPvarGetInferenceSum(), SCIPvarGetInferenceSumCurrentRun(),
+ *      SCIPvarGetCutoffSum(), and SCIPvarGetCutoffSumCurrentRun(), respectively. Furthermore, they now return
+ *      <code>SCIP_Real</code> instead of <code>SCIP_Longint</code> values.
+ *
+ * - <b>Others</b>:
+ *      <br><br>
+ *    - SCIPcutGenerationHeuristicCmir() in sepa_cmir.c has three new parameters: 
+ *        - <code>maxmksetcoefs</code> - If the mixed knapsack constraint obtained after aggregating LP rows contains more
+ *          than <code>maxmksetcoefs</code> nonzero coefficients the generation of the <b>c-MIR cut</b> is aborted. 
+ *        - <code>delta</code> - It can be used to obtain the scaling factor which leads to the best c-MIR cut found within
+ *          the cut generation heuristic. If a <code>NULL</code> pointer is passed, the corresponding c-MIR cut will already be
+ *          added to SCIP by SCIPcutGenerationHeuristicCmir(). Otherwise, the user can generate the cut and add it to SCIP
+ *          on demand afterwards.
+ *        - <code>deltavalid</code> - In case, the user wants to know the best scaling factor, i.e., <code>delta</code> passed is not <code>NULL</code>, 
+ *          <code>deltavalid</code> will be <code>TRUE</code> if the stored scaling factor <code>delta</code> will lead to a violated c-MIR cut.
+ *      <br><br>
+ *    - All functions for setting <b>user parameters</b> of different types like SCIPparamSetBool() and SCIPparamSetInt() in paramset.c have a new parameter:
+ *        - <code>quite</code> - It allows to turn on an output showing the new parameter value.
+ *   
+ *   
+ * <br>
+ * @section MISCELLANEOUS4 Miscellaneous
+ *
+ * - We do not distinguish between <b>block memory</b> for the original and the transformed problem anymore. In both
+     problem stages, the same block memory is used, now.
+ *
+ * - The usage of <b>strong branching</b> changed. Now, SCIPstartStrongbranch() and SCIPendStrongbranch() have to be
+ *   called before and after strong branching, respectively.
+ *
+ * - All <b>C++</b> objects and constructors have a SCIP pointer, now.
+ *
+ * - The <b>predefined setting files</b> like "settings/cuts/off.set,aggressive.set,fast.set" have been replaced by
+ *   interface methods like SCIPparamsetSetSeparating() in paramset.c and by user dialogs in the interactive shell like
+ *   "SCIP/set/separating/emphasis/off,aggressive,fast".
+ * 
+ * <br>
+ * For further release notes we refer the \ref RELEASENOTES "Release notes".
+ */
+
 /* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
  *
  * - SCIP has rudimentary support to solve quadratic nonlinear integer programs - see cons_quadratic.c.
@@ -4919,6 +5022,8 @@
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-2.0
  *
  * \verbinclude SCIP-release-notes-1.2
  *
