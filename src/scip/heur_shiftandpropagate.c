@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.9 2010/09/13 11:16:17 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.10 2010/09/23 21:53:39 bzfhende Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -100,7 +100,7 @@ struct ConstraintMatrix
    SCIP_Real*            upperbounds;        /**< the upper bounds of every non-continuous variable after transformation*/
    SCIP_Real*            transformshiftvals; /**< values by which original discrete variable bounds were shifted */
    int                   nnonzs;             /**< number of nonzero column entries */
-   int                   nrows;              /**< number of rows of  matrix */
+   int                   nrows;              /**< number of rows of matrix */
    int                   ncols;              /**< the number of columns in matrix (including continuous vars) */
    int                   ndiscvars;          /**< number of discrete problem variables */       
 };
@@ -472,7 +472,7 @@ SCIP_RETCODE initMatrix(
       constant = SCIProwGetConstant(row);
 
       assert(!SCIPisInfinity(scip, constant));
-      assert(maxval > 0.0);
+      assert(SCIPisFeasGT(scip, maxval, 0.0) || nrowlpnonz == 0);
         
       matrix->rowmatbegin[i] = currentpointer;
 
@@ -1291,6 +1291,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    /* heuristic is obsolete if there are only continuous variables */
    if( ndiscvars == 0 )
       return SCIP_OKAY;
+
+   /* stop execution method if there is already a primarily feasible solution at hand */
+   if( SCIPgetBestSol(scip) != NULL )
+     return SCIP_OKAY;
 
    if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPhasCurrentNodeLP(scip) )
    {
