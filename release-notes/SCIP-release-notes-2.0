@@ -4,12 +4,12 @@ Notes for SCIP Release 2.0
 Features
 ========
 
-- Full support of non-convex MIQPs and MIQCPs: Improved constraint handler
+- Better support for non-convex MIQPs and MIQCPs: Improved constraint handler
   for quadratic constraints, new constraint handler for second order cone
   constraints, new MINLP heuristics, automatic branching on solutions of
-  arbitrary relaxations, branching of continuous variables, improved
-  handling of non-linear relaxations (expression trees), support of various
-  file formats
+  arbitrary relaxations, branching on continuous variables, preliminary support
+  for non-linear relaxations (via expression trees), support of quadratic
+  extensions in file formats .lp and .mps
 
 - New constraint handlers for linking constraints, cumulative constraints,
   and for breaking orbitopal symmetries
@@ -30,17 +30,19 @@ Interfaces
 
 - Improved SoPlex interface
 
-- NLP interface now independent of SCIP like LPI
+- NLP solver interface (NLPI) now independent of SCIP like LPI
 
 - Enhanced user interface for callable library: manual restarts and
   predefined settings
 
 - Test scripts for Gurobi, BLIS, Symphony, and GLPK
 
-- Support of wbo format for weighted PBO problems and IBM's xml-solution
-  format
+- Support of wbo format for weighted PBO problems, IBM's xml-solution
+  format, and pip format for polynomial mixed-integer programs
 
 - Extended reader for Flatzinc models
+
+- Extended reader for .lp and .mps files for semicontinuous variables
 
 
 Performance Improvements and Bug Fixes
@@ -63,6 +65,9 @@ Additional Note
   "clean" is changed as described here:
   http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
 
+- The additional NLPI library requires a change in the Makefile of SCIP's project:
+  The $(MAINFILE) target now has $(NLPILIBFILE) as additional dependency and the linking
+  command requires $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) as additional argument.
 
 For details see the CHANGELOG file. Some of the interface functions were
 changed. See "Changes between version 1.2 and 2.0" in the doxygen
