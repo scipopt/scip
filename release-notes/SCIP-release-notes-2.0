@@ -1,0 +1,69 @@
+Notes for SCIP Release 2.0
+
+
+Features
+========
+
+- Full support of non-convex MIQPs and MIQCPs: Improved constraint
+  handler for quadratic constraints, new constraint handler for second
+  order cone constraints, new MINLP heuristics, automatic branching on
+  solutions of arbitrary relaxations, branching of continuous variables,
+  improved handling of nonlinear relaxations (expression trees), support of
+  various file formats
+
+- New constraint handlers for linking constraints, cumulative constraints,
+  and for breaking orbitopal symmetries
+
+- New rounding and propagation heuristics and rapid learning
+
+- New separators for Chvatal-Gomory cuts using sub-MIPs and oddcycle cuts
+
+- Preliminary version of copying SCIP instances
+
+- Preliminary support of domain holes 
+
+- Extended solution counting to MIPs 
+
+
+Interfaces
+==========
+
+- Improved SoPlex interface
+
+- Extended reader for Flatzinc models
+ 
+- Support of wbo format for weighted PBO problems and IBM's xml-solution format
+
+- NLP interface now independent of SCIP like LPI
+
+- Enhanced user interface for callable library: manual restarts and
+  predefined settings
+
+- Test scripts for Gurobi, BLIS, Symphony, and GLPK
+
+
+Performance Improvements and Bug Fixes
+======================================
+
+- Improved handling of indicator constraints
+
+- Improved zerohalf cuts
+
+- Several improvements in presolving
+
+- Many bug fixes
+
+
+Additional Note
+===============
+
+- A bug in the Makefiles of older versions of the SCIP examples may cause
+  data loss. If you have a custom Makefile, please ensure that the target
+  "clean" is changed as described here:
+  http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+
+For details see the CHANGELOG file. Some of the interface functions were
+changed. See "Changes between version 1.2 and 2.0" in the doxygen
+documentation for additional information.
+
+
