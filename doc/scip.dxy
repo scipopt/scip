@@ -531,7 +531,6 @@ INPUT_ENCODING         = UTF-8
 # *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.py
 
 FILE_PATTERNS          = *.h \
-                         *.hpp \
                          *.c \
                          *.cpp
 
