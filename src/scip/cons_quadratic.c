@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.132 2010/09/15 17:45:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.133 2010/09/23 21:28:51 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4363,8 +4363,6 @@ SCIP_RETCODE generateCut(
    bnd = (violbound == SCIP_BOUNDTYPE_LOWER) ? consdata->lhs : consdata->rhs;
    assert(!SCIPisInfinity(scip, ABS(bnd)));
 
-   /* add linear part */
-   SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
    /* TODO should we buffer the coefficients of the quadratic variables before adding them to the row? */
 
    if( isconvex )
@@ -4637,6 +4635,9 @@ SCIP_RETCODE generateCut(
          SCIP_CALL( SCIPchgRowRhs(scip, *row, bnd) );
       }
    }
+
+   /* add linear part */
+   SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
 
    SCIPdebugMessage(" -> found cut rhs=%g, min=%f, max=%f range=%g\n",
        ABS(bnd),
