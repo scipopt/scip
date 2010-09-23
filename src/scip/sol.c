@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.97 2010/09/22 16:00:26 bzfviger Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.98 2010/09/23 15:58:13 bzfviger Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1025,8 +1025,8 @@ SCIP_RETCODE SCIPsolCheck(
             
             if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
             {
-               SCIPmessagePrintInfo("solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
-                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+               SCIPmessagePrintInfo("solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
             }
          }
 
