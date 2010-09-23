@@ -4,12 +4,12 @@ Notes for SCIP Release 2.0
 Features
 ========
 
-- Full support of non-convex MIQPs and MIQCPs: Improved constraint
-  handler for quadratic constraints, new constraint handler for second
-  order cone constraints, new MINLP heuristics, automatic branching on
-  solutions of arbitrary relaxations, branching of continuous variables,
-  improved handling of nonlinear relaxations (expression trees), support of
-  various file formats
+- Full support of non-convex MIQPs and MIQCPs: Improved constraint handler
+  for quadratic constraints, new constraint handler for second order cone
+  constraints, new MINLP heuristics, automatic branching on solutions of
+  arbitrary relaxations, branching of continuous variables, improved
+  handling of non-linear relaxations (expression trees), support of various
+  file formats
 
 - New constraint handlers for linking constraints, cumulative constraints,
   and for breaking orbitopal symmetries
@@ -20,19 +20,15 @@ Features
 
 - Preliminary version of copying SCIP instances
 
-- Preliminary support of domain holes 
+- Preliminary support of domain holes
 
-- Extended solution counting to MIPs 
+- Solution counting extended to MIPs
 
 
 Interfaces
 ==========
 
 - Improved SoPlex interface
-
-- Extended reader for Flatzinc models
- 
-- Support of wbo format for weighted PBO problems and IBM's xml-solution format
 
 - NLP interface now independent of SCIP like LPI
 
@@ -41,15 +37,20 @@ Interfaces
 
 - Test scripts for Gurobi, BLIS, Symphony, and GLPK
 
+- Support of wbo format for weighted PBO problems and IBM's xml-solution
+  format
+
+- Extended reader for Flatzinc models
+
 
 Performance Improvements and Bug Fixes
 ======================================
 
-- Improved handling of indicator constraints
+- Several improvements in presolving
+
+- Enhanced handling of indicator constraints
 
 - Improved zerohalf cuts
-
-- Several improvements in presolving
 
 - Many bug fixes
 
@@ -61,6 +62,7 @@ Additional Note
   data loss. If you have a custom Makefile, please ensure that the target
   "clean" is changed as described here:
   http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+
 
 For details see the CHANGELOG file. Some of the interface functions were
 changed. See "Changes between version 1.2 and 2.0" in the doxygen
