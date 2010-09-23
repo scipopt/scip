@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.380 2010/09/20 12:59:40 bzfviger Exp $
+# $Id: Makefile,v 1.381 2010/09/23 19:54:38 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -207,12 +207,14 @@ LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
 FLAGS		+=	-I$(LIBDIR)/mskinc
 LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/mskinc
 SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/include\".\n"
 LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/lib/libmosek.a\".\n"
 LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the libiomp5, e.g., \"<Mosek-path>/lib/libiomp5.a\""

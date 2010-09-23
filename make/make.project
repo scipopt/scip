@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.25 2010/09/19 09:30:21 bzfheinz Exp $
+# $Id: make.project,v 1.26 2010/09/23 19:54:38 bzfviger Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -165,7 +165,9 @@ LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),msk)
-LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+                        $(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+                        $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),spx)
