@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.24 2010/09/23 09:53:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.25 2010/09/23 16:02:51 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1052,6 +1052,36 @@ SCIP_RETCODE hessLagAddExprtree(
    return SCIP_OKAY;
 }
 
+/** prints a name, if available, makes sure it has not more than 64 characters, and adds a unique prefix if the longnames flag is set */
+static
+void printName(
+   char*                 buffer,             /**< buffer to print to, has to be not NULL */
+   char**                names,              /**< array of names, or NULL */
+   int                   idx,                /**< index which name we want to print */
+   char                  prefix,             /**< a letter (typically 'x' or 'e') to distinguish variable and equation names, if names[idx] is not available */
+   const char*           suffix,             /**< a suffer to add to the name, or NULL */
+   SCIP_Bool             longnames           /**< whether prefixes for long names should be added */
+)
+{
+   if( longnames )
+   {
+      if( names != NULL && names[idx] != NULL )
+         sprintf(buffer, "%c%05d%.*s%s", prefix, idx, suffix ? (size_t)(57-strlen(suffix)) : 57, names[idx], suffix ? suffix : "");
+      else
+         sprintf(buffer, "%c%05d", prefix, idx);
+   }
+   else
+   {
+      if( names != NULL && names[idx] != NULL )
+      {
+         assert(strlen(names[idx]) + (suffix ? strlen(suffix) : 0) <= 64);
+         sprintf(buffer, "%s%s", names[idx], suffix ? suffix : "");
+      }
+      else
+         sprintf(buffer, "%c%d%s", prefix, idx, suffix ? suffix : "");
+   }
+}
+
 /** prints a function */ 
 static
 SCIP_RETCODE printFunction(
@@ -1063,22 +1093,22 @@ SCIP_RETCODE printFunction(
    int                   quadlen,            /**< number of indices in quadratic part matrix */
    const SCIP_QUADELEM*  quadelems,          /**< elements in quadratic part matrix */
    SCIP_EXPRTREE*        exprtree,           /**< nonquadratic part */
-   int*                  exprvaridxs         /**< indices of variables in nonquadratic part */
+   int*                  exprvaridxs,        /**< indices of variables in nonquadratic part */
+   SCIP_Bool             longvarnames,       /**< whether variable names need to be shorten to 64 characters */
+   SCIP_Bool             longequnames        /**< whether equation names need to be shorten to 64 characters */
    )
 {  /*lint --e{715}*/
    int i;
    int j;
+   char namebuf[70];
 
    assert(oracle != NULL);
    assert(file != NULL);
    
    for( i = 0; i < nlin; ++i )
    {
-      SCIPmessageFPrintInfo(file, "%+.20g*", linvals[i]);
-      if( oracle->varnames != NULL && oracle->varnames[lininds[i]] != NULL )
-         SCIPmessageFPrintInfo(file, oracle->varnames[lininds[i]]);
-      else
-         SCIPmessageFPrintInfo(file, "x%d", lininds[i]);
+      printName(namebuf, oracle->varnames, lininds[i], 'x', NULL, longvarnames);
+      SCIPmessageFPrintInfo(file, "%+.20g*%s", linvals[i], namebuf);
       if( i % 10 == 9 )
          SCIPmessageFPrintInfo(file, "\n");
    }
@@ -1088,16 +1118,10 @@ SCIP_RETCODE printFunction(
       j = 0;
       for( i = 0; i < quadlen; ++i )
       {
-         SCIPmessageFPrintInfo(file, "%+.20g*", quadelems[j].coef);
-         if( oracle->varnames != NULL && oracle->varnames[quadelems[i].idx1] != NULL )
-            SCIPmessageFPrintInfo(file, oracle->varnames[quadelems[i].idx1]);
-         else
-            SCIPmessageFPrintInfo(file, "x%d", quadelems[i].idx1);
-         SCIPmessageFPrintInfo(file, "*");
-         if( oracle->varnames != NULL && oracle->varnames[quadelems[i].idx2] != NULL )
-            SCIPmessageFPrintInfo(file, oracle->varnames[quadelems[i].idx2]);
-         else
-            SCIPmessageFPrintInfo(file, "x%d", quadelems[i].idx2);
+         printName(namebuf, oracle->varnames, quadelems[i].idx1, 'x', NULL, longvarnames);
+         SCIPmessageFPrintInfo(file, "%+.20g*%s", quadelems[j].coef, namebuf);
+         printName(namebuf, oracle->varnames, quadelems[i].idx2, 'x', NULL, longvarnames);
+         SCIPmessageFPrintInfo(file, "*%s", namebuf);
          if( i % 10 == 9 )
             SCIPmessageFPrintInfo(file, "\n");
       }
@@ -1108,17 +1132,12 @@ SCIP_RETCODE printFunction(
       char** varnames;
       SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree)) );
 
+      /* setup variable names */
       for( i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i )
       {
-         if( oracle->varnames == NULL || oracle->varnames[exprvaridxs[i]] == NULL )
-         {
-            /* missing variable name for this variable, thus use generic name */
-            assert(exprvaridxs[i] < 1e+20);
-            BMSallocBlockMemoryArray(oracle->blkmem, &varnames[i], 22);
-            (void) SCIPsnprintf(varnames[i], 22, "x%d", exprvaridxs[i]);
-            break;
-         }
-         varnames[i] = oracle->varnames[exprvaridxs[i]];
+         assert(exprvaridxs[i] < 1e+20);
+         BMSallocBlockMemoryArray(oracle->blkmem, &varnames[i], 70);
+         printName(varnames[i], oracle->varnames, exprvaridxs[i], 'x', NULL, longvarnames);
       }
 
       SCIPmessageFPrintInfo(file, " +");
@@ -1126,12 +1145,8 @@ SCIP_RETCODE printFunction(
 
       for( i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i )
       {
-         if( oracle->varnames == NULL || oracle->varnames[exprvaridxs[i]] == NULL )
-         {
-            BMSfreeBlockMemoryArray(oracle->blkmem, &varnames[i], 22);
-         }
+         BMSfreeBlockMemoryArray(oracle->blkmem, &varnames[i], 70);
       }
-
       BMSfreeBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(exprtree));
    }
 
@@ -3047,7 +3062,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP_CALL( printFunction(oracle, file,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
       oracle->objquadlen, oracle->objquadelems,
-      oracle->objexprtree, oracle->objexprvaridxs) );
+      oracle->objexprtree, oracle->objexprvaridxs,
+      FALSE, FALSE) );
    if( oracle->objconstant != 0.0 )
       SCIPmessageFPrintInfo(file, "%+.20g", oracle->objconstant);
    SCIPmessageFPrintInfo(file, "\n");
@@ -3070,7 +3086,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
          (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
          (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
          (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL),
-         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
+         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL),
+         FALSE, FALSE) );
       
       if( oracle->conslhss[i] == oracle->consrhss[i] )
          SCIPmessageFPrintInfo(file, " = %.20g", oracle->consrhss[i]);
@@ -3085,7 +3102,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    return SCIP_OKAY;
 }
 
-/** prints the problem to a file in GAMS format */
+/** prints the problem to a file in GAMS format
+ * If there are variable (equation, resp.) names with more than 9 characters, then variable (equation, resp.) names are prefixed with an unique identifier.
+ * This is to make it easier to identify variables solution output in the listing file.
+ * Names with more than 64 characters are shorten to 64 letters due to GAMS limits.
+ */
 SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */
@@ -3096,6 +3117,9 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    int nllevel; /* level of nonlinearity of problem: linear = 0, quadratic, smooth nonlinear, nonsmooth */
    static const char* nllevelname[4] = { "LP", "QCP", "NLP", "DNLP" };
    const char* problemname;
+   char namebuf[70];
+   SCIP_Bool havelongvarnames;
+   SCIP_Bool havelongequnames;
 
    assert(oracle != NULL);
    
@@ -3103,17 +3127,31 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       file = stdout;
    
    nllevel = 0;
-   
+
+   havelongvarnames = FALSE;
+   for( i = 0; i < oracle->nvars; ++i )
+      if( oracle->varnames != NULL && oracle->varnames[i] != NULL && strlen(oracle->varnames[i]) > 9 )
+      {
+         havelongvarnames = TRUE;
+         break;
+      }
+
+   havelongequnames = FALSE;
+   for( i = 0; i < oracle->nconss; ++i )
+      if( oracle->consnames != NULL && oracle->consnames[i] != NULL && strlen(oracle->consnames[i]) > 9 )
+      {
+         havelongequnames = TRUE;
+         break;
+      }
+
    SCIPmessageFPrintInfo(file, "$offlisting\n");
    SCIPmessageFPrintInfo(file, "$offdigit\n");
    SCIPmessageFPrintInfo(file, "* NLPI Oracle Problem %s\n", oracle->name ? oracle->name : "");
    SCIPmessageFPrintInfo(file, "Variables ");
    for( i = 0; i < oracle->nvars; ++i )
    {
-      if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-         SCIPmessageFPrintInfo(file, "%s, ", oracle->varnames[i]);
-      else
-         SCIPmessageFPrintInfo(file, "x%d, ", i);
+      printName(namebuf, oracle->varnames, i, 'x', NULL, havelongvarnames);
+      SCIPmessageFPrintInfo(file, "%s, ", namebuf);
       if( i % 10 == 9 )
          SCIPmessageFPrintInfo(file, "\n");
    }
@@ -3122,38 +3160,26 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    {
       if( oracle->varlbs[i] == oracle->varubs[i] )
       {
-         if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-            SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
-         else
-            SCIPmessageFPrintInfo(file, "x%d", i);
-         SCIPmessageFPrintInfo(file, ".fx = %.20g;\t", oracle->varlbs[i]);
+         printName(namebuf, oracle->varnames, i, 'x', NULL, havelongvarnames);
+         SCIPmessageFPrintInfo(file, "%s.fx = %.20g;\t", namebuf, oracle->varlbs[i]);
       }
       else
       {
          if( oracle->varlbs[i] > -oracle->infinity )
          {
-            if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-               SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
-            else
-               SCIPmessageFPrintInfo(file, "x%d", i);
-            SCIPmessageFPrintInfo(file, ".lo = %.20g;\t", oracle->varlbs[i]);
+            printName(namebuf, oracle->varnames, i, 'x', NULL, havelongvarnames);
+            SCIPmessageFPrintInfo(file, "%s.lo = %.20g;\t", namebuf, oracle->varlbs[i]);
          }
          if( oracle->varubs[i] <  oracle->infinity )
          {
-            if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-               SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
-            else
-               SCIPmessageFPrintInfo(file, "x%d", i);
-            SCIPmessageFPrintInfo(file, ".up = %.20g;\t", oracle->varubs[i]);
+            printName(namebuf, oracle->varnames, i, 'x', NULL, havelongvarnames);
+            SCIPmessageFPrintInfo(file, "%s.up = %.20g;\t", namebuf, oracle->varubs[i]);
          }
       }
       if( initval != NULL )
       {
-         if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-            SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
-         else
-            SCIPmessageFPrintInfo(file, "x%d", i);
-         SCIPmessageFPrintInfo(file, ".l = %.20g;\t", initval[i]);
+         printName(namebuf, oracle->varnames, i, 'x', NULL, havelongvarnames);
+         SCIPmessageFPrintInfo(file, "%s.l = %.20g;\t", namebuf, initval[i]);
       }
       SCIPmessageFPrintInfo(file, "\n");
    }
@@ -3162,20 +3188,16 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIPmessageFPrintInfo(file, "Equations ");
    for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
-         SCIPmessageFPrintInfo(file, "%s, ", oracle->consnames[i]);
-      else
-         SCIPmessageFPrintInfo(file, "e%d, ", i);
-      if( i % 10 == 9 )
-         SCIPmessageFPrintInfo(file, "\n");
+      printName(namebuf, oracle->consnames, i, 'e', NULL, havelongequnames);
+      SCIPmessageFPrintInfo(file, "%s, ", namebuf);
 
       if( oracle->conslhss[i] > -oracle->infinity && oracle->consrhss[i] < oracle->infinity && oracle->conslhss[i] != oracle->consrhss[i] )
       { /* ranged row: add second constraint */
-         if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
-            SCIPmessageFPrintInfo(file, "%s_RNG, ", oracle->consnames[i]);
-         else
-            SCIPmessageFPrintInfo(file, "e%d_RNG, ", i);
+         printName(namebuf, oracle->consnames, i, 'e', "_RNG", havelongequnames);
+         SCIPmessageFPrintInfo(file, "%s, ", namebuf);
       }
+      if( i % 10 == 9 )
+         SCIPmessageFPrintInfo(file, "\n");
    }
    SCIPmessageFPrintInfo(file, "NLPIORACLEOBJ;\n\n");
    
@@ -3183,18 +3205,16 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_CALL( printFunction(oracle, file,
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
       oracle->objquadlen, oracle->objquadelems,
-      oracle->objexprtree, oracle->objexprvaridxs) );
+      oracle->objexprtree, oracle->objexprvaridxs,
+      havelongvarnames, havelongequnames) );
    if( oracle->objconstant != 0.0 )
       SCIPmessageFPrintInfo(file, "%+.20g", oracle->objconstant);
    SCIPmessageFPrintInfo(file, ";\n");
    
    for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
-         SCIPmessageFPrintInfo(file, "%s", oracle->consnames[i]);
-      else
-         SCIPmessageFPrintInfo(file, "e%d", i);
-      SCIPmessageFPrintInfo(file, ".. ");
+      printName(namebuf, oracle->consnames, i, 'e', NULL, havelongequnames);
+      SCIPmessageFPrintInfo(file, "%s.. ", namebuf);
       
       SCIP_CALL( printFunction(oracle, file,
          (oracle->conslinlens   != NULL ? oracle->conslinlens  [i] : 0),
@@ -3203,7 +3223,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
          (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
          (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL),
-         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
+         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL),
+         havelongvarnames, havelongequnames) );
 
       if( oracle->conslhss[i] == oracle->consrhss[i] )
          SCIPmessageFPrintInfo(file, " =E= %.20g", oracle->consrhss[i]);
@@ -3217,11 +3238,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
 
       if( oracle->conslhss[i] > -oracle->infinity && oracle->consrhss[i] < oracle->infinity && oracle->conslhss[i] != oracle->consrhss[i] )
       {
-         if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
-            SCIPmessageFPrintInfo(file, "%s", oracle->consnames[i]);
-         else
-            SCIPmessageFPrintInfo(file, "e%d", i);
-         SCIPmessageFPrintInfo(file, "_RNG.. ");
+         printName(namebuf, oracle->consnames, i, 'e', "_RNG", havelongequnames);
+         SCIPmessageFPrintInfo(file, "%s.. ", namebuf);
         
          SCIP_CALL( printFunction(oracle, file,
             (oracle->conslinlens   != NULL ? oracle->conslinlens  [i] : 0),
@@ -3230,7 +3248,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
             (oracle->consquadlens  != NULL ? oracle->consquadlens [i] : 0),
             (oracle->consquadlens  != NULL ? oracle->consquadelems[i] : NULL),
             (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL),
-            (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL)) );
+            (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[i] : NULL),
+            havelongvarnames, havelongequnames) );
          
          SCIPmessageFPrintInfo(file, " =G= %.20g;\n", oracle->conslhss[i]);
       }

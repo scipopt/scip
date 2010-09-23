@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.h,v 1.6 2010/09/15 19:41:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.h,v 1.7 2010/09/23 16:02:51 bzfviger Exp $"
 
 /**@file   nlpioracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -402,7 +402,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    FILE*                 file                /**< file to print to, or NULL for standard output */
    );
 
-/** prints the problem to a file in GAMS format */
+/** prints the problem to a file in GAMS format
+ * If there are variable (equation, resp.) names with more than 9 characters, then variable (equation, resp.) names are prefixed with an unique identifier.
+ * This is to make it easier to identify variables solution output in the listing file.
+ * Names with more than 64 characters are shorten to 64 letters due to GAMS limits.
+ */
 extern
 SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
