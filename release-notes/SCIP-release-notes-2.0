@@ -4,7 +4,7 @@ Notes for SCIP Release 2.0
 Features
 ========
 
-- SCIP can now copy instances (e.g. for heuristics).
+- SCIP can now copy instances (e.g. for heuristics)
 
 - New rounding and propagation heuristics, rapid learning
 
@@ -17,13 +17,13 @@ Features
 
 - Solution counting extended to MIPs
 
-- Better support for non-convex MIQPs and MIQCPs:
+- Better support for nonlinear CIPs:
   + Improved constraint handler for quadratic constraints
   + Support of quadratic extensions in file formats .lp and .mps
   + New constraint handler for second order cone constraints
   + New MINLP heuristics
-  + Automatic branching on solutions of arbitrary relaxations and on continuous variables
   + Preliminary support for non-linear relaxations (via expression trees)
+  + Automatic branching on solutions from arbitrary relaxations and on continuous variables
 
 
 Interfaces
@@ -69,7 +69,7 @@ Additional Notes
   command requires $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) as additional argument.
 
 - The interface contains several additional callback functions and
-  parameters for plugins. Some work might be required to compile your
+  parameters for plugins. Some effort may be required to compile your
   own projects with SCIP 2.0. For details see the CHANGELOG file. See
   also "Changes between version 1.2 and 2.0" in the doxygen
   documentation for additional information.
