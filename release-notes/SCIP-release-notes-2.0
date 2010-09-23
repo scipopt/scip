@@ -19,11 +19,11 @@ Features
 
 - Better support for non-convex MIQPs and MIQCPs:
   + Improved constraint handler for quadratic constraints
-  + support of quadratic extensions in file formats .lp and .mps
+  + Support of quadratic extensions in file formats .lp and .mps
   + New constraint handler for second order cone constraints
-  + new MINLP heuristics
-  + automatic branching on solutions of arbitrary relaxations and on continuous variables
-  + preliminary support for non-linear relaxations (via expression trees)
+  + New MINLP heuristics
+  + Automatic branching on solutions of arbitrary relaxations and on continuous variables
+  + Preliminary support for non-linear relaxations (via expression trees)
 
 
 Interfaces
@@ -44,8 +44,6 @@ Interfaces
 - Extended reader for .lp and .mps files for semicontinuous variables
 
 
-
-
 Performance Improvements and Bug Fixes
 ======================================
 
@@ -56,8 +54,6 @@ Performance Improvements and Bug Fixes
 - Improved zerohalf cuts
 
 - Many bug fixes
-
-
 
 
 Additional Notes
