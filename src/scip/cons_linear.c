@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -12,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.387 2010/09/18 19:30:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.388 2010/09/24 01:45:26 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -773,8 +774,8 @@ SCIP_RETCODE findNegatedVar(
    SCIP_VAR**            negvar              /**< buffer to store pointer to negated variable (created if not yet existing) */
 )
 {
-   char      buf[SCIP_MAXSTRLEN];
-   int       namelen;
+   char buf[SCIP_MAXSTRLEN];
+   unsigned int namelen;
    SCIP_VAR* var;
    
    assert(scip   != NULL);
@@ -3357,7 +3358,7 @@ SCIP_RETCODE scaleCons(
    assert(!SCIPisEQ(scip, scalar, 1.0));
 
    /* scale the coefficients */
-   for( i = 0; i < consdata->nvars; ++i )
+   for( i = consdata->nvars - 1; i >= 0; --i )
    {
       newval = scalar * consdata->vals[i];
       if( SCIPisScalingIntegral(scip, consdata->vals[i], scalar) )
@@ -3367,7 +3368,6 @@ SCIP_RETCODE scaleCons(
          SCIPwarningMessage("coefficient %.15g of variable <%s> in linear constraint <%s> scaled to zero (scalar: %.15g)\n",
             consdata->vals[i], SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons), scalar);
          SCIP_CALL( delCoefPos(scip, cons, i) );
-         --i;
       }
       else
          consdata->vals[i] = newval;
@@ -7461,7 +7461,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       int diffidx1minus0weight;
       int v0;
       int v1;
-
+      
       assert(cons0lhs == consdata0->lhs);
       assert(cons0rhs == consdata0->rhs);
       assert(cons0upgraded == consdata0->upgraded);
