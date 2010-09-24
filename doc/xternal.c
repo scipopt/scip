@@ -4904,6 +4904,9 @@
  * <br>
  * @section MISCELLANEOUS4 Miscellaneous
  *
+ * - The NLPI library is now a separate library that is required when linking against the SCIP library.
+ *   This requires changes to Makefile's that use SCIP, see the \ref RELEASENOTES "Release notes" for more details.
+ *
  * - We do not distinguish between <b>block memory</b> for the original and the transformed problem anymore. In both
      problem stages, the same block memory is used, now.
  *
