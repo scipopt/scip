@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.22 2010/09/24 10:26:19 bzfschwa Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.23 2010/09/24 11:33:51 bzfwinkm Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1576,11 +1576,11 @@ void* BMSallocBlockMemory_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   assert( blkmem != NULL );
-
    BMS_CHKMEM** chkmemptr;
    int hashnumber;
    void* ptr;
+
+   assert( blkmem != NULL );
 
    /* calculate hash number of given size */
    alignSize(&size);
@@ -1686,6 +1686,8 @@ void BMSfreeBlockMemory_call(
    BMS_CHKMEM* chkmem;
    int hashnumber;
 
+   assert( blkmem != NULL );
+
    if( ptr != NULL )
    {
       /* calculate hash number of given size */
@@ -1695,7 +1697,6 @@ void BMSfreeBlockMemory_call(
       debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
       /* find correspoding chunk block */
-      assert( blkmem != NULL );
       assert( blkmem->chkmemhash != NULL );
       chkmem = blkmem->chkmemhash[hashnumber];
       while( chkmem != NULL && chkmem->elemsize != (int)size )
