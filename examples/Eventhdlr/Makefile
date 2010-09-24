@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.4 2010/09/24 10:41:21 bzfheinz Exp $
+# $Id: Makefile,v 1.5 2010/09/24 10:44:47 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for event handler plugin in C 
@@ -60,6 +60,7 @@ all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 .PHONY: lint
 lint:		$(MAINSRC)
 		-rm -f lint.out
+		@-(ln -fs $(SCIPDIR)/lint);
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
