@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event_bestsol.h,v 1.1 2010/07/21 21:25:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event_bestsol.h,v 1.2 2010/09/24 10:41:22 bzfheinz Exp $"
 
 /**@file   event_bestsol.h
  * @brief  eventhdlr for best solution found
@@ -24,8 +24,8 @@
 
 #include "scip/scip.h"
 
-/** creates event handler for best solution found */
+/** includes event handler for best solution found */
 extern
-SCIP_RETCODE SCIPcreateEventHdlrBestsol(
+SCIP_RETCODE SCIPincludeEventHdlrBestsol(
    SCIP*                 scip                /**< SCIP data structure */
    );

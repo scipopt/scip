@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event_bestsol.c,v 1.1 2010/07/21 21:25:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event_bestsol.c,v 1.2 2010/09/24 10:41:22 bzfheinz Exp $"
 
 /**@file   event_bestsol.c
  * @brief  eventhdlr for best solution found
@@ -38,7 +38,7 @@ SCIP_DECL_EVENTCOPY(eventCopyBestsol)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* call inclusion method of event handler */
-   SCIP_CALL( SCIPcreateEventHdlrBestsol(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
 
    return SCIP_OKAY;
 }
@@ -103,13 +103,14 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    solvalue = SCIPgetSolOrigObj(scip, bestsol);
    
    /* print best solution value */
-   SCIPinfoMessage(scip, NULL, "found new best solution with solution value <%g>\n", solvalue);
+   SCIPinfoMessage(scip, NULL, "found new best solution with solution value <%g> in SCIP <%s>\n", 
+      solvalue, SCIPgetProbName(scip) );
    
    return SCIP_OKAY;
 }
 
-/** creates event handler for best solution found */
-SCIP_RETCODE SCIPcreateEventHdlrBestsol(
+/** includes event handler for best solution found */
+SCIP_RETCODE SCIPincludeEventHdlrBestsol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

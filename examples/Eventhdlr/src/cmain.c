@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.1 2010/07/21 21:25:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.2 2010/09/24 10:41:22 bzfheinz Exp $"
 
 /**@file   cmain.c
  * @brief  Main file for C compilation
@@ -48,8 +48,8 @@ SCIP_RETCODE runShell(
    /* include default plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* create event handler for best solution found */
-   SCIPcreateEventHdlrBestsol(scip);
+   /* include event handler for best solution found */
+   SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
    
    /**********************************
     * Process command line arguments *
