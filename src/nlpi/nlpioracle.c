@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.25 2010/09/23 16:02:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.26 2010/09/24 07:28:38 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1066,7 +1066,7 @@ void printName(
    if( longnames )
    {
       if( names != NULL && names[idx] != NULL )
-         sprintf(buffer, "%c%05d%.*s%s", prefix, idx, suffix ? (size_t)(57-strlen(suffix)) : 57, names[idx], suffix ? suffix : "");
+         sprintf(buffer, "%c%05d%.*s%s", prefix, idx, suffix ? (int)(57-strlen(suffix)) : 57, names[idx], suffix ? suffix : "");
       else
          sprintf(buffer, "%c%05d", prefix, idx);
    }
