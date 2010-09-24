@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.121 2010/09/17 14:39:14 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.122 2010/09/24 10:26:20 bzfschwa Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -2255,12 +2255,12 @@ SCIP_RETCODE spxSolve(
    SPxSolver::Type       type                /**< algorithm type */
    )
 {
-   SCIPdebugMessage("calling SoPlex solve(): %d cols, %d rows\n", lpi->spx->nCols(), lpi->spx->nRows());
-
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
    assert( rep == SPxSolver::ROW || rep == SPxSolver::COLUMN );
    assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
+
+   SCIPdebugMessage("calling SoPlex solve(): %d cols, %d rows\n", lpi->spx->nCols(), lpi->spx->nRows());
 
    invalidateSolution(lpi);
 
@@ -3492,12 +3492,12 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
 
+   assert( lpi != NULL );
+   assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    try
    {
-      assert(lpi != NULL);
-      assert(lpi->spx != NULL);
       SPxSolver* spx = lpi->spx;
 
       Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
@@ -3552,12 +3552,12 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
 
+   assert( lpi != NULL );
+   assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    try
    {
-      assert(lpi != NULL);
-      assert(lpi->spx != NULL);
       SPxSolver* spx = lpi->spx;
 
       Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
@@ -3656,12 +3656,12 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
 
+   assert( lpi != NULL );
+   assert( lpi->spx != NULL );
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    try 
    {
-      assert(lpi != NULL);
-      assert(lpi->spx != NULL);
       SPxSolver* spx = lpi->spx;
 
       Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */

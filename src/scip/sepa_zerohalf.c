@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.38 2010/09/13 07:16:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.39 2010/09/24 10:26:22 bzfschwa Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -5870,7 +5870,6 @@ SCIP_RETCODE addEdgeToAuxGraph(
    int                     n1;
    int                     n2;
 
-   const int maxnumberofneighbors = 2 * graph->nnodes - 2;  
    assert(scip != NULL);
    assert(graph != NULL);
    assert(node1index >= 0);
@@ -5878,6 +5877,8 @@ SCIP_RETCODE addEdgeToAuxGraph(
    assert(node2index >= 0);
    assert(node2index < graph->nnodes);
    assert(!SCIPisNegative(scip, weight));
+
+   const int maxnumberofneighbors = 2 * graph->nnodes - 2;  
 
    if( isodd )
    {

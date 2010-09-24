@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.cpp,v 1.12 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: objdialog.cpp,v 1.13 2010/09/24 10:26:19 bzfschwa Exp $"
 
 /**@file   objdialog.cpp
  * @brief  C++ wrapper for dialogs
@@ -162,6 +162,7 @@ SCIP_RETCODE SCIPincludeObjDialog(
    {
       SCIP_DIALOGDATA* dialogdata;
       SCIP_DIALOG* dialog;
+      dialog = NULL;
 
       /* create dialog data */
       dialogdata = new SCIP_DIALOGDATA;

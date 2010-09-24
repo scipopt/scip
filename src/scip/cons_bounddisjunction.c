@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.42 2010/09/19 12:15:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.43 2010/09/24 10:26:20 bzfschwa Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1589,13 +1589,13 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->vars != NULL);
    assert(0 <= inferinfo && inferinfo < consdata->nvars);
    assert(consdata->vars[inferinfo] == infervar);
 
    vars = consdata->vars;
    boundtypes = consdata->boundtypes;
    bounds = consdata->bounds;
-   assert(vars != NULL);
    assert(boundtypes != NULL);
    assert(bounds != NULL);
 

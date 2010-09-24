@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.34 2010/09/21 20:09:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.35 2010/09/24 10:26:22 bzfschwa Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -212,6 +212,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                                              */
 
    int ndiscvars;
+
+   soladded = FALSE;
 
    assert(sepa != NULL);
    assert(scip != NULL);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.359 2010/09/18 19:26:24 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.360 2010/09/24 10:26:20 bzfschwa Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and data structures
@@ -8089,6 +8089,7 @@ void findBestLb(
           *       to be replaced by variable bounds seems to be buggy (wrong result on gesa2)
           */
          vlbvars = SCIPvarGetVlbVars(var);
+	 assert( vlbvars != NULL );
          if( SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var) )
          {
             *bestlb = bestvlb;
@@ -8143,6 +8144,7 @@ void findBestUb(
           *       to be replaced by variable bounds seems to be buggy (wrong result on gesa2)
           */
          vubvars = SCIPvarGetVubVars(var);
+	 assert( vubvars != NULL );
          if( SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) )
          {
             *bestub = bestvub;
@@ -13808,11 +13810,10 @@ SCIP_RETCODE lpDelRowset(
       row = lp->rows[r];
       assert(row == lp->lpirows[r]);
       assert(rowdstat[r] <= r);
+      assert(row != NULL);
       row->lppos = rowdstat[r];
       if( rowdstat[r] == -1 )
       {
-         assert(row != NULL);
-
          if( row->removable )
             lp->nremovablerows--;
 

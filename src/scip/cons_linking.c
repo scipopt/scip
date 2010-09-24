@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.14 2010/09/14 10:25:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.15 2010/09/24 10:26:20 bzfschwa Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -2800,9 +2800,9 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
             (*success) = FALSE;
          else
          {
-            binvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, binvars[v]);
-            
-            if( binvars[v] == NULL )
+	    intvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, intvar);
+
+            if( intvar == NULL )
                (*success) = FALSE;
          }
       }

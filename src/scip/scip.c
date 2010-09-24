@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.677 2010/09/22 18:14:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.678 2010/09/24 10:26:20 bzfschwa Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1519,6 +1519,9 @@ SCIP_RETCODE SCIPcopyConss(
       SCIP_Bool succeed;
    
       assert(sourceconshdlrs[i] != NULL);
+
+      /* constraint handlers have to explicitly set the succeed pointer to TRUE */
+      succeed = FALSE; 
 
       /* for a global copy, copy all constraints that are globally active, for a local copy, copy all constraints that
        * are locally enforced, in order to also get local constraints, e.g. from branching

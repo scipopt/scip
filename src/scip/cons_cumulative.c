@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.15 2010/09/21 10:13:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.16 2010/09/24 10:26:20 bzfschwa Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -271,6 +271,7 @@ SCIP_Bool thetatreeIsLeftChild(
    )
 {
    assert(node != NULL);
+   assert(node->parent != NULL);
    return node->parent->left == node;
 }
 
@@ -673,6 +674,7 @@ TLTREENODE* tltreeGetSibling(
    )
 {
    assert(node != NULL);
+   assert(node->parent != NULL);
    assert(node->parent->left != NULL);
    assert(node->parent->right != NULL);
 
@@ -2302,7 +2304,7 @@ SCIP_RETCODE updateBounds(
    int*                  nbdchgs             /**< pointer to store the number of bound changes */
    )
 {
-   SCIP_Bool infeasible;
+   SCIP_Bool infeasible; 
    SCIP_Bool tightened;
 
    INFERINFO inferinfo;
@@ -3317,6 +3319,7 @@ void subtractStartingJobDemands(
    int                   nvars               /**< number of vars in array of starttimes and startindices */
    )
 {
+   assert(idx != NULL);
 #ifdef SCIP_DEBUG
    int oldidx;
    oldidx = *idx;
@@ -3324,7 +3327,6 @@ void subtractStartingJobDemands(
    assert(starttimes != NULL);
    assert(starttimes != NULL);
    assert(freecapacity != NULL);
-   assert(idx != NULL);
    assert(starttimes[*idx] == curtime);
    assert(consdata->demands != NULL);
    assert(freecapacity != idx);
@@ -6958,7 +6960,10 @@ int SCIPprofileGetEarliestFeasibleStart(
    }
    
    if( duration == 0 || demand == 0 ) 
+   {
+      *infeasible = FALSE;
       return lb;
+   }
 
    starttime = lb;
 

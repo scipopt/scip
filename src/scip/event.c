@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.72 2010/09/14 10:43:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.73 2010/09/24 10:26:20 bzfschwa Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1269,12 +1269,11 @@ SCIP_RETCODE SCIPeventProcess(
 {
    SCIP_VAR* var;
 
+   assert(event != NULL);
    assert((event->eventtype & SCIP_EVENTTYPE_OBJCHANGED) == 0 || primal != NULL);
    assert((event->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED)) == 0 || lp != NULL);
    assert((event->eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) == 0 || branchcand != NULL);
 
-   assert(event != NULL);
-   
    SCIPdebugMessage("processing event of type 0x%x\n", event->eventtype);
    
    switch( event->eventtype )

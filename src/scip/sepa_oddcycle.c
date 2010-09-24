@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.8 2010/09/14 10:25:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.9 2010/09/24 10:26:22 bzfschwa Exp $"
 
 /**@file   sepa_oddcycle.c
  * @ingroup SEPARATORS
@@ -2185,10 +2185,6 @@ findUnblockedShortestPathToRoot(
    int* parentTree;
    int* transform;
    
-   /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &parentTree, graph->n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &transform, graph->n) );
-
    assert(scip != NULL);
    assert(graph != NULL);
    assert(graph->beginBackward != NULL);
@@ -2197,7 +2193,13 @@ findUnblockedShortestPathToRoot(
    assert(distance != NULL);
    assert(queue != NULL);
    assert(inQueue != NULL);
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &parentTree, graph->n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transform, graph->n) );
+
    assert(parentTree != NULL);
+   assert(transform != NULL);
 
    /* init distances */
    for( i = 0; i < graph->n; ++i )
