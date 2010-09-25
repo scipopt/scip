@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.16 2010/09/21 18:20:45 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.17 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -620,6 +620,7 @@ SCIP_Real determineBound(
 	 if( !SCIPisInfinity(scip, -lhs) && SCIPisFeasLT(scip, activity + effect * bound, lhs) )
          {
             assert(SCIPisNegative(scip, effect));
+            assert(effect != 0.0);
             bound = SCIPfeasFloor(scip, (lhs - activity)/effect); /*lint !e795 */
          }
 	 
@@ -627,6 +628,7 @@ SCIP_Real determineBound(
          if( !SCIPisInfinity(scip, rhs) && SCIPisFeasGT(scip, activity + effect * bound, rhs) )
          {
             assert(SCIPisPositive(scip, effect));
+            assert(effect != 0.0);
             bound = SCIPfeasFloor(scip, (rhs - activity)/effect); /*lint !e795 */
          }
       }
@@ -1095,9 +1097,9 @@ SCIP_RETCODE optimize(
 	    slavesolval = SCIPgetSolVal(scip, worksol, slave);
 
 	    /* in blocks with a small number of variables, iteration over slaves is interrupted 
-	    * in case of equal coefficients since no further improvement can be achieved.
-	    * in case of a large block, the search for slave variables is continued at the
-	    * first block variable. */
+	     * in case of equal coefficients since no further improvement can be achieved.
+	     * in case of a large block, the search for slave variables is continued at the
+	     * first block variable. */
 	    if( SCIPisFeasEQ(scip, slaveobj, masterobj) && blocklen <= heurdata->maxnslaves )
 	       break;
 	    else if( SCIPisFeasEQ(scip, slaveobj, masterobj) )
@@ -1126,8 +1128,8 @@ SCIP_RETCODE optimize(
 	       disposeVariable(vars, &(blockstart[b]), &(blockend[b]), slaveindex, &insertedlast);
 	       
 	       /* if variable has been deleted and variables were shifted from the end of the block, 
-	       * the index of the master variable has been decreased by 1. In the other case, the position
-	       * of the best slave has increased by 1.*/
+	        * the index of the master variable has been decreased by 1. In the other case, the position
+	        * of the best slave has increased by 1.*/
 	       if( insertedlast )
 		  --e;
 	       else  if( bestslavepos != -1 )
@@ -1559,7 +1561,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       if( success )
       {
          SCIPdebugMessage("found feasible shifted solution:\n");
-         SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
          heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
          *result = SCIP_FOUNDSOL;
 
@@ -1644,7 +1646,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
-            SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
             heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
             *result = SCIP_FOUNDSOL;
 

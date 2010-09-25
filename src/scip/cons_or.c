@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.85 2010/09/10 13:58:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.86 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -1915,7 +1915,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    SCIPdebugMessage("pasre <%s> as or constraint\n", str);
 
    /* copy string for truncating it */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1));
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
 
    /* cutoff "or" form the constraint string */
    token = SCIPstrtok(strcopy, "=", &saveptr ); 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.55 2010/09/13 07:16:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.56 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_rins.c
  * @ingroup PRIMALHEURISTICS
@@ -427,7 +427,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    }
    
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
    
    /* free hash map */
    SCIPhashmapFree(&varmapfw);

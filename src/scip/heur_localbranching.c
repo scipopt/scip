@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.58 2010/09/14 09:38:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.59 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -480,7 +480,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
 
    for (i = 0; i < nvars; ++i)
-      subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);

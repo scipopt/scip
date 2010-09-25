@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.20 2010/09/18 22:01:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.21 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -860,7 +860,7 @@ SCIP_RETCODE propagateCons(
 	    SCIP_CALL( SCIPinferBinvarCons(scip, vars[i][j], FALSE, cons, inferInfo, infeasible, &tightened) );
 
 	    /* if entry is fixed to one -> infeasible node */
-	    if ( infeasible )
+	    if ( *infeasible )
 	    {
 	       SCIPdebugMessage(" -> Infeasible node: row %d, 1 in column %d beyond rightmost position %d\n", i, j, lastoneinrow);
                goto TERMINATE;

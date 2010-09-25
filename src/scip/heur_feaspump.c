@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.68 2010/09/13 09:37:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.69 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -302,8 +302,8 @@ SCIP_RETCODE addLocalBranchingConstraint(
       }
       else
          consvals[i] = 1.0;
-      consvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
-      SCIPchgVarObj(probingscip, consvars[i], consvals[i]);
+      consvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      SCIP_CALL( SCIPchgVarObj(probingscip, consvars[i], consvals[i]) );
       assert( SCIPvarGetType(consvars[i]) == SCIP_VARTYPE_BINARY );
    }
       
@@ -643,6 +643,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPcreateSol(scip, &lastroundedsols[j], heur) ); 
    }
 
+   closestsol = NULL;
    if( heurdata->stage3 )
    {
       SCIP_CALL( SCIPcreateSol(scip, &closestsol, heur) );
@@ -655,7 +656,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    if( heurdata->usefp20 )
    {
-      setupProbingSCIP(scip, &probingscip, &varmapfw, &success);
+      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, &success) );
       
       if( success )
       {
@@ -670,17 +671,17 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 #endif
 
          /* do presolve and initialize solving */
-         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1) ); 
+         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) ); 
          SCIP_CALL( SCIPsetIntParam(probingscip, "lp/solvefreq", -1) );
 
          /* disable expensive presolving */
          SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
          SCIP_CALL( SCIPsolve(probingscip) );
-         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 2) ); 
+         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 2LL) ); 
          
          /* set SCIP into probing mode and create root node of the probing tree */
          SCIP_CALL( SCIPstartProbing(probingscip) );
-         SCIPnewProbingNode(probingscip);
+         SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
          SCIPdebugMessage("successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");       
       }
@@ -789,20 +790,26 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* ensure, that the fixing value is inside the local domains */
          if( heurdata->usefp20 )
-         {          
-            probingvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, var);
-            solval = MAX(solval, SCIPvarGetLbLocal(probingvar));
-            solval = MIN(solval, SCIPvarGetUbLocal(probingvar));
+         {
+            SCIP_Real lb;
+            SCIP_Real ub;
+
+            probingvar = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, var);
+            lb = SCIPvarGetLbLocal(probingvar);
+            ub = SCIPvarGetUbLocal(probingvar);
+
+            solval = MAX(solval, lb);
+            solval = MIN(solval, ub);
 
             /* fix the variable and propagate the domain change */
-            if( !SCIPisFeasEQ(probingscip, SCIPvarGetLbLocal(probingvar), SCIPvarGetUbLocal(probingvar)) )
+            if( !SCIPisFeasEQ(probingscip, lb, ub) )
             {            
-               assert(SCIPisFeasLE(probingscip, SCIPvarGetLbLocal(probingvar), SCIPvarGetUbLocal(probingvar)));
-               SCIPnewProbingNode(probingscip);
+               assert(SCIPisFeasLE(probingscip, lb, ub));
+               SCIP_CALL( SCIPnewProbingNode(probingscip) );
                
                SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
-               SCIPdebugMessage("try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar),
-                  SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval);
+               SCIPdebugMessage("try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
+                  solval);
                SCIP_CALL( SCIPpropagateProbing(probingscip, 3, &infeasible, &ndomreds) );
                SCIPdebugMessage("  -> reduced %"SCIP_LONGINT_FORMAT" domains\n", ndomreds);
                
@@ -953,6 +960,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       {
          SCIP_Real distance;        /* distance of the current rounded solution from the LP solution */
 
+         assert(closestsol != NULL);
+
          /* calculate distance */
          distance = 0.0;
          for( i = 0; i < nbinvars+nintvars; i++ )
@@ -969,7 +978,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          if( SCIPisLT(scip, distance, mindistance) )
          {
             for( i = 0; i < nbinvars+nintvars; i++ )
-               SCIPsetSolVal(scip, closestsol, vars[i], SCIPgetSolVal(scip, heurdata->roundedsol, vars[i]));
+            {
+               SCIP_CALL( SCIPsetSolVal(scip, closestsol, vars[i], SCIPgetSolVal(scip, heurdata->roundedsol, vars[i])) );
+            }
             mindistance = distance;
          }
       }
@@ -1033,12 +1044,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( heurdata->usefp20 )
       {
          assert(probingscip != NULL);        
-         SCIPrestartSolve(probingscip);
+         SCIP_CALL( SCIPrestartSolve(probingscip) );
       }
       else
       {
          assert(probingscip == NULL);
-         setupProbingSCIP(scip, &probingscip, &varmapfw, &success);      
+         SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, &success) );
       }
 
       /* check whether there is enough time and memory left */
@@ -1058,8 +1069,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
 #endif
          /* set limits for the subproblem */
-         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1000) ); 
-         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/stallnodes", 100) ); 
+         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1000LL) ); 
+         SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/stallnodes", 100LL) ); 
          SCIP_CALL( SCIPsetRealParam(probingscip, "limits/time", timelimit) );
          SCIP_CALL( SCIPsetRealParam(probingscip, "limits/memory", memorylimit) );
 
@@ -1119,7 +1130,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             /* for copying a solution we need an explicit mapping */
             SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
             for( i = 0; i < nvars; i++ )
-               subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+               subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
             
             nsubsols = SCIPgetNSols(probingscip);
             subsols = SCIPgetSols(probingscip);

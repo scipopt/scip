@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_zirounding.c,v 1.9 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_zirounding.c,v 1.10 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_zirounding.c
  * @ingroup PRIMALHEURISTICS
@@ -522,8 +522,13 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          /* if the variable is integer, do not shift further than the nearest integer */
          if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
          {
-            up   = MIN(up, SCIPfeasCeil(scip, oldsolval));
-            down = MAX(down, SCIPfeasFloor(scip, oldsolval));
+            SCIP_Real ceilx;
+            SCIP_Real floorx;
+
+            ceilx = SCIPfeasCeil(scip, oldsolval);
+            floorx = SCIPfeasFloor(scip, oldsolval);
+            up   = MIN(up, ceilx);
+            down = MAX(down, floorx);
          }
 
          /** calculate necessary values */
@@ -590,7 +595,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible rounded solution:\n");
-         SCIPprintSol(scip, sol, NULL, FALSE);
+         SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
       }

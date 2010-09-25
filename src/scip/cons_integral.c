@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.56 2010/09/08 19:14:53 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.57 2010/09/25 18:27:48 bzfwinkm Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -170,7 +170,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   SCIPdebugMessage("Check method of integrality constraint (checkintegrality=%d)\n", checkintegrality);
+   SCIPdebugMessage("Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
 

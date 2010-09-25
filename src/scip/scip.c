@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.679 2010/09/25 10:36:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.680 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6114,7 +6114,7 @@ SCIP_RETCODE presolveRound(
          assert(SCIPgetNSols(scip) > 0);         
          sol = SCIPgetBestSol(scip);
          assert(sol != NULL);           
-         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);           
+         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
          
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
             SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
@@ -6201,7 +6201,7 @@ SCIP_RETCODE presolve(
          assert(SCIPgetNSols(scip) > 0);         
          sol = SCIPgetBestSol(scip);
          assert(sol != NULL);           
-         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);           
+         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);  /*lint !e777*/
          
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
             SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    

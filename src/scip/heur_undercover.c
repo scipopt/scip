@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.100 2010/09/20 15:47:13 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.101 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -153,8 +153,6 @@ SCIP_Bool termIsConstant(
    else
       return SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
-   /* fall through */
-   return FALSE;
 }
 
 
@@ -438,8 +436,12 @@ SCIP_RETCODE createCoveringProblem(
    nlrowmap = NULL;
    if( SCIPisNLPConstructed(scip) )
    {
+      int nnlprows;
+
       assert(SCIPgetNLP(scip) != NULL);
-      if( SCIPnlpGetNNlRows(SCIPgetNLP(scip)) > 0 )
+ 
+      nnlprows = SCIPnlpGetNNlRows(SCIPgetNLP(scip));
+      if( nnlprows > 0 )
       {
          int mapsize;
 
@@ -450,7 +452,7 @@ SCIP_RETCODE createCoveringProblem(
          mapsize += SCIPconshdlrGetNConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "soc");
          mapsize += SCIPconshdlrGetNConss(conshdlr);
-         mapsize = MAX(mapsize, SCIPnlpGetNNlRows(SCIPgetNLP(scip)));
+         mapsize = MAX(mapsize, nnlprows);
          mapsize = SCIPcalcHashtableSize(2*mapsize);
          assert(mapsize > 0);
 
@@ -1627,7 +1629,7 @@ SCIP_RETCODE solveSubproblem(
    /* store subproblem variables */
    for( i = nvars-1; i >= 0; i-- )
    {
-      subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, vars[i]);
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
       assert(subvars[i] != NULL);
    }
 

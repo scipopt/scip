@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.56 2010/09/17 19:37:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.57 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -53,6 +53,10 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define QUADCONSUPGD_PRIORITY         0 /**< priority of the constraint handler for upgrading of quadratic constraints */
+
+#ifndef M_PI
+#define M_PI           3.141592653589793238462643
+#endif
 
 /*
  * Data structures
@@ -1626,7 +1630,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    }
 
    /* create intermediate linear constraints */
-   val = M_PI; /* @todo does one have M_PI also on windows? */
+   val = M_PI;
    for( i = 1; i < N; ++i )
    {
       val /= 2.0;

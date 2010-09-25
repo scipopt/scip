@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.16 2010/09/24 10:26:20 bzfschwa Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.17 2010/09/25 18:27:48 bzfwinkm Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -2045,7 +2045,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
          ++nconflictids;
       
          SCIPdebugMessage("   start of %d\n", startindices[j]);
-         while ( j+1 < ncores && startvalues[j+1] <= curtime )
+         while( j+1 < ncores && startvalues[j+1] <= curtime )
          {
             ++j;
             SCIPdebugMessage("   start of %d\n", startindices[j]);
@@ -2837,6 +2837,8 @@ SCIP_RETCODE createCoverCutsTimepoint(
       int idx; 
       int end;
       int start;
+      int lb;
+      int ub;
 
       idx = flexibleids[j];
 
@@ -2845,17 +2847,19 @@ SCIP_RETCODE createCoverCutsTimepoint(
       assert(nbinvars != 0);
       offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[idx]);
 
+      lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
+      ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
       /* compute start and finishing time */
-      start = MAX(convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx])), time + 1 - consdata->durations[idx]);
-      end =  MIN(time, convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]))) + 1;
+      start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
+      end =  MIN(time, ub) + 1 - offset;
 
       /* add all neccessary binary variables */
       for( i = start; i < end; ++i )
       {
-         assert(i-offset >= 0);
-         assert(i-offset < nbinvars);
-         assert(binvars[i-offset] != NULL);
-         SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i-offset], 1.0) );
+         assert(i >= 0);
+         assert(i < nbinvars);
+         assert(binvars[i] != NULL);
+         SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i], 1.0) );
       }
    }
    
@@ -2911,25 +2915,29 @@ SCIP_RETCODE createCoverCutsTimepoint(
          int idx; 
          int end;
          int start;
-         
+         int lb;
+         int ub;
+
          idx = flexibleids[j];
          
          /* get and add binvars into var array */
          SCIP_CALL( SCIPgetBinvarsLinking(scip, consdata->linkingconss[idx], &binvars, &nbinvars) );
          assert(nbinvars != 0);
          offset = SCIPgetOffsetLinking(scip, consdata->linkingconss[idx]);
-         
+
+         lb = convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx]));
+         ub = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]));
          /* compute start and finishing time */
-         start = MAX(convertBoundToInt(scip, SCIPvarGetLbLocal(consdata->vars[idx])), time + 1 - consdata->durations[idx]);
-         end =  MIN(time, convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[idx]))) + 1;
+         start = MAX(lb, time + 1 - consdata->durations[idx]) - offset;
+         end =  MIN(time, ub) + 1 - offset;
          
          /* add  all neccessary binary variables */
          for( i = start; i < end; ++i )
          {
-            assert(i-offset >= 0);
-            assert(i-offset < nbinvars);
-            assert(binvars[i-offset] != NULL);
-            SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i-offset], 1.0) );
+            assert(i >= 0);
+            assert(i < nbinvars);
+            assert(binvars[i] != NULL);
+            SCIP_CALL( SCIPaddVarToRow(scip, row, binvars[i], 1.0) );
          }
       }
       
@@ -3029,14 +3037,14 @@ SCIP_RETCODE createCoverCuts(
       /* subtract all capacity needed up to this point */  
       freecapacity -= consdata->demands[startindices[j]];
       
-      while ( j+1 < nvars && startvaluessorted[j+1] == curtime )
+      while( j+1 < nvars && startvaluessorted[j+1] == curtime )
       {
          ++j;
          freecapacity -= consdata->demands[startindices[j]];
       }
 
       /* free all capacity usages of jobs the are no longer running */
-      while ( endidx < nvars && curtime >= endvaluessorted[endidx] )
+      while( endidx < nvars && curtime >= endvaluessorted[endidx] )
       {
          freecapacity += consdata->demands[endindices[endidx]];
          ++endidx;
@@ -4389,15 +4397,17 @@ int computeNewLstOmegaset(
    
    for( j = 0; j < nelements; ++j )
    {
-      int idx ;
+      int idx;
 
       assert(omegaset[j]->inTheta);
       assert(omegaset[j]->var != NULL);
       idx = (int)(size_t)SCIPhashmapGetImage(varhashmap, omegaset[j]->var);
       assert(idx < consdata->nvars);
 
-      *est_omega = MIN(*est_omega, makespan - SCIPvarGetUbLocal(omegaset[j]->var) - consdata->durations[idx]);
-      *lct_omega = MAX(*lct_omega, makespan - SCIPvarGetLbLocal(omegaset[j]->var));
+      tmp = (int) (makespan - SCIPvarGetUbLocal(omegaset[j]->var) - consdata->durations[idx]);
+      *est_omega = MIN(*est_omega, tmp);
+      tmp = (int) (makespan - SCIPvarGetLbLocal(omegaset[j]->var));
+      *lct_omega = MAX(*lct_omega, tmp);
 
       assert(consdata->durations[idx] * consdata->demands[idx] == omegaset[j]->energy);
       assert(*lct_omega <= lct_j);
@@ -4474,14 +4484,17 @@ int computeNewEstOmegaset(
    for( j = 0; j < nelements; ++j )
    {
       int idx ;
+      int tmp;
 
       assert(omegaset[j]->var != NULL);
       assert(omegaset[j]->inTheta);
       idx = (int)(size_t)SCIPhashmapGetImage(varhashmap, omegaset[j]->var);
       assert(idx < consdata->nvars);
 
-      *est_omega = MIN(*est_omega, convertBoundToInt(scip, SCIPvarGetLbLocal(omegaset[j]->var)));
-      *lct_omega = MAX(*lct_omega, convertBoundToInt(scip, SCIPvarGetUbLocal(omegaset[j]->var)) + consdata->durations[idx]);
+      tmp = convertBoundToInt(scip, SCIPvarGetLbLocal(omegaset[j]->var));
+      *est_omega = MIN(*est_omega, tmp);
+      tmp = convertBoundToInt(scip, SCIPvarGetUbLocal(omegaset[j]->var)) + consdata->durations[idx];
+      *lct_omega = MAX(*lct_omega, tmp);
 
       assert(consdata->durations[idx] * consdata->demands[idx] == omegaset[j]->energy);
       assert(*lct_omega <= lct_j);
@@ -4554,7 +4567,10 @@ SCIP_RETCODE performEdgeFindingDetection(
    {
       for( j = 0; j < nvars; ++j )
       { 
-         makespan = MAX(makespan, convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[j])) + consdata->durations[j]);
+         int tmp;
+
+         tmp = convertBoundToInt(scip, SCIPvarGetUbLocal(consdata->vars[j])) + consdata->durations[j];
+         makespan = MAX(makespan, tmp);
       }
    }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.49 2010/09/18 19:08:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.50 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -142,12 +142,16 @@ SCIP_RETCODE createSubproblem(
       if( marked[i] == fixingmarker )
       {
          SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
+
          solval = SCIPgetSolVal(scip, sol, vars[i]);
 
          /* due to dual reductions, it may happen that the solution value is not in
             the variable's domain anymore */
-         solval = MIN(SCIPvarGetUbGlobal(subvars[i]), solval);
-         solval = MIN(SCIPvarGetLbGlobal(subvars[i]), solval);
+         lb = SCIPvarGetLbGlobal(subvars[i]);
+         ub = SCIPvarGetUbGlobal(subvars[i]);
+         solval = MIN3(lb, ub, solval);
          
          /* perform the bound change */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
@@ -444,7 +448,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    }
    
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
    
    /* free hash map */
    SCIPhashmapFree(&varmapfw);

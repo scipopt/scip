@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.120 2010/09/15 14:56:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.121 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -622,6 +622,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNlpi)
    {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, nlpis, nnlpis) );
    }
+   else
+      sorted = NULL;
 
    /* sort the branching rules */
    SCIPsortPtr((void**)sorted, SCIPnlpiComp, nnlpis);

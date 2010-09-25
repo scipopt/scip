@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.15 2010/09/24 10:26:20 bzfschwa Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.16 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -1475,6 +1475,7 @@ SCIP_RETCODE separateCons(
          else
          {
             SCIP_Real feasibility;
+            SCIP_Real tmp;
            
             feasibility = 1.;
             
@@ -1486,20 +1487,22 @@ SCIP_RETCODE separateCons(
                SCIP_Real intsol;
                SCIP_Real binsol;
                int idx;
-
+               
                intsol = SCIPgetVarSol(scip, consdata->intvar);
-               idx = SCIPfeasFloor(scip, intsol) - consdata->offset;
+               idx = ((int) SCIPfeasFloor(scip, intsol)) - consdata->offset;
                assert(idx < consdata->nbinvars);
                binsol = SCIPgetVarSol(scip, consdata->binvars[idx]);
 
-
-               feasibility = MIN(feasibility, SCIPisFeasEQ(scip, intsol, (consdata->offset + idx) * binsol ) ? -1.0 : 1.0);
+               tmp = SCIPisFeasEQ(scip, intsol, (consdata->offset + idx) * binsol ) ? -1.0 : 1.0;
+               feasibility = MIN(feasibility, tmp);
             }
 
             /* check second row (setppc) for feasibility */
             if( !SCIProwIsInLP(consdata->row2) )
-               feasibility = MIN( feasibility, SCIPgetRowLPFeasibility(scip, consdata->row2) );
-            
+            {
+               tmp = SCIPgetRowLPFeasibility(scip, consdata->row2);
+               feasibility = MIN( feasibility, tmp);
+            }
             addcut = SCIPisFeasNegative(scip, feasibility);
          }
       }
@@ -1646,6 +1649,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   *result = SCIP_FEASIBLE;
+   
    /* disable all linking constraints which contain at most one binary variable */
    for( c = 0; c < nconss; ++c )
    {
@@ -2072,7 +2077,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                {
                   SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one");
                }
-               else if( !SCIPisFeasEQ(scip, pos + consdata->offset, SCIPgetSolVal(scip, sol, consdata->intvar)) )
+               else if( !SCIPisFeasEQ(scip, (SCIP_Real) (pos + consdata->offset), SCIPgetSolVal(scip, sol, consdata->intvar)) )
                {
                   /* check if the fixed binary variable match with the integer variable */
                   SCIPinfoMessage(scip, NULL, "violation: <%s> = <%g> and <%s> is one\n",

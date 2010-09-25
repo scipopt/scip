@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.212 2010/09/21 14:23:39 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.213 2010/09/25 18:27:48 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -2969,7 +2969,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
       SCIP_CALL( separateSequLiftedMinimalCoverInequality(scip, cons, vars, nvars, ntightened, weights, capacity, solvals,
             covervars, noncovervars, ncovervars, nnoncovervars, sol, ncuts) );
 
-      if( USESUPADDLIFT )
+      if( USESUPADDLIFT ) /*lint !e506 !e774*/
       { 
          SCIPdebugMessage("separate LMCI2 cuts:\n"); 
          /* separates lifted minimal cover inequalities using superadditive up-lifting */
@@ -4019,6 +4019,7 @@ SCIP_RETCODE propagateCons(
 
    /* we need a merged constraint cause without it the negated clique information could be invalid */
    usenegatedclique = usenegatedclique && consdata->merged;
+   secondmaxweights = NULL;
 
    do
    {

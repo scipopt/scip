@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.10 2010/09/23 21:53:39 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.11 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -1598,7 +1598,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       *result = SCIP_FOUNDSOL;
 
       SCIPdebugMessage("found feasible shifted solution:\n");
-      SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
+      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
       /* print the solution value to the console */
       STATISTIC(
@@ -1659,7 +1659,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          if( stored )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
-            SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
+            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
 	    STATISTIC(
 		SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n", 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.34 2010/09/13 07:16:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.35 2010/09/25 18:27:49 bzfwinkm Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -86,9 +86,8 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem                          */
    SCIP_VAR**            vars,               /**< variables of the original problem                              */
    SCIP_VAR**            subvars,            /**< variables of the subproblem                                    */
-   int*                  nvars,              /**< number of variables of problem and subproblem                  */
-   int*                  nbinvars,           /**< number of binary variables of problem and subproblem           */
-   int*                  nintvars,           /**< number of general integer variables of problem and subproblem  */
+   int                   nbinvars,           /**< number of binary variables of problem and subproblem           */
+   int                   nintvars,           /**< number of general integer variables of problem and subproblem  */
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    )
 {
@@ -120,7 +119,7 @@ SCIP_RETCODE createSubproblem(
    assert(bestsol != NULL);
 
    /* create the rebounded general integer variables of the subproblem */
-   for( i = *nbinvars; i < *nbinvars + *nintvars; i++ )
+   for( i = nbinvars; i < nbinvars + nintvars; i++ )
    {
       /* get the current LP solution for each variable */
       lpsol = SCIPvarGetLPSol(vars[i]);
@@ -580,13 +579,13 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
    
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmapfw, vars[i]);
+     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
    
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
    
    /* create variables and rebound them if their bounds differ by more than 0.5 */
-   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, &nvars, &nbinvars, &nintvars, heurdata->uselprows) );
+   SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, heurdata->uselprows) );
    SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n", 
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip) );
 
@@ -635,7 +634,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    
    /* get the best MIP-solution known so far */
    bestsol = SCIPgetBestSol(scip);
-   assert( bestsol != NULL );
+   assert(bestsol != NULL);
 
    /* get solution pool and number of solutions in pool */
    sols = SCIPgetSols(scip);
@@ -647,6 +646,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    
    /* create fixing flag array */
    SCIP_CALL( SCIPallocBufferArray( scip, &fixed, nbinvars ) );
+   assert(nbinvars <= nvars);
 
    /* fixing for binary variables */
    /* hard fixing for some with mipsol(s)=lpsolval=rootlpsolval and preparation for soft fixing for the remaining */
