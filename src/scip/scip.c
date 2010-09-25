@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.678 2010/09/24 10:26:20 bzfschwa Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.679 2010/09/25 10:36:43 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6772,7 +6772,7 @@ SCIP_RETCODE SCIPsolve(
       SCIPinterruptCapture(scip->interrupt);
 
    /* automatic restarting loop */
-   restart = FALSE;
+   restart = scip->stat->userrestart;
    do
    {
       if( restart )
