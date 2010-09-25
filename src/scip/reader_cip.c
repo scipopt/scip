@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.28 2010/09/22 10:11:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.29 2010/09/25 11:11:30 bzfpfets Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -36,7 +36,13 @@
 /** Section of the in CIP files */
 enum CipSection 
 {
-   CIP_START, CIP_STATISTIC, CIP_OBJECTIVE, CIP_VARS, CIP_FIXEDVARS, CIP_CONSTRAINTS, CIP_END 
+   CIP_START,            /**< start tag */
+   CIP_STATISTIC,        /**< statistics section */
+   CIP_OBJECTIVE,        /**< objective */
+   CIP_VARS,             /**< list of (free) variables */
+   CIP_FIXEDVARS,        /**< list of fixed variables */
+   CIP_CONSTRAINTS,      /**< constraints */
+   CIP_END               /**< end of file tag */
 };
 typedef enum CipSection CIPSECTION;          /**< Section of the in CIP files */
 
@@ -49,14 +55,14 @@ typedef enum CipSection CIPSECTION;          /**< Section of the in CIP files */
 /** CIP reading data */
 struct CipInput
 {
-   SCIP_FILE*           file;
-   char*                strbuf;
-   int                  len;
-   int                  readingsize;
-   int                  linenumber;
-   CIPSECTION           section;
-   SCIP_Bool            haserror;
-   SCIP_Bool            endfile;
+   SCIP_FILE*           file;                /**< input file */
+   char*                strbuf;              /**< string buffer for input lines */
+   int                  len;                 /**< length of strbuf */
+   int                  readingsize;         /**< size of block in which len is increased if necessary */
+   int                  linenumber;          /**< number of line in input file */
+   CIPSECTION           section;             /**< current section */
+   SCIP_Bool            haserror;            /**< some error occurred */
+   SCIP_Bool            endfile;             /**< we have reached the end of the file */
 };
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 
@@ -86,23 +92,23 @@ SCIP_RETCODE getInputString(
    
    if( cipinput->endfile )
       return SCIP_OKAY;
-   
+
    cipinput->linenumber++;
    endline = strchr(cipinput->strbuf, '\n');
-   
+
    endcharacter = strchr(cipinput->strbuf, ';'); 
    while( endline == NULL || (endcharacter == NULL && cipinput->section == CIP_CONSTRAINTS && strncmp(cipinput->strbuf, "END", 3) != 0 ) )
    {
       int pos;
 
-      /* we refil the buffer from the '\n' character */
+      /* we refill the buffer from the '\n' character */
       if( endline == NULL )
          pos = cipinput->len - 1;
       else
          pos = endline - cipinput->strbuf;
  
       /* don't erase the '\n' from all buffers for constraints */ 
-      if( cipinput->section == CIP_CONSTRAINTS )
+      if( endline != NULL && cipinput->section == CIP_CONSTRAINTS )
          pos++;
 
       /* if necessary reallocate memory */
