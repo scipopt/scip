@@ -29,7 +29,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
- * @version  2.0.0a
+ * @version  2.0.0b
  *
  * <b>SCIP Authors:</b>
  * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
@@ -4488,7 +4488,7 @@
  * 
  * <b>Note that in all lines the file extension of the file name is omitted.</b>
  *  \n
- *  See the files <code>scip/check/shortmiplib.test</code> and <code>scip/check/shortmiplib.solu</code> 
+ *  See the files <code>scip/check/short.test</code> and <code>scip/check/short.solu</code> 
  *  for an example of a <code>test</code>-file and its corresponding <code>solu</code>-file.
  *  
  *
