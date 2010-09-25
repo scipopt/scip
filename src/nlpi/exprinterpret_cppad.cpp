@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.22 2010/09/23 12:29:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.23 2010/09/25 18:20:04 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -354,13 +354,40 @@ void evalSquare(
  */
 template<>
 void evalSquare(
-   SCIPInterval&         resultant,          /**< resultant */
-   SCIPInterval&         arg                 /**< operand */
+   CppAD::AD<SCIPInterval>& resultant,          /**< resultant */
+   CppAD::AD<SCIPInterval>& arg                 /**< operand */
    )
 {
-   SCIPintervalSquare(SCIPInterval::infinity, &resultant, arg);
+   SCIPInterval result;
+
+   SCIPintervalSquare(SCIPInterval::infinity, &result, Value(arg));
+
+   resultant = result;
 }
 
+/** template for evaluation for square-root operator
+ * default is to use the standard sqrt-function
+ */
+template<class Type>
+void evalSqrt(
+   Type&                 resultant,          /**< resultant */
+   Type&                 arg                 /**< operand */
+   )
+{
+   resultant = sqrt(arg);
+}
+
+/** specialization of square-root operator for numbers
+ * we perturb the function a little bit so that it's derivatives are defined in 0.0
+ */
+template<>
+void evalSqrt(
+   CppAD::AD<double>&    resultant,          /**< resultant */
+   CppAD::AD<double>&    arg                 /**< operand */
+   )
+{
+   resultant = sqrt(arg + 1e-20) - 1e-10;
+}
 
 /** template for function that sets a value to NaN
  * default is to set it to 1.0/0.0
@@ -446,7 +473,7 @@ SCIP_RETCODE eval(
          break;
 
       case SCIP_EXPR_SQRT:
-         val = sqrt(buf[0]);
+         evalSqrt(val, buf[0]);
          break;
 
       case SCIP_EXPR_POWER:
@@ -627,7 +654,9 @@ SCIP_RETCODE eval(
                }
                if( exponent == 0.5 )
                {
-                  monomval *= sqrt(childval);
+                  Type tmp;
+                  evalSqrt(tmp, childval);
+                  monomval *= tmp;
                   continue;
                }
                if( exponent == -1.0 )
