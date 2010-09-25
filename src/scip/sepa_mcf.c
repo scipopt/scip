@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.130 2010/09/24 10:26:21 bzfschwa Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.131 2010/09/25 12:38:46 bzfviger Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -4767,9 +4767,6 @@ SCIP_RETCODE nodepairqueueCreate(
    NODEPAIRQUEUE**       nodepairqueue       /**< pointer to nodepair priority queue */
 )
 {
-   assert(mcfnetwork != NULL);
-   assert(nodepairqueue != NULL);
-
    /* For every nodepair that is used in the network (at least one arc exists having this nodepair as endnodes)
     * we calculate a weight:
     * The weight w_st of a nodepair (s,t) is the minimum of the weights of all s-t and t-s arcs
@@ -4798,6 +4795,9 @@ SCIP_RETCODE nodepairqueueCreate(
    int a;
    int nnodepairs;
    int n;
+
+   assert(mcfnetwork != NULL);
+   assert(nodepairqueue != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, nodepairqueue) );
 
@@ -5334,8 +5334,6 @@ nodepartitionIsConnected
  NODEPARTITION*        nodepartition, /**< node partition data structure */
  unsigned int          partition )      /**< partition of nodes, or node number in single-node partition */
 {
-   assert(nodepartition != NULL);
-
    const int* nodeclusters = nodepartition->nodeclusters;
    const int* arcsources   = mcfnetwork->arcsources;
    const int* arctargets   = mcfnetwork->arctargets;
@@ -5345,6 +5343,8 @@ nodepartitionIsConnected
    int  ncomponents;
    int  a;
    int* rep;
+
+   assert(nodepartition != NULL);
 
    if( SCIPallocBufferArray(scip, &rep, nclusters) != SCIP_OKAY )
       return 0;
