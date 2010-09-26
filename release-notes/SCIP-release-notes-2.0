@@ -13,16 +13,15 @@ Features
 
 - New separators for oddcycle cuts and Chvatal-Gomory cuts using sub-MIPs
 
-- New propagator for variables bounds
+- New propagator for variable bounds
 
-- Solution counting extended to all constraints integer programs, this also
-  constraint integer programs which contain continuous variables
+- Solution counting extended to constraint integer programs, this also
+  includes constraint integer programs which contain continuous variables
 
-- Better support for nonlinear CIPs:
+- More support for nonlinear CIPs:
   + Improved constraint handler for quadratic constraints
-  + Support of quadratic extensions in file formats .lp and .mps
   + New constraint handler for second order cone constraints
-  + New MINLP heuristics
+  + New MINLP heuristics (undercover, subnlp)
   + Preliminary support for non-linear relaxations (via expression trees)
   + Automatic branching on solutions from arbitrary relaxations and on continuous variables
 
@@ -43,6 +42,7 @@ Interfaces
 - Extended reader for Flatzinc models
 
 - Extended reader for .lp and .mps files for semicontinuous variables
+  and quadratic objective or constraints
 
 
 Performance Improvements and Bug Fixes
