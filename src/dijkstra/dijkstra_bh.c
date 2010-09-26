@@ -100,7 +100,7 @@ DIJKSTRA_Bool heap_is_valid(
 
 
 /** Moves an entry down in the vector until the sorting is valid again. */
-static inline
+static
 void sift_down(
    unsigned int*              entry,
    const unsigned long long*  value,
@@ -141,7 +141,7 @@ void sift_down(
 
 
 /** Moves an entry up in the vector until the sorting is valid again. */
-static inline
+static
 void sift_up(
    unsigned int*              entry,
    const unsigned long long*  value,
