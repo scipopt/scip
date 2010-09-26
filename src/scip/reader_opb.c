@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.62 2010/09/19 11:04:51 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.63 2010/09/26 00:33:13 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1968,9 +1968,9 @@ SCIP_RETCODE computeAndConstraintInfos(
       {
          nandconss = SCIPconshdlrGetNConss(conshdlr);
          andconss = SCIPconshdlrGetConss(conshdlr);
-         
-         assert(andconss != NULL || nandconss == 0);
       }
+      
+      assert(andconss != NULL || nandconss == 0);
 
       *nresvars = nandconss;
 
@@ -2172,7 +2172,7 @@ SCIP_RETCODE writeOpbObjective(
 	 /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
          if( !transformed )
 	    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
-		    SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
+               SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
       }
 #endif
       

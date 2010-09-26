@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.29 2010/09/25 11:11:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.30 2010/09/26 00:33:13 bzfwinkm Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -132,7 +132,7 @@ SCIP_RETCODE getInputString(
 
    /*SCIPdebugMessage("read line: %s\n", cipinput->strbuf);*/
    
-   if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline != NULL && endline - endcharacter != 1 )
+   if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline - endcharacter != 1 )
    {
       SCIPerrorMessage("Constraint line has to end with ';\\n'.\n");
       cipinput->haserror = TRUE;

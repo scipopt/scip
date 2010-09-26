@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.57 2010/09/21 14:34:41 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.58 2010/09/26 00:33:13 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1236,8 +1236,9 @@ SCIP_RETCODE parseOutputDimensioninfo(
          SCIP_CALL( SCIPreallocMemoryArray(scip, &(*info)->ubs, size) );
       }
       
-      (*info)->lbs[nelements] = lb;
-      (*info)->ubs[nelements] = ub;
+      /* we assume integer bounds */
+      (*info)->lbs[nelements] = (int) lb;
+      (*info)->ubs[nelements] = (int) ub;
       nelements++;
    }
    
@@ -1805,7 +1806,7 @@ SCIP_RETCODE parseArray(
    if( hasError(fzninput) )
       return SCIP_OKAY;
    
-   SCIPdebugMessage("found <%s> array named <%s> of type <%s> and size <%d> with bounds [%g,%g] (output %d)\n",
+   SCIPdebugMessage("found <%s> array named <%s> of type <%s> and size <%d> with bounds [%g,%g] (output %u)\n",
       isvararray ? "variable" : "constant", name,
       type == FZN_BOOL ? "bool" : type == FZN_INT ? "integer" : "float", nelements, lb, ub, output);
    
@@ -2133,7 +2134,7 @@ SCIP_RETCODE parseQuadratic(
             SCIPswapPointers((void*)&vals[0], (void*)&vals[1]);
 
          /* after swapping, the variable and the coefficient should stand in front */
-         assert(vars[0] != NULL && vals[0] != SCIP_INVALID );
+         assert(vars[0] != NULL && vals[0] != SCIP_INVALID ); /*lint !e777*/
 
          /* the right hand side might be a variable or a constant */
          if( vars[2] != NULL )
@@ -2144,7 +2145,7 @@ SCIP_RETCODE parseQuadratic(
          }
          else
          {
-            assert(vals[2] != SCIP_INVALID);
+            assert(vals[2] != SCIP_INVALID); /*lint !e777*/
             rhs += vals[2];
          }
          
@@ -2153,7 +2154,7 @@ SCIP_RETCODE parseQuadratic(
       else
       {
          /* the left hand side of x*y = z is constant */
-         assert(vals[0] != SCIP_INVALID && vals[1] != SCIP_INVALID);
+         assert(vals[0] != SCIP_INVALID && vals[1] != SCIP_INVALID); /*lint !e777*/
 
          rhs = rhs - vals[0]*vals[1];
        
@@ -2166,7 +2167,7 @@ SCIP_RETCODE parseQuadratic(
          }
          else
          {
-            assert(vals[2] != SCIP_INVALID);
+            assert(vals[2] != SCIP_INVALID); /*lint !e777*/
             rhs += vals[2];
             SCIP_CALL( createLinearCons(scip, name, 0, NULL, NULL, rhs, rhs) );  
          }
@@ -2504,6 +2505,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
          
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
       SCIP_CALL( SCIPallocBufferArray(scip, &elements, 1) );
+      nelements = 0;     
          
       SCIPdebugMessage("found and constraint <%s>\n", fname);
          
@@ -2522,7 +2524,6 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       }
          
       /* parse resultant variable array */
-      nelements = 0;     
       SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 1) );
       resvar = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[0]);
          
@@ -2684,7 +2685,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    
       if( !hasError(fzninput) )
       {
-         assert(sidevalue != SCIP_INVALID);
+         assert(sidevalue != SCIP_INVALID); /*lint !e777*/
 
          /* compute left and right side */
          computeLinearConsSides(scip, fzninput, ftokens[2], sidevalue, &lhs, &rhs);
@@ -3158,7 +3159,7 @@ SCIP_RETCODE readFZNFile(
             {
                SCIPwarningMessage("unknown keyword <%s> skip statement\n", fzninput->token);
                SCIPABORT();
-               return SCIP_OKAY;
+               return SCIP_OKAY;  /*lint !e527*/
             }
          }        
          

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.35 2010/09/24 10:26:22 bzfschwa Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.36 2010/09/26 00:33:13 bzfwinkm Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -485,8 +485,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    {
       SCIP_HASHMAP* consmap;
       
+      assert((int) (5 * SCIPgetNConflictConssApplied(subscip)) > SCIPgetNConflictConssApplied(subscip));
+
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5*SCIPgetNConflictConssApplied(subscip))) );
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPcalcHashtableSize( (int) (5 * SCIPgetNConflictConssApplied(subscip)))) );
 
       /* loop over all constraint handlers that might contain conflict constraints */
       for( i = 0; i < nconshdlrs; ++i)

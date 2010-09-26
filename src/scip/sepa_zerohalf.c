@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.40 2010/09/25 12:38:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.41 2010/09/26 00:33:13 bzfwinkm Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -1779,7 +1779,7 @@ void findClosestLb(
    if( *bestlbtype == -1 )
       return;
    
-   if( USEVARBOUNDS )
+   if( USEVARBOUNDS ) /*lint !e774 !e506*/
    {
       nvlb = SCIPvarGetNVlbs(var);
       zvlb = SCIPvarGetVlbVars(var);
@@ -1789,7 +1789,7 @@ void findClosestLb(
 
    if( *bestlbtype == -2 )
    {
-      if( USEVARBOUNDS )
+      if( USEVARBOUNDS ) /*lint !e774 !e506*/
       {
          /* search for lb or vlb with maximal bound value */
          for( j = 0; j < nvlb; j++ )
@@ -1823,7 +1823,7 @@ void findClosestLb(
 
    if( *bestlbtype >= 0 )
    {
-      assert(USEVARBOUNDS);
+      assert(USEVARBOUNDS); /*lint !e774 !e506*/
       *bestzvlb = zvlb[*bestlbtype];
       *bestbvlb = bvlb[*bestlbtype];
       *bestdvlb = dvlb[*bestlbtype];      
@@ -1873,7 +1873,7 @@ void findClosestUb(
    if( *bestubtype == -1 )
       return;
    
-   if( USEVARBOUNDS )
+   if( USEVARBOUNDS ) /*lint !e774 !e506*/
    {
       nvub = SCIPvarGetNVubs(var);
       zvub = SCIPvarGetVubVars(var);
@@ -1883,7 +1883,7 @@ void findClosestUb(
 
    if( *bestubtype == -2 )
    {
-      if( USEVARBOUNDS )
+      if( USEVARBOUNDS ) /*lint !e774 !e506*/
       {
          /* search for ub or vub with maximal bound value */
          for( j = 0; j < nvub; j++ )
@@ -1916,7 +1916,7 @@ void findClosestUb(
 
    if( *bestubtype >= 0 )
    {
-      assert(USEVARBOUNDS);
+      assert(USEVARBOUNDS); /*lint !e774 !e506*/
       *bestzvub = zvub[*bestubtype];
       *bestbvub = bvub[*bestubtype];
       *bestdvub = dvub[*bestubtype];      
@@ -2670,13 +2670,13 @@ SCIP_RETCODE storeMod2Data(
 
             /* check bound type */
             assert(bestbndtype > -2);
-            if( !USEVARBOUNDS )
+            if( !USEVARBOUNDS )  /*lint !e774 !e506*/
                assert(bestbndtype == -1);
 
             /* normal lb or ub is used; only rhs would have to be adjusted but this has already been done in getRelevantRows */
             if( bestbndtype == -1 )
                continue;
-            assert(USEVARBOUNDS && bestbndtype > -1);
+            assert(USEVARBOUNDS && bestbndtype > -1); /*lint !e774 !e506*/
 
             /* variable bound is used: update coeffcient of non-continuous variable z that is used in substitution */
             densecoeffscurrentrow[SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd))] += (nonzvalscurrentrow[j] * intscalar * bestbvbnd);
@@ -4399,7 +4399,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
             markRowAsRemoved(mod2data, i, SLACK_GREATER_THAN_MSL_MINUS_SODD);
          for( i = 0 ; i < mod2data->ncolsind ; ++i )
             markColAsRemovedAndClearCol(mod2data, i, ALL_MATRIX_ROWS_DELETED);
-         nlslrowsremoved = mod2data->nrowsind;
+         //nlslrowsremoved = mod2data->nrowsind;
          mod2data->nrowsind = 0;
          mod2data->ncolsind = 0;
       }
@@ -4864,6 +4864,8 @@ SCIP_RETCODE createSubscip(
 
    SCIP_Bool success;
 
+   SCIP_Real             feastol;
+
    assert(scip != NULL);
    assert(sepadata != NULL);
    assert(lpdata != NULL);
@@ -4921,7 +4923,8 @@ SCIP_RETCODE createSubscip(
    else
       auxipdata->nodelimit = -1;
 
-   auxipdata->objectivelimit = MIN(1.0, maxslack + SCIPfeastol(scip));
+   feastol = SCIPfeastol(scip);
+   auxipdata->objectivelimit = MIN(1.0, maxslack + feastol);
   
    /* abort if not enough memory available */
    if( auxipdata->memorylimit <= 0.0 ) 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.27 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.28 2010/09/26 00:33:13 bzfwinkm Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -64,7 +64,7 @@ SCIP_DECL_SEPACOPY(sepaCopyObj)
    if( sepadata->objsepa->iscloneable() )
    {
       scip::ObjSepa* newobjsepa;
-      newobjsepa = (scip::ObjSepa*) sepadata->objsepa->clone(scip, valid);
+      newobjsepa = dynamic_cast<scip::ObjSepa*> (sepadata->objsepa->clone(scip, valid));
 
       /* call include method of separator object */
       SCIP_CALL( SCIPincludeObjSepa(scip, newobjsepa, TRUE) );
