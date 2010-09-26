@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.137 2010/09/16 16:20:08 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.138 2010/09/26 11:25:42 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -70,27 +70,29 @@
 #define PATCH_CHAR    '_'
 #define BLANK         ' '
 
+/** enum containing all mps sections */
 enum MpsSection
-   {
-      MPS_NAME,
-      MPS_OBJSEN,
-      MPS_OBJNAME,
-      MPS_ROWS,
-      MPS_USERCUTS,
-      MPS_LAZYCONS,
-      MPS_COLUMNS,
-      MPS_RHS,
-      MPS_RANGES,
-      MPS_BOUNDS,
-      MPS_SOS,
-      MPS_QUADOBJ,
-      MPS_QMATRIX,
-      MPS_QCMATRIX,
-      MPS_INDICATORS,
-      MPS_ENDATA
-   };
+{
+   MPS_NAME,
+   MPS_OBJSEN,
+   MPS_OBJNAME,
+   MPS_ROWS,
+   MPS_USERCUTS,
+   MPS_LAZYCONS,
+   MPS_COLUMNS,
+   MPS_RHS,
+   MPS_RANGES,
+   MPS_BOUNDS,
+   MPS_SOS,
+   MPS_QUADOBJ,
+   MPS_QMATRIX,
+   MPS_QCMATRIX,
+   MPS_INDICATORS,
+   MPS_ENDATA
+};
 typedef enum MpsSection MPSSECTION;
 
+/** mps input structure */
 struct MpsInput
 {
    MPSSECTION           section;
@@ -112,7 +114,7 @@ struct MpsInput
 };
 typedef struct MpsInput MPSINPUT;
 
-/* sparse matrix representation */
+/** sparse matrix representation */
 struct SparseMatrix
 {
    SCIP_Real*            values;           /**< matrix element */
@@ -123,7 +125,7 @@ struct SparseMatrix
 };
 typedef struct SparseMatrix SPARSEMATRIX;
 
-
+/** creates the mps input structure */
 static
 SCIP_RETCODE mpsinputCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -156,6 +158,7 @@ SCIP_RETCODE mpsinputCreate(
    return SCIP_OKAY;
 }
 
+/** free the mps input structure */
 static
 void mpsinputFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -165,6 +168,7 @@ void mpsinputFree(
    SCIPfreeMemory(scip, mpsi);
 }
 
+/** returns the current section */
 static
 MPSSECTION mpsinputSection(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -176,6 +180,7 @@ MPSSECTION mpsinputSection(
 }
 
 #if 0
+/** return the current line number */
 static
 int mpsinputLineno(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -187,6 +192,7 @@ int mpsinputLineno(
 }
 #endif
 
+/** return the current value of field 0 */
 static
 const char* mpsinputField0(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -197,6 +203,7 @@ const char* mpsinputField0(
    return mpsi->f0;
 }
 
+/** return the current value of field 1 */
 static
 const char* mpsinputField1(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -207,6 +214,7 @@ const char* mpsinputField1(
    return mpsi->f1;
 }
 
+/** return the current value of field 2 */
 static
 const char* mpsinputField2(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -217,6 +225,7 @@ const char* mpsinputField2(
    return mpsi->f2;
 }
 
+/** return the current value of field 3 */
 static
 const char* mpsinputField3(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -227,6 +236,7 @@ const char* mpsinputField3(
    return mpsi->f3;
 }
 
+/** return the current value of field 4 */
 static
 const char* mpsinputField4(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -237,6 +247,7 @@ const char* mpsinputField4(
    return mpsi->f4;
 }
 
+/** return the current value of field 5 */
 static
 const char* mpsinputField5(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -248,6 +259,7 @@ const char* mpsinputField5(
 }
 
 #if 0
+/** returns the problem name */
 static
 const char* mpsinputProbname(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -259,6 +271,7 @@ const char* mpsinputProbname(
 }
 #endif
 
+/** returns the objective name */
 static
 const char* mpsinputObjname(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -269,6 +282,7 @@ const char* mpsinputObjname(
    return mpsi->objname;
 }
 
+/** returns the objective sense */
 static
 SCIP_OBJSENSE mpsinputObjsense(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -279,6 +293,7 @@ SCIP_OBJSENSE mpsinputObjsense(
    return mpsi->objsense;
 }
 
+/** returns if an error was detected */
 static
 SCIP_Bool mpsinputHasError(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -289,6 +304,7 @@ SCIP_Bool mpsinputHasError(
    return mpsi->haserror;
 }
 
+/** returns the value of the Bool "is interger" in the mps input */
 static
 SCIP_Bool mpsinputIsInteger(
    const MPSINPUT*       mpsi                /**< mps input structure */
@@ -299,6 +315,7 @@ SCIP_Bool mpsinputIsInteger(
    return mpsi->isinteger;
 }
 
+/** set the section in the mps input structure to given section */
 static
 void mpsinputSetSection(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -310,6 +327,7 @@ void mpsinputSetSection(
    mpsi->section = section;
 }
 
+/** set the problem name in the mps input structure to given problem name */
 static
 void mpsinputSetProbname(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -323,6 +341,7 @@ void mpsinputSetProbname(
    (void)strncpy(mpsi->probname, probname, MPS_MAX_NAMELEN - 1);
 }
 
+/** set the objective name in the mps input structure to given objective name */
 static
 void mpsinputSetObjname(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -336,6 +355,7 @@ void mpsinputSetObjname(
    (void)strncpy(mpsi->objname, objname, MPS_MAX_NAMELEN - 1);
 }
 
+/** set the objective sense in the mps input structure to given objective sense */
 static
 void mpsinputSetObjsense(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -359,15 +379,16 @@ void mpsinputSyntaxerror(
    mpsi->haserror = TRUE;
 }
 
+/** method post a ignore message  */
 static
 void mpsinputEntryIgnored(
    SCIP*                 scip,               /**< SCIP data structure */
    MPSINPUT*             mpsi,               /**< mps input structure */
-   const char*           what,
-   const char*           what_name,
-   const char*           entity,
-   const char*           entity_name,
-   SCIP_VERBLEVEL        verblevel
+   const char*           what,               /**< what get ignored */
+   const char*           what_name,          /**< name of that object */
+   const char*           entity,             /**< entity */
+   const char*           entity_name,        /**< entity name */
+   SCIP_VERBLEVEL        verblevel           /**< SCIP verblevel for this message */
    )
 {
    assert(mpsi        != NULL);
@@ -383,8 +404,8 @@ void mpsinputEntryIgnored(
 /** fill the line from \p pos up to column 80 with blanks. */
 static
 void clearFrom(
-   char*                 buf,
-   unsigned int          pos
+   char*                 buf,                /**< buffer to clear */
+   unsigned int          pos                 /**< position to start the clearing process */
    )
 {
    unsigned int i;
@@ -397,9 +418,9 @@ void clearFrom(
 /** change all blanks inside a field to #PATCH_CHAR. */
 static
 void patchField(
-   char*                 buf,
-   int                   beg,
-   int                   end
+   char*                 buf,                /**< buffer to patch */
+   int                   beg,                /**< position to begin */
+   int                   end                 /**< position to end */
    )
 {
    int i;
@@ -418,7 +439,7 @@ void patchField(
 /** read a mps format data line and parse the fields. */
 static
 SCIP_Bool mpsinputReadLine(
-   MPSINPUT*             mpsi
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    unsigned int len;
@@ -591,12 +612,12 @@ SCIP_Bool mpsinputReadLine(
    return TRUE;
 }
 
-/* Insert \p name as field 1 and shift all other fields up. */
+/** Insert \p name as field 1 or 2 and shift all other fields up. */
 static
 void mpsinputInsertName(
-   MPSINPUT*             mpsi,
-   const char*           name,
-   SCIP_Bool             second
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           name,               /**< name to insert */
+   SCIP_Bool             second              /**< insert as second field? */
    )
 {
    assert(mpsi != NULL);
@@ -618,7 +639,7 @@ void mpsinputInsertName(
 /** Process NAME section. */
 static
 SCIP_RETCODE readName(
-   MPSINPUT*             mpsi
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -664,7 +685,7 @@ SCIP_RETCODE readName(
 /** Process OBJSEN section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjsen(
-   MPSINPUT*             mpsi
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -715,7 +736,7 @@ SCIP_RETCODE readObjsen(
 /** Process OBJNAME section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjname(
-   MPSINPUT*             mpsi
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -752,7 +773,7 @@ SCIP_RETCODE readObjname(
 /** Process ROWS, USERCUTS, or LAZYCONS section. */
 static
 SCIP_RETCODE readRows(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -845,7 +866,7 @@ SCIP_RETCODE readRows(
 /** Process COLUMNS section. */
 static
 SCIP_RETCODE readCols(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -956,7 +977,7 @@ SCIP_RETCODE readCols(
 /** Process RHS section. */
 static
 SCIP_RETCODE readRhs(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1081,7 +1102,7 @@ SCIP_RETCODE readRhs(
 /** Process RANGES section */
 static
 SCIP_RETCODE readRanges(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1217,7 +1238,7 @@ SCIP_RETCODE readRanges(
 /** Process BOUNDS section. */
 static
 SCIP_RETCODE readBounds(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1490,7 +1511,7 @@ READBOUNDS_FINISH:
  */
 static
 SCIP_RETCODE readSOS(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1664,7 +1685,7 @@ SCIP_RETCODE readSOS(
  */
 static
 SCIP_RETCODE readQMatrix(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP_Bool             isQuadObj,          /**< whether we actually read a QUADOBJ section */
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1843,7 +1864,7 @@ SCIP_RETCODE readQMatrix(
  */
 static
 SCIP_RETCODE readQCMatrix(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -2009,7 +2030,7 @@ SCIP_RETCODE readQCMatrix(
  */
 static
 SCIP_RETCODE readIndicators(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -2211,7 +2232,7 @@ SCIP_RETCODE readIndicators(
 }
 
 
-/* Read LP in "MPS File Format".
+/** Read LP in "MPS File Format".
  *
  *  A specification of the MPS format can be found at
  *
@@ -2355,7 +2376,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 }
 
 
-/* computes the field width such that the output file is nicely arranged */
+/** computes the field width such that the output file is nicely arranged */
 static
 unsigned int computeFieldWidth(
    unsigned int             width              /**< required width */
@@ -2366,7 +2387,7 @@ unsigned int computeFieldWidth(
 }
 
 
-/* output two strings in columns 1 and 2 with computed widths */
+/** output two strings in columns 1 and 2 with computed widths */
 static
 void printRecord(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2392,7 +2413,7 @@ void printRecord(
    SCIPinfoMessage(scip, file, format, col1, col2);
 }
 
-/* output two strings in columns 1 (width 2) and 2 (width 8) */
+/** output two strings in columns 1 (width 2) and 2 (width 8) */
 static
 void printStart(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2426,7 +2447,7 @@ void printStart(
    SCIPinfoMessage(scip, file, format, col1, col2);
 }
 
-/* prints the given data as column entry */
+/** prints the given data as column entry */
 static
 void printEntry(
    SCIP*              scip,               /**< SCIP data structure */
@@ -2467,7 +2488,7 @@ void printEntry(
    }
 }
 
-/* prints the constraint type to file stream */
+/** prints the constraint type to file stream */
 static
 void printRowType(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2844,7 +2865,7 @@ SCIP_RETCODE checkConsnames(
 }
 
 
-/* outputs the COULMNS section of the MPS format */
+/** outputs the COULMNS section of the MPS format */
 static
 void printColumnSection(
    SCIP*              scip,               /**< SCIP data structure */
