@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.10 2010/09/26 00:33:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_oddcycle.c,v 1.11 2010/09/26 20:45:13 bzfwinkm Exp $"
 
 /**@file   sepa_oddcycle.c
  * @ingroup SEPARATORS
@@ -2752,7 +2752,6 @@ SCIP_RETCODE separateHeur(
             for( j = graph.levelAdj[graph.nlevels+1]; j < graph.levelAdj[graph.nlevels+2]
                     && ncutslevel < maxcutslevel && !SCIPisStopped(scip); ++j )
             {
-               unsigned int weight;
                unsigned int ncyclevars; 
                unsigned int u;
 
@@ -2762,13 +2761,9 @@ SCIP_RETCODE separateHeur(
    
                assert(graph.sourceAdj[j] < graph.targetAdj[j]);
 
-               /* initialize weight of cycle */
-               weight = graph.weightAdj[j];
-
                /* find shortest path from source to root and update weight of cycle */
                SCIP_CALL( findShortestPathToRoot(scip, sepadata->scale, &graph, graph.sourceAdj[j],
                      distance, queue, inQueue, parentTree) );
-               weight += distance[0];
                
 #ifndef NDEBUG
                /* check that this path ends in the root node */
@@ -2794,7 +2789,6 @@ SCIP_RETCODE separateHeur(
                /* find shortest path from root to target node avoiding blocked nodes */
                SCIP_CALL( findUnblockedShortestPathToRoot(scip, sepadata->scale, &graph, 
                      graph.targetAdj[j], distance, queue, inQueue, parentTreeBackward, i, blocked) );
-               weight += distance[graph.targetAdj[j]];
 
                /* no odd cycle cut found */
                if( parentTreeBackward[graph.targetAdj[j]] < 0 ) 

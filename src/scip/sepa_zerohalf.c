@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.42 2010/09/26 14:43:29 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.43 2010/09/26 20:45:13 bzfwinkm Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -4399,7 +4399,6 @@ SCIP_RETCODE preprocessConsiderMinSlack(
             markRowAsRemoved(mod2data, i, SLACK_GREATER_THAN_MSL_MINUS_SODD);
          for( i = 0 ; i < mod2data->ncolsind ; ++i )
             markColAsRemovedAndClearCol(mod2data, i, ALL_MATRIX_ROWS_DELETED);
-         /* nlslrowsremoved = mod2data->nrowsind; */
          mod2data->nrowsind = 0;
          mod2data->ncolsind = 0;
       }
