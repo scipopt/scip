@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.381 2010/09/23 19:54:38 bzfviger Exp $
+# $Id: Makefile,v 1.382 2010/09/26 17:12:12 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -103,7 +103,7 @@ BLIS            =       blis
 
 SHELL		= 	bash
 READ		=	read -e
-
+LN_s		= ln -s
 
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF
 OFLAGS		=
@@ -786,23 +786,23 @@ tags:
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(LPILIBFILE)) $(notdir $@)
+		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
 
 $(NLPILIBLINK):	$(NLPILIBFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(NLPILIBFILE)) $(notdir $@)
+		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
 
 $(SCIPLIBLINK):	$(SCIPLIBFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(SCIPLIBFILE)) $(notdir $@)
+		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $@)
 
 $(OBJSCIPLIBLINK):	$(OBJSCIPLIBFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(OBJSCIPLIBFILE)) $(notdir $@)
+		cd $(dir $@) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $@)
 
 $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
+		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
@@ -1046,7 +1046,7 @@ ifeq ($(MAKESOFTLINKS), true)
 				then \
 					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
 					rm -f $@ ; \
-					ln -s $$TARGET $@ ; \
+					$(LN_s) $$TARGET $@ ; \
 				else \
 					echo "* skipped creation of softlink \"$@\". Call \"make links\" if needed later." ; \
 				fi ; \
