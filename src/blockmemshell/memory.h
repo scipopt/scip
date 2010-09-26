@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.11 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.12 2010/09/26 15:01:25 bzfschwa Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -24,7 +24,7 @@
 #ifndef __BMS_MEMORY_H__
 #define __BMS_MEMORY_H__
 
-
+#include <limits.h>
 #include <stdlib.h>
 
 /* special thanks to Daniel Junglas for following template and macros */
@@ -50,14 +50,30 @@ extern "C" {
  * detection.
  *************************************************************************************/
 
-#define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
+/* Check for integer overflow in allocation size */
+#ifdef NDEBUG
 #define BMSallocMemoryArray(ptr,num)          ASSIGN((ptr), BMSallocMemory_call( (num)*sizeof(**(ptr)), \
                                                 __FILE__, __LINE__ ))
-#define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
-#define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
-#define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
 #define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
                                                 __FILE__, __LINE__ ))
+#define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
+#else
+#define BMSallocMemoryArray(ptr,num)          ( ( ((size_t)num) > (UINT_MAX / sizeof(**(ptr))) )               \
+						? NULL                                                         \
+						: ( ASSIGN((ptr), BMSallocMemory_call( (num)*sizeof(**(ptr)),  \
+										       __FILE__, __LINE__ )) ) )
+#define BMSreallocMemoryArray(ptr,num)        ( ( ((size_t)num) > (UINT_MAX / sizeof(**(ptr))) ) \
+						? NULL                                                         \
+						: ( ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
+											 __FILE__, __LINE__ )) )        )
+#define BMSallocMemoryArrayCPP(num,size)      ( ( ((size_t)num) > (UINT_MAX / size) ) \
+						? NULL                                                        \
+						:( BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ ) ) )
+#endif
+
+#define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
+#define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
 #define BMSreallocMemorySize(ptr,size)        ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (size_t)(size), \
                                                 __FILE__, __LINE__ ))
 #define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
@@ -313,6 +329,25 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 /* block memory methods for faster memory access */
 
+/* Check for integer overflow in allocation size */
+#ifdef NDEBUG
+#define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)), \
+                                                __FILE__, __LINE__))
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
+                                                ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
+                                                (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, __LINE__))
+#else
+#define BMSallocBlockMemoryArray(mem,ptr,num) ( ( ((size_t)num) > UINT_MAX / sizeof(**(ptr)) )                          \
+						? NULL                                                                  \
+						: ( ASSIGN((ptr), BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)),\
+											   __FILE__, __LINE__)) )       )
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)                                         \
+   ( ( ((size_t)newnum) > UINT_MAX / sizeof(**(ptr)) )			                          \
+   ? NULL							                                  \
+   : ( ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), (oldnum)*sizeof(**(ptr)), \
+						(newnum)*sizeof(**(ptr)), __FILE__, __LINE__)) )  )
+#endif
+
 #define BMScreateBlockMemory(csz,gbf)         BMScreateBlockMemory_call( (csz), (gbf), __FILE__, __LINE__ )
 #define BMSclearBlockMemory(mem)              BMSclearBlockMemory_call( (mem), __FILE__, __LINE__ )
 #define BMSclearBlockMemoryNull(mem)          { if( (mem) != NULL ) BMSclearBlockMemory( (mem) ); }
@@ -321,13 +356,8 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 #define BMSallocBlockMemory(mem,ptr)          ASSIGN((ptr), BMSallocBlockMemory_call((mem), sizeof(**(ptr)), \
                                                 __FILE__, __LINE__))
-#define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)), \
-                                                __FILE__, __LINE__))
 #define BMSallocBlockMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (size_t)(size), \
                                                 __FILE__, __LINE__))
-#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
-                                                ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
-                                                (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize) \
                                                 ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
                                                 (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
