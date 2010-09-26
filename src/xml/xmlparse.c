@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xmlparse.c,v 1.3 2010/09/14 10:26:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: xmlparse.c,v 1.4 2010/09/26 16:44:31 bzfviger Exp $"
 
 /**@file   xmldef.h
  * @brief  declarations for XML parsing
@@ -195,7 +195,7 @@ void clear_pstack(
  * fgetc()).
  */
 static
-inline int my_getc(
+int my_getc(
    PPOS*                 ppos
    )
 {
@@ -228,7 +228,7 @@ inline int my_getc(
  * If there is a LF, CR, CR/LF, or LF/CR it returns exactly on LF.  Also counts the number of
  * characters.
  */
-static inline
+static
 int getsymbol(
    PPOS*                 ppos
    )
@@ -268,7 +268,7 @@ int getsymbol(
  *  @note This function counts lines differently. On systems that have only one '\\r' as line feed
  *  (MAC) it does not count correctly.
  */
-static inline
+static
 int getsymbol(
    PPOS*                 ppos
    )
