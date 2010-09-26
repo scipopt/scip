@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.23 2010/09/18 19:30:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.24 2010/09/26 11:31:35 bzfviger Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -76,7 +76,7 @@ void getRandomVariable(
    /* handle case where cands[idx] is fixed by selecting next idx with unfixed var
     * this may happen if we are inside a multiaggregation */
    firstidx = idx;
-   while( SCIPisEQ(scip, SCIPvarGetLbLocal(cands[idx]), SCIPvarGetUbLocal(cands[idx])) )
+   while( SCIPrelDiff(SCIPvarGetUbLocal(cands[idx]), SCIPvarGetLbLocal(cands[idx])) <= 2.0*SCIPepsilon(scip) )
    {
       ++idx;
       if( idx == ncands )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.54 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.55 2010/09/26 11:31:35 bzfviger Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -126,7 +126,8 @@ int SCIPbranchcandGetNPrioRelaxConts(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
 
-/** insert variable, its score and its solution value into the relaxation branching candidate storage */
+/** insert variable, its score and its solution value into the relaxation branching candidate storage
+ * the relative difference of the current lower and upper bounds of the variable must be at least 2*epsilon */
 extern
 SCIP_RETCODE SCIPbranchcandAddRelaxCand(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

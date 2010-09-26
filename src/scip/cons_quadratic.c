@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.133 2010/09/23 21:28:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.134 2010/09/26 11:31:35 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3310,7 +3310,7 @@ SCIP_RETCODE presolveUpgrade(
          nimpllin++;
          break;
       case SCIP_VARTYPE_CONTINUOUS:
-         integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, lincoef * lb);
+         integral = integral && SCIPisRelEQ(scip, lb, ub) && SCIPisIntegral(scip, lincoef * lb);
          ncontlin++;
          break;
       default:
@@ -3345,7 +3345,7 @@ SCIP_RETCODE presolveUpgrade(
          nimplquad++;
          break;
       case SCIP_VARTYPE_CONTINUOUS:
-         integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, lincoef * lb + quadcoef * lb * lb);
+         integral = integral && SCIPisRelEQ(scip, lb, ub) && SCIPisIntegral(scip, lincoef * lb + quadcoef * lb * lb);
          ncontquad++;
          break;
       default:
@@ -4283,7 +4283,7 @@ SCIP_RETCODE generateCutCareful(
          continue;
       }
 
-      if( SCIPisGT(scip, SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row), maxrange) )
+      if( SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row) > maxrange )
       { /* seems to be a numerically bad cut */
          SCIPdebugMessage("skip cut for constraint %s because of very large range: %g\n", SCIPconsGetName(cons), SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
          SCIP_CALL( SCIPreleaseRow(scip, row) );
@@ -4651,7 +4651,7 @@ SCIP_RETCODE generateCut(
       return SCIP_OKAY;
    }
 
-   if( SCIPisGT(scip, SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row), maxrange) )
+   if( SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row) > maxrange )
    { /* seems to be a numerically bad cut */
       SCIPdebugMessage("skip cut for constraint %s because of very large range: %g\n", SCIPconsGetName(cons), SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
       SCIP_CALL( SCIPreleaseRow(scip, row) );
@@ -4886,8 +4886,11 @@ SCIP_RETCODE registerVariableInfeasibilities(
          {
             xlb = SCIPvarGetLbLocal(consdata->quadvarterms[j].var);
             xub = SCIPvarGetUbLocal(consdata->quadvarterms[j].var);
-            if( SCIPisEQ(scip, xlb/2, xub/2) )
+            if( SCIPrelDiff(xub, xlb) <= 2.0 * SCIPepsilon(scip) )
+            {
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), xlb, xub, SCIPrelDiff(xub, xlb));
                continue;
+            }
             
             xval = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[j].var);
             
@@ -4955,15 +4958,23 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( gap < 0.0 ) 
             gap = 0.0;
          
-         if( !SCIPisEQ(scip, xlb/2, xub/2) )
+         if( SCIPrelDiff(xub, xlb) > 2.0 * SCIPepsilon(scip) )
          {
             SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
             ++*nnotify;
          }
-         if( !SCIPisEQ(scip, ylb/2, yub/2) )
+         else
+         {
+            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->bilinterms[j].var1), xlb, xub, SCIPrelDiff(xub, xlb));
+         }
+         if( SCIPrelDiff(yub, ylb) > 2.0 * SCIPepsilon(scip) )
          {
             SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
             ++*nnotify;
+         }
+         else
+         {
+            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->bilinterms[j].var2), ylb, yub, SCIPrelDiff(yub, ylb));
          }
       }
    }
@@ -5004,7 +5015,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* do not propose fixed variables */
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var)/2.0, SCIPvarGetUbLocal(consdata->quadvarterms[i].var)/2.0) )
+         if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) <= 2.0 * SCIPepsilon(scip) )
             continue;
          val = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[i].var);
          if( ABS(val) > brvarval )
@@ -5020,6 +5031,73 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       SCIP_CALL( SCIPaddRelaxBranchCand(scip, *brvar, brvarval, SCIP_INVALID) );
    }
    
+   return SCIP_OKAY;
+}
+
+
+/** replaces violated quadratic constraints where all quadratic variables are fixed by linear constraints */
+static
+SCIP_RETCODE replaceByLinearConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_CONS*          cons;
+   SCIP_CONSDATA*      consdata;
+   SCIP_Real           constant;
+   SCIP_Real           val1;
+   SCIP_Real           val2;
+   int                 i;
+   int                 c;
+
+   assert(scip  != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL);
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
+         continue;
+
+      constant = 0.0;
+
+      for( i = 0; i < consdata->nquadvars; ++i )
+      {
+         /* variables should be fixed if constraint is violated */
+         assert(SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) <= 2.0 * SCIPepsilon(scip));
+
+         val1 = (SCIPvarGetUbLocal(consdata->quadvarterms[i].var) + SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) / 2.0;
+         constant += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val1) * val1;
+      }
+
+      for( i = 0; i < consdata->nbilinterms; ++i )
+      {
+         val1 = (SCIPvarGetUbLocal(consdata->bilinterms[i].var1) + SCIPvarGetLbLocal(consdata->bilinterms[i].var1)) / 2.0;
+         val2 = (SCIPvarGetUbLocal(consdata->bilinterms[i].var2) + SCIPvarGetLbLocal(consdata->bilinterms[i].var2)) / 2.0;
+         constant += consdata->bilinterms[i].coef * val1 * val2;
+      }
+
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPconsGetName(conss[c]),
+         consdata->nlinvars, consdata->linvars, consdata->lincoefs,
+         SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : (consdata->lhs - constant),
+         SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : (consdata->rhs - constant),
+         SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
+         SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  TRUE,
+         SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
+         SCIPconsIsStickingAtNode(conss[c])) );
+
+      SCIPdebugMessage("replace quadratic constraint <%s> by linear constraint after all linear vars have been fixed\n", SCIPconsGetName(conss[c]) );
+      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -5642,7 +5720,7 @@ SCIP_RETCODE propagateBounds(
          var  = consdata->linvars[i];
          
          /* skip fixed variables ??????????? */
-         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
          
          if( coef > 0.0 )
@@ -5873,7 +5951,7 @@ SCIP_RETCODE propagateBounds(
                var = consdata->quadvarterms[i].var;
 
                /* skip fixed variables ??????????? */
-               if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+               if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
                   continue;
 
                /* compute rhs2 such that we can propagate quadvarterm(x_i) \in rhs2 */
@@ -5958,7 +6036,7 @@ SCIP_RETCODE propagateBounds(
                   SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
                }
 
-               /* deduce domain reductions for x_i */ 
+               /* deduce domain reductions for x_i */
                SCIP_CALL( propagateBoundsQuadVar(scip, cons, intervalinfty, var, consdata->quadvarterms[i].sqrcoef, lincoef, rhs2, result, nchgbds) );
                if( *result == SCIP_CUTOFF )
                   break;
@@ -6735,8 +6813,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
       SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
-         SCIPwarningMessage("Could not find any branching variable candidate. Cutting off node.\n");
-         *result = SCIP_CUTOFF;
+         /* fallback2: all quadratic variables seem to be fixed -> replace by linear constraint */
+         SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss) );
+         *result = SCIP_CONSADDED;
          return SCIP_OKAY;
       }
       else
@@ -6802,7 +6881,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       SCIPdebugMessage("con %s violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
       
       for( i = 0; i < consdata->nquadvars; ++i )
-         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+         if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) > 2.0*SCIPepsilon(scip) )
          {
             SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvarterms[i].var, consdata->lhsviol + consdata->rhsviol, SCIP_INVALID) );
          }
@@ -7389,6 +7468,7 @@ static
 SCIP_DECL_CONSCOPY(consCopyQuadratic)
 {
    SCIP_CONSDATA*    consdata;
+   SCIP_CONSDATA*    targetconsdata;
    SCIP_VAR**        linvars;
    SCIP_QUADVARTERM* quadvarterms;
    SCIP_BILINTERM*   bilinterms;
@@ -7407,8 +7487,6 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
    consdata = SCIPconsGetData(sourcecons);
    assert(consdata != NULL);
    
-   *success = TRUE; /* think positive */
-
    linvars = NULL;
    quadvarterms = NULL;
    bilinterms = NULL;
@@ -7423,12 +7501,12 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
       }
    }
    
-   if( consdata->nbilinterms != 0 && *success )
+   if( consdata->nbilinterms != 0 )
    {
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &bilinterms, consdata->nbilinterms) );
    }
 
-   if( consdata->nquadvars != 0 && *success )
+   if( consdata->nquadvars != 0 )
    {
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &quadvarterms, consdata->nquadvars) );
       for( i = 0; i < consdata->nquadvars; ++i )
@@ -7468,31 +7546,27 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
       }
    }
 
-   if(*success)
-   {
-      SCIP_CONSDATA* targetconsdata;
       
-      assert(stickingatnode == FALSE);
-      SCIP_CALL( SCIPcreateConsQuadratic2(scip, cons, name ? name : SCIPconsGetName(sourcecons),
-         consdata->nlinvars, linvars, consdata->lincoefs,
-         consdata->nquadvars, quadvarterms,
-         consdata->nbilinterms, bilinterms,
-         consdata->lhs, consdata->rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
-      
-      /* copy information on curvature */
-      targetconsdata = SCIPconsGetData(*cons);
-      targetconsdata->isconvex      = consdata->isconvex;
-      targetconsdata->isconcave     = consdata->isconcave;
-      targetconsdata->iscurvchecked = consdata->iscurvchecked;
-   }
-   else
-      *cons = NULL;
+   assert(stickingatnode == FALSE);
+   SCIP_CALL( SCIPcreateConsQuadratic2(scip, cons, name ? name : SCIPconsGetName(sourcecons),
+      consdata->nlinvars, linvars, consdata->lincoefs,
+      consdata->nquadvars, quadvarterms,
+      consdata->nbilinterms, bilinterms,
+      consdata->lhs, consdata->rhs,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+
+   /* copy information on curvature */
+   targetconsdata = SCIPconsGetData(*cons);
+   targetconsdata->isconvex      = consdata->isconvex;
+   targetconsdata->isconcave     = consdata->isconcave;
+   targetconsdata->iscurvchecked = consdata->iscurvchecked;
 
    SCIPfreeBufferArrayNull(sourcescip, &quadvarterms);
    SCIPfreeBufferArrayNull(sourcescip, &bilinterms);
    SCIPfreeBufferArrayNull(sourcescip, &linvars);
    
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -7582,7 +7656,7 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
       {
          assert(var1 != NULL);
          assert(SCIPvarGetType(var2 == NULL ? var1 : var2) == SCIP_VARTYPE_CONTINUOUS || 
-            (SCIPisEQ(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetUbGlobal(var1)) && SCIPisIntegral(scip, SCIPvarGetLbGlobal(var1))) );
+            (SCIPisRelEQ(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetUbGlobal(var1)) && SCIPisIntegral(scip, SCIPvarGetLbGlobal(var1))) );
          SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
          continue;
       }

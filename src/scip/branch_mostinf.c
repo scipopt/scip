@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.37 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.38 2010/09/26 11:31:35 bzfviger Exp $"
 
 /**@file   branch_mostinf.c
  * @ingroup BRANCHINGRULES
@@ -74,7 +74,7 @@ void updateBestCandidate(
       for( i = 0; i < SCIPvarGetMultaggrNVars(cand); ++i )
       {
          /* skip fixed variables */
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i])/2.0, SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i])/2.0) )
+         if( SCIPrelDiff(SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i]), SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i])) <= 2.0*SCIPepsilon(scip) )
             continue;
          
          updateBestCandidate(scip, bestvar, bestscore, bestobj, bestsol,

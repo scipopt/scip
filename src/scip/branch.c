@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.97 2010/09/14 10:43:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.98 2010/09/26 11:31:34 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -457,7 +457,8 @@ int SCIPbranchcandGetNPrioRelaxConts(
    return branchcand->npriorelaxcands - branchcand->npriorelaxbins - branchcand->npriorelaxints - branchcand->npriorelaximpls;
 }
 
-/** insert variable, its score and its solution value into the relaxation branching candidate storage */
+/** insert variable, its score and its solution value into the relaxation branching candidate storage
+ * the relative difference of the current lower and upper bounds of the variable must be at least 2*epsilon */
 SCIP_RETCODE SCIPbranchcandAddRelaxCand(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -472,7 +473,7 @@ SCIP_RETCODE SCIPbranchcandAddRelaxCand(
 
    assert(branchcand != NULL);
    assert(var != NULL);
-   assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var)/2.0, SCIPvarGetUbLocal(var)/2.0)); /* there should be enough domain left to create two child nodes with domain width > epsilon */
+   assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) > 2.0*SCIPsetEpsilon(set)); /* there should be enough domain left to create two child nodes with domain width > epsilon */
    assert(branchcand->npriorelaxcands <= branchcand->nrelaxcands);
    assert(branchcand->nrelaxcands <= branchcand->relaxcandssize);
 
@@ -1898,18 +1899,19 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    
-   /* for an (almost) fixed variable, we cannot branch further */
-   assert(!SCIPsetIsEQ(set, lb, ub));
+   /* for an (almost) fixed variable, we cannot branch further
+    * we now use RelEQ to avoid numerical difficulities later if bounds are very large */
+   assert(!SCIPsetIsRelEQ(set, lb, ub) || (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsEQ(set, lb, ub)));
    
    if( !SCIPsetIsInfinity(set, REALABS(suggestion)) )
-   { 
+   {
       /* use user suggested branching point */
 
       /* first, project it onto the current domain */
       branchpoint = MAX(lb, MIN(suggestion, ub));
       
       if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-      { 
+      {
          /* if it is a discrete variable, then round it down and up and accept this choice */
          if( SCIPsetIsEQ(set, branchpoint, ub) )
          {
@@ -1922,8 +1924,8 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             return SCIPsetFloor(set, branchpoint) + 0.5;
          }
       }
-      else if( (SCIPsetIsInfinity(set, -lb) || SCIPsetIsGT(set, branchpoint, lb)) && 
-               (SCIPsetIsInfinity(set,  ub) || SCIPsetIsLT(set, branchpoint, ub)) )
+      else if( (SCIPsetIsInfinity(set, -lb) || SCIPsetIsRelGT(set, branchpoint, lb)) &&
+               (SCIPsetIsInfinity(set,  ub) || SCIPsetIsRelLT(set, branchpoint, ub)) )
       {
          /* if it is continuous and inside the box, then accept it */ 
          return branchpoint;
@@ -1969,30 +1971,33 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
       {
          /* if branching point is too close to the bounds, move more into the middle of the interval */
-         if( ub - lb < 2.02 * SCIPsetEpsilon(set) )
-         { 
+         if( SCIPrelDiff(ub, lb) < 2.02 * SCIPsetEpsilon(set) )
+         {
             /* for very tiny intervals we set it exactly into the middle */
             branchpoint = (lb+ub)/2.0;
          }
          else
-         { 
+         {
             /* otherwise we project it away from the bounds */
             SCIP_Real minbrpoint;
             SCIP_Real maxbrpoint;
+            SCIP_Real scale;
+
+            scale = MAX3(REALABS(lb), REALABS(ub), 1.0);
 
             /* the minimal branching point should be
              * - set->clamp away from the lower bound - relative to the local domain size
-             * - SCIPsetEpsilon(set) above the lower bound - in absolute value
+             * - SCIPsetEpsilon(set)*scale above the lower bound - in absolute value
              */
             minbrpoint = (1.0 - set->branch_clamp) * lb + set->branch_clamp * ub;
-            minbrpoint = MAX(lb + 1.01*SCIPsetEpsilon(set), minbrpoint);  /*lint !e666*/
+            minbrpoint = MAX(lb + 1.01*SCIPsetEpsilon(set)*scale, minbrpoint);  /*lint !e666*/
 
             /* the maximal branching point should be
              * - set->clamp away from the upper bound - relative to the local domain size
-             * - SCIPsetEpsilon(set) below the upper bound - in absolute value
+             * - SCIPsetEpsilon(set)*scale below the upper bound - in absolute value
              */
             maxbrpoint = set->branch_clamp * lb + (1.0 - set->branch_clamp) * ub;
-            maxbrpoint = MIN(ub - 1.01*SCIPsetEpsilon(set), maxbrpoint);  /*lint !e666*/
+            maxbrpoint = MIN(ub - 1.01*SCIPsetEpsilon(set)*scale, maxbrpoint);  /*lint !e666*/
 
             /* project branchpoint into [minbrpoint, maxbrpoint] */
             branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
@@ -2001,10 +2006,10 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             if( SCIPsetIsFeasZero(set, branchpoint) && SCIPsetIsFeasNegative(set, lb) && SCIPsetIsFeasPositive(set, ub) )
                branchpoint = 0.0;
          }
-         assert(SCIPsetIsLT(set, lb, branchpoint));
-         assert(SCIPsetIsLT(set, branchpoint, ub));
+         assert(SCIPsetIsRelLT(set, lb, branchpoint));
+         assert(SCIPsetIsRelLT(set, branchpoint, ub));
       }
-      else if( !SCIPsetIsLT(set, lb, branchpoint) )
+      else if( !SCIPsetIsRelLT(set, lb, branchpoint) )
       {
          /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound */
          assert(SCIPsetIsInfinity(set,  ub));

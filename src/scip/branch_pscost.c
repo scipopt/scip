@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.34 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.35 2010/09/26 11:31:35 bzfviger Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -101,7 +101,7 @@ void updateBestCandidate(
       for( i = 0; i < SCIPvarGetMultaggrNVars(cand); ++i )
       {
          /* skip fixed variables */
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i])/2.0, SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i])/2.0) )
+         if( SCIPrelDiff(SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i]), SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i])) <= 2.0*SCIPepsilon(scip) )
             continue;
          
          updateBestCandidate(scip, branchruledata, bestvar, bestbrpoint, bestscore,
@@ -114,8 +114,8 @@ void updateBestCandidate(
    
    /* select branching point for this variable */
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || SCIPisGT(scip, candbrpoint, SCIPvarGetLbLocal(cand)));
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || SCIPisLT(scip, candbrpoint, SCIPvarGetUbLocal(cand)));
+   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || SCIPisRelGT(scip, candbrpoint, SCIPvarGetLbLocal(cand)));
+   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || SCIPisRelLT(scip, candbrpoint, SCIPvarGetUbLocal(cand)));
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
 
    switch( branchruledata->strategy )
