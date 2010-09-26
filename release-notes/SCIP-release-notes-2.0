@@ -8,14 +8,13 @@ Features
 
 - New rounding and propagation heuristics, rapid learning
 
-- Preliminary support of domain holes
-
-- New constraint handlers for linking constraints, cumulative constraints,
+- New constraint handlers for linking constraints (only Beta), cumulative constraints,
   and for breaking orbitopal symmetries
 
 - New separators for oddcycle cuts and Chvatal-Gomory cuts using sub-MIPs
 
-- Solution counting extended to MIPs
+- Solution counting extended to all constraints integer programs, this also
+  constraint integer programs which contain continuous variables
 
 - Better support for nonlinear CIPs:
   + Improved constraint handler for quadratic constraints
