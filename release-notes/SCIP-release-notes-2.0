@@ -13,6 +13,8 @@ Features
 
 - New separators for oddcycle cuts and Chvatal-Gomory cuts using sub-MIPs
 
+- New propagator for variables bounds
+
 - Solution counting extended to all constraints integer programs, this also
   constraint integer programs which contain continuous variables
 
