@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.382 2010/09/26 17:12:12 bzfviger Exp $
+# $Id: Makefile,v 1.383 2010/09/27 20:58:38 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -312,6 +312,7 @@ LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
+LPILIBSHORTLINK = $(LIBDIR)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
 
 
@@ -353,6 +354,7 @@ NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJ
 NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
 NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT).$(OPT)
 NLPILIBLINK	=	$(LIBDIR)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
+NLPILIBSHORTLINK	=	$(LIBDIR)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(NLPILIBSRC)
 
 #-----------------------------------------------------------------------------
@@ -608,6 +610,7 @@ SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
+SCIPLIBSHORTLINK = $(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
 ALLSRC		+=	$(SCIPLIBSRC)
 
@@ -640,6 +643,7 @@ OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 OBJSCIPLIBLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
+OBJSCIPLIBSHORTLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(OBJSCIPLIBSRC)
 
 
@@ -678,12 +682,13 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 ifeq ($(VERBOSE),false)
 .SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) \
-		$(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(NLPILIBLINK) $(MAINLINK) $(MAINSHORTLINK) \
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) \
+	  $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(MAINLINK) $(MAINSHORTLINK) \
 		$(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
 .PHONY: all
-all: checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(NLPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+all: checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
@@ -704,9 +709,6 @@ lintfiles:
 			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
-
-.PHONY: nlpilib
-nlpilib:	$(NLPILIBLINK)
 
 .PHONY: doc
 doc:		
@@ -788,7 +790,15 @@ $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
 
+$(LPILIBSHORTLINK):	$(LPILIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
+
 $(NLPILIBLINK):	$(NLPILIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
+
+$(NLPILIBSHORTLINK):	$(NLPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
 
@@ -796,7 +806,15 @@ $(SCIPLIBLINK):	$(SCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $@)
 
+$(SCIPLIBSHORTLINK):	$(SCIPLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $@)
+
 $(OBJSCIPLIBLINK):	$(OBJSCIPLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $@)
+
+$(OBJSCIPLIBSHORTLINK):	$(OBJSCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $@)
 
@@ -837,7 +855,8 @@ ifneq ($(OBJDIR),)
 endif
 		@echo "-> remove objective files"
 		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINFILE) \
-		$(LPILIBLINK) $(NLPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+		$(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		$(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(MAINLINK) $(MAINSHORTLINK)
 		@echo "-> remove libraries"
 		@echo "-> remove binary"
 
