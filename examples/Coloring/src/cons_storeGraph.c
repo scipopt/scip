@@ -186,6 +186,10 @@ SCIP_RETCODE createConsStoreGraphAtRoot(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
+/** We do not want to copy store graph constraints into subSCIPs since they just store information about 
+ *  branching decisions and are used to enforce those. 
+ *  However, in subSCIPs, we only want to solve the current MIP with a branch-and-cut approach.
+ */
 #define conshdlrCopyStoreGraph NULL
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
