@@ -512,7 +512,6 @@ INPUT                  = . \
                          ../src/objscip \
                          ../src/tclique \
                          ../src/dijkstra \
-                         ../src/rectlu \
                          ../src/xml \
                          ../src/blockmemshell
                          
