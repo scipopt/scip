@@ -7,6 +7,7 @@
      <li><a href="#Section3">Using SCIP included in another source code</a></li>
      <li><a href="#Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></li>
      <li><a href="#Section5">Specific questions about Column Generation and Branch-And-Price with SCIP</a></li>
+     <li><a href="#Section6">Specific questions about the copy functionality in SCIP</a></li>
     </ul>
 
     <h4><a name="Section1">General Questions about SCIP</a></h4>
@@ -681,6 +682,25 @@
       <code>SCIPincludeSepaXxx()</code> and <code>SCIPincludePresolXxx()</code> in your own plugins-including
       files. Alternatively, you can set the parameters maxrounds and maxroundsroot to zero for all separators and
       maxrounds to zero for the presolvers.
+    </p>
+
+<h4><a name="Section6">Specific questions about the copy functionality in SCIP</a></h4>
+    <p class="q">
+      <a name="Q38">What is <code>SCIPcopy()</code>?</a>
+    </p>
+    <p class="a">
+      The functionality of copying a SCIP model is added to the SCIP version 2.0.0. It gives the possibility to 
+      generate a copy of the current SCIP model. This functionality is of interested, for example, for large 
+      neighborhood heuristics (such as heur_rens.c). They can now easily copy the complete problem and fix  a certain 
+      set of variables and work therefore on a reasonable copy of the original problem.
+    </p>
+
+    <p class="q">
+      <a name="Q39">How do I get a copy of a variable or a constraint</code>?</a>
+    </p>
+    <p class="a">
+      For the variables and constraints there are the methods <code>SCIPgetVarCopy()</code> and 
+      <code>SCIPgetConsCopy()</code> which provide a copy for a variable or a constraint, respectively.
     </p>
           <!-- FAQ Punkt: Verhaeltnis zu CPLEX callable library, concert, Coin... ????????? -->
 </div>

@@ -4866,7 +4866,11 @@
  *      <br><br>
  *    - All plugins, like \ref BRANCH "branching rules" and \ref HEUR "primal heuristics", have a new callback method (see, e.g.,
  *      type_branch.h and type_heur.h for more details): 
- *       - SCIP_DECL_BRANCHCOPY(x), SCIP_DECL_HEURCOPY(x) etc. - When copying a SCIP instance, these methods are called to copy the plugins.
+ *       - SCIP_DECL_BRANCHCOPY(x), SCIP_DECL_HEURCOPY(x) etc. 
+ *       - When copying a SCIP instance, these methods are called to copy the plugins.
+ *      <br><br>
+ *    - In case of the constraint handler there are two new callback methods. One for copying the constraint handler plugins
+ *      (SCIP_DECL_CONSHDLRCOPY) and the other for copying a constraint (SCIP_DECL_CONSCOPY) itself.
  *      <br><br>
  *    - Variables have a new callback method (see type_var.h for more details):
  *       - SCIP_DECL_VARCOPY(x) - When copying a SCIP instance, this method is called to copy the variables' data.
@@ -4952,8 +4956,18 @@
  * - All <b>C++</b> objects and constructors have a SCIP pointer, now.
  *
  * - The <b>predefined setting files</b> like "settings/cuts/off.set,aggressive.set,fast.set" have been replaced by
- *   interface methods like SCIPparamsetSetSeparating() in paramset.c and by user dialogs in the interactive shell like
- *   "SCIP/set/separating/emphasis/off,aggressive,fast".
+ *   interface methods like SCIPsetHeuristics(), SCIPsetPresolving(), SCIPsetSeparating(), and SCIPsetEmphasis() in 
+ *   scip.c and by user dialogs in the interactive shell like
+ *   <br>
+ *   <br>
+ *   <code>SCIP&gt; set {heuristics|presolving|separating} emphasis {aggressive|fast|off}</code>
+ *   <br>
+ *   <br>
+ *   or
+ *   <br>
+ *   <br>
+ *   <code>SCIP&gt; set emphasis {counter|cpsolver|easycip|feasibility|hardlp|optimality}</code>
+ *
  * 
  * <br>
  * For further release notes we refer the \ref RELEASENOTES "Release notes".
