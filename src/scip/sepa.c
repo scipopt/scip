@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.75 2010/09/14 10:43:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.76 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -64,19 +64,17 @@ SCIP_DECL_PARAMCHGD(paramChgdSepaPriority)
 /** copies the given separator to a new scip */
 SCIP_RETCODE SCIPsepaCopyInclude(
    SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(sepa != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( sepa->sepacopy != NULL )
    {
       SCIPdebugMessage("including separator %s in subscip %p\n", SCIPsepaGetName(sepa), (void*)set->scip);
-      SCIP_CALL( sepa->sepacopy(set->scip, sepa, valid) );
+      SCIP_CALL( sepa->sepacopy(set->scip, sepa) );
    }
    return SCIP_OKAY;
 }

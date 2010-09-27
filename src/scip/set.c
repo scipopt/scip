@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.257 2010/09/18 19:35:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.258 2010/09/27 17:20:25 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -409,9 +409,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nreaders - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
       }
    }
 
@@ -461,9 +459,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nconflicthdlrs - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPconflicthdlrCopyInclude(sourceset->conflicthdlrs[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPconflicthdlrCopyInclude(sourceset->conflicthdlrs[p], targetset) );
       }
    }
 
@@ -472,9 +468,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->npresols - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset) );
       }
    }
 
@@ -484,9 +478,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nrelaxs - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
       }
    }
 
@@ -496,9 +488,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nsepas - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
       }
    }
 
@@ -507,9 +497,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nprops - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
       }
    }
 
@@ -518,9 +506,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nheurs - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
       }
    }
 
@@ -531,9 +517,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = sourceset->neventhdlrs - 1; p >= 0; --p )
       {
          /* @todo: the copying process of event handlers is currently not checked for consistency */
-         valid = TRUE;
-         SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
       }
    }
   
@@ -543,9 +527,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nnodesels - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPnodeselCopyInclude(sourceset->nodesels[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPnodeselCopyInclude(sourceset->nodesels[p], targetset) );
       }
    }
 
@@ -554,9 +536,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nbranchrules - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
       }
    }
 
@@ -566,9 +546,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->ndisps - 1; p >= 0; --p )
       {
-         valid = TRUE;
-         SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
       }
    }
 
@@ -579,9 +557,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = sourceset->ndialogs - 1; p >= 0; --p )
       {
          /* @todo: the copying process of dialog handlers is currently not checked for consistency */         
-         valid = TRUE;
-         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
 
@@ -592,9 +568,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       {
          SCIP_NLPI* nlpicopy;
 
-         valid = TRUE;
-         SCIP_CALL( SCIPnlpiCopy(sourceset->nlpis[p], &nlpicopy, &valid) );
-         *allvalid = *allvalid && valid;
+         SCIP_CALL( SCIPnlpiCopy(sourceset->nlpis[p], &nlpicopy) );
          SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
       }
    }

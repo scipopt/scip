@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.28 2010/09/14 10:43:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.29 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -64,19 +64,17 @@ SCIP_DECL_PARAMCHGD(paramChgdPropPriority)
 /** copies the given propagator to a new scip */
 SCIP_RETCODE SCIPpropCopyInclude(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(prop != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( prop->propcopy != NULL )
    {
       SCIPdebugMessage("including propagator %s in subscip %p\n", SCIPpropGetName(prop), (void*)set->scip);
-      SCIP_CALL( prop->propcopy(set->scip, prop, valid) );
+      SCIP_CALL( prop->propcopy(set->scip, prop) );
    }
    return SCIP_OKAY;
 }

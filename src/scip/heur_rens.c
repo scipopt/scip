@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.56 2010/09/25 18:27:49 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.57 2010/09/27 17:20:22 bzfheinz Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -502,8 +502,6 @@ SCIP_DECL_HEURCOPY(heurCopyRens)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurRens(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.68 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.69 2010/09/27 17:20:22 bzfheinz Exp $"
 
 /**@file   heur_fracdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -105,8 +105,6 @@ SCIP_DECL_HEURCOPY(heurCopyFracdiving)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.98 2010/09/26 11:31:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.99 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1086,19 +1086,17 @@ SCIP_DECL_PARAMCHGD(paramChgdBranchrulePriority)
 /** copies the given branchrule to a new scip */
 SCIP_RETCODE SCIPbranchruleCopyInclude(
    SCIP_BRANCHRULE*      branchrule,         /**< branchrule */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(branchrule != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( branchrule->branchcopy != NULL )
    {
       SCIPdebugMessage("including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), (void*)set->scip);
-      SCIP_CALL( branchrule->branchcopy(set->scip, branchrule, valid) );
+      SCIP_CALL( branchrule->branchcopy(set->scip, branchrule) );
    }
    
    return SCIP_OKAY;

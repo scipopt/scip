@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.55 2010/09/26 11:31:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.56 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -217,8 +217,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
 extern
 SCIP_RETCODE SCIPbranchruleCopyInclude(
    SCIP_BRANCHRULE*      branchrule,         /**< branchrule */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates a branching rule */

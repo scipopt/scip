@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.16 2010/09/08 22:16:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.17 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   presol_inttobinary.c
  * @ingroup PRESOLVERS
@@ -52,8 +52,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyInttobinary)
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

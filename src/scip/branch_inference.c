@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.31 2010/09/08 19:14:52 bzfhende Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.32 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   branch_inference.c
  * @ingroup BRANCHINGRULES
@@ -134,8 +134,6 @@ SCIP_DECL_BRANCHCOPY(branchCopyInference)
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.22 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.23 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -42,8 +42,7 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPrelaxCopyInclude(
    SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates a relaxator */

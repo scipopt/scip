@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.25 2010/09/26 00:33:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.26 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -65,7 +65,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyObj)
    if( presoldata->objpresol->iscloneable() )
    {
       scip::ObjPresol* newobjpresol;
-      newobjpresol = dynamic_cast<scip::ObjPresol*> (presoldata->objpresol->clone(scip, valid));
+      newobjpresol = dynamic_cast<scip::ObjPresol*> (presoldata->objpresol->clone(scip));
 
       /* call include method of presolver object */
       SCIP_CALL( SCIPincludeObjPresol(scip, newobjpresol, TRUE) );

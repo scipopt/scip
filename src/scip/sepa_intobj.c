@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.39 2010/09/08 22:16:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.40 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   sepa_intobj.c
  * @ingroup SEPARATORS
@@ -260,8 +260,6 @@ SCIP_DECL_SEPACOPY(sepaCopyIntobj)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.50 2010/09/27 13:03:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.51 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -2168,21 +2168,6 @@ SCIP_RETCODE createCountDialog(
  * Callback methods for columns
  */
 
-/** copy method for display plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_DISPCOPY(dispCopyCountsols)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(disp != NULL);
-
-   /* The display columns should be created in a previous call of the constraint handler's copy callback.
-    * If we find a display column with the correct name, we declare the copy to be correct */
-   *valid = (SCIPfindDisp(scip, DISP_CUTS_NAME) != NULL) && 
-      (SCIPfindDisp(scip,DISP_SOLS_NAME)  != NULL);
-         
-   return SCIP_OKAY;
-}
-
 /** output method of display column to output file stream 'file' */
 static
 SCIP_DECL_DISPOUTPUT(dispOutputSols)
@@ -2292,10 +2277,10 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_SOLS_NAME, DISP_SOLS_DESC, DISP_SOLS_HEADER, SCIP_DISPSTATUS_OFF, 
-         dispCopyCountsols, NULL, NULL, NULL, NULL, NULL, dispOutputSols, 
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputSols, 
          NULL, DISP_SOLS_WIDTH, DISP_SOLS_PRIORITY, DISP_SOLS_POSITION, DISP_SOLS_STRIPLINE) );
    SCIP_CALL( SCIPincludeDisp(scip, DISP_CUTS_NAME, DISP_CUTS_DESC, DISP_CUTS_HEADER, SCIP_DISPSTATUS_OFF, 
-         dispCopyCountsols, NULL, NULL, NULL, NULL, NULL, dispOutputFeasSubtrees, 
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputFeasSubtrees, 
          NULL, DISP_CUTS_WIDTH, DISP_CUTS_PRIORITY, DISP_CUTS_POSITION, DISP_CUTS_STRIPLINE) );
    
    return SCIP_OKAY;

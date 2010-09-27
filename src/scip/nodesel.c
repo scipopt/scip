@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.66 2010/09/14 10:43:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.67 2010/09/27 17:20:22 bzfheinz Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -682,19 +682,17 @@ SCIP_DECL_PARAMCHGD(paramChgdNodeselMemsavePriority)
 /** copies the given node selector to a new scip */
 SCIP_RETCODE SCIPnodeselCopyInclude(
    SCIP_NODESEL*         nodesel,            /**< node selector */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(nodesel != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( nodesel->nodeselcopy != NULL )
    {
       SCIPdebugMessage("including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), (void*)set->scip);
-      SCIP_CALL( nodesel->nodeselcopy(set->scip, nodesel, valid) );
+      SCIP_CALL( nodesel->nodeselcopy(set->scip, nodesel) );
    }
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.62 2010/09/14 10:43:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.63 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -55,19 +55,17 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispActive)
 /** copies the given display to a new scip */
 SCIP_RETCODE SCIPdispCopyInclude(
    SCIP_DISP*            disp,               /**< display column */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(disp != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( disp->dispcopy != NULL )
    {
       SCIPdebugMessage("including display column %s in subscip %p\n", SCIPdispGetName(disp), (void*)set->scip);
-      SCIP_CALL( disp->dispcopy(set->scip, disp, valid) );
+      SCIP_CALL( disp->dispcopy(set->scip, disp) );
    }
    return SCIP_OKAY;
 }

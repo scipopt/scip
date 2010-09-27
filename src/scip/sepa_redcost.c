@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.15 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.16 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   sepa_redcost.c
  * @ingroup SEPARATORS
@@ -62,8 +62,6 @@ SCIP_DECL_SEPACOPY(sepaCopyRedcost)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaRedcost(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

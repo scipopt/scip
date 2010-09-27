@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.79 2010/09/14 10:43:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.80 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -84,19 +84,17 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 /** copies the given primal heuristic to a new scip */
 SCIP_RETCODE SCIPheurCopyInclude(
    SCIP_HEUR*            heur,               /**< primal heuristic */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(heur != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( heur->heurcopy != NULL )
    {
       SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
-      SCIP_CALL( heur->heurcopy(set->scip, heur, valid) );
+      SCIP_CALL( heur->heurcopy(set->scip, heur) );
    }
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.58 2010/09/14 10:43:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.59 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -42,19 +42,17 @@
 /** copies the given reader to a new scip */
 SCIP_RETCODE SCIPreaderCopyInclude(
    SCIP_READER*          reader,             /**< reader */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(reader != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( reader->readercopy != NULL )
    {
       SCIPdebugMessage("including reader %s in subscip %p\n", SCIPreaderGetName(reader), (void*)set->scip);
-      SCIP_CALL( reader->readercopy(set->scip, reader, valid) );
+      SCIP_CALL( reader->readercopy(set->scip, reader) );
    }
    return SCIP_OKAY;
 }

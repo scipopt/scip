@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.13 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.14 2010/09/27 17:20:22 bzfheinz Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -76,8 +76,6 @@ SCIP_DECL_HEURCOPY(heurCopyTrySol)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

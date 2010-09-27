@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_dialog.h,v 1.21 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: type_dialog.h,v 1.22 2010/09/27 17:20:25 bzfheinz Exp $"
 
 /**@file   type_dialog.h
  * @ingroup TYPEDEFINITIONS
@@ -44,9 +44,8 @@ typedef struct SCIP_Linelist SCIP_LINELIST;       /**< linked list of single inp
  *  input:
  *  - scip            : SCIP main data structure
  *  - dialog          : the dialog itself
- *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_DIALOGCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog, SCIP_Bool* valid)
+#define SCIP_DECL_DIALOGCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog)
 
 /** destructor of dialog to free user data (called when the dialog is not captured anymore)
  *

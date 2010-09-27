@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.121 2010/09/25 18:27:49 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.122 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -276,8 +276,6 @@ SCIP_DECL_DIALOGCOPY(dialogCopyDefault)
    /* call inclusion method of dialog */
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

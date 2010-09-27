@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.64 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.65 2010/09/27 17:20:22 bzfheinz Exp $"
 
 /**@file   heur_rounding.c
  * @ingroup PRIMALHEURISTICS
@@ -412,8 +412,6 @@ SCIP_DECL_HEURCOPY(heurCopyRounding)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurRounding(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

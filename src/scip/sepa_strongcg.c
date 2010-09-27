@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.47 2010/09/10 09:20:04 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.48 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -205,8 +205,6 @@ SCIP_DECL_SEPACOPY(sepaCopyStrongcg)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

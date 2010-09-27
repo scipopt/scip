@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.50 2010/09/14 10:43:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.51 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -66,19 +66,17 @@ SCIP_DECL_PARAMCHGD(paramChgdPresolPriority)
 /** copies the given presolver to a new scip */
 SCIP_RETCODE SCIPpresolCopyInclude(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(presol != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( presol->presolcopy != NULL )
    {
       SCIPdebugMessage("including presolver %s in subscip %p\n", SCIPpresolGetName(presol), (void*)set->scip);
-      SCIP_CALL( presol->presolcopy(set->scip, presol, valid) );
+      SCIP_CALL( presol->presolcopy(set->scip, presol) );
    }
    return SCIP_OKAY;
 }

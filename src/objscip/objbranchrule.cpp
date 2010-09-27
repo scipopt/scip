@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.29 2010/09/26 00:33:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.30 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -65,7 +65,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyObj)
    if( branchruledata->objbranchrule->iscloneable() )
    {
       scip::ObjBranchrule*  newobjbranchrule;
-      newobjbranchrule = dynamic_cast<scip::ObjBranchrule*> (branchruledata->objbranchrule->clone(scip, valid));
+      newobjbranchrule = dynamic_cast<scip::ObjBranchrule*> (branchruledata->objbranchrule->clone(scip));
 
       /* call include method of branchrule object */
       SCIP_CALL( SCIPincludeObjBranchrule(scip, newobjbranchrule, TRUE) );

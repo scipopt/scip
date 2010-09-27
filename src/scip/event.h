@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.53 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.54 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -51,8 +51,7 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPeventhdlrCopyInclude(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates an event handler */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.20 2010/09/25 18:27:49 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.21 2010/09/27 17:20:22 bzfheinz Exp $"
 
 
 /**@file   heur_trivial.c
@@ -54,8 +54,6 @@ SCIP_DECL_HEURCOPY(heurCopyTrivial)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurTrivial(scip) );
 
-   *valid = TRUE;
- 
    return SCIP_OKAY;
 }
 

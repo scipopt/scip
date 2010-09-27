@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.36 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.37 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   nodesel_dfs.c
  * @ingroup NODESELECTORS
@@ -51,8 +51,6 @@ SCIP_DECL_NODESELCOPY(nodeselCopyDfs)
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
 
-   *valid = TRUE;
- 
    return SCIP_OKAY;
 }
 

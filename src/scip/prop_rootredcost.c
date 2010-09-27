@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.14 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.15 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   prop_rootredcost.c
  * @ingroup PROPAGATORS
@@ -65,8 +65,6 @@ SCIP_DECL_PROPCOPY(propCopyRootredcost)
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

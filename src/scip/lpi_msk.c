@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.21 2010/09/03 17:22:53 bzfwanie Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.22 2010/09/27 17:20:22 bzfheinz Exp $"
 
 /**@file   lpi_msk.c
  * @ingroup LPIS
@@ -3558,8 +3558,8 @@ void lpistateFree(
 static
 SCIP_RETCODE checkState1(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   n, 
-   MSKstakeye*           sk, 
+   int                   n,                  /**< number of rows or columns */
+   MSKstakeye*           sk,                 /**< 
    MSKaccmodee           accmode, 
    char                  xc
    )

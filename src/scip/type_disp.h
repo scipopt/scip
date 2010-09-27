@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.21 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: type_disp.h,v 1.22 2010/09/27 17:20:25 bzfheinz Exp $"
 
 /**@file   type_disp.h
  * @ingroup TYPEDEFINITIONS
@@ -53,9 +53,8 @@ typedef struct SCIP_DispData SCIP_DISPDATA;       /**< display column specific d
  *  input:
  *  - scip            : SCIP main data structure
  *  - disp            : the display column itself
- *  - valid           : was the copying process valid? 
  */
-#define SCIP_DECL_DISPCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp, SCIP_Bool* valid)
+#define SCIP_DECL_DISPCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp)
 
 /** destructor of display column to free user data (called when SCIP is exiting)
  *

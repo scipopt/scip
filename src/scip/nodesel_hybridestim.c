@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_hybridestim.c,v 1.10 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: nodesel_hybridestim.c,v 1.11 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   nodesel_hybridestim.c
  * @ingroup NODESELECTORS
@@ -99,8 +99,6 @@ SCIP_DECL_NODESELCOPY(nodeselCopyHybridestim)
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselHybridestim(scip) );
 
-   *valid = TRUE;
- 
    return SCIP_OKAY;
 }
 

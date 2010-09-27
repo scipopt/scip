@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.21 2010/09/26 00:33:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.22 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -65,7 +65,7 @@ SCIP_DECL_RELAXCOPY(relaxCopyObj)
    if( relaxdata->objrelax->iscloneable() )
    {
       scip::ObjRelax* newobjrelax;
-      newobjrelax = dynamic_cast<scip::ObjRelax*> (relaxdata->objrelax->clone(scip, valid));
+      newobjrelax = dynamic_cast<scip::ObjRelax*> (relaxdata->objrelax->clone(scip));
 
       /* call include method of relaxator object */
       SCIP_CALL( SCIPincludeObjRelax(scip, newobjrelax, TRUE) );

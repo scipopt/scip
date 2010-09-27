@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.11 2010/09/10 13:58:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.12 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -694,8 +694,6 @@ SCIP_DECL_PROPCOPY(propCopyVbounds)
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropVbounds(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

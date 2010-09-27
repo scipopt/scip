@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objcloneable.h,v 1.5 2010/09/18 13:27:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objcloneable.h,v 1.6 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   objcloneable.h
  * @author Michael Winkler
@@ -33,7 +33,7 @@ namespace scip
    {
       virtual ~ObjCloneable() {}
 
-      /** clone method which will be used to copy a objective plugin */
+      /** clone method which will be used to copy a objective constraint handlers and variable pricer plugin */
       virtual ObjCloneable* clone(
          SCIP*                 scip,               /**< SCIP data structure */
          SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
@@ -42,6 +42,15 @@ namespace scip
          return 0;
       }
 
+      /** clone method which will be used to copy a objective plugins which are not a constraint handlers or a variable
+       *  pricer plugin */
+      virtual ObjCloneable* clone(
+         SCIP*                 scip                /**< SCIP data structure */
+         ) const
+      {
+         return 0;
+      }
+      
       /** returns whether the objective plugin is copyable */
       virtual SCIP_Bool iscloneable(
          void

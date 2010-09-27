@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.34 2010/09/08 19:14:57 bzfhende Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.35 2010/09/27 17:20:25 bzfheinz Exp $"
 
 /**@file   type_event.h
  * @ingroup TYPEDEFINITIONS
@@ -144,33 +144,32 @@ typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache even
 /** copy method for event handler plugins (called when SCIP copies plugins)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    eventhdlr       : the event handler itself
- *  - valid           : was the copying process valid? 
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
  */
-#define SCIP_DECL_EVENTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr, SCIP_Bool* valid)
+#define SCIP_DECL_EVENTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** destructor of event handler to free user data (called when SCIP is exiting)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    eventhdlr       : the event handler itself
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
  */
 #define SCIP_DECL_EVENTFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** initialization method of event handler (called after problem was transformed)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    eventhdlr       : the event handler itself
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
  */
 #define SCIP_DECL_EVENTINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** deinitialization method of event handler (called before transformed problem is freed)
  *
  *  input:
- *    scip            : SCIP main data structure
- *    eventhdlr       : the event handler itself
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
  */
 #define SCIP_DECL_EVENTEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
@@ -199,9 +198,9 @@ typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache even
 /** frees specific event data
  *
  *  input:
- *    scip            : SCIP main data structure
- *    eventhdlr       : the event handler itself
- *    eventdata       : pointer to the event data to free
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
+ *  - eventdata       : pointer to the event data to free
  */
 #define SCIP_DECL_EVENTDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr, SCIP_EVENTDATA** eventdata)
 
@@ -213,10 +212,10 @@ typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache even
  *  given event handler and event data.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    eventhdlr       : the event handler itself
- *    event           : event to process
- *    eventdata       : user data for the event
+ *  - scip            : SCIP main data structure
+ *  - eventhdlr       : the event handler itself
+ *  - event           : event to process
+ *  - eventdata       : user data for the event
  */
 #define SCIP_DECL_EVENTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr, SCIP_EVENT* event, SCIP_EVENTDATA* eventdata)
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.16 2010/09/26 00:33:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.17 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers
@@ -65,7 +65,7 @@ SCIP_DECL_EVENTCOPY(eventhdlrCopyObj)
    if( eventhdlrdata->objeventhdlr->iscloneable() )
    {
       scip::ObjEventhdlr*  newobjeventhdlr;
-      newobjeventhdlr = dynamic_cast<scip::ObjEventhdlr*> (eventhdlrdata->objeventhdlr->clone(scip, valid));
+      newobjeventhdlr = dynamic_cast<scip::ObjEventhdlr*> (eventhdlrdata->objeventhdlr->clone(scip));
 
       /* call include method of event handler object */
       SCIP_CALL( SCIPincludeObjEventhdlr(scip, newobjeventhdlr, TRUE) );

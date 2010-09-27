@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.35 2010/09/10 09:20:04 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.36 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -2617,8 +2617,6 @@ SCIP_DECL_SEPACOPY(sepaCopyFlowcover)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

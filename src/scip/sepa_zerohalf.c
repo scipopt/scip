@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.43 2010/09/26 20:45:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.44 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -6733,8 +6733,6 @@ SCIP_DECL_SEPACOPY(sepaCopyZerohalf)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

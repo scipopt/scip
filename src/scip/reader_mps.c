@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.138 2010/09/26 11:25:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.139 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -3274,8 +3274,6 @@ SCIP_DECL_READERCOPY(readerCopyMps)
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderMps(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

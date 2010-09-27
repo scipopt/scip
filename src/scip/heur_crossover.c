@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.62 2010/09/14 09:38:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.63 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -567,8 +567,6 @@ SCIP_DECL_HEURCOPY(heurCopyCrossover)
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

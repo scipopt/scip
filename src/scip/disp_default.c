@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.76 2010/09/21 12:27:54 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.77 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -283,8 +283,6 @@ SCIP_DECL_DISPCOPY(dispCopyDefault)
    /* call inclusion method of dialog */
    SCIP_CALL( SCIPincludeDispDefault(scip) );
 
-   *valid = TRUE;
- 
    return SCIP_OKAY;
 }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.67 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.68 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   heur_coefdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -105,8 +105,6 @@ SCIP_DECL_HEURCOPY(heurCopyCoefdiving)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

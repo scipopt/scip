@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.27 2010/09/14 10:43:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.28 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -63,19 +63,17 @@ SCIP_DECL_PARAMCHGD(paramChgdRelaxPriority)
 /** copies the given relaxator to a new scip */
 SCIP_RETCODE SCIPrelaxCopyInclude(
    SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
    assert(relax != NULL);
    assert(set != NULL);
-   assert(valid != NULL);
    assert(set->scip != NULL);
 
    if( relax->relaxcopy != NULL )
    {
       SCIPdebugMessage("including relaxator %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
-      SCIP_CALL( relax->relaxcopy(set->scip, relax, valid) );
+      SCIP_CALL( relax->relaxcopy(set->scip, relax) );
    }
    return SCIP_OKAY;
 }

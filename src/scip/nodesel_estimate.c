@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.11 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.12 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   nodesel_estimate.c
  * @ingroup NODESELECTORS
@@ -77,8 +77,6 @@ SCIP_DECL_NODESELCOPY(nodeselCopyEstimate)
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselEstimate(scip) );
 
-   *valid = TRUE;
- 
    return SCIP_OKAY;
 }
 

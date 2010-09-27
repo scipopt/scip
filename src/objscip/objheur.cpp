@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.32 2010/09/26 00:33:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.33 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -65,7 +65,7 @@ SCIP_DECL_HEURCOPY(heurCopyObj)
    if( heurdata->objheur->iscloneable() )
    {
       scip::ObjHeur*  newobjheur;
-      newobjheur = dynamic_cast<scip::ObjHeur*> (heurdata->objheur->clone(scip, valid));
+      newobjheur = dynamic_cast<scip::ObjHeur*> (heurdata->objheur->clone(scip));
 
       /* call include method of primal heuristic object */
       SCIP_CALL( SCIPincludeObjHeur(scip, newobjheur, TRUE) );

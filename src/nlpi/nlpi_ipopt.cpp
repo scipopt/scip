@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.25 2010/09/22 16:05:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.26 2010/09/27 17:20:20 bzfheinz Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -347,8 +347,6 @@ SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
    assert(*targetnlpi != NULL);
 
    SCIP_CALL( SCIPnlpiSetRealPar((*targetnlpi), NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
-
-   *valid = TRUE;
 
    return SCIP_OKAY;
 }

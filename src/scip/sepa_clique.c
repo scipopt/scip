@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.49 2010/09/27 11:30:28 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.50 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -1277,8 +1277,6 @@ SCIP_DECL_SEPACOPY(sepaCopyClique)
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaClique(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

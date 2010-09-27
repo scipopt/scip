@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_wbo.c,v 1.2 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: reader_wbo.c,v 1.3 2010/09/27 17:20:24 bzfheinz Exp $"
 
 /**@file   reader_wbo.c
  * @ingroup FILEREADERS 
@@ -48,8 +48,6 @@ SCIP_DECL_READERCOPY(readerCopyWbo)
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

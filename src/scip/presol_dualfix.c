@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.37 2010/09/08 19:14:55 bzfhende Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.38 2010/09/27 17:20:23 bzfheinz Exp $"
 
 /**@file   presol_dualfix.c
  * @ingroup PRESOLVERS
@@ -52,8 +52,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualfix)
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolDualfix(scip) );
  
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

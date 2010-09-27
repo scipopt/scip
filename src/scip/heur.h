@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.55 2010/09/08 19:14:54 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.56 2010/09/27 17:20:21 bzfheinz Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -42,8 +42,7 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPheurCopyInclude(
    SCIP_HEUR*            heur,               /**< primal heuristic */
-   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates a primal heuristic */
