@@ -867,8 +867,8 @@
  *
  * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
  *
- * The additional callback methods need not to be implemented in every case.
- * However, some of them have to be implemented for most applications.
+ * The additional callback methods need not to be implemented in every case.  However, some of them have to be
+ * implemented for most applications. 
  *
  * @subsection CONSFREE
  *
@@ -900,12 +900,37 @@
  *
  * @subsection CONSHDLRCOPY
  *
- * The CONSHDLRCOPY callback is executed when a SCIP instance is copied, e.g. to 
- * solve a sub-SCIP. By
- * defining this callback as
- * <code>NULL</code> the user disables the execution of the specified 
- * constraint handler for all copied SCIP instances. This may deteriorate the performance 
- * of primal heuristics using sub-SCIPs.
+ * The CONSHDLRCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the execution of the specified constraint handler for all copied SCIP
+ * instances. This may deteriorate the performance of primal heuristics using sub-SCIPs. A usual implementation just
+ * calls the interface method which includes the constraint handler to the model. For example, this callback is
+ * implemented for the knapsack constraint handler as follows.
+ *
+ * \code
+ * static
+ * SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
+ * {
+ *    assert(scip != NULL);
+ *    assert(conshdlr != NULL);
+ *    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+ *
+ *    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
+ *
+ *    *valid = TRUE;
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ *
+ * <b>Note.</b> If this callback gets implemented, then there is one thing to be precise. You should only set the valid
+ * pointer to TRUE, if you can make sure that all necessary data of the constraint handler is copied correctly. This
+ * means, if the complete problem was validly copied (all copy methods returned a valid TRUE), then dual reductions made
+ * with the copied problem can be transfer to the original SCIP instance. This means, it was a one-to-one copy of the
+ * original problem. If the valid pointer is wrongly set to TRUE, then it might happen that optimal solutions are cut
+ * off. 
+ *
+ * <b>Note.</b> If you implement this callback and the constraints handler needs constraints (see CONSHDLR_NEEDSCONS),
+ * then you also need to implement the callback \ref CONSCOPY.
  *
  * @subsection CONSINIT
  *
@@ -1167,18 +1192,29 @@
  * @subsection CONSCOPY
  *
  * The CONSCOPY callback method is used if constraints should get copied from one SCIP environment into another SCIP
- * environment. To do so, this method comes with the necessary parameters such as a map mapping the variables from the 
- * source SCIP environment to the corresponding variables of the target SCIP environment. The following code line shows
- * how to get the corresponding target variable of given source variable:
+ * environment. To do so, this method comes with the necessary parameters such as a map mapping the variables from the
+ * source SCIP environment to the corresponding variables of the target SCIP environment and a map mapping constraints
+ * in the same way. For a complete list of all arguments of this callback method see type_cons.h. To get the
+ * corresponding target variable of given source variable, you can use the variable map directly.
  *
  * \code
- * target = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, source);
+ * targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
  * \endcode
  *
- * Furthermore, if the copy process was successful the result pointer success has to be set to TRUE.
- * For an example implementation we refer to cons_linear.c.
+ * We recommend, however, to use the method SCIPgetVarCopy() which gets the variable map and the constraint map as input
+ * (besides others) and returns the requested target variable. The advantage of using SCIPgetVarCopy() is, that in case
+ * the required variable does not exist yet it is created and added to the copy.
  *
- * Additional documentation and the complete list of all parameters can be found in the file in type_cons.h. 
+ * \code
+ * SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevar, &targetvar, varmap, consmap, global) );
+ * \endcode
+ *
+ * Furthermore, if the copy process was successful the result pointer success has to be set to TRUE. <b>Note.</b> You
+ * have to be precise by setting the success pointer. If you set the success pointer to TRUE and the constraint was not
+ * copied one-to-one, then it might happen that optimal solutions are cut off during the search.
+ *
+ * For an example implementation we refer to cons_linear.c. Additional documentation and the complete list of all
+ * parameters can be found in the file in type_cons.h.
  *
  * @subsection CONSPARSE
  *
@@ -4953,11 +4989,9 @@
  *
  * <code>SCIP&gt; count</code>
  *
- * <b>Note:</b> If you are using the default SCIP settings, it is most likely that SCIP will not compute the right
- * number of feasible solutions since <tt>dual</tt> reduction are turned on. For example, the presolver dualfix
- * (presol_dualfix.c) performs dual reductions as the name already says. We recommend to use the counting settings which
- * can be found in the interactive in the sub menu "emphasis" in the "set" folder. Setting this in the interactive shell
- * looks like that:
+ * <b>Note:</b> Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
+ * automatically turned off. The only thing you should switch off are restarts. Since restarts will lead to a wrong
+ * counting process. We recommend to use the counting settings which can set in the interactive shell as follows:
  *
  * <code>SCIP&gt; set emphasis counter</code>
  *
@@ -4973,7 +5007,7 @@
  * exceeded SCIP will be stopped. The name of the parameter to use is <code>constraints/countsols/sollimit</code>. In
  * the interactive shell this parameter can be set as follows:
  *
- * - <code>SCIP&gt; constraints countsols sollimit 1000</code>
+ * <code>SCIP&gt; constraints countsols sollimit 1000</code>
  * 
  * In case of using the callable library you use the function SCIPsetLongintParam() as follows:
  *
@@ -4993,7 +5027,7 @@
  * do this, SCIP will not only count the number of feasible solutions it will also <b>collect</b> them. Using the
  * following command you can write the collect solution into a file:
  *
- * - <code>SCIP&gt; write allsolutions &lt;file name&gt;</code>
+ * <code>SCIP&gt; write allsolutions &lt;file name&gt;</code>
  *
  * @section COUNTOPTIMAL Count number of optimal solutions
  *
