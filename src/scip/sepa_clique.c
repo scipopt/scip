@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.48 2010/09/08 19:14:56 bzfhende Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.49 2010/09/27 11:30:28 bzfwanie Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -109,12 +109,8 @@ SCIP_RETCODE tcliquegraphCreate(
 
    SCIP_CALL( SCIPallocMemory(scip, tcliquegraph) );
 
-   /* there are at most 2*nbinvars nodes in the graph 
-    *
-    * @note that a clique can include variables of SCIP_VARTYPE_INTEGER or SCIP_VARTYPE_IMPLINT if the global bound of
-    *       binary type (see SCIPvarIsBinary())
-    */
-   maxnnodes = 2*(SCIPgetNVars(scip) - SCIPgetNContVars(scip));
+   /* there are at most 2*nbinvars nodes in the graph */
+   maxnnodes = 2*SCIPgetNBinVars(scip);
    assert(maxnnodes > 0);
 
    /* allocate memory for tclique graph arrays */
@@ -227,7 +223,7 @@ SCIP_RETCODE tcliquegraphAddNode(
    int i;
 
    assert(tcliquegraph != NULL);
-   assert(SCIPvarIsBinary(var));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarIsActive(var));
    assert(nodeidx != NULL);
 
@@ -237,7 +233,7 @@ SCIP_RETCODE tcliquegraphAddNode(
       SCIP_CALL( tcliquegraphCreate(scip, tcliquegraph) );
    }
    assert(*tcliquegraph != NULL);
-   assert((*tcliquegraph)->nnodes < 2*(SCIPgetNVars(scip) - SCIPgetNContVars(scip)) - 1);
+   assert((*tcliquegraph)->nnodes < 2*SCIPgetNBinVars(scip) - 1);
 
    /* if the value is FALSE, use the negated variable for the node */
    if( !value )
@@ -295,9 +291,9 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
    assert(cliquegraphidx[0] != NULL);
    assert(cliquegraphidx[1] != NULL);
 
-   /* get candidates for explicit and implicit binary problem variables */
+   /* get binary problem variables */
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nvars = SCIPgetNBinVars(scip);
 
    for( i = 0; i < nvars; ++i )
    {
@@ -306,10 +302,6 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
 
       var = vars[i];
 
-      /* check if the variables is of (implicit) binary type */
-      if( !SCIPvarIsBinary(var) )
-         continue;
-      
       for( value = 0; value < 2; ++value )
       {
          assert(cliquegraphidx[value][i] == -1);
@@ -401,12 +393,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             y = ximplvars[i];
             yi = SCIPvarGetProbindex(y);
             yindex = SCIPvarGetIndex(y);
-            assert(SCIPvarGetType(y) == SCIP_VARTYPE_BINARY);
-            assert(yi < SCIPgetNBinVars(scip));
-
-            /* consider only implications with active implvar y */
-            if( yi < 0 )
-               continue;
+            assert(0 <= yi && yi < nvars);
 
             assert(xindex < yindex); /* the implied variables are sorted by increasing variable index */
             assert(yindex < SCIPvarGetIndex(ximplvars[i+1]));
@@ -466,7 +453,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                   /* we found z with xindex < yindex < zindex and x + y + z <= 1 */
                   z = ximplvars[xk];
                   zi = SCIPvarGetProbindex(z);
-                  assert(zi < nvars);
+                  assert(0 <= zi && zi < nvars);
 
                   /* consider only implications with active implvar z */
                   if( zi < 0 )
@@ -525,14 +512,9 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
    assert(cliquegraphidx[1] != NULL);
 
    /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
-
-   /* get binary variables 
-    *
-    * @note that a clique can include variables of SCIP_VARTYPE_INTEGER or SCIP_VARTYPE_IMPLINT if the global bound of
-    *       binary type (see SCIPvarIsBinary())
-    */
+   /* get binary variables */
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nvars = SCIPgetNBinVars(scip);
    assert(nvars > 0);
 
    /* detect triples (x,y,z) with implications x -> y' and x -> z' and a clique that contains y and z;
@@ -547,10 +529,6 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
 
       x = vars[xi];
 
-      /* check if the variables is (implicit) binary */
-      if( !SCIPvarIsBinary(x) )
-         continue;
-      
       for( xvalue = 0; xvalue < 2; xvalue++ )
       {
          SCIP_VAR** ximplvars;
@@ -664,7 +642,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
       SCIP_Bool value;
       SCIP_VAR** implvars;
       SCIP_BOUNDTYPE* impltypes;
-      int nimpls;
+      int nbinimpls;
       int adjnodesidx;
       int j;
 
@@ -676,26 +654,23 @@ SCIP_RETCODE tcliquegraphAddImplics(
       var = tcliquegraph->vars[i];
       value = TRUE;
       SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
-      assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < SCIPgetNVars(scip) - SCIPgetNContVars(scip));
+      assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < SCIPgetNBinVars(scip));
       assert(cliquegraphidx[value][SCIPvarGetProbindex(var)] == i);
 
       /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
       /* get implications on binary variables */
-      nimpls = SCIPvarGetNImpls(var, value);
+      nbinimpls = SCIPvarGetNBinImpls(var, value);
       implvars = SCIPvarGetImplVars(var, value);
       impltypes = SCIPvarGetImplTypes(var, value);
-      for( j = 0; j < nimpls; ++j )
+      for( j = 0; j < nbinimpls; ++j )
       {
          int probidx;
          int graphidx;
          SCIP_Bool implvalue;
 
-         if( !SCIPvarIsBinary(implvars[j]) )
-            continue;
-         
          probidx = SCIPvarGetProbindex(implvars[j]);
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-         assert(probidx < SCIPgetNVars(scip));
+         assert(0 <= probidx && probidx < SCIPgetNVars(scip));
 
          graphidx = cliquegraphidx[implvalue][probidx];
          if( graphidx >= 0 )
@@ -854,8 +829,8 @@ SCIP_RETCODE loadTcliquegraph(
    assert(sepadata != NULL);
    assert(sepadata->tcliquegraph == NULL);
 
-   /* there is nothing to do, if no (implicit) binary variables are present in the problem */
-   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   /* there is nothing to do, if no binary variables are present in the problem */
+   nvars = SCIPgetNBinVars(scip);
    if( nvars == 0 )
       return SCIP_OKAY;
 
