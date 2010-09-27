@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.26 2010/09/15 21:09:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.27 2010/09/27 08:24:02 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -2650,8 +2650,11 @@ SCIP_RETCODE SCIPexprtreeFree(
       assert((*tree)->interpreterdata == NULL);
    }
    
-   SCIPexprFreeDeep((*tree)->blkmem, &(*tree)->root);
-   assert((*tree)->root == NULL);
+   if( (*tree)->root != NULL )
+   {
+      SCIPexprFreeDeep((*tree)->blkmem, &(*tree)->root);
+      assert((*tree)->root == NULL);
+   }
    
    BMSfreeBlockMemoryArrayNull((*tree)->blkmem, &(*tree)->vars,   (*tree)->nvars  );
    BMSfreeBlockMemoryArrayNull((*tree)->blkmem, &(*tree)->params, (*tree)->nparams);
