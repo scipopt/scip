@@ -23,10 +23,10 @@
 /**@mainpage Binpacking Example
  * @author   Stefan Heinz
  *
- * This example contains a branch-and-price approach for the binpacking problem which is realized with the framework <a
- * href="http://scip.zib.de">SCIP</a>. Therefore, the following plugins are implemented:
+ * This example contains a branch-and-price approach for the binpacking problem which is realized with the framework 
+ * \SCIP. Therefore, the following plugins are implemented:
  *
- * - a problem reader which parses the problem out of file and creates the corresponding problem within SCIP
+ * - a problem reader which parses the problem out of file and creates the corresponding problem within \SCIP
  *   (reader_bpa.c)
  * - a (global) problem data structure which contains all necessary information (probdata_binpacking.c)
  * - a pricer which generates new variables/columns during the search (pricer_binpacking.c)
@@ -37,7 +37,7 @@
  *
  * In the following we introduce the problem, explain the use of the reader plugin and pricer plugin. Finally we
  * introduce the Ryan/Foster branching rule and show how that specific branching rule is realized within the framework
- * <a href="http://scip.zib.de">SCIP</a>.
+ * \SCIP.
  *
  * -# \ref PROBLEM "Problem description"
  * -# \ref READER "Parsing the input format and creating the problem"
@@ -131,8 +131,8 @@
 
 /**@page MAKEFILE The Makefile
  *
- * The Makefile is based on the main SCIP Makefile. This means, all compiling options which are 
- * available for SCIP are also available for the binpacking project. Below you find a list 
+ * The Makefile is based on the main \SCIP Makefile. This means, all compiling options which are 
+ * available for \SCIP are also available for the binpacking project. Below you find a list 
  * of the most important compiling flags, the values they can take, and a short description. The
  * values in bold face are the default values. 
  *
@@ -159,7 +159,7 @@
  *   <br>
  *   Statically checks the code for uninitialized variables and many other stuff. Therefore, the
  *   the external tool flexelint is needed. This call produces the file <code>lint.out</code> 
- *   which contains all the detected warnings. From the development of SCIP we strongly 
+ *   which contains all the detected warnings. From the development of \SCIP we strongly 
  *   recommend to use such a code checker. It is always a surprising the stuff such tools detect.  
  *   <br>
  *
