@@ -19,14 +19,6 @@
                 Column generation, further development
 	      </td>
 	    </tr>
-            <tr>	    
-	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=hendel&amp;language=en">Gregor Hendel</a>
-	      </td>
-	      <td>
-                Student assistant
-	      </td>
-	    </tr>
 	    <tr>
 	      <td>
 		<a href="http://www.zib.de/heinz/">Stefan Heinz</a>
@@ -151,7 +143,7 @@
 	    </tr>
             <tr>
 	      <td>
-                <a href="http://www3.mathematik.tu-darmstadt.de/index.php?id=495">Thorsten Gellermann</a>
+                <a href="http://fauam2m.am.uni-erlangen.de/de/optimierung/wirtschaftsmathematik/mitarbeiter/gellermann-thorsten/thorsten-gellermann.html">Thorsten Gellermann</a>
 	      </td>
 	      <td>
                  Generic NLP interface
