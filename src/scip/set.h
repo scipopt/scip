@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.133 2010/09/26 15:01:25 bzfschwa Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.134 2010/09/27 14:37:11 bzfschwa Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -1415,15 +1415,15 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
          (int)((num)*sizeof(**(ptr)))) )
 #else
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( ( ((size_t)num) > (UINT_MAX / sizeof(**(ptr))) ) \
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
 						  ? SCIP_NOMEMORY	                                  \
 						  : SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
 								       (int)((num)*sizeof(**(ptr))))      )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( ( ((size_t)num) > (UINT_MAX / sizeof(**(ptr)))) \
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr)))) \
 							  ? SCIP_NOMEMORY                                               \
 							  : SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr),   \
 										   source, (int)((num)*sizeof(**(ptr)))))
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( ( ((size_t)num) > (UINT_MAX / sizeof(**(ptr))) ) \
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
 						  ? SCIP_NOMEMORY                                           \
 						  : SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
 									 (int)((num)*sizeof(**(ptr))))      )
