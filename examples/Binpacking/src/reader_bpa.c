@@ -12,12 +12,69 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_bpa.c,v 1.1 2010/09/09 12:21:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_bpa.c,v 1.2 2010/09/27 21:09:32 bzfheinz Exp $"
 
-/**@file   reader_bpa.h
+/**@file   reader_bpa.c
  * @brief  binpacking problem reader file reader
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * @page READER Parsing the input format and creating the problem
+ *
+ * In the <code>data</code> directory you find a few data files which contain each one binpacking problem. These data
+ * files have the following structure. In the first line the name of the instance is stated. In the second line you find
+ * three integer numbers. The first one gives you the capacity \f$\kappa\f$, the second the number of items, and the
+ * last integer states the value of a known feasible solution. This means an upper bound on the number of needed
+ * bins. The remaining lines give the size for each item.
+ *
+ * For parsing that data, we implemented a reader plugin for <a href="http://scip.zib.de">SCIP</a>. A reader has several
+ * callback methods and at least one interface methods (the one including the reader into <a
+ * href="http://scip.zib.de">SCIP</a>). For our purpose we only implemented the \ref READERREAD "READERREAD" callback
+ * and the interface method which adds the reader plugin to <a href="http://scip.zib.de">SCIP</a>.
+ *
+ * @section READERINCLUDE The SCIPincludeReaderBpa() interface method
+ *
+ * The interface method <code>SCIPincludeReaderBpa()</code> is called to add the reader plugin to <a
+ * href="http://scip.zib.de">SCIP</a> (see cmain.c). This means <a href="http://scip.zib.de">SCIP</a> gets informed that
+ * this reader is available for reading input files. Therefore, the function <code>SCIPincludeReader()</code> is called
+ * within this method which passes all necessary information of the reader to <a
+ * href="http://scip.zib.de">SCIP</a>. These information include the name of the reader, a description, and the file
+ * extension for which the file reader is in charge. In our case we selected the file extension "bpa". This means all
+ * files which have this file extension are passed to our reader for parsing. Besides these information the call
+ * <code>SCIPincludeReader()</code> also passes for each callback of the reader a function pointers (some of them might
+ * be NULL pointers). These function pointers are used by <a href="http://scip.zib.de">SCIP</a> to run the reader. For
+ * more information about all the callbacks of the reader we refer to the <a
+ * href="http://scip.zib.de/doc/html/READER.html">How to add file readers</a> tutorial. In the remaining section we
+ * restrict ourself to the callback <code>READERREAD</code> which is the only one we implemented for the binpacking
+ * example. All other callbacks are not required for this example.
+ *
+ * @section READERREAD The READERREAD callback method
+ *
+ * The READERREAD callback is in charge of parsing a file and creating the problem. To see the list of arguments this
+ * functions gets see the file type_reader.c in the source of <a href="http://scip.zib.de">SCIP</a>. The following
+ * arguments are of interest in our case. First of all the <a href="http://scip.zib.de">SCIP</a> pointer, the file name,
+ * and the SCIP_RESULT pointer. The <a href="http://scip.zib.de">SCIP</a> pointer gives us the current environment. The
+ * file name states the file which we should open and parse. And finally the SCIP_RESULT pointer is required to tell <a
+ * href="http://scip.zib.de">SCIP</a> if the parsing process was successfully or not. Note that in type_reader.c you
+ * also find a list of allowable result values for the SCIP_RESULT pointer and the SCIP_RETCODE which is the return
+ * value of this function.
+ *
+ * @subsection PARSING Parsing the problem
+ *
+ * The file can be opened and parsed with your favorite methods. In this case we are using the functionality provided by
+ * <a href="http://scip.zib.de">SCIP</a> since this has same nice side effects. We are using the function SCIPfopen()
+ * which can handle besides standard files also files which are packed. To find all files related to the parsing of a
+ * file we refer to the file pub_misc.h in the source of <a href="http://scip.zib.de">SCIP</a>. Parsing the data out of
+ * the file is not that hard. Please look at the code and comments therein for more details.
+ *
+ * @subsection CREATING Creating the problem
+ * 
+ * After parsing the file the final task for the reader is to create the problem. In our case we pass the collected data
+ * to main problem data plugin. Therefore, we use the interface methods SCIPprobdataCreate() which is provided by the
+ * problem data plugin (see probdata_binpacking.c). After that the reader set the result value for the SCIP_RESULT
+ * pointer and returns with a proper SCIP_RETCODE.
+ *
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -49,18 +106,7 @@ struct SCIP_ReaderData
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_READERCOPY(readerCopyBpa)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
-
-   /* call inclusion method of reader */
-   SCIP_CALL( SCIPincludeReaderBpa(scip) );
- 
-   return SCIP_OKAY;
-}
+#define readerCopyBpa NULL
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeBpa NULL
@@ -215,9 +261,6 @@ SCIP_RETCODE SCIPincludeReaderBpa(
    /* include binpacking reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerCopyBpa, readerFreeBpa, readerReadBpa, readerWriteBpa, readerdata) );
-
-   /* add bpa reader parameters */
-   /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */
    
    return SCIP_OKAY;
 }

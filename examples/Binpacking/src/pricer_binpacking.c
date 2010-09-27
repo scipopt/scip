@@ -12,12 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.3 2010/09/20 10:18:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.4 2010/09/27 21:09:32 bzfheinz Exp $"
 
 /**@file   pricer_binpacking.c
  * @brief  binpacking variable pricer
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * @page PRICER Pricing new variables
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

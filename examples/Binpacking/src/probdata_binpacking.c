@@ -12,12 +12,26 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_binpacking.c,v 1.3 2010/09/19 09:28:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_binpacking.c,v 1.4 2010/09/27 21:09:32 bzfheinz Exp $"
 
 /**@file   probdata_binpacking.c
  * @brief  problem data for binpacking problem 
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * @page PROBLEMDATA Main problem data
+ *
+ * The problem data is accessible in all plugin. The function SCIPgetProbData() return the pointer to that structure. We
+ * are using this data structure to store all the information of the binpacking problem. Since this structure is not
+ * visible in the other plugin we implemented setter and getter function to access this data.
+ *
+ * The function SCIPprobdataCreate(), which is called in the reader plugin after the input file was parsed, initial the
+ * problem data structure and creates the problem in the SCIP environment. Therefore, it creates for each item of the
+ * binpacking problem on set covering constraints and creates an initial set of variables/packing. Note that the set
+ * covering constraints have to have the modifiable set to TRUE. This is necessary to tell the solver that these
+ * constraints are not completed yet. This means, during the search new variables might be added. The solver has to know
+ * that since in this case certain reductions are not allowed. See the body of the function SCIPprobdataCreate() for
+ * more details.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_samediff.c,v 1.2 2010/09/19 09:28:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_samediff.c,v 1.3 2010/09/27 21:09:32 bzfheinz Exp $"
 
-/**@file   cons_samediff.h
+/**@file   cons_samediff.c
  * @brief  constraint handler stores the local branching decision data 
  * @author Timo Berthold
  * @author Stefan Heinz
