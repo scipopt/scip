@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expression.h,v 1.9 2010/09/06 10:51:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expression.h,v 1.10 2010/09/27 18:34:20 bzfviger Exp $"
 
 /**@file   type_expression.h
  * @brief  type definitions for expressions and expression trees
@@ -54,7 +54,7 @@ enum SCIP_ExprOp {
    SCIP_EXPR_SIN       = 17,  /**< sinus (1 operand) */
    SCIP_EXPR_COS       = 18,  /**< cosinus (1 operand) */
    SCIP_EXPR_TAN       = 19,  /**< tangent (1 operand) */
-   SCIP_EXPR_ERF       = 20,  /**< gaussian error function (1 operand) */
+   /* SCIP_EXPR_ERF       = 20, */  /**< gaussian error function (1 operand) */
    /* SCIP_EXPR_ERFI      = 21, */  /**< imaginary part of gaussian error function (1 operand) */
    SCIP_EXPR_MIN       = 22,  /**< minimum (2 operands) */
    SCIP_EXPR_MAX       = 23,  /**< maximum (2 operands) */

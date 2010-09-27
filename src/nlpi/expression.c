@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.27 2010/09/27 08:24:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.28 2010/09/27 18:34:20 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -396,6 +396,7 @@ SCIP_DECL_EVAL( SCIPexprevalTan )
 /* @todo implement SCIPintervalTan */
 #define SCIPexprevalTanInt NULL
 
+#if 0
 static
 SCIP_DECL_EVAL( SCIPexprevalErf )
 {
@@ -410,7 +411,6 @@ SCIP_DECL_EVAL( SCIPexprevalErf )
 /* @todo implement SCIPintervalErf */
 #define SCIPexprevalErfInt NULL
 
-#if 0
 static
 SCIP_DECL_EVAL( SCIPexprevalErfi )
 {
@@ -946,7 +946,7 @@ struct SCIPexprOpTableElement SCIPexprOpTable[] =
    { "sin",               1, SCIPexprevalSin,           SCIPexprevalSinInt           },
    { "cos",               1, SCIPexprevalCos,           SCIPexprevalCosInt           },
    { "tan",               1, SCIPexprevalTan,           SCIPexprevalTanInt           },
-   { "erf",               1, SCIPexprevalErf,           SCIPexprevalErfInt           },
+   {NULL,-1,NULL,NULL}, /* { "erf",               1, SCIPexprevalErf,           SCIPexprevalErfInt           }, */
    {NULL,-1,NULL,NULL}, /* { "erfi",              1, SCIPexprevalErfi,          SCIPexprevalErfiInt          }, */
    { "min",               2, SCIPexprevalMin,           SCIPexprevalMinInt           },
    { "max",               2, SCIPexprevalMax,           SCIPexprevalMaxInt           },
@@ -1086,7 +1086,8 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_SIN   :
       case SCIP_EXPR_COS   :
       case SCIP_EXPR_TAN   :
-      case SCIP_EXPR_ERF   :
+      /* case SCIP_EXPR_ERF   : */
+      /* case SCIP_EXPR_ERFI  : */
       case SCIP_EXPR_ABS   :
       case SCIP_EXPR_SIGN  :
       {
@@ -1981,7 +1982,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
       case SCIP_EXPR_SIN:
       case SCIP_EXPR_COS:
       case SCIP_EXPR_TAN:
-      case SCIP_EXPR_ERF:
+      /* case SCIP_EXPR_ERF: */
       /* case SCIP_EXPR_ERFI: */
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
@@ -2392,7 +2393,7 @@ void SCIPexprPrint(
       case SCIP_EXPR_SIN:
       case SCIP_EXPR_COS:
       case SCIP_EXPR_TAN:
-      case SCIP_EXPR_ERF:
+      /* case SCIP_EXPR_ERF: */
       /* case SCIP_EXPR_ERFI: */
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
