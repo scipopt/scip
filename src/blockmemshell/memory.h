@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.12 2010/09/26 15:01:25 bzfschwa Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.13 2010/09/27 14:04:52 bzfwinkm Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -58,15 +58,15 @@ extern "C" {
                                                 __FILE__, __LINE__ ))
 #define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
 #else
-#define BMSallocMemoryArray(ptr,num)          ( ( ((size_t)num) > (UINT_MAX / sizeof(**(ptr))) )               \
+#define BMSallocMemoryArray(ptr,num)          ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
 						? NULL                                                         \
 						: ( ASSIGN((ptr), BMSallocMemory_call( (num)*sizeof(**(ptr)),  \
 										       __FILE__, __LINE__ )) ) )
-#define BMSreallocMemoryArray(ptr,num)        ( ( ((size_t)num) > (UINT_MAX / sizeof(**(ptr))) ) \
+#define BMSreallocMemoryArray(ptr,num)        ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
 						? NULL                                                         \
 						: ( ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
 											 __FILE__, __LINE__ )) )        )
-#define BMSallocMemoryArrayCPP(num,size)      ( ( ((size_t)num) > (UINT_MAX / size) ) \
+#define BMSallocMemoryArrayCPP(num,size)      ( ( ((size_t)(num)) > (UINT_MAX / size) ) \
 						? NULL                                                        \
 						:( BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ ) ) )
 #endif
@@ -337,15 +337,16 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
                                                 ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
                                                 (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, __LINE__))
 #else
-#define BMSallocBlockMemoryArray(mem,ptr,num) ( ( ((size_t)num) > UINT_MAX / sizeof(**(ptr)) )                          \
+#define BMSallocBlockMemoryArray(mem,ptr,num) ( ( ((size_t)(num)) > UINT_MAX / sizeof(**(ptr)) ) \
 						? NULL                                                                  \
 						: ( ASSIGN((ptr), BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)),\
 											   __FILE__, __LINE__)) )       )
-#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)                                         \
-   ( ( ((size_t)newnum) > UINT_MAX / sizeof(**(ptr)) )			                          \
-   ? NULL							                                  \
-   : ( ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), (oldnum)*sizeof(**(ptr)), \
-						(newnum)*sizeof(**(ptr)), __FILE__, __LINE__)) )  )
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
+						( ( ((size_t)(newnum)) > UINT_MAX / sizeof(**(ptr)) )                \
+                                                ? NULL               \
+                                                : ( ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
+                                                         (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, \
+                                                         __LINE__)) )  )
 #endif
 
 #define BMScreateBlockMemory(csz,gbf)         BMScreateBlockMemory_call( (csz), (gbf), __FILE__, __LINE__ )
