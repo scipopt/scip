@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.13 2010/09/22 13:37:16 bzfschwa Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.14 2010/09/27 18:15:58 bzfheinz Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -380,8 +380,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_exec(
 
 /** clone method which will be used to copy a objective plugin */
 scip::ObjCloneable* HeurFarthestInsert::clone(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+   SCIP*                 scip                /**< SCIP data structure */
    ) const
 {
    return new HeurFarthestInsert(scip);

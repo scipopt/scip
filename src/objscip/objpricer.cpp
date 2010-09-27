@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.29 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.30 2010/09/27 18:15:58 bzfheinz Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -65,7 +65,7 @@ SCIP_DECL_PRICERCOPY(pricerCopyObj)
    if( pricerdata->objpricer->iscloneable() )
    {
       scip::ObjPricer* newobjpricer;
-      newobjpricer = dynamic_cast<scip::ObjPricer*> (pricerdata->objpricer->clone(scip));
+      newobjpricer = dynamic_cast<scip::ObjPricer*> (pricerdata->objpricer->clone(scip, valid));
 
       /* call include method of pricer object */
       SCIP_CALL( SCIPincludeObjPricer(scip, newobjpricer, TRUE) );

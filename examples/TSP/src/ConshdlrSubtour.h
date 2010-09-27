@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.16 2010/09/22 13:37:16 bzfschwa Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.17 2010/09/27 18:15:58 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
@@ -343,7 +343,7 @@ public:
       }
 
       /** clone method which will be used to copy a objective plugin */
-      virtual ObjCloneable* clone(
+      virtual ObjProbCloneable* clone(
          SCIP*           scip,               /**< SCIP data structure */
          SCIP_Bool*      valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
          ) const;

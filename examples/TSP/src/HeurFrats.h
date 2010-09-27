@@ -110,8 +110,7 @@ namespace tsp
 
       /** clone method which will be used to copy a objective plugin */
       virtual ObjCloneable* clone(
-         SCIP*                 scip,               /**< SCIP data structure */
-         SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+         SCIP*                 scip                /**< SCIP data structure */
          ) const;
 
       /** returns whether the objective plugin is copyable */

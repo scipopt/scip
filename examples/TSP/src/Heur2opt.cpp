@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.11 2010/09/22 13:37:16 bzfschwa Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.12 2010/09/27 18:15:58 bzfheinz Exp $"
 
 /**@file   Heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -251,8 +251,7 @@ SCIP_RETCODE Heur2opt::scip_exec(
 
 /** clone method which will be used to copy a objective plugin */
 scip::ObjCloneable* Heur2opt::clone(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+   SCIP*                 scip                /**< SCIP data structure */
    ) const
 {
    return new Heur2opt(scip);

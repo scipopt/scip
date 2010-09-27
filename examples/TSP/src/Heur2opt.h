@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.h,v 1.16 2010/09/22 13:37:16 bzfschwa Exp $"
+#pragma ident "@(#) $Id: Heur2opt.h,v 1.17 2010/09/27 18:15:58 bzfheinz Exp $"
 
 /**@file   Heur2opt.h
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -113,8 +113,7 @@ namespace tsp
 
       /** clone method which will be used to copy a objective plugin */
       virtual ObjCloneable* clone(
-         SCIP*                 scip,               /**< SCIP data structure */
-         SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+         SCIP*                 scip                /**< SCIP data structure */
          ) const;
 
       /** returns whether the objective plugin is copyable */

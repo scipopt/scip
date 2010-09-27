@@ -12,36 +12,40 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objcloneable.h,v 1.7 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objprobcloneable.h,v 1.1 2010/09/27 18:15:58 bzfheinz Exp $"
 
-/**@file   objcloneable.h
- * @author Michael Winkler
+/**@file   objprobcloneable.h
+ * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Ambros Gleixner
+ * @author Stefan Heinz
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_OBJCLONEABLE_H__
-#define __SCIP_OBJCLONEABLE_H__
+#ifndef __SCIP_OBJPROBCLONEABLE_H__
+#define __SCIP_OBJPROBCLONEABLE_H__
 
 #include "scip/def.h"
 #include "scip/scip.h"
 
 namespace scip
 {
-   /** all except constraint handlers and variable pricer C++ wrapper object plugins should extend this class */
-   struct ObjCloneable 
+   /** constraint handler and variable pricer C++ wrapper object plugins should extend this class */
+   struct ObjProbCloneable 
    {
-      virtual ~ObjCloneable() {}
+      virtual ~ObjProbCloneable() {}
 
-      /** clone method which will be used to copy objective plugins which are not a constraint handlers or a variable
-       *  pricer plugin */
-      virtual ObjCloneable* clone(
-         SCIP*                 scip                /**< SCIP data structure */
+      /** clone method which will be used to copy objective constraint handlers and variable pricer plugins */
+      virtual ObjProbCloneable* clone(
+         SCIP*                 scip,               /**< SCIP data structure */
+         SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
          ) const
       {
          return 0;
       }
-      
+
       /** returns whether the objective plugin is copyable */
       virtual SCIP_Bool iscloneable(
          void

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.9 2010/09/22 13:37:16 bzfschwa Exp $"
+#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.10 2010/09/27 18:15:58 bzfheinz Exp $"
 
 /**@file   HeurFrats.cpp
  * @brief  fractional travelling salesman heuristic - Rounding heuristic for TSP
@@ -248,8 +248,7 @@ SCIP_RETCODE HeurFrats::scip_exec(
 
 /** clone method which will be used to copy a objective plugin */
 scip::ObjCloneable* HeurFrats::clone(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+   SCIP*                 scip                /**< SCIP data structure */
    ) const
 {
    return new HeurFrats(scip);

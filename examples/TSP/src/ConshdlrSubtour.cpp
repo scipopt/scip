@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.22 2010/09/22 13:37:16 bzfschwa Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.23 2010/09/27 18:15:58 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -648,7 +648,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_print(
 }
 
 /** clone method which will be used to copy a objective plugin */
-ObjCloneable* ConshdlrSubtour::clone(
+ObjProbCloneable* ConshdlrSubtour::clone(
          SCIP*           scip,               /**< SCIP data structure */
          SCIP_Bool*      valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
          ) const
