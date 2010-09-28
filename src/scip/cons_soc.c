@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.57 2010/09/25 18:27:49 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.58 2010/09/28 18:54:08 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "scip/cons_soc.h"
 #include "scip/cons_quadratic.h"
