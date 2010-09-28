@@ -19,6 +19,10 @@ find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/*
 
+echo generate parameters.set
+make LPS=none ZIMPL=false
+bin/scip -c "set default set save doc/inc/parameters.set quit"
+
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
 --exclude="*cvs*" \
