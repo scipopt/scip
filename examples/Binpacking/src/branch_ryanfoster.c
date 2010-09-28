@@ -12,13 +12,49 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_ryanfoster.c,v 1.2 2010/09/19 09:28:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_ryanfoster.c,v 1.3 2010/09/28 13:40:08 bzfheinz Exp $"
 
 /**@file   branch_ryanfoster.c
  * @ingroup BRANCHINGRULES
  * @brief  Ryan/Foster branching rule
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ *
+ * @page BRANCHING Ryan/Foster branching
+ *
+ * Ryan/Foster branching is one of the branching rules which are very useful for the used integer programs model. A
+ * standard variable branching has the disadvantage that the zero branch is more or less useless. This is the case since
+ * we only forbid one packing out of exponential many. The one branch on the other side reduces the problem since
+ * certain items are packed. This leads to an very unbalanced search tree.
+ *
+ * The idea of Ryan/Foster is to branch in a way that we say that on the one branch a certain pair of items are always
+ * together and an the other branch they are never together. Note that in both case it is allowed that packings are
+ * used which contain none of the two items.
+ *
+ * There are two issue to be taken care off:
+ * -# How do we select the pair of itmes?
+ * -# How do we realize such a branching within \SCIP?
+ *
+ * @section SELECTION How do we select the pair of items?
+ *
+ * To select a pair of items, we have to know for each packing to items which are contained. Since every packing is a
+ * variable and each item is a set covering constraint, we have to know for each variable in which set covering
+ * constraints it appears (this means, has a coefficient of 1.0). Since \SCIP is constraint based, it is not possible to
+ * get this information in general. To overcome this issue we use to functionality to add variable data to each
+ * variable. This variable data contains the required information. This means, the constraints in which this variable
+ * appears (see vardata_binpacking.c for more details). Having this variable data, it is now possible to get the
+ * information which items belong to which packing. Therefore, we can use the Ryan/Foster idea to select a pair of
+ * items.
+ *
+ * @section SAMEDIFFBRANCHING How do we realize such a branching within SCIP?
+ *
+ * After we selected a pair of items to branch on, the questions how to realize that with \SCIP. Since \SCIP is
+ * constraint based, it is really easy to do that. We implement a constraint handler which handles these
+ * informations. Therefore, see cons_samediff.c. This constraint handler does not only stores the branching
+ * decisions. It also takes care of the fact that in each node all packing which are not feasible for that node a fixed
+ * locally to zero. For more details we refer to the source code of the constraint handler.
+ * 
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -126,7 +162,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(result != NULL);
-
    
    SCIPdebugMessage("start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
 

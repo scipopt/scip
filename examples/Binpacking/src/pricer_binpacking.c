@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.4 2010/09/27 21:09:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.5 2010/09/28 13:40:08 bzfheinz Exp $"
 
 /**@file   pricer_binpacking.c
  * @brief  binpacking variable pricer
@@ -20,6 +20,34 @@
  * @author Stefan Heinz
  *
  * @page PRICER Pricing new variables
+ * 
+ * The task of the pricer is to search for new variables with negative reduced cost. Therefore the following integer
+ * program is solved.
+ *
+ *  \f[
+ *  \begin{array}[t]{rll}
+ *       \max & \displaystyle \sum_{i=1}^n (\lambda_S)_i y^*_i\\
+ *        & \\
+ *        subject \ to & \displaystyle \sum_{i=0}^n (\lambda_S)_i s_i \leq \kappa \\
+ *        & \\
+ *        & (\lambda_S)_i \in \{0,1\} & \quad \forall i \in \{ 1, \dots , n \} \\
+ *  \end{array}
+ * \f]
+ *
+ * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^*_i\f$ given by the dual
+ * solution of the restricted master problem. See the \ref PROBLEM "problem description" for more details.
+ *
+ * To solve the above integer program we create new SCIP instance within SCIP and use the usual functions to create
+ * variables and constraints. Besides that we need the current dual solutions to all set covering constraints (each
+ * stands for one item) which are the objective coefficient the binary variables. Therefore, we use the function
+ * SCIPgetDualsolSetppc() which returns the dual solutions for the given set converting constraint.
+ *
+ * Since we also want to generate new variables during search we have to care that we do not generate variables over and
+ * over again. For example if we branched or fix a certain packing to zero, we have to make sure that we in that node do
+ * not generate that variables again. To do so we have to add constraints which forbid to generate variables which are
+ * locally fixed to zero. See the function addFixedVarsConss() for more details. If we use the \ref BRANCHING
+ * "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This realized within
+ * the function addBranchingDecisionConss().
  *
  */
 

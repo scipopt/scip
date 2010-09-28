@@ -15,13 +15,15 @@
 
 /**@file   xternal.c
  * @brief  main document page
+ * @author Timo Berthold
  * @author Stefan Heinz
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage Binpacking Example
- * @author   Stefan Heinz
+ * @author Timo Berthold
+ * @author Stefan Heinz
  *
  * This example contains a branch-and-price approach for the binpacking problem which is realized with the framework 
  * \SCIP. Therefore, the following plugins are implemented:
@@ -35,9 +37,9 @@
  * - a variable data structure which stores information for each variable and is needed to perform the Ryan/Foster
  *   branching (vardata_binpacking.c)
  *
- * In the following we introduce the problem, explain the use of the reader plugin and pricer plugin. Finally we
- * introduce the Ryan/Foster branching rule and show how that specific branching rule is realized within the framework
- * \SCIP.
+ * In the following we introduce the problem, explain the use of the reader plugin and pricer plugin. Finally, we
+ * introduce the Ryan/Foster branching rule and briefly discuss how that specific branching rule can be realized within
+ * the framework \SCIP.
  *
  * -# \ref PROBLEM "Problem description"
  * -# \ref READER "Parsing the input format and creating the problem"
@@ -45,7 +47,6 @@
  * -# \ref PRICER "Pricing new variables"
  * -# \ref BRANCHING "Ryan/Foster branching"
  * -# \ref MAKEFILE "The Makefile"
- * -# \ref TESTRUNS "Automated test runs"
  *
  */
 
@@ -125,10 +126,6 @@
 
 
 
-/**@page BRANCHING Ryan/Foster branching
- *
- */
-
 /**@page MAKEFILE The Makefile
  *
  * The Makefile is based on the main \SCIP Makefile. This means, all compiling options which are 
@@ -176,9 +173,10 @@
  *   Remove all objective files, libraries, and binaries.
  *   <br>
  *
- * - <b>test</b>
- *   <br>
- *   Starts the automated test runs (see \ref TESTRUNS "Automated test runs").
+ * - <b>test</b> 
+ *   <br> 
+ *   Starts the automated test runs which is based on the SCIP test runs (see <a
+ *   href="http://scip.zib.de/doc/html/TEST.html">How to run automated tests with SCIP</a>).  
  *   <br>
  *
  * - <b>tags</b>
