@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.13 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.14 2010/09/28 09:32:58 bzfgleix Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -1765,7 +1765,7 @@ SCIP_RETCODE readBinaries(
    return SCIP_OKAY;
 }
 
-/** reads an PIP file
+/** reads a PIP file
  */
 static
 SCIP_RETCODE readPIPFile(
