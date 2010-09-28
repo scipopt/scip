@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.27 2010/09/28 00:35:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.28 2010/09/28 10:13:27 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -671,7 +671,7 @@ SCIP_RETCODE evalFunctionGradient(
    int*                  exprvaridxs,        /**< indices of variables in nonquadratic part */
    SCIP_EXPRTREE*        exprtree,           /**< nonquadratic part */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
-   SCIP_Bool             newx,               /**< indicates whether the function has not been evaluated for this point before */
+   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
    SCIP_Real*            val,                /**< pointer to store function value */
    SCIP_Real*            grad                /**< pointer to store function gradient */
    )
@@ -715,17 +715,18 @@ SCIP_RETCODE evalFunctionGradient(
 
    if( exprtree != NULL )
    {
-      SCIP_Real* xx = NULL;
+      SCIP_Real* xx;
       SCIP_Real* g;
       int        i;
       SCIP_Real  nlval;
       int        nvars;
       
+      xx = NULL;
       nvars = SCIPexprtreeGetNVars(exprtree);
 
       SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &g, nvars) );
 
-      if( newx )
+      if( isnewx )
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &xx, nvars) );
          for (i = 0; i < nvars; ++i)
@@ -739,7 +740,7 @@ SCIP_RETCODE evalFunctionGradient(
       SCIPdebug( SCIPexprtreePrint(exprtree, NULL, NULL, NULL) );
       SCIPdebug( printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); printf("\n"); )
       
-      SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, exprtree, xx, newx, &nlval, g) );
+      SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, exprtree, xx, isnewx, &nlval, g) );
       
       SCIPdebug( printf("g ="); for( i = 0; i < nvars; ++i) printf(" %g", g[i]); printf("\n"); )
 
@@ -876,7 +877,13 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
 {
    SCIP_Real*  x;
    SCIP_Bool*  hesnz;
-   int         i, j, n, nn, row, col, pos;
+   int         i;
+   int         j;
+   int         nvars;
+   int         nn;
+   int         row;
+   int         col;
+   int         pos;
    
    assert(oracle != NULL);
    assert(colnz  != NULL);
@@ -887,21 +894,21 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
    assert(exprtree != NULL);
    assert(dim >= 0);
    
-   n  = SCIPexprtreeGetNVars(exprtree);
-   nn = n*n;
+   nvars = SCIPexprtreeGetNVars(exprtree);
+   nn = nvars * nvars;
    
-   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &x,     n ) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &x,     nvars) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &hesnz, nn) );
    
-   for( i = 0; i < n; ++i )
+   for( i = 0; i < nvars; ++i )
       x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */
    
    SCIP_CALL( SCIPexprintHessianSparsityDense(oracle->exprinterpreter, exprtree, x, hesnz) );
    
-   for( i = 0; i < n; ++i ) /* rows */
+   for( i = 0; i < nvars; ++i ) /* rows */
       for( j = 0; j <= i; ++j ) /* cols */
       {
-         if( !hesnz[i*n + j] )
+         if( !hesnz[i*nvars + j] )
             continue;
          
          row = MAX(exprvaridx[i], exprvaridx[j]);
@@ -923,7 +930,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
          }
       }
    
-   BMSfreeBlockMemoryArray(oracle->blkmem, &x, n);
+   BMSfreeBlockMemoryArray(oracle->blkmem, &x, nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &hesnz, nn);
    
    return SCIP_OKAY;
@@ -976,12 +983,20 @@ SCIP_RETCODE hessLagAddExprtree(
    SCIP_Real*            values      /**< buffer for values of sparse matrix that is to be filled */
 )
 {
-   SCIP_Real* xx = NULL;
+   SCIP_Real* xx;
    SCIP_Real* h;
    SCIP_Real* hh;
-   int        i, j, n, nn, row, col, idx;
+   int        i;
+   int        j;
+   int        nvars;
+   int        nn;
+   int        row;
+   int        col;
+   int        idx;
    SCIP_Real  val;
    
+   xx = NULL;
+
    assert(oracle != NULL);
    assert(x != NULL || new_x == FALSE);
    assert(exprvaridx != NULL);
@@ -990,15 +1005,15 @@ SCIP_RETCODE hessLagAddExprtree(
    assert(hescol != NULL);
    assert(values != NULL);
 
-   n = SCIPexprtreeGetNVars(exprtree);
-   nn = n*n;
+   nvars = SCIPexprtreeGetNVars(exprtree);
+   nn = nvars * nvars;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &h, nn) );
 
    if( new_x )
    {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &xx, n) );
-      for( i = 0; i < n; ++i )
+      SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &xx, nvars) );
+      for( i = 0; i < nvars; ++i )
       {
          assert(exprvaridx[i] >= 0);
          xx[i] = x[exprvaridx[i]];  /*lint !e613*/
@@ -1009,13 +1024,13 @@ SCIP_RETCODE hessLagAddExprtree(
    if( val != val )  /*lint !e777*/
    {
       SCIPdebugMessage("hessian evaluation yield invalid function value %g\n", val);
-      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, n);
+      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
       BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
       return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
    }
 
    hh = h;
-   for( i = 0; i < n; ++i ) /* rows */
+   for( i = 0; i < nvars; ++i ) /* rows */
    {
       for( j = 0; j <= i; ++j, ++hh ) /* cols */
       {
@@ -1025,7 +1040,7 @@ SCIP_RETCODE hessLagAddExprtree(
          if( *hh != *hh )  /*lint !e777*/
          {
             SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
-            BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, n);
+            BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
             BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
             return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
          }
@@ -1036,17 +1051,17 @@ SCIP_RETCODE hessLagAddExprtree(
          if( !SCIPsortedvecFindInt(&hescol[hesoffset[row]], col, hesoffset[row+1] - hesoffset[row], &idx) )
          {
             SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
-            BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, n);
+            BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
             BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
             return SCIP_ERROR;
          }
          
          values[hesoffset[row] + idx] += weight * *hh;
       }
-      hh += (n-j);
+      hh += nvars - j;
    }
    
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, n);
+   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
 
    return SCIP_OKAY;
@@ -1411,8 +1426,9 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    )
 {  /*lint --e{715}*/
    SCIP_Bool addednlcon;  /* whether a nonlinear constraint was added */
-   int i, j;
-   int newlen;
+   int       i;
+   int       j;
+   int       newlen;
 
    assert(oracle != NULL);
    
@@ -2115,7 +2131,9 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    else
    {
       int pos;
-      int len = *linlen;
+      int len;
+
+      len = *linlen;
       
       for( i = 0; i < nentries; ++i )
       {
@@ -2217,7 +2235,9 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    else
    {
       int pos;
-      int len = *myquadlen;
+      int len;
+
+      len = *myquadlen;
       
       for( i = 0; i < nquadelems; ++i )
       {
@@ -2631,7 +2651,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             newx,               /**< indicates whether the function has not been evaluated for this point before */
+   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
    SCIP_Real*            objval,             /**< pointer to store objective value */
    SCIP_Real*            objgrad             /**< pointer to store (dense) objective gradient */  
    )
@@ -2642,7 +2662,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
       oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
       oracle->objquadlen, oracle->objquadelems,
       oracle->objexprvaridxs, oracle->objexprtree,
-      x, newx, objval, objgrad) );
+      x, isnewx, objval, objgrad) );
    
    *objval += oracle->objconstant;
    
@@ -2654,7 +2674,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int             considx,            /**< index of constraint to compute gradient for */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             newx,               /**< indicates whether the function has not been evaluated for this point before */ 
+   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
    SCIP_Real*            conval,             /**< pointer to store constraint value */
    SCIP_Real*            congrad             /**< pointer to store (dense) constraint gradient */  
    )
@@ -2671,7 +2691,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
       (oracle->consquadlens  != NULL ? oracle->consquadelems  [considx] : NULL),
       (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[considx] : NULL),
       (oracle->consexprtrees != NULL ? oracle->consexprtrees  [considx] : NULL),
-      x, newx, conval, congrad) );
+      x, isnewx, conval, congrad) );
    
    return SCIP_OKAY;
 }
@@ -2818,7 +2838,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             newx,               /**< indicates whether some function has not been evaluated for this point before */
+   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
    SCIP_Real*            convals,            /**< pointer to store constraint values, can be NULL */ 
    SCIP_Real*            jacobi              /**< pointer to store sparse jacobian values */  
    )
@@ -2855,7 +2875,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       }
       else
       { /* @TODO do this sparse too */
-         SCIP_RETCODE retcode = SCIPnlpiOracleEvalConstraintGradient(oracle, i, x, newx, (convals ? &convals[i] : &dummy), grad);
+         SCIP_RETCODE retcode = SCIPnlpiOracleEvalConstraintGradient(oracle, i, x, isnewx, (convals ? &convals[i] : &dummy), grad);
          if( retcode != SCIP_OKAY )
          {
             BMSfreeBlockMemoryArray(oracle->blkmem, &grad, oracle->nvars);
@@ -2887,10 +2907,10 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    int** colnz;   /** nonzeros in Hessian corresponding to one column */
    int*  collen;  /** collen[i] is length of array colnz[i] */
    int*  colnnz;  /** colnnz[i] is number of entries in colnz[i] (<= collen[i]) */ 
-   int nnz;
-   int i;
-   int j;
-   int cnt;
+   int   nnz;
+   int   i;
+   int   j;
+   int   cnt;
    
    assert(oracle != NULL);
    
@@ -2976,7 +2996,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             newx,               /**< indicates whether some function has not been evaluated for this point before */
+   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
    const SCIP_Real*      lambda,             /**< weights (Lagrangian multipliers) for the constraints */ 
    SCIP_Real*            hessian             /**< pointer to store sparse hessian values */  
@@ -3006,7 +3026,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       if( oracle->objexprtree != NULL )
       {
          assert(oracle->objexprvaridxs != NULL );
-         SCIP_CALL( hessLagAddExprtree(oracle, objfactor, x, newx, oracle->objexprvaridxs, oracle->objexprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+         SCIP_CALL( hessLagAddExprtree(oracle, objfactor, x, isnewx, oracle->objexprvaridxs, oracle->objexprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
       }
    }
    
@@ -3025,7 +3045,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       {
          assert(oracle->consexprvaridxs != NULL);
          assert(oracle->consexprvaridxs[i] != NULL);
-         SCIP_CALL( hessLagAddExprtree(oracle, lambda[i], x, newx, oracle->consexprvaridxs[i], oracle->consexprtrees[i], oracle->heslagoffsets, oracle->heslagcols, hessian) );
+         SCIP_CALL( hessLagAddExprtree(oracle, lambda[i], x, isnewx, oracle->consexprvaridxs[i], oracle->consexprtrees[i], oracle->heslagoffsets, oracle->heslagcols, hessian) );
       }
    }
    
