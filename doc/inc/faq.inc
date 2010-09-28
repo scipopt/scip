@@ -74,9 +74,9 @@
       with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
     </p>
     <p class="a">
-      Another way is to use SCIP as a solver integrated into your own program source code. 
-      See the directory &quot;examples/MIPsolver/&quot; for a simple example and 
-      <a href="#Q12">this point</a>.
+      Another way is to use SCIP as a solver integrated into your own program source code.
+      See the directories &quot;examples/MIPsolver/&quot and &quot;examples/Queens/&quot;
+      for simple examples and <a href="#Q12">this point</a>.
     </p>
     <p class="a">
       A third way is to implement your own plugins into SCIP. 
@@ -215,13 +215,16 @@
       <a name="Q10">How do I change the behavior of SCIP?</a>
     </p>
     <p class="a">
-      You can find a variety of different general settings for SCIP in the directory "settings". 
-      They can be loaded via "set load settings/&#42;/&#42;.set" in the interactive shell. 
-      You can combine the general settings for cuts, presolving, and heuristics arbitrarily.<br>
+      You can switch the settings for all presolving, heuristics, and separation plugins to three different modes
+      via the "set {presolving, heuristics, separation} emphasis" parameters in the interactive shell.
+      "Off" turns off the respective type of plugins, "fast" chooses settings that lead to less time spent
+      in this type of plugins, possibly deteriorating their impact, and "aggressive" increases the impact
+      of this type of plugins.
+      You can combine these general settings for cuts, presolving, and heuristics arbitrarily.<br>
       "display parameters" shows you which settings currently differ from their default, 
       "set default" resets them all. 
-      Furthermore, there are complete settings in settings/emphasis/, analogously to 
-      <a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a>.		    
+      Furthermore, there are complete settings that can be set by "set emphasis", i.e. settings for pure
+      feasibility problems, solution counting, and CP like search.
     </p>
     <p class="q">
       <a name="Q11"> I recognized that one special plugin works very bad / very well for my problem and 
