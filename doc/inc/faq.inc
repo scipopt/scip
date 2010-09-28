@@ -697,13 +697,20 @@
       neighborhood heuristics (such as heur_rens.c). They can now easily copy the complete problem and fix  a certain 
       set of variables and work therefore on a reasonable copy of the original problem.
     </p>
-
     <p class="q">
       <a name="Q39">How do I get a copy of a variable or a constraint</code>?</a>
     </p>
     <p class="a">
       For the variables and constraints there are the methods <code>SCIPgetVarCopy()</code> and 
       <code>SCIPgetConsCopy()</code> which provide a copy for a variable or a constraint, respectively.
+    </p>
+    <p class="q">
+      <a name="Q39">What does the valid pointer in case of the constraint handler and variable pricer mean?</a>
+    </p>
+    <p class="a">
+      SCIP would like to know if the copied problem is a one to one copy. That means, if all problem defining objects 
+      got successfully copied. If this is the case, all reductions made in the copy can be transformed into 
+      original instance. The problem defining objects in SCIP are the constraint handlers and the variable pricers.
     </p>
           <!-- FAQ Punkt: Verhaeltnis zu CPLEX callable library, concert, Coin... ????????? -->
 </div>
