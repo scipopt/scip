@@ -111,6 +111,14 @@
         <h3><a name="contributors">Contributors</a></h3>
 
     	<table class="desc">
+           <tr>
+	      <td>
+		 Livio Bertacco
+	      </td>
+	      <td>
+                 Interface to <a href="http://www.dashoptimization.com/home/products/products_optimizer.html">FICO/Xpress</a>
+	      </td>
+	    </tr>
             <tr>
 	      <td>
                 <a href=" http://www.math.tu-berlin.de/coga/people/bley/">Andreas Bley</a>
