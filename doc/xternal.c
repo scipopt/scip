@@ -29,7 +29,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
- * @version  2.0.0b
+ * @version  2.0.0c
  *
  * <b>SCIP Authors:</b>
  * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
