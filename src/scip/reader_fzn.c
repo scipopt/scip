@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.59 2010/09/27 17:20:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.60 2010/09/28 21:18:41 bzfheinz Exp $"
 
-/**@file   reader_fzn.h
+/**@file   reader_fzn.c
  * @ingroup FILEREADERS 
  * @brief  FlatZinc file reader
  * @author Timo Berthold
