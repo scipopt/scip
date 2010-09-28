@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.11 2010/09/15 16:17:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.12 2010/09/28 09:42:28 bzfviger Exp $"
 
 /**@file    exprinterpret_none.c
  * @brief   function definitions for nonexisting expression interpreter to resolve linking references
@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPexprintCompile(
    SCIP_EXPRTREE*        tree                /**< expression tree */
    )
 {
-   return SCIP_PLUGINNOTFOUND;
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** frees interpreter data */
@@ -91,7 +91,10 @@ SCIP_RETCODE SCIPexprintFreeData(
    SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
    )
 {
-   return SCIP_PLUGINNOTFOUND;
+   assert(interpreterdata  != NULL);
+   assert(*interpreterdata == NULL);
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** notify expression interpreter that a new parameterization is used
