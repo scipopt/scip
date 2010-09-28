@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.213 2010/09/25 18:27:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.214 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -7440,7 +7440,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
          }
       }
    }
-
+   
    /* NOTE: It might be the case that capsum < consdata->capacity. This is due the fact that the fixing of the variable
     *       to zero can included negated clique information. A negated clique means, that at most one of the clique
     *       variables can be zero. These information can be used to compute a minimum activity of the constraint and
@@ -7542,7 +7542,7 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
    /* copy the logic using the linear constraint copy method */
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, coefs,
          -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap, consmap, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL);
 
    SCIPfreeBufferArray(scip, &coefs);

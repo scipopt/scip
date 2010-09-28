@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.43 2010/09/24 10:26:20 bzfschwa Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.44 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1765,9 +1765,9 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    int nvars;
    int v;
    
-   assert(success != NULL);
+   assert(valid != NULL);
    
-   *success = TRUE;
+   *valid = TRUE;
 
    /* get source data */
    sourcevars = SCIPgetVarsBounddisjunction(sourcescip, sourcecons);

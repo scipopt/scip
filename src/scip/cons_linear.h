@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.67 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.68 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -152,7 +152,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store if the copying was successfully */
+   SCIP_Bool*            valid               /**< pointer to store if the copying was valid */
    );
 
 /** adds coefficient to linear constraint (if it is not zero) */

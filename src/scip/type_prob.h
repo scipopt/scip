@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.24 2010/09/17 16:33:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.25 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   type_prob.h
  * @ingroup TYPEDEFINITIONS
@@ -112,13 +112,15 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
 
 /** copies user data of source SCIP for the target SCIP
  *
- *  This method should copy the problem data of the source SCIP and create a target problem data for
- *  (target) SCIP. Implementing this callback is optional. If it is implemented, however, the copying
- *  process has to be always successful.
+ *  This method should copy the problem data of the source SCIP and create a target problem data for (target)
+ *  SCIP. Implementing this callback is optional. If the copying process was successful the target SCIP gets this
+ *  problem data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target SCIP will have no problem data
+ *  at all.
  *
  *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
  *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
- *  SCIP. You should be very carefully in using these two methods since they could lead to an infinite loop.
+ *  SCIP. You should be very carefully in using these two methods since they could lead to an infinite loop due to
+ *  recursion.
  *
  *  input:
  *  - scip            : target SCIP data structure

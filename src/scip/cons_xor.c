@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.83 2010/09/18 19:07:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.84 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -2287,7 +2287,7 @@ SCIP_DECL_CONSCOPY(consCopyXor)
    assert(sourcescip != NULL);
    assert(sourcecons != NULL);
 
-   (*success) = TRUE;
+   (*valid) = TRUE;
 
    /* get variables and coefficients of the source constraint */
    sourcevars = SCIPgetVarsXor(sourcescip, sourcecons);

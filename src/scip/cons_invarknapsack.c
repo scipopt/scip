@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.49 2010/09/10 14:39:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.50 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_invarknapsack.c
  * @ingroup CONSHDLRS 
@@ -433,7 +433,7 @@ SCIP_DECL_CONSCOPY(consCopyInvarknapsack)
    SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
-   *success = FALSE;
+   *valid = FALSE;
 
    return SCIP_OKAY;
 }

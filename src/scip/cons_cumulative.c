@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.17 2010/09/25 18:27:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.18 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -6320,7 +6320,7 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    nvars = sourceconsdata->nvars;
    sourcevars = sourceconsdata->vars;
 
-   (*success) = TRUE;
+   (*valid) = TRUE;
    
    if( nvars == 0 )
       return SCIP_OKAY;

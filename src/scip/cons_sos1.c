@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.41 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.42 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS
@@ -1755,7 +1755,7 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    assert( sourcecons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
 
-   *success = TRUE;
+   *valid = TRUE;
 
    if ( name != NULL )
       consname = name;

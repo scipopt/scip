@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.86 2010/09/25 18:27:49 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.87 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -1326,67 +1326,6 @@ SCIP_RETCODE upgradeCons(
    return SCIP_OKAY;
 }
 
-/* maps a binary variable of source SCIP to corresponding variable in the target SCIP */
-static
-SCIP_RETCODE mapVariable(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            repvar,             /**< pointer to store the corresponding variable in the target SCIP */
-   SCIP*                 sourcescip,         /**< SCIP data structure of the source SCIP */
-   SCIP_VAR*             var,                /**< source variable of source SCIP */
-   SCIP_HASHMAP*         varmap,             /**< mapping variables of the source SCIP to corresponding variables of the
-                                              *   target SCIP */
-   SCIP_Bool*            success             /**< pointer to store whether the mapping  was successful or not */
-   )
-{
-   SCIP_Bool negated;
-   
-   assert(scip != NULL);
-   assert(repvar != NULL);
-   assert(sourcescip != NULL);
-   assert(var != NULL);
-   assert(varmap != NULL);
-   assert(success != NULL);
-   assert(*success == TRUE);
-
-   *repvar = NULL;
-
-   SCIP_CALL( SCIPgetBinvarRepresentative(sourcescip, var, &var, &negated) );
-   
-   switch( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_NEGATED:
-      /* returnsform a negated variable to an active variable */
-      SCIP_CALL( SCIPgetNegatedVar(sourcescip, var, &var) );
-      negated = !negated;
-      /*lint -fallthrough*/
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      /* get corresponding variable in the target SCIP */
-      (*repvar) = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
-      
-      /* if there does not exist a corresponding variable, return */
-      if( (*repvar) == NULL )
-      {
-         (*success) = FALSE;
-         return SCIP_OKAY;
-      }
-      
-      /* if the relationship is negated, get the negated variable */
-      if( negated )
-         SCIP_CALL( SCIPgetNegatedVar(scip, *repvar, repvar) );
-      break;
-   case SCIP_VARSTATUS_MULTAGGR:
-      /* it is not clear how to handle muliaggr variables; therefore, stop copying */
-      (*success) = FALSE;
-      break;
-   default:
-      SCIPerrorMessage("invalid variable status\n");
-      return SCIP_INVALIDDATA;
-   }  /*lint !e788*/
-   
-   return SCIP_OKAY;
-}
 
 /*
  * Callback methods of constraint handler
@@ -1864,16 +1803,13 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    int nvars;
    int v;
 
-   assert(success != NULL);
-
-   (*success) = TRUE;
+   assert(valid != NULL);
+   (*valid) = TRUE;
    
    sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons);
 
    /* map resultant to active variable of the target SCIP  */
-   SCIP_CALL( mapVariable(scip, &resvar, sourcescip, sourceresvar, varmap, success) );
-   if( !(*success) )
-      return SCIP_OKAY;
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global) );
    
    /* map operand variables to active variables of the target SCIP  */
    sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
@@ -1882,17 +1818,16 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    
-   for( v = 0; v < nvars && (*success); ++v )
+   for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( mapVariable(scip, &vars[v], sourcescip, sourcevars[v], varmap, success) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global) );
    }
    
-   if( *success )
-   {
-      SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   }
-      
+   SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   
+   *valid = TRUE;
+   
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
    

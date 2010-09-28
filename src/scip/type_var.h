@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.28 2010/09/10 18:15:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.29 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   type_var.h
  * @ingroup TYPEDEFINITIONS
@@ -137,7 +137,9 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
 /** copies variable data of source SCIP variable for the target SCIP variable
  *
  *  This method should copy the variable data of the source SCIP and create a target variable data for target
- *  variable. This callback is optimal. If it is implemented, however, to copying process has to be always successfully.
+ *  variable. This callback is optimal. If the copying process was successful the target variable gets this variable
+ *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target variable will have no variable data at
+ *  all.
  *
  *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
  *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target

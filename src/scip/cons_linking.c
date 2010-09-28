@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.17 2010/09/27 17:20:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.18 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -2701,14 +2701,11 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    SCIP_CONSDATA* sourceconsdata;
    SCIP_VAR** binvars;
    SCIP_VAR* intvar;
+   const char* consname;
    int offset;
    int nbinvars;
-   int size;
-   
-   SCIP_Real coef;
-   SCIP_Real constant;
-   int requiredsize;
    int v;
+   
    
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) != 0 )
    {
@@ -2716,7 +2713,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
       SCIPABORT();
    }
 
-   (*success) = TRUE;
+   (*valid) = TRUE;
    
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert(sourceconsdata != NULL);
@@ -2734,95 +2731,22 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    else
       binvars = NULL;
    
-   coef = 1.0;
-   constant = 0.0;
-   size = 1;
-   
-   if( SCIPisTransformed(sourcescip) )
+   /* get copy for the binary variables */
+   for( v = 0; v < nbinvars; ++v )
    {
-      SCIP_Bool negated;
-
-      /* convert the binary variable into active variables and map this active variable to counter part in the target
-       * SCIP */
-      for( v = 0; v < nbinvars && *success; ++v )
-      {
-         SCIP_CALL( SCIPgetBinvarRepresentative(sourcescip, binvars[v], &binvars[v], &negated)  );
-         assert(!negated);
-         
-         binvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, binvars[v]);
-         
-         if( binvars[v] == NULL )
-            (*success) = FALSE;
-      }
-      
-      if( *success )
-      {
-         /* convert the integer variable into an active variable and map this variable to the counter part in the target SCIP */
-         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, &intvar, &coef, &size, size, &constant, &requiredsize, TRUE) );
-      
-         if(requiredsize == 1 && SCIPisEQ(scip, coef, 1.0) && SCIPisZero(scip, constant) )
-         {
-            assert(SCIPisZero(scip, constant));
-            intvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, intvar);
-
-            if( intvar == NULL )
-               (*success) = FALSE;
-         }
-         else
-            (*success) = FALSE;
-      }
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, binvars[v], &binvars[v], varmap, consmap, global) );
    }
+      
+   /* copy the integer variables */
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &intvar, varmap, consmap, global) );
+   
+   if( name != NULL )
+      consname = name;
    else
-   {
-      /* convert the binary variable into active variables and map this active variable to counter part in the target SCIP */
-      for( v = 0; v < nbinvars; ++v )
-      {
-         SCIP_CALL( SCIPvarGetOrigvarSum(&binvars[v], &coef, &constant) );
-
-         if( !SCIPisEQ(scip, coef, 1.0) || !SCIPisZero(scip, constant) ) 
-         {
-            (*success) = FALSE;
-            break;
-         }
-
-         binvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, binvars[v]);
-         
-         if( binvars[v] == NULL )
-         {
-            (*success) = FALSE;
-            break;
-         }
-      }
-      
-      if( *success )
-      {
-         /* convert the integer variable into an active variable and map this variable to the counter part in the target SCIP */
-         SCIP_CALL( SCIPvarGetOrigvarSum(&intvar, &coef, &constant) );
-
-         if( !SCIPisEQ(scip, coef, 1.0) || !SCIPisZero(scip, constant) ) 
-            (*success) = FALSE;
-         else
-         {
-	    intvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, intvar);
-
-            if( intvar == NULL )
-               (*success) = FALSE;
-         }
-      }
-   }
+      consname = SCIPconsGetName(sourcecons);
    
-   if( *success )
-   {      
-      const char* consname;
-
-      if( name != NULL )
-         consname = name;
-      else
-         consname = SCIPconsGetName(sourcecons);
-
-      SCIP_CALL( SCIPcreateConsLinking(scip, cons, consname, intvar, binvars, nbinvars, offset,  
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   }
+   SCIP_CALL( SCIPcreateConsLinking(scip, cons, consname, intvar, binvars, nbinvars, offset,  
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    
    /* free buffer array */
    if( nbinvars > 0 )

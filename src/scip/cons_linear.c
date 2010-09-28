@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.388 2010/09/24 01:45:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.389 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9554,7 +9554,7 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
 
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
          SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap, consmap, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL);
 
    return SCIP_OKAY;
@@ -10372,7 +10372,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store if the copying was successfully */
+   SCIP_Bool*            valid               /**< pointer to store if the copying was valid */
    )
 {
    SCIP_VAR** vars;
@@ -10382,7 +10382,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    int requiredsize;
    int v;
 
-   (*success) = TRUE;
+   (*valid) = TRUE;
 
    if( nvars == 0 )
    {

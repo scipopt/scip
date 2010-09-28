@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.64 2010/09/10 13:58:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.65 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -43,7 +43,13 @@ typedef struct SCIP_ConsData SCIP_CONSDATA;       /**< locally defined constrain
 typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins)
- *
+ * 
+ *  If the copy process was a one to one the valid pointer can set to TRUE. Otherwise, you have to set this pointer to
+ *  FALSE. In case all problem defining objects (constraint handlers and variable pricers) return a valid TRUE for all
+ *  their copying calls, SCIP assumes that it is a overall one to one copy of the original instance. In this case any
+ *  reductions made in the copied SCIP instance can be transfer to the original SCIP instance. If the valid pointer is
+ *  set to TRUE and it was not one to one copy, it might happen that optimal solutions are cut off.
+ *  
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
@@ -622,9 +628,15 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** constraint copying method of constraint handler
  *
- *  The constraint handler can provide a copy method which copy a constraint from one SCIP data structure into a other
- *  SCIP data structure. If a copy is created the constraint has to be captured (which usually already done due to the
- *  creation of the constraint).
+ *  The constraint handler can provide a copy method which copies a constraint from one SCIP data structure into a other
+ *  SCIP data structure. If a copy of a constraint is created the constraint has to be captured (The capture is usually
+ *  already done due to the creation of the constraint).
+ * 
+ *  If the copy process was a one to one the valid pointer can set to TRUE. Otherwise, you have to set this pointer to
+ *  FALSE. In case all problem defining objects (constraint handlers and variable pricers) return a valid TRUE for all
+ *  their copying calls, SCIP assumes that it is a overall one to one copy of the original instance. In this case any
+ *  reductions made in the copied SCIP instance can be transfer to the original SCIP instance. If the valid pointer is
+ *  set to TRUE and it was not one to one copy, it might happen that optimal solutions are cut off.
  *
  *  To get copy of variable in the target SCIP you should use the function SCIPgetVarCopy(). 
  *
@@ -651,13 +663,13 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - global          : should a global or a local copy be created?
  *
  *  output:
- *  - success         : pointer to store whether the copying was successful or not 
+ *  - valid           : pointer to store whether the copying was valid or not 
  */
 #define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS** cons, const char* name, \
       SCIP* sourcescip, SCIP_CONSHDLR* sourceconshdlr, SCIP_CONS* sourcecons, SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, \
       SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, \
       SCIP_Bool local, SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, \
-      SCIP_Bool global, SCIP_Bool* success)
+      SCIP_Bool global, SCIP_Bool* valid)
 
 /** constraint parsing method of constraint handler
  *

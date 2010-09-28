@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.21 2010/09/25 18:27:49 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.22 2010/09/28 20:07:56 bzfheinz Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1942,7 +1942,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( sourcecons != NULL );
    assert( varmap != NULL );
 
-   *success = TRUE;
+   *valid = TRUE;
 
    SCIPdebugMessage("Copying method for orbitope constraint handler.\n");
 
