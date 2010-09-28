@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event_xxx.h,v 1.2 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event_xxx.h,v 1.3 2010/09/28 16:32:53 bzfheinz Exp $"
 
-/**@file   event_xxx.c
+/**@file   event_xxx.h
  * @brief  eventhdlr for xxx event
  * @author Stefan Heinz
  */
