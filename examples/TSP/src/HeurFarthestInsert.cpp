@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.14 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.15 2010/09/28 20:22:48 bzfheinz Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -306,8 +306,8 @@ SCIP_RETCODE HeurFarthestInsert::scip_exec(
 
 	       // check, whether you have found a better (feasible) insertion
 	       if( edges[0]->back->length - edges[1]->length + edges[2]->back->length < min 
-		   && SCIPvarGetUbGlobal(edges[0]->var) != 0.0
-		   && SCIPvarGetUbGlobal(edges[2]->var) != 0.0 )
+                  && SCIPvarGetUbGlobal(edges[0]->var) != 0.0
+                  && SCIPvarGetUbGlobal(edges[2]->var) != 0.0 )
 	       {
 		  min = edges[0]->back->length - edges[1]->length + edges[2]->back->length;
 		  for( i = 0; i < 3; i++ )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ProbDataTSP.h,v 1.7 2010/09/22 13:37:16 bzfschwa Exp $"
+#pragma ident "@(#) $Id: ProbDataTSP.h,v 1.8 2010/09/28 20:22:48 bzfheinz Exp $"
 
 /**@file   ProbDataTSP.h
  * @brief  C++ problem data for TSP
@@ -41,7 +41,7 @@ public:
    ProbDataTSP(
       GRAPH*             g                   /**< graph data */
       )
-        : graph_(g)
+      : graph_(g)
    {
       capture_graph(graph_);
    }

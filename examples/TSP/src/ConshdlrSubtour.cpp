@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.23 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.24 2010/09/28 20:22:48 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -649,9 +649,9 @@ SCIP_RETCODE ConshdlrSubtour::scip_print(
 
 /** clone method which will be used to copy a objective plugin */
 ObjProbCloneable* ConshdlrSubtour::clone(
-         SCIP*           scip,               /**< SCIP data structure */
-         SCIP_Bool*      valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
-         ) const
+   SCIP*           scip,               /**< SCIP data structure */
+   SCIP_Bool*      valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+   ) const
 {
    *valid = true;
    return new ConshdlrSubtour(scip);
@@ -685,7 +685,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_copy(
    SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
 					   *   if it may be moved to a more global node? */
    SCIP_Bool          global,             /**< create a global or a local copy? */
-   SCIP_Bool*         success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*         valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    SCIP_CONSHDLR* conshdlr = NULL;
@@ -710,10 +710,10 @@ SCIP_RETCODE ConshdlrSubtour::scip_copy(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, (name == NULL) ? SCIPconsGetName(sourcecons) : name, 
-			     conshdlr, consdata, initial, separate, enforce, check, 
-			     propagate, local, modifiable, dynamic, removable, FALSE) );
+         conshdlr, consdata, initial, separate, enforce, check, 
+         propagate, local, modifiable, dynamic, removable, FALSE) );
 
-   *success = true;
+   *valid = true;
    return SCIP_OKAY;
 }
 

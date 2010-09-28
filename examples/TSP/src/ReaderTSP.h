@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.h,v 1.12 2010/09/22 16:50:42 bzfberth Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.h,v 1.13 2010/09/28 20:22:48 bzfheinz Exp $"
 
 /**@file   ReaderTSP.h
  * @brief  C++ file reader for TSP data files
@@ -45,9 +45,9 @@ public:
       : scip::ObjReader(scip, "tspreader", "file reader for TSP files", "tsp")
    {
       /* add TSP reader parameters */
-    SCIPaddBoolParam(scip,
-                  "reading/tspreader/round_lengths", "should lenghts of edges be rounded to nearest integer?", 
-       &round_lengths_, FALSE, TRUE, NULL, NULL);
+      SCIPaddBoolParam(scip,
+         "reading/tspreader/round_lengths", "should lenghts of edges be rounded to nearest integer?", 
+         &round_lengths_, FALSE, TRUE, NULL, NULL);
    }
 
    /** destructor */
@@ -138,9 +138,9 @@ private:
    
    /** adds a variable to both halfedges and captures it for usage in the graph */
    SCIP_RETCODE addVarToEdges(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPHEDGE*            edge,               /**< an edge of the graph */
-   SCIP_VAR*             var                 /**< variable corresponding to that edge */
+      SCIP*                 scip,               /**< SCIP data structure */
+      GRAPHEDGE*            edge,               /**< an edge of the graph */
+      SCIP_VAR*             var                 /**< variable corresponding to that edge */
       );
 
 };

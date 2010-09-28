@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.12 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.13 2010/09/28 20:22:48 bzfheinz Exp $"
 
 /**@file   Heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -214,10 +214,10 @@ SCIP_RETCODE Heur2opt::scip_exec(
              
       // if the new solution is better and variables are not fixed, update and end
       if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length 
-	  &&  SCIPvarGetLbGlobal(edges2test[0]->var) == 0.0
-	  &&  SCIPvarGetLbGlobal(edges2test[1]->var) == 0.0
-	  &&  SCIPvarGetUbGlobal(edges2test[2]->var) == 1.0
-	  &&  SCIPvarGetUbGlobal(edges2test[3]->var) == 1.0 )
+         &&  SCIPvarGetLbGlobal(edges2test[0]->var) == 0.0
+         &&  SCIPvarGetLbGlobal(edges2test[1]->var) == 0.0
+         &&  SCIPvarGetUbGlobal(edges2test[2]->var) == 1.0
+         &&  SCIPvarGetUbGlobal(edges2test[3]->var) == 1.0 )
       {
 
          SCIP_Bool success;

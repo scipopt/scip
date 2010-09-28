@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.17 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.18 2010/09/28 20:22:48 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
@@ -334,50 +334,50 @@ public:
       FILE*              file                /**< the text file to store the information into */
       );
 
-      /** returns whether the objective plugin is copyable */
-      virtual SCIP_Bool iscloneable(
-         void
-         ) const
-      {
-         return true;
-      }
+   /** returns whether the objective plugin is copyable */
+   virtual SCIP_Bool iscloneable(
+      void
+      ) const
+   {
+      return true;
+   }
 
-      /** clone method which will be used to copy a objective plugin */
-      virtual ObjProbCloneable* clone(
-         SCIP*           scip,               /**< SCIP data structure */
-         SCIP_Bool*      valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
-         ) const;
+   /** clone method which will be used to copy a objective plugin */
+   virtual ObjProbCloneable* clone(
+      SCIP*           scip,               /**< SCIP data structure */
+      SCIP_Bool*      valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
+      ) const;
 
-      /** constraint copying method of constraint handler
-       *
-       *  The constraint handler can provide a copy method, which copies a constraint from one SCIP data structure into a other
-       *  SCIP data structure.
-       */
-      virtual SCIP_RETCODE scip_copy(
-	 SCIP*              scip,               /**< target SCIP data structure */
-	 SCIP_CONS**        cons,               /**< pointer to store the created target constraint */
-	 const char*        name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
-	 SCIP*              sourcescip,         /**< source SCIP data structure */
-	 SCIP_CONSHDLR*     sourceconshdlr,     /**< source constraint handler of the source SCIP */
-	 SCIP_CONS*         sourcecons,         /**< source constraint of the source SCIP */
-	 SCIP_HASHMAP*      varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
-						 *   variables of the target SCIP */
-	 SCIP_HASHMAP*      consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-						 *   target constraints, or NULL */
-	 SCIP_Bool          initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-	 SCIP_Bool          separate,           /**< should the constraint be separated during LP processing? */
-	 SCIP_Bool          enforce,            /**< should the constraint be enforced during node processing? */
-	 SCIP_Bool          check,              /**< should the constraint be checked for feasibility? */
-	 SCIP_Bool          propagate,          /**< should the constraint be propagated during node processing? */
-	 SCIP_Bool          local,              /**< is constraint only valid locally? */
-	 SCIP_Bool          modifiable,         /**< is constraint modifiable (subject to column generation)? */
-	 SCIP_Bool          dynamic,            /**< is constraint subject to aging? */
-	 SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
-	 SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
-						 *   if it may be moved to a more global node? */
-	 SCIP_Bool          global,             /**< create a global or a local copy? */
-	 SCIP_Bool*         success             /**< pointer to store whether the copying was successful or not */
-	 );
+   /** constraint copying method of constraint handler
+    *
+    *  The constraint handler can provide a copy method, which copies a constraint from one SCIP data structure into a other
+    *  SCIP data structure.
+    */
+   virtual SCIP_RETCODE scip_copy(
+      SCIP*              scip,               /**< target SCIP data structure */
+      SCIP_CONS**        cons,               /**< pointer to store the created target constraint */
+      const char*        name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
+      SCIP*              sourcescip,         /**< source SCIP data structure */
+      SCIP_CONSHDLR*     sourceconshdlr,     /**< source constraint handler of the source SCIP */
+      SCIP_CONS*         sourcecons,         /**< source constraint of the source SCIP */
+      SCIP_HASHMAP*      varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                              *   variables of the target SCIP */
+      SCIP_HASHMAP*      consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+      SCIP_Bool          initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+      SCIP_Bool          separate,           /**< should the constraint be separated during LP processing? */
+      SCIP_Bool          enforce,            /**< should the constraint be enforced during node processing? */
+      SCIP_Bool          check,              /**< should the constraint be checked for feasibility? */
+      SCIP_Bool          propagate,          /**< should the constraint be propagated during node processing? */
+      SCIP_Bool          local,              /**< is constraint only valid locally? */
+      SCIP_Bool          modifiable,         /**< is constraint modifiable (subject to column generation)? */
+      SCIP_Bool          dynamic,            /**< is constraint subject to aging? */
+      SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+      SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
+      SCIP_Bool          global,             /**< create a global or a local copy? */
+      SCIP_Bool*         valid               /**< pointer to store whether the copying was valid or not */
+      );
 };
 
 /** creates and captures a TSP subtour constraint */
@@ -398,6 +398,5 @@ SCIP_RETCODE SCIPcreateConsSubtour(
    );
 
 }
-
 
 #endif
