@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.26 2010/09/24 07:28:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.27 2010/09/28 00:35:46 bzfwinkm Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1837,7 +1837,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    invalidateHessianLagSparsity(oracle);
    
    lastgood = oracle->nvars - 1;
-   while( lastgood >= 0 && delstats[lastgood] == 1)
+   while( lastgood >= 0 && delstats[lastgood] == 1 )
       --lastgood;
    if( lastgood < 0 )
    { /* all variables should be deleted */

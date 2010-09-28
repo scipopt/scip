@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.127 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.128 2010/09/28 00:35:46 bzfwinkm Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -2670,7 +2670,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    SCIPdebugMessage("pasre <%s> as and constraint\n", str);
 
    /* copy string for truncating it */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, strlen(str)+1));
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
 
    /* cutoff "and" form the constraint string */
    token = SCIPstrtok(strcopy, "=", &saveptr ); 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.99 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.100 2010/09/28 00:35:46 bzfwinkm Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1980,8 +1980,13 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             SCIP_Real minbrpoint;
             SCIP_Real maxbrpoint;
             SCIP_Real scale;
+            SCIP_Real lbabs;
+            SCIP_Real ubabs;
 
-            scale = MAX3(REALABS(lb), REALABS(ub), 1.0);
+            lbabs = REALABS(lb);
+            ubabs = REALABS(ub);
+
+            scale = MAX3(lbabs, ubabs, 1.0);
 
             /* the minimal branching point should be
              * - set->clamp away from the lower bound - relative to the local domain size
@@ -2009,15 +2014,21 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       }
       else if( !SCIPsetIsRelLT(set, lb, branchpoint) )
       {
+         SCIP_Real lbabs;
+
          /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound */
          assert(SCIPsetIsInfinity(set,  ub));
-         branchpoint = lb + MAX(0.5*REALABS(lb), 1000);  /*lint !e666*/
+         lbabs = REALABS(lb);
+         branchpoint = lb + MAX(0.5 * lbabs, 1000);
       }
       else if( !SCIPsetIsGT(set, ub, branchpoint) )
       { 
+         SCIP_Real ubabs;
+
          /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound */
          assert(SCIPsetIsInfinity(set, -lb));
-         branchpoint = ub - MAX(0.5*REALABS(ub), 1000);  /*lint !e666*/
+         ubabs = REALABS(ub);
+         branchpoint = ub - MAX(0.5 * ubabs, 1000);
       }
 
       return branchpoint;
