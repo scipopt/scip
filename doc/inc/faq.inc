@@ -653,8 +653,19 @@
       event handler, catch the corresponding events of the variable, and in the event handler's 
       execution method adjust the data structures of your pricer accordingly.
     </p>
+
     <p class="q">
-      <a name="Q36">My pricer generates the same column twice. How can I solve this problem?</a>
+      <a name="Q36">How can I add locally valid variables to the problem in my branch-and-price code?</a>
+    </p>
+    <p class="a">
+      Variables in SCIP are always added globally. If you want to add them locally, because they are forbidden
+      in another part of the branch-and-bound-tree, you should look to it that they are locally fixed to 0
+      in all subtrees where they are not valid. A description of how this can be done is given <a href="#Q34">here</a>.
+    </p>
+
+
+    <p class="q">
+      <a name="Q37">My pricer generates the same column twice. How can I solve this problem?</a>
     </p>
     <p class="a">
       First check whether your pricing is correct. Are there upper bounds on variables that you have forgotten to take
@@ -675,8 +686,9 @@
       find some more information about the PRICER_DELAY property at <a
       href="http://scip.zib.de/doc/html/PRICER.html#PRICER_PROPERTIES">How to add variable pricers </a>.
     </p>
+
     <p class="q">
-      <a name="Q37">Which default plugins should be deactivated in order to get a working branch-and price code?</a>
+      <a name="Q38">Which default plugins should be deactivated in order to get a working branch-and price code?</a>
     </p>
     <p class="a">
       In most cases, you should deactivate separators, since cutting planes that are added to your master problem may
@@ -687,9 +699,56 @@
       maxrounds to zero for the presolvers.
     </p>
 
+    <p class="q">
+      <a name="Q39">What are the lazy bounds for variables in SCIP and what do I need them for?</a>
+    </p>
+    <p class="a">
+      In many Branch-and-Price applications, you have binary variables, but you do not want to impose
+      upper bounds on these variables in the LP relaxation, because the upper bound is implicitly enforced
+      by the problem contraints, anyway. If the upper bounds are explicitly added to the LP, they lead to 
+      further dual variables, which may be hard to take into account in the pricing problem.
+    </p>
+    <p class="a">  
+      There are two possibilities how to solve this problem. First, you could change the binary variables 
+      to general integer variables, if this does not change the problem. However, if you use special linear 
+      constraints like set partitioning/packing/covering, you can only add binary variables to these constraints. 
+    </p>
+    <p class="a">  
+      In order to still allow the usage of these types of constraints in a branch-and-price approach, the 
+      concept of lazy bounds was introduced in SCIP 2.0.
+      For each variable, you can define lazy upper and lower bounds, i.e. bounds, that are implicitly enforced by
+      constraints in the problem. SCIP adds variable bounds to the LP only if the bound is tighter than the 
+      corresponding lazy bound. In order to use lazy bounds, you have to make sure, however, that each feasible
+      LP solution respects these bounds (even non-optimal LP solutions).
+    </p>
+    <p class="a">  
+      For instance, if you have set partioning constraints in your problem, you can define variables contained in these
+      constraints as binary and set the lazy upper bound to 1, which allows you to use the better propagation methods
+      of the setppc constraint handler compared to the linear constraint handler without taking care about upper 
+      bounds on variables in the master.
+    </p>
+
+    <p class="q">
+      <a name="Q40">Can I stop the pricing process before the master problem is solved to optimality?</a>
+    </p>
+    <p class="a">
+      In a column generation approach, you usually have to solve the master problem to optimality since otherwise,
+      its objective function value is no valid dual bound. However, there is a way in SCIP to
+      stop the pricing process earlier, called "early branching".
+    </p>
+    <p class="a">  
+      The reduced cost pricing method of a pricer has a result pointer that should be set each time the method is called.
+      In the usual case that the pricer either adds a new variable or ensures that there are no further 
+      variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS. 
+      If the pricer aborts pricing without creating a new variable, but there might exist additional 
+      variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN. 
+      In this case, the lp solution will not be used as a lower bound. 
+      The pricer can, however, store a valid lower bound in the lowerbound pointer.
+    </p>
+
 <h4><a name="Section6">Specific questions about the copy functionality in SCIP</a></h4>
     <p class="q">
-      <a name="Q38">What is <code>SCIPcopy()</code>?</a>
+      <a name="Q41">What is <code>SCIPcopy()</code>?</a>
     </p>
     <p class="a">
       The functionality of copying a SCIP model is added to the SCIP version 2.0.0. It gives the possibility to 
@@ -698,7 +757,7 @@
       set of variables and work therefore on a reasonable copy of the original problem.
     </p>
     <p class="q">
-      <a name="Q39">How do I get a copy of a variable or a constraint</code>?</a>
+      <a name="Q42">How do I get a copy of a variable or a constraint</code>?</a>
     </p>
     <p class="a">
       For the variables and constraints there are the methods <code>SCIPgetVarCopy()</code> and 
@@ -713,5 +772,6 @@
       original instance. The problem defining objects in SCIP are the constraint handlers and the variable pricers.
     </p>
           <!-- FAQ Punkt: Verhaeltnis zu CPLEX callable library, concert, Coin... ????????? -->
+          <!-- VBC tool, visualisierung ????????? -->
 </div>
 
