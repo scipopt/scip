@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.h,v 1.20 2010/09/17 16:30:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objvardata.h,v 1.21 2010/09/28 20:26:04 bzfheinz Exp $"
 
 /**@file   objvardata.h
  * @brief  C++ wrapper for user variable data
@@ -113,14 +113,15 @@ public:
 
    /** copies variable data of source SCIP variable for the target SCIP variable
     *
-    *  This method should copy the variable data of the source SCIP and create a target variable
-    *  data for target variable. The implementation of this callback is optional. If it is
-    *  implemented, however, to copying process has to be always successful.
+    *  This method should copy the variable data of the source SCIP and create a target variable data for target
+    *  variable. This callback is optimal. If the copying process was successful the target variable gets this variable
+    *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target variable will have no variable data at
+    *  all.
     *
     *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
     *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
-    *  SCIP. You should be very carefully in using these two methods since they could lead to an infinite loop.
-    *
+    *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+    *  
     *  possible return values for *result:
     *  - SCIP_DIDNOTRUN  : the copying process was not performed 
     *  - SCIP_SUCCESS    : the copying process was successfully performed

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.67 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.68 2010/09/28 20:26:04 bzfheinz Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -730,8 +730,17 @@ public:
 
    /** constraint copying method of constraint handler
     *
-    *  The constraint handler can provide a copy method, which copies a constraint from one SCIP data structure into a other
-    *  SCIP data structure.
+    *  The constraint handler can provide a copy method which copies a constraint from one SCIP data structure into a other
+    *  SCIP data structure. If a copy of a constraint is created the constraint has to be captured (The capture is usually
+    *  already done due to the creation of the constraint).
+    * 
+    *  If the copy process was a one to one the valid pointer can set to TRUE. Otherwise, you have to set this pointer to
+    *  FALSE. In case all problem defining objects (constraint handlers and variable pricers) return a valid TRUE for all
+    *  their copying calls, SCIP assumes that it is a overall one to one copy of the original instance. In this case any
+    *  reductions made in the copied SCIP instance can be transfer to the original SCIP instance. If the valid pointer is
+    *  set to TRUE and it was not one to one copy, it might happen that optimal solutions are cut off.
+    *
+    *  To get copy of variable in the target SCIP you should use the function SCIPgetVarCopy(). 
     */
    virtual SCIP_RETCODE scip_copy(
       SCIP*              scip,               /**< target SCIP data structure */
@@ -756,9 +765,10 @@ public:
       SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
       SCIP_Bool          global,             /**< create a global or a local copy? */
-      SCIP_Bool*         success             /**< pointer to store whether the copying was successful or not */
+      SCIP_Bool*         valid               /**< pointer to store whether the copying was valid or not */
       )
    {  /*lint --e{715}*/
+      *valid = FALSE;
       return SCIP_OKAY;
    }
    

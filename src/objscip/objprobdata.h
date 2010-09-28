@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.27 2010/09/17 17:02:23 bzfschwa Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.28 2010/09/28 20:26:04 bzfheinz Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -135,13 +135,15 @@ public:
 
    /** copies user data of source SCIP for the target SCIP
     *
-    *  This method should copy the problem data of the source SCIP and create a target problem data for the
-    *  (target) SCIP. This callback is optional. If it is implemented, however, the copying process always has
-    *  to be successful.
+    *  This method should copy the problem data of the source SCIP and create a target problem data for (target)
+    *  SCIP. Implementing this callback is optional. If the copying process was successful the target SCIP gets this
+    *  problem data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target SCIP will have no problem data
+    *  at all.
     *
     *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
     *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
-    *  SCIP. You should be very careful in using these two methods since they could lead to infinite loops.
+    *  SCIP. You should be very carefully in using these two methods since they could lead to an infinite loop due to
+    *  recursion.
     *
     *  possible return values for *result:
     *  - SCIP_DIDNOTRUN  : the copying process was not performed 
