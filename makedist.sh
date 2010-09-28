@@ -26,6 +26,8 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/* $NAME/doc/inc/faq.inc $NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc \
+$NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
+$NAME/doc/inc/parameters.set \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_blis.sh $NAME/check/evalcheck_blis.sh $NAME/check/check_blis.awk \
