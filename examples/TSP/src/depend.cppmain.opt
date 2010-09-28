@@ -46,35 +46,35 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- ../../src/objscip/objscipdefplugins.h ../../src/scip/scipdefplugins.h \
- ../../src/scip/branch_allfullstrong.h ../../src/scip/branch_fullstrong.h \
- ../../src/scip/branch_inference.h ../../src/scip/branch_mostinf.h \
- ../../src/scip/branch_leastinf.h ../../src/scip/branch_pscost.h \
- ../../src/scip/branch_random.h ../../src/scip/branch_relpscost.h \
- ../../src/scip/cons_and.h ../../src/scip/cons_bounddisjunction.h \
- ../../src/scip/cons_conjunction.h ../../src/scip/cons_countsols.h \
- ../../src/scip/cons_cumulative.h ../../src/scip/cons_indicator.h \
- ../../src/scip/cons_integral.h ../../src/scip/cons_knapsack.h \
- ../../src/scip/cons_linear.h ../../src/scip/cons_linking.h \
- ../../src/scip/cons_logicor.h ../../src/scip/cons_or.h \
- ../../src/scip/cons_orbitope.h ../../src/scip/cons_quadratic.h \
- ../../src/scip/cons_setppc.h ../../src/scip/cons_sos1.h \
- ../../src/scip/cons_sos2.h ../../src/scip/cons_soc.h \
- ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
- ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
- ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_coefdiving.h \
- ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
- ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
- ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
- ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
- ../../src/scip/heur_linesearchdiving.h \
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h ../../src/objscip/objscipdefplugins.h \
+ ../../src/scip/scipdefplugins.h ../../src/scip/branch_allfullstrong.h \
+ ../../src/scip/branch_fullstrong.h ../../src/scip/branch_inference.h \
+ ../../src/scip/branch_mostinf.h ../../src/scip/branch_leastinf.h \
+ ../../src/scip/branch_pscost.h ../../src/scip/branch_random.h \
+ ../../src/scip/branch_relpscost.h ../../src/scip/cons_and.h \
+ ../../src/scip/cons_bounddisjunction.h ../../src/scip/cons_conjunction.h \
+ ../../src/scip/cons_countsols.h ../../src/scip/cons_cumulative.h \
+ ../../src/scip/cons_indicator.h ../../src/scip/cons_integral.h \
+ ../../src/scip/cons_knapsack.h ../../src/scip/cons_linear.h \
+ ../../src/scip/cons_linking.h ../../src/scip/cons_logicor.h \
+ ../../src/scip/cons_or.h ../../src/scip/cons_orbitope.h \
+ ../../src/scip/cons_quadratic.h ../../src/scip/cons_setppc.h \
+ ../../src/scip/cons_sos1.h ../../src/scip/cons_sos2.h \
+ ../../src/scip/cons_soc.h ../../src/scip/cons_varbound.h \
+ ../../src/scip/cons_xor.h ../../src/scip/dialog_default.h \
+ ../../src/scip/disp_default.h ../../src/scip/heur_actconsdiving.h \
+ ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
+ ../../src/scip/heur_dins.h ../../src/scip/heur_feaspump.h \
+ ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
+ ../../src/scip/heur_guideddiving.h ../../src/scip/heur_intdiving.h \
+ ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_objpscostdiving.h ../../src/scip/heur_octane.h \
  ../../src/scip/heur_oneopt.h ../../src/scip/heur_pscostdiving.h \
@@ -158,14 +158,15 @@ $(OBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- src/GomoryHuTree.h src/ProbDataTSP.h ../../src/scip/cons_linear.h
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h src/GomoryHuTree.h src/ProbDataTSP.h \
+ ../../src/scip/cons_linear.h
 $(OBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -214,14 +215,14 @@ $(OBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- src/ProbDataTSP.h src/GomoryHuTree.h
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h src/ProbDataTSP.h src/GomoryHuTree.h
 $(OBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -270,15 +271,16 @@ $(OBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- ../../src/scip/cons_linear.h src/ReaderTSP.h src/GomoryHuTree.h \
- src/ProbDataTSP.h src/ConshdlrSubtour.h
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h ../../src/scip/cons_linear.h \
+ src/ReaderTSP.h src/GomoryHuTree.h src/ProbDataTSP.h \
+ src/ConshdlrSubtour.h
 $(OBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -327,14 +329,14 @@ $(OBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- src/GomoryHuTree.h
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h src/GomoryHuTree.h
 $(OBJDIR)/EventhdlrNewSol.o: src/EventhdlrNewSol.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -383,14 +385,15 @@ $(OBJDIR)/EventhdlrNewSol.o: src/EventhdlrNewSol.cpp ../../src/objscip/objscip.h
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- src/EventhdlrNewSol.h src/ProbDataTSP.h src/GomoryHuTree.h
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h src/EventhdlrNewSol.h src/ProbDataTSP.h \
+ src/GomoryHuTree.h
 $(OBJDIR)/HeurFarthestInsert.o: src/HeurFarthestInsert.cpp \
  ../../src/objscip/objscip.h ../../src/objscip/objbranchrule.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -439,14 +442,15 @@ $(OBJDIR)/HeurFarthestInsert.o: src/HeurFarthestInsert.cpp \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- src/GomoryHuTree.h src/HeurFarthestInsert.h src/ProbDataTSP.h
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h src/GomoryHuTree.h \
+ src/HeurFarthestInsert.h src/ProbDataTSP.h
 $(OBJDIR)/HeurFrats.o: src/HeurFrats.cpp src/HeurFrats.h \
  ../../src/objscip/objheur.h ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/type_retcode.h ../../src/scip/message.h \
@@ -495,14 +499,14 @@ $(OBJDIR)/HeurFrats.o: src/HeurFrats.cpp src/HeurFrats.h \
  ../../src/scip/struct_set.h ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h src/GomoryHuTree.h \
  ../../src/objscip/objscip.h ../../src/objscip/objbranchrule.h \
- ../../src/objscip/objconshdlr.h ../../src/objscip/objdialog.h \
- ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- src/ProbDataTSP.h
+ ../../src/objscip/objconshdlr.h ../../src/objscip/objprobcloneable.h \
+ ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
+ ../../src/objscip/objeventhdlr.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h src/ProbDataTSP.h
 $(OBJDIR)/Heur2opt.o: src/Heur2opt.cpp ../../src/objscip/objscip.h \
  ../../src/objscip/objbranchrule.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -551,11 +555,12 @@ $(OBJDIR)/Heur2opt.o: src/Heur2opt.cpp ../../src/objscip/objscip.h \
  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
  ../../src/scip/tree.h ../../src/scip/misc.h \
  ../../src/objscip/objcloneable.h ../../src/objscip/objconshdlr.h \
- ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
- ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
- ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
- ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
- ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
- ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
- ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
- src/GomoryHuTree.h src/Heur2opt.h src/ProbDataTSP.h
+ ../../src/objscip/objprobcloneable.h ../../src/objscip/objdialog.h \
+ ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
+ ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
+ ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
+ ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
+ ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
+ ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
+ ../../src/objscip/objvardata.h src/GomoryHuTree.h src/Heur2opt.h \
+ src/ProbDataTSP.h
