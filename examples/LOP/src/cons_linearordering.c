@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.14 2010/09/17 19:14:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.15 2010/09/28 20:09:44 bzfheinz Exp $"
 
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
@@ -1006,7 +1006,7 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
    assert( sourcecons != 0 );
    assert( varmap != 0 );
 
-   *success = TRUE;
+   *valid = TRUE;
 
    SCIPdebugMessage("Copying method for linear ordering constraint handler.\n");
 
