@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.102 2010/09/27 17:20:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.103 2010/09/28 17:18:10 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -2267,7 +2267,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          nsubnodes = 0;
 
          SCIP_CALL( solveSubproblem(scip, heur, coversize, cover, fixingvals,
-               timelimit, memorylimit, SCIP_LONGINT_MAX, nstallnodes, &solved, &sol, &nsubnodes) );
+               timelimit, memorylimit, 5*nstallnodes, nstallnodes, &solved, &sol, &nsubnodes) );
 
          /* update number of sub-CIP nodes used by heuristic so far */
          heurdata->nusednodes += nsubnodes;
