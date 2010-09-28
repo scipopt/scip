@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.682 2010/09/28 07:26:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.683 2010/09/28 07:58:35 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -18711,10 +18711,16 @@ void printConstraintTimingStatistics(
       maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
+         SCIP_Real totaltime;
+
+         totaltime = SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr) 
+            + SCIPconshdlrGetEnfoLPTime(conshdlr) 
+            + SCIPconshdlrGetEnfoPSTime(conshdlr) 
+            + SCIPconshdlrGetCheckTime(conshdlr);
+         
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
-            SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr) + SCIPconshdlrGetEnfoLPTime(conshdlr)
-            + SCIPconshdlrGetEnfoPSTime(conshdlr),
+            totaltime,
             SCIPconshdlrGetSepaTime(conshdlr),
             SCIPconshdlrGetPropTime(conshdlr),
             SCIPconshdlrGetEnfoLPTime(conshdlr),
