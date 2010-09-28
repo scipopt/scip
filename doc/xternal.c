@@ -28,7 +28,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage SCIP (Solving Constraint Integer Programs)
+/**@mainpage Overview
  * @version  2.0.0c
  *
  * <b>SCIP Authors:</b>
@@ -69,6 +69,9 @@
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
  * - \ref PARAMETERS "List of all SCIP parameters"
  *
+ * <table cellpadding="0px" width="100%">
+ *   <tr>
+ *     <td nowrap>
  * <b>Programming with SCIP</b>
  *
  * - \ref CODE    "Coding style guidelines"
@@ -97,7 +100,12 @@
  * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
  * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
- *
+ *     </td>
+ *     <td valign="bottom" width="200">
+ *       \image html scippy.png
+ *     </td>
+ *   </tr>
+ * </table>
  */
 
 
@@ -5220,4 +5228,11 @@
  * <code>SCIP_CALL( SCIPwriteParams(scip, &lt;file name&gt;, TRUE, FALSE) );</code>
  *
  * \verbinclude parameters.set
+ */
+
+/**@page SCIPPY SCIPPY images
+ *
+ * \image html miniscippy.png
+ * \image html scippy.png
+ *  
  */
