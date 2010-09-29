@@ -752,7 +752,7 @@
     </p>
     <p class="a">
       The functionality of copying a SCIP model is added to the SCIP version 2.0.0. It gives the possibility to 
-      generate a copy of the current SCIP model. This functionality is of interested, for example, for large 
+      generate a copy of the current SCIP model. This functionality is of interest, for example, for large 
       neighborhood heuristics (such as heur_rens.c). They can now easily copy the complete problem and fix  a certain 
       set of variables and work therefore on a reasonable copy of the original problem.
     </p>
