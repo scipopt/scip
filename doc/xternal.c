@@ -69,7 +69,7 @@
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
  * - \ref PARAMETERS "List of all SCIP parameters"
  *
- * <table cellpadding="0px" width="100%">
+ * <table cellpadding="0px" border="0" width="100%">
  *   <tr>
  *     <td nowrap>
  * <b>Programming with SCIP</b>
