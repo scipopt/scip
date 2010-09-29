@@ -4889,6 +4889,9 @@
  *      <br>
  *    - The main problem has a new callback method (see type_prob.h for more details):
  *       - SCIP_DECL_PROBCOPY(x) - When copying a SCIP instance, this method is called to copy the problem's data.
+ *      <br>
+ *      <br>
+ *    - The argument success in SCIP_DECL_CONSCOPY has been renamed to valid.
  *
  * - <b>Branching on solutions of arbitrary relaxations</b>:
  *      <br>

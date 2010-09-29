@@ -1,4 +1,4 @@
-SCIP version NEXT
+SCIP version 2.0.0
 ===============
 
 interface:
@@ -104,6 +104,7 @@ interface:
 - added new callback "SCIP_DECL_VARCOPY" for variables data to be able to copy (see type_var.h)
 - added new parameter "varcopy" to SCIPcreateVar() to add the function for copying variable data
 - the SoPlex interface now includes equilibrium scaling on lp's solved from scratch without starting basis
+- the parameter "success" in "SCIP_DECL_CONSCOPY" has been renamed to "valid"
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
