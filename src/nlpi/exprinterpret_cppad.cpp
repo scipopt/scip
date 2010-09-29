@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.24 2010/09/27 18:34:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.25 2010/09/29 17:36:06 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -27,6 +27,7 @@
 #include "nlpi/pub_expression.h"
 #include "nlpi/exprinterpret.h"
 
+#include <cmath>
 #include <vector>
 using std::vector;
 
@@ -390,14 +391,18 @@ void evalSqrt(
 }
 
 /** template for function that sets a value to NaN
- * default is to set it to 1.0/0.0
+ * default is to set it to NAN, if available, and to log(-1.0) otherwise
  */
 template<class Type>
 void setToNaN(
    Type&                 resultant           /**< resultant */
    )
 {
-   resultant = 1.0/0.0;
+#ifdef NAN
+   resultant = NAN;
+#else
+   resultant = log(-1.0);
+#endif
 }
 
 /** specialization of setNaN for intervals
