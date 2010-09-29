@@ -74,24 +74,27 @@
  *     <td nowrap >
  * <b>Programming with SCIP</b>
  *
- * - \ref CODE    "Coding style guidelines"
- * - \ref CONS    "How to add constraint handlers"
- * - \ref PRICER  "How to add variable pricers"
- * - \ref PRESOL  "How to add presolvers"
- * - \ref SEPA    "How to add separators"
- * - \ref PROP    "How to add propagators"
- * - \ref BRANCH  "How to add branching rules"
- * - \ref NODESEL "How to add node selectors"
- * - \ref HEUR    "How to add primal heuristics"
- * - \ref RELAX   "How to add relaxation handlers"
- * - \ref READER  "How to add file readers"
- * - \ref DIALOG  "How to add dialogs"
- * - \ref DISP    "How to add display columns"
- * - \ref EVENT   "How to add event handler"
- * - \ref NLPI    "How to add interfaces to NLP solvers"
- * - \ref EXPRINT "How to add expression interpreter"
- * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
- * - \ref PARAM   "Adding additional user parameters"
+ * - How to add ...
+ *   - \ref CONS    "Constraint handlers"
+ *   - \ref PRICER  "Variable pricers"
+ *   - \ref PRESOL  "Presolvers"
+ *   - \ref SEPA    "Separators"
+ *   - \ref PROP    "Propagators"
+ *   - \ref BRANCH  "Branching rules"
+ *   - \ref NODESEL "Node selectors"
+ *   - \ref HEUR    "Primal heuristics"
+ *   - \ref RELAX   "Relaxation handlers"
+ *   - \ref READER  "File readers"
+ *   - \ref DIALOG  "Dialogs"
+ *   - \ref DISP    "Display columns"
+ *   - \ref EVENT   "Event handler"
+ *   - \ref NLPI    "Interfaces to NLP solvers"
+ *   - \ref EXPRINT "Expression interpreter"
+ *
+ * - Miscellaneous
+ *   - \ref CODE    "Coding style guidelines"
+ *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
+ *   - \ref PARAM   "Adding additional user parameters"
  *
  * <b>Changes between different versions of SCIP</b>
  *
@@ -3184,12 +3187,11 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page READER How to add file readers
  *
- * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They create 
- * constraints and variables and activate variable pricers if necessary. However, they can also be called, for example, to parse an 
- * input file containing information about a primal solution or fixing of variables. Besides that it is possible to use some of them 
- * for writing (exporting) the problem in a specific format. 
- * \n
- * A complete list of all file readers contained in this release can be found \ref FILEREADERS "here".
+ * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They
+ * create constraints and variables and activate variable pricers if necessary. However, they can also be called, for
+ * example, to parse an input file containing information about a primal solution or fixing of variables. Besides that
+ * it is possible to use some of them for writing (exporting) the problem in a specific format.  \n A complete list of
+ * all file readers contained in this release can be found \ref FILEREADERS "here".
  *
  * Since a file reader is also responsible for writing a file, the user may
  * ask why the readers have not the name "filehandler". This name whould
@@ -3287,7 +3289,7 @@
  * file. A file reader is only useful if the reader method \ref READERREAD
  * and/or the writing method \ref READERWRITE is implemented.  One of these
  * methods should be implemented for every file reader; the other callback
- * method \ref READERFREE is optional.  In the C++ wrapper class ObjReader, the
+ * methods \ref READERCOPY and \ref READERFREE are optional.  In the C++ wrapper class ObjReader, the
  * scip_read() and scip_write() methods (which corresponds to the \ref
  * READERREAD and \ref READERWRITE callback) are virtual member
  * functions. At least one of them should be implemented.
@@ -3298,8 +3300,8 @@
  * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
  *
  * File reader plugins contain only additional callback methods, namely the methods \ref READERREAD, 
- * \ref READERWRITE, and \ref READERFREE. Therefore, these are not needed to be implemented. However, 
- * at least \ref READERREAD or/and \ref READERWRITE should be implemented (see notes 
+ * \ref READERWRITE, \ref READERFREE, and \ref READERCOPY. Therefore, these are not needed to be implemented. However, 
+ * at least \ref READERREAD and/or \ref READERWRITE should be implemented (see notes 
  * \ref READER_FUNDAMENTALCALLBACKS "above").
  *
  *
@@ -3341,6 +3343,28 @@
  * \n
  * For an example we refer to the writing method of the MPS reader (see reader_mps.c).
  *
+ * 
+ * @subsection READERCOPY
+ * 
+ * The READERCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the execution of the specified reader for all copied SCIP
+ * instances. The question might arise why to copy that plugin. In case of debugging it is nice to be able to
+ * write/display the copied instances. Since the reader is in charge of that, you might want to copy the plugin. Below
+ * you see a standard implementation.
+ *
+ * \code
+ * static
+ * SCIP_DECL_READERCOPY(readerCopyMyreader)
+ * {
+ *    assert(scip != NULL);
+ *    assert(reader != NULL);
+ *    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+ *
+ *    SCIP_CALL( SCIPincludeReaderMyreader(scip) );
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
  *
  * @subsection READERFREE
  *
@@ -3366,6 +3390,7 @@
  * before freeing the file reader data itself.
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3582,6 +3607,14 @@
  * information describing the meaning of the dialog. 
  * \n
  * If this callback is not implemented, the description string of the dialog (DIALOG_DESC) is displayed instead.
+ *
+ * @subsection DIALOGCOPY
+ *
+ * The DIALOGCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the execution of this dialog for all copied SCIP instances. In
+ * general there is no need to copy any dialog since it is most unlikely to start the interactive shell of the copied
+ * instances.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3713,6 +3746,14 @@
  *
  * The additional callback methods need not to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection DISPCOPY
+ *
+ * The DISPCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this callback
+ * as <code>NULL</code> the user disables the execution of the specified column. In general it is probably not needed to
+ * implement that callback since the output of the copied instance is usually suppressed. In the other case or for
+ * debugging the callback should be implement.
+ *
  *
  * @subsection DISPFREE
  *
@@ -3868,6 +3909,31 @@
  * The additional callback methods need not to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
+ * @subsection EVENTCOPY
+ *
+ * The EVENTCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the execution of the specified event handler for all copied SCIP
+ * instances. Note that in most case the event handler in the copied instance will be initialize by those objects (such
+ * as constraint handlers or propagators) which need these event handler (see cons_knapsack.c). In these case the copy
+ * callback can be ignored. In case of general events such as new best solution found (SCIP_EVENTTYPE_BESTSOLFOUND) you
+ * might want to implement that callback. The event handler example which you find in the directory
+ * "examples/Eventhdlr/" uses that callback. 
+ *
+ * \code
+ * static
+ * SCIP_DECL_EVENTCOPY(eventCopyBestsol) 
+ * {
+ *    assert(scip != NULL);
+ *    assert(eventhdlr != NULL);
+ *    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+ *
+ *    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ *
+ *
  * @subsection EVENTFREE
  *
  * If you are using event handler data, you have to implement this method in order to free the event handler data.
@@ -3892,6 +3958,7 @@
  * before freeing the event handler data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
+ *
  *
  * @subsection EVENTINIT
  *
