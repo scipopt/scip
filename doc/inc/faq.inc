@@ -370,6 +370,18 @@
       If you do not want to use this either, you have to do the exception handling
       (i.e. the case that the return code is not SCIP_OKAY) on your own. 
     </p>		   
+    <p class="q">
+      <a name="Q17a">I want to stop the solving process after a certain time. How can I do this?</a>
+    </p>
+    <p class="a">
+      Limits are given by parameters in SCIP, for example <code>limits/time</code> for a time limit or
+      <code>limits/nodes</code> for a node limit. 
+      If you want to set a limit, you have to change these parameters.
+      For example, for setting the time limit to one hour, you have to call 
+      <code>SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", 3600) )</code>.
+      For more examples, please have a look into heur_rens.c.
+      
+    </p>		   
 <h4><a name="Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
     <p class="q">
       <a name="Q18">How do I start a project?</a>
