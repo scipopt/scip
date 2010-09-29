@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.316 2010/09/29 12:52:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.317 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2510,7 +2510,11 @@ SCIP_RETCODE solveNode(
    assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
    actdepth = SCIPnodeGetDepth(focusnode);
 
+   /** invalidate relaxation solution */
    SCIPrelaxationSetSolValid(relaxation, FALSE);
+
+   /** clear the storage of external branching candidates */
+   SCIPbranchcandClearExternCands(branchcand);
 
    SCIPdebugMessage("Processing node %"SCIP_LONGINT_FORMAT" in depth %d, %d siblings\n",
       stat->nnodes, actdepth, tree->nsiblings);
@@ -2617,8 +2621,8 @@ SCIP_RETCODE solveNode(
       /* solve external relaxations with non-negative priority */
       if( solverelax && !(*cutoff) )
       {
-         /**  clears the storage for relaxation branching */
-         SCIPbranchcandClearRelaxCands(branchcand);
+         /** clear the storage of external branching candidates */
+         SCIPbranchcandClearExternCands(branchcand);
 
          SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, TRUE, cutoff, &propagateagain, &solvelpagain, &solverelaxagain) );
 
@@ -2858,12 +2862,12 @@ SCIP_RETCODE solveNode(
          }
          else 
          {
-            if( SCIPbranchcandGetNRelaxCands(branchcand) > 0 )
+            if( SCIPbranchcandGetNExternCands(branchcand) > 0 )
             {
-               /* branch on relaxation solution */
-               SCIPdebugMessage("infeasibility in depth %d was not resolved: branch on relaxation solution with %d pre-known branching candidates.\n",
-                  SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNRelaxCands(branchcand));
-               SCIP_CALL( SCIPbranchExecRelax(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
+               /* branch on external candidates */
+               SCIPdebugMessage("infeasibility in depth %d was not resolved: branch on %d external branching candidates.\n",
+                  SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNExternCands(branchcand));
+               SCIP_CALL( SCIPbranchExecExtern(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
                      primal->cutoffbound, TRUE, &result) );
             }
 
@@ -2967,7 +2971,7 @@ SCIP_RETCODE solveNode(
             }
             break;
          default:
-            SCIPerrorMessage("invalid result code <%d> from SCIPbranchLP(), SCIPbranchRelax() or SCIPbranchPseudo()\n", result);
+            SCIPerrorMessage("invalid result code <%d> from SCIPbranchLP(), SCIPbranchExt() or SCIPbranchPseudo()\n", result);
             return SCIP_INVALIDRESULT;
          }  /*lint !e788*/
          assert(*cutoff || solvelpagain || propagateagain || branched); /* something must have been done */

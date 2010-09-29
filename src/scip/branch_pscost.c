@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.36 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.37 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -34,7 +34,7 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define BRANCHRULE_STRATEGIES    "bri"       /**< possible variable selection strategies for branching on relaxation solution candidates */
+#define BRANCHRULE_STRATEGIES    "bri"       /**< possible variable selection strategies for branching on external candidates */
 #define BRANCHRULE_STRATEGY_DEFAULT 'r'      /**< default variable selection strategy */
 #define BRANCHRULE_SCOREMINWEIGHT_DEFAULT 0.8 /**< default weight for minimum of scores of a branching candidate */
 #define BRANCHRULE_SCOREMAXWEIGHT_DEFAULT 1.3 /**< default weight for maximum of scores of a branching candidate */
@@ -46,7 +46,7 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   char                  strategy;           /**< strategy for computing score of relaxation branching candidates */
+   char                  strategy;           /**< strategy for computing score of external candidates */
    SCIP_Real             scoreminweight;     /**< weight for minimum of scores of a branching candidate */
    SCIP_Real             scoremaxweight;     /**< weight for maximum of scores of a branching candidate */
    SCIP_Real             scoresumweight;     /**< weight for sum of scores of a branching candidate */
@@ -283,7 +283,7 @@ SCIP_RETCODE selectBranchVar(
          else if( candsscore[candsorigidx[j]] > scoremax )
             scoremax = candsscore[candsorigidx[j]];
 
-         /* @todo if there are two valid relaxcandssol available for the same variable, should we take the one closer to the middle of the domain? */
+         /* @todo if there are two valid externcandssol available for the same variable, should we take the one closer to the middle of the domain? */
          if( SCIPisInfinity(scip, REALABS(candsol)) )
             candsol = candssol[candsorigidx[j]];
       }
@@ -408,14 +408,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 }
 
 
-/** branching execution method for relaxation solutions */
+/** branching execution method for external candidates */
 static
-SCIP_DECL_BRANCHEXECREL(branchExecrelPscost)
+SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 {  /*lint --e{715}*/
-   SCIP_VAR** relaxcands;
-   SCIP_Real* relaxcandssol;
-   SCIP_Real* relaxcandsscore;
-   int npriorelaxcands;
+   SCIP_VAR** externcands;
+   SCIP_Real* externcandssol;
+   SCIP_Real* externcandsscore;
+   int nprioexterncands;
    SCIP_VAR* brvar;
    SCIP_Real brpoint;
 
@@ -424,18 +424,18 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelPscost)
    assert(scip != NULL);
    assert(result != NULL);
    
-   SCIPdebugMessage("Execrel method of pscost branching\n");
+   SCIPdebugMessage("Execext method of pscost branching\n");
    
    /* get branching candidates */
-   SCIP_CALL( SCIPgetRelaxBranchCands(scip, &relaxcands, &relaxcandssol, &relaxcandsscore, NULL, &npriorelaxcands, NULL, NULL, NULL) );
-   assert(npriorelaxcands > 0);
+   SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nprioexterncands, NULL, NULL, NULL) );
+   assert(nprioexterncands > 0);
    
    /* select braching variable */
-   SCIP_CALL( selectBranchVar(scip, branchrule, relaxcands, relaxcandssol, relaxcandsscore, npriorelaxcands, &brvar, &brpoint) );
+   SCIP_CALL( selectBranchVar(scip, branchrule, externcands, externcandssol, externcandsscore, nprioexterncands, &brvar, &brpoint) );
    
    if( brvar == NULL )
    {
-      SCIPerrorMessage("branchExecrelPscost failed to select a branching variable from %d candidates\n", npriorelaxcands);
+      SCIPerrorMessage("branchExecextPscost failed to select a branching variable from %d candidates\n", nprioexterncands);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
@@ -477,11 +477,11 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchCopyPscost,
          branchFreePscost, branchInitPscost, branchExitPscost, branchInitsolPscost, branchExitsolPscost, 
-         branchExeclpPscost, branchExecrelPscost, branchExecpsPscost,
+         branchExeclpPscost, branchExecextPscost, branchExecpsPscost,
          branchruledata) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/strategy",
-         "strategy for computing score of relaxation branching candidates (b: rb-int-br, r: rb-int-br-rev, i: rb-inf)",
+         "strategy for computing score of external branching candidates (b: rb-int-br, r: rb-int-br-rev, i: rb-inf)",
          &branchruledata->strategy, FALSE, BRANCHRULE_STRATEGY_DEFAULT, BRANCHRULE_STRATEGIES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/minscoreweight",

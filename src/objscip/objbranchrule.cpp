@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.30 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.31 2010/09/29 20:24:55 bzfgamra Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -186,9 +186,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpObj)
 }
 
 
-/** branching execution method for relaxation solutions */
+/** branching execution method for external candidates */
 static
-SCIP_DECL_BRANCHEXECREL(branchExecrelObj)
+SCIP_DECL_BRANCHEXECEXT(branchExecextObj)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
@@ -197,7 +197,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelObj)
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   SCIP_CALL( branchruledata->objbranchrule->scip_execlp(scip, branchrule, allowaddcons, result) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_execext(scip, branchrule, allowaddcons, result) );
 
    return SCIP_OKAY;
 }
@@ -248,7 +248,7 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
          branchCopyObj,
          branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
-         branchExeclpObj, branchExecrelObj, branchExecpsObj,
+         branchExeclpObj, branchExecextObj, branchExecpsObj,
          branchruledata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

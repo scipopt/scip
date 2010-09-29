@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.44 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.45 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -912,7 +912,7 @@ SCIP_RETCODE registerBranchingCandidates(
       }
       else
       {
-         SCIP_CALL( SCIPaddRelaxBranchCand(scip, vars[v], ABS(violation), bounds[v]) );
+         SCIP_CALL( SCIPaddExternBranchCand(scip, vars[v], ABS(violation), bounds[v]) );
          *neednarybranch = FALSE;
       }
    }

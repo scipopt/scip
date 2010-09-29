@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.39 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.40 2010/09/29 20:24:55 bzfgamra Exp $"
 
 /**@file   branch_mostinf.c
  * @ingroup BRANCHINGRULES
@@ -198,14 +198,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
    return SCIP_OKAY;
 }
 
-/** branching execution method for relaxation solutions */
+/** branching execution method for external candidates */
 static
-SCIP_DECL_BRANCHEXECREL(branchExecrelMostinf)
+SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
 {  /*lint --e{715}*/
-   SCIP_VAR** relaxcands;
-   SCIP_Real* relaxcandssol;
-   SCIP_Real* relaxcandsscore;
-   int nrelaxcands;
+   SCIP_VAR** externcands;
+   SCIP_Real* externcandssol;
+   SCIP_Real* externcandsscore;
+   int nexterncands;
    SCIP_VAR* bestcand;
    SCIP_Real bestscore;
    SCIP_Real bestobj;
@@ -218,25 +218,25 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelMostinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execrel method of mostinf branching\n");
+   SCIPdebugMessage("Execext method of mostinf branching\n");
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetRelaxBranchCands(scip, &relaxcands, &relaxcandssol, &relaxcandsscore, NULL, &nrelaxcands, NULL, NULL, NULL) );
-   assert(nrelaxcands > 0);
+   SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nexterncands, NULL, NULL, NULL) );
+   assert(nexterncands > 0);
 
    /* search the most infeasible candidate */
    bestscore = SCIP_REAL_MIN;
    bestobj = 0.0;
    bestcand = NULL;
    bestsol = SCIP_INVALID;
-   for( i = 0; i < nrelaxcands; ++i )
+   for( i = 0; i < nexterncands; ++i )
    {
-      updateBestCandidate(scip, &bestcand, &bestscore, &bestobj, &bestsol, relaxcands[i], relaxcandsscore[i], relaxcandssol[i]);
+      updateBestCandidate(scip, &bestcand, &bestscore, &bestobj, &bestsol, externcands[i], externcandsscore[i], externcandssol[i]);
    }
    
    if( bestcand == NULL )
    {
-      SCIPerrorMessage("branchExecrelMostinf failed to select a branching variable from %d candidates\n", nrelaxcands);
+      SCIPerrorMessage("branchExecextMostinf failed to select a branching variable from %d candidates\n", nexterncands);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
@@ -244,7 +244,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelMostinf)
    brpoint = SCIPgetBranchingPoint(scip, bestcand, bestsol);
 
    SCIPdebugMessage(" -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
-      nrelaxcands, SCIPvarGetName(bestcand), bestsol, bestobj,
+      nexterncands, SCIPvarGetName(bestcand), bestsol, bestobj,
       SCIPvarGetBranchFactor(bestcand), bestscore, brpoint);
 
    /* perform the branching */
@@ -276,7 +276,7 @@ SCIP_RETCODE SCIPincludeBranchruleMostinf(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchCopyMostinf,
          branchFreeMostinf, branchInitMostinf, branchExitMostinf, branchInitsolMostinf, branchExitsolMostinf, 
-         branchExeclpMostinf, branchExecrelMostinf, branchExecpsMostinf,
+         branchExeclpMostinf, branchExecextMostinf, branchExecpsMostinf,
          NULL) );
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.135 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.136 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4901,7 +4901,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
             else
                gap = (xval-xlb)*(xub-xval)/(1+2*ABS(xval));
             assert(!SCIPisNegative(scip, gap));
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvarterms[j].var, MAX(gap, 0.0), SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->quadvarterms[j].var, MAX(gap, 0.0), SCIP_INVALID) );
             ++*nnotify;
          }
       }
@@ -4912,7 +4912,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          xub = SCIPvarGetUbLocal(consdata->bilinterms[j].var1);
          if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
          {
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinterms[j].var1, SCIPinfinity(scip), SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, SCIPinfinity(scip), SCIP_INVALID) );
             ++*nnotify;
             continue;
          }
@@ -4921,7 +4921,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          yub = SCIPvarGetUbLocal(consdata->bilinterms[j].var2);
          if( SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
          {
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinterms[j].var2, SCIPinfinity(scip), SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, SCIPinfinity(scip), SCIP_INVALID) );
             ++*nnotify;
             continue;
          }
@@ -4960,7 +4960,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          
          if( SCIPrelDiff(xub, xlb) > 2.0 * SCIPepsilon(scip) )
          {
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
             ++*nnotify;
          }
          else
@@ -4969,7 +4969,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          }
          if( SCIPrelDiff(yub, ylb) > 2.0 * SCIPepsilon(scip) )
          {
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
             ++*nnotify;
          }
          else
@@ -5028,7 +5028,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    
    if( *brvar != NULL )
    {
-      SCIP_CALL( SCIPaddRelaxBranchCand(scip, *brvar, brvarval, SCIP_INVALID) );
+      SCIP_CALL( SCIPaddExternBranchCand(scip, *brvar, brvarval, SCIP_INVALID) );
    }
    
    return SCIP_OKAY;
@@ -6883,7 +6883,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       for( i = 0; i < consdata->nquadvars; ++i )
          if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) > 2.0*SCIPepsilon(scip) )
          {
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvarterms[i].var, consdata->lhsviol + consdata->rhsviol, SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->quadvarterms[i].var, consdata->lhsviol + consdata->rhsviol, SCIP_INVALID) );
          }
    }
 

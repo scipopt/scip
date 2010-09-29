@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.32 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.33 2010/09/29 20:24:55 bzfgamra Exp $"
 
 /**@file   branch_inference.c
  * @ingroup BRANCHINGRULES
@@ -204,7 +204,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 
 
 /** branching execution method for relaxation solutions */
-#define branchExecrelInference NULL
+#define branchExecextInference NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -255,7 +255,7 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchCopyInference,
          branchFreeInference, branchInitInference, branchExitInference, branchInitsolInference, branchExitsolInference, 
-         branchExeclpInference, branchExecrelInference, branchExecpsInference,
+         branchExeclpInference, branchExecextInference, branchExecpsInference,
          branchruledata) );
 
    /* inference branching rule parameters */

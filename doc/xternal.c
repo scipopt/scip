@@ -2169,9 +2169,9 @@
  * BRANCHRULE_ADDITIONALCALLBACKS).  Branching is performed if:
  * - the LP solution of the current problem is fractional. In this case, the integrality constraint handler calls the
  *   \ref BRANCHEXECLP methods of the branching rules.
- * - the list of relaxation branching candidates is not empty. This will only be the case if branching candidates were added
- *   by a user's \ref RELAX "relaxator" or \ref CONS "constraint handler" plugin, calling SCIPaddRelaxBranchCand().
- *   These branching candidates should be processed by the \ref BRANCHEXECREL method.
+ * - the list of external branching candidates is not empty. This will only be the case if branching candidates were added
+ *   by a user's \ref RELAX "relaxator" or \ref CONS "constraint handler" plugin, calling SCIPaddExternBranchCand().
+ *   These branching candidates should be processed by the \ref BRANCHEXECEXT method.
  * - if an integral solution violates one or more constraints and this infeasibility could not be resolved in the callback methods
  *   \ref CONSENFOLP and \ref CONSENFOPS of the corresponding constraint handlers. In this case, the \ref BRANCHEXECPS method will be called. This is the
  *   standard case, if you use SCIP as a pure CP or SAT solver. If the LP or any other type of relaxation is used, then
@@ -2300,7 +2300,7 @@
  * @section BRANCHRULE_ADDITIONALCALLBACKS Additional Callback Methods of a Branching Rule
  *
  * The additional callback methods need not to be implemented in every case.  They can be used, for example, to
- * initialize and free private data.  The most important callback methods are the \ref BRANCHEXECLP, \ref BRANCHEXECREL,
+ * initialize and free private data.  The most important callback methods are the \ref BRANCHEXECLP, \ref BRANCHEXECEXT,
  * and \ref BRANCHEXECPS methods, which perform the actual task of generating a branching.
  *
  * Additional documentation to the callback methods can be found in type_branch.h.
@@ -2326,35 +2326,35 @@
  *
  * Please also see the \ref BRANCHEXEC "further information for the three execution methods".
  *
- * @subsection BRANCHEXECREL
+ * @subsection BRANCHEXECEXT
  *
- * The BRANCHEXECREL callback is executed during node processing if no LP solution is available and the list of
- * relaxation branching candidates is not empty. It should split the current problem into smaller subproblems.  If you
- * do not use relaxators or constraints handlers that provide relaxation branching candidates, you do not need to
+ * The BRANCHEXECEXT callback is executed during node processing if no LP solution is available and the list of
+ * external branching candidates is not empty. It should split the current problem into smaller subproblems. If you
+ * do not use relaxators or constraints handlers that provide external branching candidates, you do not need to
  * implement this callback.
  *
- * In contrast to the LP branching candidates and the pseudo branching candidates, the list of relaxation branching
+ * In contrast to the LP branching candidates and the pseudo branching candidates, the list of external branching
  * candidates will not be generated automatically. The user has to add all variables to the list by calling
- * SCIPaddRelaxBranchCand() for each of them. Usually, this will happen in the execution method of a relaxator or in the
+ * SCIPaddExternBranchCand() for each of them. Usually, this will happen in the execution method of a relaxator or in the
  * enforcement methods of a constraint handler.
  *
- * The user gains access to these branching candidates by calling the method SCIPgetRelaxBranchCands(). Furthermore,
+ * The user gains access to these branching candidates by calling the method SCIPgetExternBranchCands(). Furthermore,
  * SCIP provides two methods for performing the actual branching with a given solution value, namely SCIPbranchVarVal()
  * and SCIPcreateChild(). SCIPbranchVarVal() allows to specify the branching point for a variable in contrast to
  * SCIPbranchVar(), which will always use the current LP or pseudo solution.
  *
- * This paragraph contains additional information, how the method SCIPbranchVarVal() works. For relaxation solutions,
+ * This paragraph contains additional information, how the method SCIPbranchVarVal() works. For external branching candidates,
  * there are three principle possibilities:
- * - Given a continuous variable \f$x\f$ with relaxation solution value \f$x^*\f$, the method SCIPbranchVarVal() creates
+ * - Given a continuous variable \f$x\f$ with solution value \f$x^*\f$, the method SCIPbranchVarVal() creates
  *   two child nodes; one contains the bound \f$x \le x^* \f$ and the other one contains the bound \f$x \ge x^* \f$.
- * - Given an integer variable \f$x\f$ with fractional relaxation solution value \f$x^*\f$, the method
+ * - Given an integer variable \f$x\f$ with fractional solution value \f$x^*\f$, the method
  *   SCIPbranchVarVal() creates two child nodes; one contains the bound \f$x \le \lfloor x^* \rfloor\f$ and the other
  *   one contains the bound \f$x \ge \lceil x^* \rceil\f$.
- * - Given an integer variable \f$x\f$ with integral relaxation solution value \f$x^*\f$, the method SCIPbranchVarVal()
+ * - Given an integer variable \f$x\f$ with integral solution value \f$x^*\f$, the method SCIPbranchVarVal()
  *   creates three child nodes; one contains the bound \f$x \le x^* -1\f$, one contains the bound \f$x \ge x^* +1\f$,
  *   one contains the fixing \f$x = x^*\f$.
  *
- * See the BRANCHEXECREL callback in src/scip/branch_random.c for an example. In addition, if a proven lower bound of a
+ * See the BRANCHEXECEXT callback in src/scip/branch_random.c for an example. In addition, if a proven lower bound of a
  * created child node is known the user may call the method SCIPupdateNodeLowerbound() in order to update the child
  * node's lower bound.
  *
@@ -3091,10 +3091,12 @@
  * SCIPupdateLocalLowerbound() to update the current node's dual bound after having solved the relaxation.
  * In addition, you may want to call SCIPtrySolFree() if you think that you have found a feasible primal solution.
  *
- * Note that the primal solution of the relaxation cannot be stored inside the data structures of SCIP, which means in
- * particular, that the branching rules cannot take the solution as a guide on how to split the problem into subproblems.
- * If you want to branch with respect to your relaxation solution, you have to implement your own branching rule and
- * extract the primal solution vector from the relaxation directly.
+ * The primal solution of the relaxation can be stored inside the data structures of SCIP with 
+ * <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code> and later accessed by
+ * <code>SCIPgetRelaxSolVal()</code>. 
+ * Furthermore, there is a list of external branching candidates, that can be filled by relaxators and constraint handlers,
+ * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems.
+ * Relaxators should store appropriate candidates in this list using the method <code>SCIPaddExternBranchCand()</code>.
  *
  * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound with a call to
  * SCIPupdateLocalLowerbound().
@@ -4893,11 +4895,12 @@
  *      <br>
  *    - The argument success in SCIP_DECL_CONSCOPY has been renamed to valid.
  *
- * - <b>Branching on solutions of arbitrary relaxations</b>:
+ * - <b>Branching on externally given candidates</b>:
  *      <br>
  *      <br>
  *    - The \ref BRANCH "branching rules" have a second new callback method (see type_branch.h for more details):
- *       - SCIP_DECL_BRANCHEXECREL(x) - This method can be used to branch on relaxation solutions.
+ *       - SCIP_DECL_BRANCHEXECEXT(x) - This method can be used to branch on external branching candidates, 
+ *         which can be added by a user's "relaxator" or "constraint handler" plugin, calling <code>SCIPaddExternBranchCand()</code>.
  * 
  * - <b>Restarts</b>:
  *      <br>

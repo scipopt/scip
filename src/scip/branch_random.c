@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.25 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.26 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -212,14 +212,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
 }
 
 
-/** branching execution method for relaxation solutions */
+/** branching execution method for external candidates */
 static
-SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
+SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
-   SCIP_VAR** relaxcands;
-   SCIP_Real* relaxcandssol;
-   int npriorelaxcands;
+   SCIP_VAR** externcands;
+   SCIP_Real* externcandssol;
+   int nprioexterncands;
    SCIP_VAR* bestcand;
    SCIP_Real bestcandsol;
    SCIP_Real brpoint;
@@ -238,19 +238,19 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
    bestcandsol = 0.0;
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetRelaxBranchCands(scip, &relaxcands, &relaxcandssol, NULL, NULL, &npriorelaxcands, NULL, NULL, NULL) );
-   assert(npriorelaxcands > 0);
+   SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, NULL, NULL, &nprioexterncands, NULL, NULL, NULL) );
+   assert(nprioexterncands > 0);
 
    /* get random branching candidate
     *
     * since variables can occur several times in the list of candidates, variables that have been added more often have
     * a higher probability to be chosen for branching
     */
-   getRandomVariable(scip, relaxcands, relaxcandssol, npriorelaxcands, &bestcand, &bestcandsol, &branchruledata->seed);
+   getRandomVariable(scip, externcands, externcandssol, nprioexterncands, &bestcand, &bestcandsol, &branchruledata->seed);
 
    if( bestcand == NULL )
    {
-      SCIPerrorMessage("branchExecrelRandom failed to select a branching variable from %d candidates\n", npriorelaxcands);
+      SCIPerrorMessage("branchExecrelRandom failed to select a branching variable from %d candidates\n", nprioexterncands);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
@@ -258,7 +258,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelRandom)
    brpoint = SCIPgetBranchingPoint(scip, bestcand, bestcandsol);
 
    SCIPdebugMessage(" -> %d candidates, selected variable <%s> with solution value %g, branching point=%g\n",
-      npriorelaxcands, SCIPvarGetName(bestcand), bestcandsol, brpoint);
+      nprioexterncands, SCIPvarGetName(bestcand), bestcandsol, brpoint);
 
    SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, NULL, NULL, NULL) );
    
@@ -328,7 +328,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchCopyRandom,
          branchFreeRandom, branchInitRandom, branchExitRandom, branchInitsolRandom, branchExitsolRandom, 
-         branchExeclpRandom, branchExecrelRandom, branchExecpsRandom,
+         branchExeclpRandom, branchExecextRandom, branchExecpsRandom,
          branchruledata) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/seed", "initial random seed value",

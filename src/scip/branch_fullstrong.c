@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.60 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.61 2010/09/29 20:24:55 bzfgamra Exp $"
 
 /**@file   branch_fullstrong.c
  * @ingroup BRANCHINGRULES
@@ -380,7 +380,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
 
 /** branching execution method for relaxation solutions */
-#define branchExecrelFullstrong NULL
+#define branchExecextFullstrong NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -410,7 +410,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
          branchCopyFullstrong,
          branchFreeFullstrong, branchInitFullstrong, branchExitFullstrong, 
          branchInitsolFullstrong, branchExitsolFullstrong, 
-         branchExeclpFullstrong, branchExecrelFullstrong, branchExecpsFullstrong,
+         branchExeclpFullstrong, branchExecextFullstrong, branchExecpsFullstrong,
          branchruledata) );
 
    /* fullstrong branching rule parameters */

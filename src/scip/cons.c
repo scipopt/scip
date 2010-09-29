@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.214 2010/09/22 18:14:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.215 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4605,7 +4605,7 @@ SCIP_RETCODE SCIPconsCopy(
 }
 
 
-/** parses constrint information (in cip format) out of a string; if the parsing process was successful a constraint is
+/** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
  *  created, captured, and inserted into the conss array of its constraint handler.
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.

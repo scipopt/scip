@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.66 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.67 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -840,7 +840,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
 
 /** branching execution method for relaxation solutions */
-#define branchExecrelRelpscost NULL
+#define branchExecextRelpscost NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -868,7 +868,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchCopyRelpscost,
          branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, branchInitsolRelpscost, branchExitsolRelpscost, 
-         branchExeclpRelpscost, branchExecrelRelpscost, branchExecpsRelpscost,
+         branchExeclpRelpscost, branchExecextRelpscost, branchExecpsRelpscost,
          branchruledata) );
 
    /* relpscost branching rule parameters */

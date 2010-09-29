@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.78 2010/09/29 19:16:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.79 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -116,13 +116,13 @@
 #define DISP_POSI_NFRAC         2500
 #define DISP_STRI_NFRAC         TRUE
 
-#define DISP_NAME_NRELAXCANDS   "nrelaxbranchcands"
-#define DISP_DESC_NRELAXCANDS   "number of relaxation branching variables in the current node"
-#define DISP_HEAD_NRELAXCANDS   "relbr"
-#define DISP_WIDT_NRELAXCANDS   5
-#define DISP_PRIO_NRELAXCANDS   650
-#define DISP_POSI_NRELAXCANDS   2600
-#define DISP_STRI_NRELAXCANDS   TRUE
+#define DISP_NAME_NEXTERNCANDS  "nexternbranchcands"
+#define DISP_DESC_NEXTERNCANDS  "number of extern branching variables in the current node"
+#define DISP_HEAD_NEXTERNCANDS  "extbr"
+#define DISP_WIDT_NEXTERNCANDS  5
+#define DISP_PRIO_NEXTERNCANDS  650
+#define DISP_POSI_NEXTERNCANDS  2600
+#define DISP_STRI_NEXTERNCANDS  TRUE
 
 #define DISP_NAME_VARS          "vars"
 #define DISP_DESC_VARS          "number of variables in the problem"
@@ -466,13 +466,13 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNfrac)
 
 /** output method of display column to output file stream 'file' */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputNrelaxcands)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNexterncands)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NRELAXCANDS) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NEXTERNCANDS) == 0);
    assert(scip != NULL);
 
-   SCIPdispInt(file, SCIPgetPreviousNRelaxBranchCands(scip), DISP_WIDT_NRELAXCANDS);
+   SCIPdispInt(file, SCIPgetPreviousNExternBranchCands(scip), DISP_WIDT_NEXTERNCANDS);
 
    return SCIP_OKAY;
 }
@@ -881,14 +881,14 @@ SCIP_RETCODE SCIPincludeDispDefault(
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNfrac, NULL, 
             DISP_WIDT_NFRAC, DISP_PRIO_NFRAC, DISP_POSI_NFRAC, DISP_STRI_NFRAC) );
    }
-   tmpdisp = SCIPfindDisp(scip, DISP_NAME_NRELAXCANDS);
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_NEXTERNCANDS);
    if( tmpdisp == NULL )
    {
-      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NRELAXCANDS, DISP_DESC_NRELAXCANDS, DISP_HEAD_NRELAXCANDS,
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NEXTERNCANDS, DISP_DESC_NEXTERNCANDS, DISP_HEAD_NEXTERNCANDS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNrelaxcands, NULL,
-            DISP_WIDT_NRELAXCANDS, DISP_PRIO_NRELAXCANDS, DISP_POSI_NRELAXCANDS, DISP_STRI_NRELAXCANDS) );
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNexterncands, NULL,
+            DISP_WIDT_NEXTERNCANDS, DISP_PRIO_NEXTERNCANDS, DISP_POSI_NEXTERNCANDS, DISP_STRI_NEXTERNCANDS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_VARS);
    if( tmpdisp == NULL )

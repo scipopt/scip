@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.684 2010/09/29 19:16:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.685 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3239,7 +3239,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
-   SCIP_DECL_BRANCHEXECREL((*branchexecrel)),/**< branching execution method for relaxation solutions */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)),/**< branching execution method for external candidates */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
@@ -3257,7 +3257,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
 
    SCIP_CALL( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth,
          maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
-         branchexeclp, branchexecrel, branchexecps, branchruledata) );
+         branchexeclp, branchexecext, branchexecps, branchruledata) );
    SCIP_CALL( SCIPsetIncludeBranchrule(scip->set, branchrule) );
 
    return SCIP_OKAY;
@@ -15560,160 +15560,160 @@ int SCIPgetNPrioLPBranchCands(
    return npriolpcands;
 }
 
-/** gets branching candidates for relaxation solution branching along with solution values, scores, 
- *  and number of branching candidates;
- *  branching rules should always select the branching candidate among the first npriorelaxcands of the candidate
+/** gets external branching candidates along with solution values, scores, and number of branching candidates;
+ *  these branching candidates can be used by relaxations or nonlinear constraint handlers
+ *  branching rules should always select the branching candidate among the first nprioexterncands of the candidate
  *  list
  */
-SCIP_RETCODE SCIPgetRelaxBranchCands(
+SCIP_RETCODE SCIPgetExternBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           relaxcands,         /**< pointer to store the array of relax branching candidates, or NULL */
-   SCIP_Real**           relaxcandssol,      /**< pointer to store the array of relax candidate solution values, or NULL */
-   SCIP_Real**           relaxcandsscore,    /**< pointer to store the array of relax candidate scores, or NULL */
-   int*                  nrelaxcands,        /**< pointer to store the number of relax branching candidates, or NULL */
-   int*                  npriorelaxcands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
-   int*                  npriorelaxbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
-   int*                  npriorelaxints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  npriorelaximpls     /**< pointer to store the number of implicit integer candidates with maximal priority, 
+   SCIP_VAR***           externcands,        /**< pointer to store the array of extern branching candidates, or NULL */
+   SCIP_Real**           externcandssol,     /**< pointer to store the array of extern candidate solution values, or NULL */
+   SCIP_Real**           externcandsscore,   /**< pointer to store the array of extern candidate scores, or NULL */
+   int*                  nexterncands,       /**< pointer to store the number of extern branching candidates, or NULL */
+   int*                  nprioexterncands,   /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  nprioexternbins,    /**< pointer to store the number of binary candidates with maximal priority, or NULL */
+   int*                  nprioexternints,    /**< pointer to store the number of integer candidates with maximal priority, or NULL */
+   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority, 
                                               *   or NULL */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetExternBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbranchcandGetRelaxCands(scip->branchcand, relaxcands, relaxcandssol, relaxcandsscore, nrelaxcands, 
-         npriorelaxcands, npriorelaxbins, npriorelaxints, npriorelaximpls) );
+   SCIP_CALL( SCIPbranchcandGetExternCands(scip->branchcand, externcands, externcandssol, externcandsscore, nexterncands, 
+         nprioexterncands, nprioexternbins, nprioexternints, nprioexternimpls) );
 
    return SCIP_OKAY;
 }
 
-/** gets number of branching candidates for relaxation solution branching */
-int SCIPgetNRelaxBranchCands(
+/** gets number of external branching candidates */
+int SCIPgetNExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNExternBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandGetNRelaxCands(scip->branchcand);
+   return SCIPbranchcandGetNExternCands(scip->branchcand);
 }
 
-/** gets number of branching candidates with maximal branch priority for relaxation solution branching */
-int SCIPgetNPrioRelaxBranchCands(
+/** gets number of external branching candidates with maximal branch priority */
+int SCIPgetNPrioExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioExternBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandGetNPrioRelaxCands(scip->branchcand);
+   return SCIPbranchcandGetNPrioExternCands(scip->branchcand);
 }
 
-/** gets number of binary branching candidates with maximal branch priority for relaxation solution branching */
-int SCIPgetNPrioRelaxBranchBins(
+/** gets number of binary external branching candidates with maximal branch priority */
+int SCIPgetNPrioExternBranchBins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchBins", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioExternBranchBins", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandGetNPrioRelaxBins(scip->branchcand);
+   return SCIPbranchcandGetNPrioExternBins(scip->branchcand);
 }
 
 
-/** gets number of integer branching candidates with maximal branch priority for relaxation solution branching */
-int SCIPgetNPrioRelaxBranchInts(
+/** gets number of integer external branching candidates with maximal branch priority */
+int SCIPgetNPrioExternBranchInts(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchInts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioExternBranchInts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandGetNPrioRelaxInts(scip->branchcand);
+   return SCIPbranchcandGetNPrioExternInts(scip->branchcand);
 }
 
-/** gets number of implicit integer branching candidates with maximal branch priority for relaxation solution branching */
-int SCIPgetNPrioRelaxBranchImpls(
+/** gets number of implicit integer external branching candidates with maximal branch priority */
+int SCIPgetNPrioExternBranchImpls(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchImpls", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioExternBranchImpls", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandGetNPrioRelaxImpls(scip->branchcand);
+   return SCIPbranchcandGetNPrioExternImpls(scip->branchcand);
 }
 
-/** gets number of continuous branching candidates with maximal branch priority for relaxation solution branching */
-int SCIPgetNPrioRelaxBranchConts(
+/** gets number of continuous external branching candidates with maximal branch priority */
+int SCIPgetNPrioExternBranchConts(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchConts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioExternBranchConts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandGetNPrioRelaxConts(scip->branchcand);
+   return SCIPbranchcandGetNPrioExternConts(scip->branchcand);
 }
 
-/** gets number of branching candidates for relaxation solution branching in previous node */
-int SCIPgetPreviousNRelaxBranchCands(
+/** gets number of external branching candidates in previous node */
+int SCIPgetPreviousNExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPreviousNRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPreviousNExternBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandGetPreviousNRelaxCands(scip->branchcand);
+   return SCIPbranchcandGetPreviousNExternCands(scip->branchcand);
 }
 
-/** insert variable, its score and its solution value into the relaxation branching candidate storage
+/** insert variable, its score and its solution value into the external branching candidate storage
  * the relative difference of the current lower and upper bounds of a continuous variable must be at least 2*epsilon */
-SCIP_RETCODE SCIPaddRelaxBranchCand(
+SCIP_RETCODE SCIPaddExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to insert */
-   SCIP_Real             score,              /**< score of relax candidate, e.g. infeasibility */
-   SCIP_Real             solval              /**< value of the variable in the relaxation's solution */
+   SCIP_Real             score,              /**< score of external candidate, e.g. infeasibility */
+   SCIP_Real             solval              /**< value of the variable in the current solution */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPaddRelaxBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddExternBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbranchcandAddRelaxCand(scip->branchcand, scip->set, var, score, solval) );
+   SCIP_CALL( SCIPbranchcandAddExternCand(scip->branchcand, scip->set, var, score, solval) );
    
    return SCIP_OKAY;
 }
 
-/** removes all relax candidates from the storage for relaxation branching */
-void SCIPclearRelaxBranchCands(
+/** removes all exteral candidates from the storage for external branching */
+void SCIPclearExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPclearRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPclearExternBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPbranchcandClearRelaxCands(scip->branchcand);
+   SCIPbranchcandClearExternCands(scip->branchcand);
 }
 
-/** checks whether the given variable is contained in the candidate storage for relaxation branching */
-SCIP_Bool SCIPcontainsRelaxBranchCand(
+/** checks whether the given variable is contained in the candidate storage for external branching */
+SCIP_Bool SCIPcontainsExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to look for */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPcontainsRelaxBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcontainsExternBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPbranchcandContainsRelaxCand(scip->branchcand, var);
+   return SCIPbranchcandContainsExternCand(scip->branchcand, var);
 }
 
 
@@ -15957,15 +15957,15 @@ SCIP_RETCODE SCIPbranchLP(
    return SCIP_OKAY;
 }
 
-/** calls branching rules to branch on a relaxation solution; if no relaxation branching candidates exist, the result is SCIP_DIDNOTRUN */
-SCIP_RETCODE SCIPbranchRelax(
+/** calls branching rules to branch on a external candidates; if no such candidates exist, the result is SCIP_DIDNOTRUN */
+SCIP_RETCODE SCIPbranchExtern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPbranchRelax", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPbranchExtern", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbranchExecRelax(scip->mem->probmem, scip->set, scip->stat, scip->tree, scip->lp,
+   SCIP_CALL( SCIPbranchExecExtern(scip->mem->probmem, scip->set, scip->stat, scip->tree, scip->lp,
          scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.23 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.24 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   pub_branch.h
  * @ingroup PUBLICMETHODS
@@ -93,9 +93,9 @@ SCIP_Longint SCIPbranchruleGetNLPCalls(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
-/** gets the total number of times, the branching rule was called on a relaxation solution */
+/** gets the total number of times, the branching rule was called on external candidates */
 extern
-SCIP_Longint SCIPbranchruleGetNRelaxCalls(
+SCIP_Longint SCIPbranchruleGetNExternCalls(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 

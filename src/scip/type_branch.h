@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.28 2010/09/27 17:20:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.29 2010/09/29 20:24:56 bzfgamra Exp $"
 
 /**@file   type_branch.h
  * @ingroup TYPEDEFINITIONS
@@ -113,7 +113,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
 #define SCIP_DECL_BRANCHEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
 
 
-/** branching execution method for relaxation solutions
+/** branching execution method for external candidates
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -130,7 +130,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define SCIP_DECL_BRANCHEXECREL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
+#define SCIP_DECL_BRANCHEXECEXT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
 
 
 /** branching execution method for not completely fixed pseudo solutions

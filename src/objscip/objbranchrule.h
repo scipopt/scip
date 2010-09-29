@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.37 2010/09/01 16:33:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.38 2010/09/29 20:24:55 bzfgamra Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -161,6 +161,28 @@ public:
       return SCIP_OKAY;
    }
    
+   /** branching execution method for external candidates
+    *
+    *  possible return values for *result (if more than one applies, the first in the list should be used):
+    *  - SCIP_CUTOFF     : the current node was detected to be infeasible
+    *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
+    *                      returned, if allowaddcons is FALSE
+    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
+    *  - SCIP_BRANCHED   : branching was applied
+    *  - SCIP_DIDNOTRUN  : the branching rule was skipped
+    */
+   virtual SCIP_RETCODE scip_execext(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule,         /**< the branching rule itself */
+      SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
+      )
+   {  /*lint --e{715}*/
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    /** branching execution method for not completely fixed pseudo solutions
     *
     *  possible return values for *result (if more than one applies, the first in the list should be used):
