@@ -22,12 +22,14 @@ compilation settings:
               - "cygwin*" is replaced by only "cygwin"
               - "irix??" is replaced by only "irix"
               - "windows*" is replaced by only "windows"
+              - "mingw*" is replaced by only "mingw"
 
 - $(ARCH):    the architecture
               the string returned by "uname -m", modified by the following
               rules to subsume some architectures:
                - "sun??" is replaced by "sparc"
-               - "i?86" is replaced by "x86"
+               - "i?86", "i86pc", and "[0-9]86" are replaced by "x86"
+               - "amd64" is replaced by "x86_64"
                - "IP??" is replaced by "mips"
                - "9000????" is replaced by "hppa"
                - "Power Macintosh" is replaced by "ppc"
@@ -41,13 +43,13 @@ compilation settings:
 
 - $(LPS):     the LP solver to use
               "spx", "spx132", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
-             
+
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
-using the gnu compiler in debug mode, using Soplex version >= 1.4.0
-as LP solver, an no expressions interpreter you would have the following names:
+using the gnu compiler in debug mode, using Soplex version >= 1.4.0 as LP solver,
+and no expressions interpreter you would have the following names:
 - $(OSTYPE)  = linux
 - $(ARCH)    = x86
 - $(COMP)    = gnu
@@ -184,22 +186,22 @@ make[1]: Leaving directory `/sw/scip'
    the first call to "make" (example answers are already given):
 
 ---
-make[1]: Entering directory `/sw/scip'                         
+make[1]: Entering directory `/sw/scip'
 
 - Current settings: LPS=clp OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt EXPRINT=cppad
 
 * SCIP needs some softlinks to external programs, in particular, LP-solvers.
-* Please insert the paths to the corresponding directories/libraries below. 
-* The links will be installed in the 'lib' directory.                       
-* For more information and if you experience problems see the INSTALL file. 
+* Please insert the paths to the corresponding directories/libraries below.
+* The links will be installed in the 'lib' directory.
+* For more information and if you experience problems see the INSTALL file.
 
   -> "clpinc" is the path to the Clp "include" directory, e.g., "<Clp-path>/include/coin".
-  -> "libclp.*" is the path to the Clp library, e.g., "<Clp-path>/lib/libclp.a"           
-  -> "libcoinutils.*" is the path to the COIN-OR utilities library, e.g., "<Clp-path>/lib/libcoinutils.a" 
+  -> "libclp.*" is the path to the Clp library, e.g., "<Clp-path>/lib/libclp.a"
+  -> "libcoinutils.*" is the path to the COIN-OR utilities library, e.g., "<Clp-path>/lib/libcoinutils.a"
   -> "ipoptinc" is a directory containing the ipopt header files, i.e., "ipoptinc/IpIpoptApplication.hpp" should exist.
-  -> "libipopt.*" is the Ipopt library, e.g., "/client/lib/ipopt-3.7.0/libipopt.a"                                     
-  -> "ipopt_addlibs.*" is the Ipopt addlibs_cpp file, e.g., "/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt"            
-  -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.                   
+  -> "libipopt.*" is the Ipopt library, e.g., "/client/lib/ipopt-3.7.0/libipopt.a"
+  -> "ipopt_addlibs.*" is the Ipopt addlibs_cpp file, e.g., "/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt"
+  -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.
 
 - preparing missing soft-link "lib/clpinc":
 > Enter soft-link target file or directory for "lib/clpinc" (return if not needed): 
@@ -432,7 +434,8 @@ Now you need to install the following packages to the mingw folder:
 - pcre (or use ZIMPL=false since pcre is needed for ZIMPL and ZIMPL-support in SCIP)
 - gmplib (or use ZIMPL=false since gmplib is needed for ZIMPL and ZIMPL-support in SCIP)
 
-(After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
+(After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL.
+ We recommend NOT to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
 
 You can download these additional packages as precompiled binaries for example from:
 http://gnuwin32.sourceforge.net/packages.html (zlib&pcre)
