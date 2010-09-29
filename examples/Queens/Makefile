@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.10 2010/09/16 16:58:37 bzfhende Exp $
+# $Id: Makefile,v 1.11 2010/09/29 12:22:36 bzfgamra Exp $
 
 #@file    Makefile
 #@brief   Makefile for the SCIP tutorial example by Cornelius Schwarz
@@ -72,7 +72,7 @@ lint:		$(MAINSRC)
 
 .PHONY: doc
 doc:
-		cd doc; $(DOXY) $(MAINNAME).dxy
+		cd doc; echo ''; echo '-->running pdflatex to create documentation'; echo ''; pdflatex scip_intro.tex; pdflatex scip_intro.tex; echo ''; echo '--> open doc/scip_intro.pdf for documentation'
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
