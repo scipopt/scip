@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.42 2010/09/27 17:20:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.43 2010/09/29 10:23:23 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -972,6 +972,10 @@ SCIP_RETCODE solveSubNLP(
       return SCIP_ERROR;
    } /*lint !e788*/
 
+   /* if NLP timelimit is set to 0.0, then caller just wanted to see if the instance is still feasible after presolve */
+   if( timelimit == 0.0 )
+      goto CLEANUP;
+   
    nlp = SCIPgetNLP(heurdata->subscip);
    assert(nlp != NULL);
 
@@ -1289,7 +1293,7 @@ SCIP_RETCODE forbidFixation(
 SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
-   SCIP_RESULT*          result,             /**< result data structure                                          */
+   SCIP_RESULT*          result,             /**< pointer to store result of: did not run, solution found, no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
@@ -1399,16 +1403,16 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
-      if( !SCIPisInfinity(scip, -1.0*SCIPgetLowerbound(scip)) )
+      if( !SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
       {
          cutoff = (1-minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
       }
       else
       {
-         if ( SCIPgetUpperbound ( scip ) >= 0 )
-            cutoff = ( 1 - minimprove ) * SCIPgetUpperbound ( scip );
+         if ( SCIPgetUpperbound(scip) >= 0 )
+            cutoff = ( 1.0 - minimprove ) * SCIPgetUpperbound(scip);
          else
-            cutoff = ( 1 + minimprove ) * SCIPgetUpperbound ( scip );
+            cutoff = ( 1.0 + minimprove ) * SCIPgetUpperbound(scip);
       }
       cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
@@ -1434,7 +1438,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       {
          SCIP_CALL( forbidFixation(scip, heurdata) );
       }
-      *result = SCIP_DIDNOTFIND;
    }
 
 applyheurcleanup:
@@ -1718,6 +1721,10 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
 
    SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent, timelimit, heurdata->minimprove, &iterused) );
    heurdata->iterused += iterused;
+   
+   /* SCIP does not like cutoff as return, so we say didnotfind, since we did not find a solution */
+   if( *result == SCIP_CUTOFF )
+      *result = SCIP_DIDNOTFIND;
    
    /* forget startcand */
    if( heurdata->startcand != NULL )

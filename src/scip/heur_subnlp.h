@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.h,v 1.3 2010/09/13 16:47:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.h,v 1.4 2010/09/29 10:23:23 bzfviger Exp $"
 
 /**@file   heur_subnlp.h
  * @brief  NLP local search primal heuristic using subSCIPs
@@ -53,7 +53,7 @@ extern
 SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
-   SCIP_RESULT*          result,             /**< result data structure                                          */
+   SCIP_RESULT*          result,             /**< pointer to store result of: solution found, no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver                                 */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
