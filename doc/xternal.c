@@ -71,7 +71,7 @@
  *
  * <table cellpadding="0px" border="0" width="100%">
  *   <tr>
- *     <td nowrap>
+ *     <td nowrap >
  * <b>Programming with SCIP</b>
  *
  * - \ref CODE    "Coding style guidelines"
