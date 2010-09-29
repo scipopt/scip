@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.103 2010/09/28 17:18:10 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.104 2010/09/29 14:49:21 bzfgleix Exp $"
+#define SCIP_DEBUG
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1079,7 +1080,7 @@ SCIP_RETCODE solveCoveringProblem(
 
    *success = FALSE;
 
-   /* forbid recursive call of heuristics and separators solving subMIPs */
+   /* forbid call of heuristics and separators solving sub-CIPs */
    SCIP_CALL( SCIPsetSubscipsOff(coveringscip, TRUE) );
 
    /* set time and memory limit */
@@ -1645,12 +1646,10 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* set the parameters such that good solutions are found fast */
-   /* TODO: control better the effort, maybe turn off subscipheurs? Add a parameter to control effort spent solving the
-    * subproblem? */
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMSETTING_FEASIBILITY, TRUE) );
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
- 
+
    /* forbid recursive call of undercover heuristic */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
    
@@ -1694,6 +1693,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPpresolve(subscip) );
    SCIPdebugMessage("presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
    SCIP_CALL( SCIPsolve(subscip) );
+   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #else
    /* errors in a heuristic should not kill the overall solving process, hence in optimized mode, the return code is
     * catched and a warning is printed; only in debug mode, SCIP will stop */
@@ -2037,6 +2037,8 @@ SCIP_RETCODE SCIPapplyUndercover(
 
       /* reordering loop */
       ndives = 0;
+      nfixedints = 0;
+      nfixedconts = 0;
       success = FALSE;
       lastfailed = coversize;
       while( ndives <= heurdata->maxreorders && !success )
@@ -2267,7 +2269,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          nsubnodes = 0;
 
          SCIP_CALL( solveSubproblem(scip, heur, coversize, cover, fixingvals,
-               timelimit, memorylimit, 5*nstallnodes, nstallnodes, &solved, &sol, &nsubnodes) );
+               timelimit, memorylimit, heurdata->maxnodes, nstallnodes, &solved, &sol, &nsubnodes) );
 
          /* update number of sub-CIP nodes used by heuristic so far */
          heurdata->nusednodes += nsubnodes;
