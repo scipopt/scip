@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.100 2010/09/28 00:35:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.101 2010/09/29 19:16:52 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -153,6 +153,7 @@ SCIP_RETCODE SCIPbranchcandCreate(
    (*branchcand)->npriorelaxints = 0;
    (*branchcand)->npriorelaximpls = 0;
    (*branchcand)->relaxmaxpriority = INT_MIN;
+   (*branchcand)->nprevrelaxcands = 0;
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
    (*branchcand)->npriopseudocands = 0;
@@ -457,6 +458,16 @@ int SCIPbranchcandGetNPrioRelaxConts(
    return branchcand->npriorelaxcands - branchcand->npriorelaxbins - branchcand->npriorelaxints - branchcand->npriorelaximpls;
 }
 
+/** gets number of branching candidates for relaxation solution branching in previous node */
+int SCIPbranchcandGetPreviousNRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->nprevrelaxcands;
+}
+
 /** insert variable, its score and its solution value into the relaxation branching candidate storage
  * the relative difference of the current lower and upper bounds of the variable must be at least 2*epsilon */
 SCIP_RETCODE SCIPbranchcandAddRelaxCand(
@@ -593,6 +604,7 @@ void SCIPbranchcandClearRelaxCands(
 {
    assert(branchcand != NULL);
 
+   branchcand->nprevrelaxcands = branchcand->nrelaxcands;
    branchcand->nrelaxcands = 0;
    branchcand->npriorelaxcands = 0;
    branchcand->npriorelaxbins = 0;

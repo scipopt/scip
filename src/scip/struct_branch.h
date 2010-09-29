@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.28 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.29 2010/09/29 19:16:53 bzfviger Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -55,6 +55,7 @@ struct SCIP_BranchCand
    int                   npriorelaxints;     /**< number of integer relaxation candidates with largest branch priority value */
    int                   npriorelaximpls;    /**< number of implicit integer relaxation candidates with largest branch priority value */
    int                   relaxmaxpriority;   /**< maximal branch priority of all relaxation candidates */
+   int                   nprevrelaxcands;    /**< number of candidates for branching on relaxation solution in previous node */
    int                   pseudocandssize;    /**< number of available slots in pseudocands array */
    int                   npseudocands;       /**< number of candidates for branching on pseudo solution */
    int                   npriopseudocands;   /**< number of pseudo candidates with largest branch priority value */

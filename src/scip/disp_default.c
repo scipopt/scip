@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.77 2010/09/27 17:20:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.78 2010/09/29 19:16:52 bzfviger Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -115,6 +115,14 @@
 #define DISP_PRIO_NFRAC         700
 #define DISP_POSI_NFRAC         2500
 #define DISP_STRI_NFRAC         TRUE
+
+#define DISP_NAME_NRELAXCANDS   "nrelaxbranchcands"
+#define DISP_DESC_NRELAXCANDS   "number of relaxation branching variables in the current node"
+#define DISP_HEAD_NRELAXCANDS   "relbr"
+#define DISP_WIDT_NRELAXCANDS   5
+#define DISP_PRIO_NRELAXCANDS   650
+#define DISP_POSI_NRELAXCANDS   2600
+#define DISP_STRI_NRELAXCANDS   TRUE
 
 #define DISP_NAME_VARS          "vars"
 #define DISP_DESC_VARS          "number of variables in the problem"
@@ -452,6 +460,19 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNfrac)
       SCIPdispInt(file, SCIPgetNLPBranchCands(scip), DISP_WIDT_NFRAC);
    else
       SCIPinfoMessage(scip, file, "   - ");
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNrelaxcands)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NRELAXCANDS) == 0);
+   assert(scip != NULL);
+
+   SCIPdispInt(file, SCIPgetPreviousNRelaxBranchCands(scip), DISP_WIDT_NRELAXCANDS);
 
    return SCIP_OKAY;
 }
@@ -859,6 +880,15 @@ SCIP_RETCODE SCIPincludeDispDefault(
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNfrac, NULL, 
             DISP_WIDT_NFRAC, DISP_PRIO_NFRAC, DISP_POSI_NFRAC, DISP_STRI_NFRAC) );
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_NRELAXCANDS);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NRELAXCANDS, DISP_DESC_NRELAXCANDS, DISP_HEAD_NRELAXCANDS,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNrelaxcands, NULL,
+            DISP_WIDT_NRELAXCANDS, DISP_PRIO_NRELAXCANDS, DISP_POSI_NRELAXCANDS, DISP_STRI_NRELAXCANDS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_VARS);
    if( tmpdisp == NULL )

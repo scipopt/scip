@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.56 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.57 2010/09/29 19:16:52 bzfviger Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -123,6 +123,12 @@ int SCIPbranchcandGetNPrioRelaxImpls(
 /** gets number of continuous branching candidates with maximal branch priority for relaxation solution branching */
 extern
 int SCIPbranchcandGetNPrioRelaxConts(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of branching candidates for relaxation solution branching in previous node */
+extern
+int SCIPbranchcandGetPreviousNRelaxCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
 

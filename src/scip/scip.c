@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.683 2010/09/28 07:58:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.684 2010/09/29 19:16:52 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -15659,6 +15659,18 @@ int SCIPgetNPrioRelaxBranchConts(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchConts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPbranchcandGetNPrioRelaxConts(scip->branchcand);
+}
+
+/** gets number of branching candidates for relaxation solution branching in previous node */
+int SCIPgetPreviousNRelaxBranchCands(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPreviousNRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetPreviousNRelaxCands(scip->branchcand);
 }
 
 /** insert variable, its score and its solution value into the relaxation branching candidate storage
