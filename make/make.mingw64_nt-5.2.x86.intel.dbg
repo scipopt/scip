@@ -1,13 +1,13 @@
-#--- $Id: make.mingw64_nt-5.2.x86.intel.dbg,v 1.1 2010/09/26 17:43:34 bzfviger Exp $
+#--- $Id: make.mingw64_nt-5.2.x86.intel.dbg,v 1.2 2010/09/29 16:26:51 bzfviger Exp $
 CC		=	icl -nologo
 CC_o		=	-Fo
 CXX		=	icl -nologo
 CXX_o		=	-Fo
-LINKCC		=	link
+LINKCC		=	link -nologo
 LINKCC_L	=	-LIBPATH:
 LINKCC_l	=	lib
 LINKCC_o	=	-out:
-LINKCXX		=       link
+LINKCXX		=	link -nologo
 LINKCXX_L	=	-LIBPATH:
 LINKCXX_l	=	lib
 LINKCXX_o	=	-out:
@@ -23,12 +23,12 @@ GMP_LDFLAGS 	=
 READLINE_FLAGS	=
 READLINE_LDFLAGS=
 EXEEXTENSION	=	.exe
-AR		=	lib
+AR		=	lib  -nologo
 AR_o		=	-OUT:
 ARFLAGS		=	
 RANLIB		=
 LN_s	= cp -r
 LIBEXT		=	lib
-STATICLIBEXT    =       lib
+STATICLIBEXT	=	lib
 SHAREDLIBEXT	=	dll
 LINKLIBSUFFIX	=	.lib
