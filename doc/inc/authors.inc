@@ -164,7 +164,7 @@
 		<a href="http://www.zib.de/gleixner/">Ambros Gleixner</a>&nbsp;
 	      </td>
 	      <td>
-                <a href="http://www.gams.com">GAMS</a> Reader
+                SoPlex interface, mixed integer nonlinear programming
 	      </td>
 	    </tr>
 	    <tr>
