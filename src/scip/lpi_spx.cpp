@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.122 2010/09/24 10:26:20 bzfschwa Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.123 2010/09/29 17:47:38 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -75,7 +75,7 @@
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
-#error "This interface is for SoPlex version 1.4"
+#error "This interface is not compatible with SoPlex versions prior to 1.4"
 #endif
 
 
