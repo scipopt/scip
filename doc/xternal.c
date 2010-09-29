@@ -911,12 +911,15 @@
  *
  * @subsection CONSHDLRCOPY
  *
- * The CONSHDLRCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
- * callback as <code>NULL</code> the user disables the execution of the specified constraint handler for all copied SCIP
- * instances. This may deteriorate the performance of primal heuristics using sub-SCIPs. A usual implementation just
+ * The CONSHDLRCOPY callback is executed when the SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the inclusion of the specified constraint handler into all copied SCIP
+ * instances. This may deteriorate the performance of primal heuristics solving sub-SCIPs, since these constitute only
+ * relaxations of the original problem if constraint handlers are missing.
+ * 
+ * A usual implementation just
  * calls the interface method which includes the constraint handler to the model. For example, this callback is
- * implemented for the knapsack constraint handler as follows.
- *
+ * implemented for the knapsack constraint handler as follows:
+ * 
  * \code
  * static
  * SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
@@ -933,14 +936,14 @@
  * }
  * \endcode
  *
- * <b>Note.</b> If this callback gets implemented, then there is one thing to be precise. You should only set the valid
- * pointer to TRUE, if you can make sure that all necessary data of the constraint handler is copied correctly. This
- * means, if the complete problem was validly copied (all copy methods returned a valid TRUE), then dual reductions made
- * with the copied problem can be transfer to the original SCIP instance. This means, it was a one-to-one copy of the
- * original problem. If the valid pointer is wrongly set to TRUE, then it might happen that optimal solutions are cut
- * off. 
+ * <b>Note.</b> If you implement this callback, take care when setting the valid pointer. The valid pointer should be
+ * set to TRUE if (and only if!) you can make sure that all necessary data of the constraint handler are copied
+ * correctly. If the complete problem is validly copied, i.e. if the copy methods of all problem defining plugins
+ * (constraint handlers and pricers) return <code>*valid = TRUE</code>, then dual reductions found for the copied problem can be
+ * transferred to the original SCIP instance. Thus, if the valid pointer is wrongly set to TRUE, it might happen that
+ * optimal solutions are cut off.
  *
- * <b>Note.</b> If you implement this callback and the constraints handler needs constraints (see CONSHDLR_NEEDSCONS),
+ * <b>Note.</b> If you implement this callback and the constraint handler needs constraints (see CONSHDLR_NEEDSCONS),
  * then you also need to implement the callback \ref CONSCOPY.
  *
  * @subsection CONSINIT
@@ -1202,11 +1205,12 @@
  *
  * @subsection CONSCOPY
  *
- * The CONSCOPY callback method is used if constraints should get copied from one SCIP environment into another SCIP
- * environment. To do so, this method comes with the necessary parameters such as a map mapping the variables from the
- * source SCIP environment to the corresponding variables of the target SCIP environment and a map mapping constraints
- * in the same way. For a complete list of all arguments of this callback method see type_cons.h. To get the
- * corresponding target variable of given source variable, you can use the variable map directly.
+ * The CONSCOPY callback method is used if constraints should get copied from one SCIP instance into another SCIP
+ * instance. This method comes with the necessary parameters to do so, most importantly with a mapping of the variables of the
+ * source SCIP instance to the corresponding variables of the target SCIP instance, and a mapping for the constraints
+ * in the same way. For a complete list of all arguments of this callback method see type_cons.h.
+ *
+ * To get the corresponding target variable of a given source variable, you can use the variable map directly:
  *
  * \code
  * targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
@@ -1214,15 +1218,17 @@
  *
  * We recommend, however, to use the method SCIPgetVarCopy() which gets the variable map and the constraint map as input
  * (besides others) and returns the requested target variable. The advantage of using SCIPgetVarCopy() is, that in case
- * the required variable does not exist yet it is created and added to the copy.
+ * the required variable does not exist, yet, it is created and added to the copy automatically:
  *
  * \code
  * SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevar, &targetvar, varmap, consmap, global) );
  * \endcode
  *
- * Furthermore, if the copy process was successful the result pointer success has to be set to TRUE. <b>Note.</b> You
- * have to be precise by setting the success pointer. If you set the success pointer to TRUE and the constraint was not
- * copied one-to-one, then it might happen that optimal solutions are cut off during the search.
+ * Finally, the result pointer valid has to be set to TRUE if (and only if!) the copy process was successful.
+ * 
+ * <b>Note.</b> Take care by setting the valid pointer. If you set the valid pointer to TRUE, but the constraint was
+ * not copied one-to-one, then it might happen that optimal solutions are cut off during the search (see section
+ * CONSHDLRCOPY above).
  *
  * For an example implementation we refer to cons_linear.c. Additional documentation and the complete list of all
  * parameters can be found in the file in type_cons.h.
@@ -5114,7 +5120,7 @@
  * 
  * @section COUNTLIMIT Limit the number of solutions which should be counted
  *
- * It is possible to give an (soft) upper on the number solutions which should be counted. If this upper bound is
+ * It is possible to give a (soft) upper on the number solutions which should be counted. If this upper bound is
  * exceeded SCIP will be stopped. The name of the parameter to use is <code>constraints/countsols/sollimit</code>. In
  * the interactive shell this parameter can be set as follows:
  *
@@ -5182,7 +5188,7 @@
  * @brief This page lists headers which contain methods that can be used via the callable library.
  *
  * All the headers listed above include functions which are allowed to be called by external users. Besides those
- * functions it is also valid to call methods that are listed in on of the headers of the (default) plugins, e.g.,
+ * functions it is also valid to call methods that are listed in one of the headers of the (default) plugins, e.g.,
  * cons_linear.h.
  *
  * If you are locking for information about a particular object of SCIP, such as a variable or a constraint, you should first search
