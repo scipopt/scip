@@ -25,7 +25,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
-$NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \ 
+$NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
 $NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
