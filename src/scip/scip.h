@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.440 2010/09/30 08:30:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.441 2010/09/30 13:56:44 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4953,6 +4953,14 @@ SCIP_RETCODE SCIPchgNlRowLhs(
    SCIP_Real             lhs                 /**< new left hand side */
    );
 
+/** changes constant of NLP nonlinear row */
+extern
+SCIP_RETCODE SCIPchgNlRowConstant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_Real             constant            /**< new value for constant */
+   );
+
 /** changes right hand side of NLP nonlinear row */
 extern
 SCIP_RETCODE SCIPchgNlRowRhs(
@@ -4978,6 +4986,27 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
    SCIP_Real*            vals                /**< values of coefficients in linear part of row */
+   );
+
+/** changes linear coefficient of a variables in a row
+ * setting the coefficient to 0.0 means that it is removed from the row
+ * the variable does not need to exists before */
+extern
+SCIP_RETCODE SCIPchgNlRowLinearCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< new value of coefficient */
+   );
+
+/** changes coefficient in quadratic part of a row
+ * setting the coefficient in the quadelement to 0.0 means that it is removed from the row
+ * the element does not need to exists before */
+extern
+SCIP_RETCODE SCIPchgNlRowQuadElement(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
    );
 
 /** adds quadratic variable to the nonlinear row

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.686 2010/09/30 08:30:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.687 2010/09/30 13:56:44 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -14099,6 +14099,20 @@ SCIP_RETCODE SCIPchgNlRowRhs(
    return SCIP_OKAY;
 }
 
+/** changes constant of NLP nonlinear row */
+SCIP_RETCODE SCIPchgNlRowConstant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_Real             constant            /**< new value for constant */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgNlRowConstant", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowChgConstant(nlrow, scip->set, scip->stat, scip->nlp, constant) );
+
+   return SCIP_OKAY;
+}
+
 /** adds variable with a linear coefficient to the nonlinear row */
 SCIP_RETCODE SCIPaddLinearCoefToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14135,6 +14149,25 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    {
       SCIP_CALL( SCIPnlrowAddLinearCoef(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, vars[v], vals[v]) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** changes linear coefficient of a variables in a row
+ * setting the coefficient to 0.0 means that it is removed from the row
+ * the variable does not need to exists before */
+SCIP_RETCODE SCIPchgNlRowLinearCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< new value of coefficient */
+   )
+{
+   assert(var != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgNlRowLinearCoef", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowChgLinearCoef(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, var, coef) );
 
    return SCIP_OKAY;
 }
@@ -14213,6 +14246,22 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
    {
       SCIP_CALL( SCIPnlrowAddQuadElement(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, quadelems[v]) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** changes coefficient in quadratic part of a row
+ * setting the coefficient in the quadelement to 0.0 means that it is removed from the row
+ * the element does not need to exists before */
+SCIP_RETCODE SCIPchgNlRowQuadElement(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgNlRowQuadElement", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPnlrowChgQuadElem(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, quadelement) );
 
    return SCIP_OKAY;
 }
