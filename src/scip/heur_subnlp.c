@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.46 2010/09/30 17:55:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.47 2010/09/30 18:06:32 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1268,7 +1268,7 @@ SCIP_RETCODE forbidFixation(
             continue;
          
          fixval = SCIPvarGetLbGlobal(subvar);
-         assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in subSCIP */
+         assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in subSCIP */  /*lint !e777*/
          assert(fixval == 0.0 || fixval == 1.0); /* we have rounded values before fixing */
          
          if( fixval == 0.0 )
@@ -1320,9 +1320,9 @@ SCIP_RETCODE forbidFixation(
             continue;
          
          fixval = SCIPvarGetLbGlobal(subvar);
-         assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in subSCIP */
+         assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in subSCIP */   /*lint !e777*/
          assert((int)fixval == fixval); /* we have rounded values before fixing */
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */ 
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/ 
          
          if( SCIPvarGetLbGlobal(var) < fixval )
          {
