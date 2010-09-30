@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.384 2010/09/28 07:26:51 bzfheinz Exp $
+# $Id: Makefile,v 1.385 2010/09/30 13:17:49 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -711,7 +711,8 @@ lintfiles:
 			done'
 
 .PHONY: doc
-doc:		
+doc: $(MAINSHORTLINK)
+		@bin/scip -c "set default set save doc/inc/parameters.set quit"
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy
 
 .PHONY: check

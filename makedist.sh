@@ -19,10 +19,6 @@ find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/*
 
-echo generate parameters.set
-make LPS=none ZIMPL=false
-bin/scip -c "set default set save doc/inc/parameters.set quit"
-
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
 --exclude="*cvs*" \
@@ -31,7 +27,6 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/* $NAME/doc/inc/faq.inc $NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
-$NAME/doc/inc/parameters.set \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_blis.sh $NAME/check/evalcheck_blis.sh $NAME/check/check_blis.awk \
