@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.29 2010/09/20 09:51:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.30 2010/09/30 13:59:34 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -2035,8 +2035,11 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    /* check, if column already exists in the row's linear variables vector */
    if( pos == -1 )
    {
-      /* add previously not existing coefficient */
-      SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, var, coef) );
+      if( !SCIPsetIsZero(set, coef) )
+      {
+         /* add previously not existing coefficient */
+         SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, var, coef) );
+      }
    }
    else
    {
