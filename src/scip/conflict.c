@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.161 2010/09/27 17:20:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.162 2010/09/30 11:06:58 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -264,7 +264,11 @@ void confgraphAddBdchg(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict graph */
    )
 {
-   const char* colors[] = {"#8888ff", "#ffff00", "#55ff55"};
+   const char* colors[] = {
+      "#8888ff", /**< blue for constraint resolving */
+      "#ffff00", /**< yellow for propagator resolving */
+      "#55ff55"  /**< green branching decision */
+   };
    char label[SCIP_MAXSTRLEN];
    char depth[SCIP_MAXSTRLEN];
    int col;
