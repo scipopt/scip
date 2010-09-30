@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.95 2010/09/30 15:33:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.96 2010/09/30 16:47:04 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2634,6 +2634,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       if ( ! SCIPconsIsTransformed(consdata->lincons) )
       {
          SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &consdata->lincons) );
+         /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible ?????????? */
          assert( consdata->lincons != NULL );
          SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
       }
@@ -2803,6 +2804,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
                (SCIP_EVENTDATA*)*consdata, -1) );
       }
 
+      /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible ?????????? */
       assert( (*consdata)->lincons != NULL );
       SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
    }
@@ -3841,6 +3843,9 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    assert( sourceconsdata != NULL );
 
    /* if the linear constraint is disabled or not active -> do not copy (may happen due to (multi-)aggregation) */
+   /* FIXME !!! if we do a global copy of the problem while we are in some node, this constraint and the corresponding linear one may be disabled
+    * in this case we should still copy the constraint
+    * how can we distinguish this from the case that the linear constraint was disabled ????????????? */ 
    if ( !SCIPconsIsEnabled(sourceconsdata->lincons) )
    {
       SCIPdebugMessage("Linear constraint <%s> disabled! Do not copy indicator constraint <%s>.\n",
@@ -3954,7 +3959,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    lincons = SCIPfindCons(scip, binvarname);
    if ( lincons == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown linear constraint <%s>\n", binvarname);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <%s>\n", name, binvarname);
       *success = FALSE;
       return SCIP_OKAY;
    }
