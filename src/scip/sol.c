@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.98 2010/09/23 15:58:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.99 2010/09/30 13:56:32 bzfgamra Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -543,7 +543,7 @@ SCIP_RETCODE SCIPsolLinkRelaxSol(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    )
-{
+{  /*lint --e{715}*/
    assert(sol != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
