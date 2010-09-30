@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.139 2010/09/27 17:20:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.140 2010/09/30 11:54:43 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1515,10 +1515,17 @@ SCIP_RETCODE readSOS(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool initial, separate, enforce, check, propagate;
-   SCIP_Bool local, modifiable, dynamic, removable;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
    char name[MPS_MAX_NAMELEN] = { '\0' };
-   SCIP_CONS*  cons = NULL;
+   SCIP_CONS* cons = NULL;
    int consType = -1;
    int cnt = 0;
 
@@ -1536,26 +1543,26 @@ SCIP_RETCODE readSOS(
    removable = FALSE;
 
    /* loop through section */
-   while( mpsinputReadLine(mpsi) )
+   while ( mpsinputReadLine(mpsi) )
    {
       int type = -1;
 
       /* check if next section is found */
-      if( mpsinputField0(mpsi) != NULL )
+      if ( mpsinputField0(mpsi) != NULL )
       {
-         if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+         if ( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
-         else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
+         else if ( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
             mpsinputSetSection(mpsi, MPS_QMATRIX);
-         else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
+         else if ( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
-         else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
+         else if ( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
-         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+         else if ( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
             mpsinputSetSection(mpsi, MPS_INDICATORS);
          break;
       }
-      if( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
+      if ( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
@@ -1563,7 +1570,7 @@ SCIP_RETCODE readSOS(
       }
 
       /* check for new SOS set */
-      if( strcmp(mpsinputField1(mpsi), "S1") == 0 )
+      if ( strcmp(mpsinputField1(mpsi), "S1") == 0 )
          type = 1;
       if( strcmp(mpsinputField1(mpsi), "S2") == 0 )
          type = 2;
@@ -2078,11 +2085,11 @@ SCIP_RETCODE readIndicators(
       /* check if next section is found */
       if ( mpsinputField0(mpsi) != NULL )
       {
-         if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+         if ( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
       }
-      if ( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
+      if ( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
