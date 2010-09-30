@@ -1465,6 +1465,22 @@
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
+ * @subsection PRICERCOPY
+ *
+ * The PRICERCOPY callback is executed when the SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the inclusion of the pricer into all copied SCIP
+ * instances. This means that primal heuristics will work on a sub-SCIP that contains only a part of the variables
+ * and no variables are priced in during the solving process of the sub-SCIP. Therefore, primal soultions found in the
+ * copied problem are typically still valid for the original problem and used for its solving process, 
+ * but dual reductions cannot be transferred to the original problem.
+ * 
+ * <b>Note.</b> If you implement this callback, take care when setting the valid pointer. The valid pointer should be
+ * set to TRUE if (and only if!) you can make sure that all necessary data of the pricer are copied
+ * correctly. If the complete problem is validly copied, i.e. if the copy methods of all problem defining plugins
+ * (constraint handlers and pricers) return <code>*valid = TRUE</code>, then dual reductions found for the copied problem can be
+ * transferred to the original SCIP instance. Thus, if the valid pointer is wrongly set to TRUE, it might happen that
+ * optimal solutions are cut off.
+ *
  * @subsection PRICERINIT
  *
  * The PRICERINIT callback is executed after the problem was transformed.
