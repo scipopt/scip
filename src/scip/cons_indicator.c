@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.96 2010/09/30 16:47:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.97 2010/09/30 17:29:33 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2571,6 +2571,44 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
 }
 
 
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+static
+SCIP_DECL_CONSINITPRE(consInitpreIndicator)
+{  /*lint --e{715}*/
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   /* check each constraint */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      assert( conss != NULL );
+      assert( conss[c] != NULL );
+      assert( SCIPconsIsTransformed(conss[c]) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* if not happend already, get transformed linear constraint */
+      assert( consdata->lincons != NULL );
+      assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
+
+      if ( ! SCIPconsIsTransformed(consdata->lincons) )
+      {
+         SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &consdata->lincons) );
+         assert( consdata->lincons != NULL );
+         SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_CONSINITSOL(consInitsolIndicator)
@@ -2626,18 +2664,6 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       assert( consdata != NULL );
 
       /* SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) ); */
-
-      /* if not happend already, get transformed linear constraint */
-      assert( consdata->lincons != NULL );
-      assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
-
-      if ( ! SCIPconsIsTransformed(consdata->lincons) )
-      {
-         SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &consdata->lincons) );
-         /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible ?????????? */
-         assert( consdata->lincons != NULL );
-         SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
-      }
 
       /* deactivate */
       if ( ! consdata->linconsActive )
@@ -4047,9 +4073,6 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitIndicator NULL
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreIndicator NULL
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #define consExitpreIndicator NULL
