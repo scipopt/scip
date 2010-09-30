@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.43 2010/09/29 10:23:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.44 2010/09/30 09:25:20 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1352,11 +1352,16 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          assert(SCIPvarGetProbindex(subvar) == i);
 
          var = heurdata->var_subscip2scip[i];
-         if( var == NULL && !SCIPisEQ(scip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)) )
+         if( var == NULL )
          {
-            SCIPdebugMessage("do not know how to fix unfixed discrete variable in subSCIP that has no correspondence to original problem, giving up on heuristic "HEUR_NAME"\n");
-            SCIP_CALL( freeSubSCIP(scip, heurdata) );
-            return SCIP_OKAY;
+            if( !SCIPisEQ(scip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)) )
+            {
+               SCIPdebugMessage("do not know how to fix unfixed discrete variable in subSCIP that has no correspondence to original problem, giving up on heuristic "HEUR_NAME"\n");
+               SCIP_CALL( freeSubSCIP(scip, heurdata) );
+               return SCIP_OKAY;
+            }
+            
+            continue;
          }
          
          /* at this point, variables in subscip and in our scip should have same bounds */
