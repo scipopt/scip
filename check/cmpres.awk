@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.57 2010/09/30 16:38:01 bzfhende Exp $
+# $Id: cmpres.awk,v 1.58 2010/09/30 16:50:47 bzfhende Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -278,6 +278,7 @@ BEGIN {
          problist[problistlen] = $1;
          problistlen++;
       }
+      printsoltimes = 0; # additional output is only available for SCIP-.res files
    }
    if( $11 in statuses ) # from NLP-trace-files
    {
@@ -305,6 +306,7 @@ BEGIN {
          problist[problistlen] = $1;
          problistlen++;
       }
+      printsoltimes = 0; # additional output is only available for SCIP-.res files
    }
    if( $12 in statuses ) # GUROBI, CBC
    {
@@ -332,6 +334,7 @@ BEGIN {
          problist[problistlen] = $1;
          problistlen++;
       }
+      printsoltimes = 0; # additional output is only available for SCIP-.res files
    }
    if( $13 in statuses ) # GLPK, CPLEX, SCIP without columns displaying times to first and best solution
    {
@@ -359,6 +362,7 @@ BEGIN {
          problist[problistlen] = $1;
          problistlen++;
       }
+      printsoltimes = 0; # additional output is only available for SCIP-.res files
    }
 
    if( $15 in statuses ) # SCIP with solution times to first/last
