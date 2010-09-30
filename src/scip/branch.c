@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.102 2010/09/29 20:24:55 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.103 2010/09/30 08:30:01 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -153,7 +153,6 @@ SCIP_RETCODE SCIPbranchcandCreate(
    (*branchcand)->nprioexternints = 0;
    (*branchcand)->nprioexternimpls = 0;
    (*branchcand)->externmaxpriority = INT_MIN;
-   (*branchcand)->nprevexterncands = 0;
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
    (*branchcand)->npriopseudocands = 0;
@@ -458,16 +457,6 @@ int SCIPbranchcandGetNPrioExternConts(
    return branchcand->nprioexterncands - branchcand->nprioexternbins - branchcand->nprioexternints - branchcand->nprioexternimpls;
 }
 
-/** gets number of extern branching candidates in previous node */
-int SCIPbranchcandGetPreviousNExternCands(
-   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
-   )
-{
-   assert(branchcand != NULL);
-
-   return branchcand->nprevexterncands;
-}
-
 /** insert variable, its score and its solution value into the external branching candidate storage
  * the relative difference of the current lower and upper bounds of the variable must be at least 2*epsilon 
  */
@@ -605,7 +594,6 @@ void SCIPbranchcandClearExternCands(
 {
    assert(branchcand != NULL);
 
-   branchcand->nprevexterncands = branchcand->nexterncands;
    branchcand->nexterncands = 0;
    branchcand->nprioexterncands = 0;
    branchcand->nprioexternbins = 0;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.79 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.80 2010/09/30 08:30:01 bzfviger Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -472,7 +472,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNexterncands)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NEXTERNCANDS) == 0);
    assert(scip != NULL);
 
-   SCIPdispInt(file, SCIPgetPreviousNExternBranchCands(scip), DISP_WIDT_NEXTERNCANDS);
+   SCIPdispInt(file, SCIPgetNExternBranchCands(scip), DISP_WIDT_NEXTERNCANDS);
 
    return SCIP_OKAY;
 }

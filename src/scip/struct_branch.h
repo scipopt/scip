@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.30 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.31 2010/09/30 08:30:01 bzfviger Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -55,7 +55,6 @@ struct SCIP_BranchCand
    int                   nprioexternints;    /**< number of integer external candidates with largest branch priority value */
    int                   nprioexternimpls;   /**< number of implicit integer external candidates with largest branch priority value */
    int                   externmaxpriority;  /**< maximal branch priority of all external candidates */
-   int                   nprevexterncands;   /**< number of candidates for branching on external candidates in previous node */
    int                   pseudocandssize;    /**< number of available slots in pseudocands array */
    int                   npseudocands;       /**< number of candidates for branching on pseudo solution */
    int                   npriopseudocands;   /**< number of pseudo candidates with largest branch priority value */

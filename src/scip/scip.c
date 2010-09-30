@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.685 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.686 2010/09/30 08:30:01 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -15659,18 +15659,6 @@ int SCIPgetNPrioExternBranchConts(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioExternBranchConts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPbranchcandGetNPrioExternConts(scip->branchcand);
-}
-
-/** gets number of external branching candidates in previous node */
-int SCIPgetPreviousNExternBranchCands(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPreviousNExternBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   return SCIPbranchcandGetPreviousNExternCands(scip->branchcand);
 }
 
 /** insert variable, its score and its solution value into the external branching candidate storage

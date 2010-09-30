@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.439 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.440 2010/09/30 08:30:01 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5632,12 +5632,6 @@ int SCIPgetNPrioExternBranchImpls(
 /** gets number of continuous external branching candidates with maximal branch priority */
 extern
 int SCIPgetNPrioExternBranchConts(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets number of external branching candidates in previous node */
-extern
-int SCIPgetPreviousNExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

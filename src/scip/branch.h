@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.58 2010/09/29 20:24:55 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.59 2010/09/30 08:30:01 bzfviger Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -124,12 +124,6 @@ int SCIPbranchcandGetNPrioExternImpls(
 /** gets number of continuous external branching candidates with maximal branch priority */
 extern
 int SCIPbranchcandGetNPrioExternConts(
-   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
-   );
-
-/** gets number of external branching candidates in previous node */
-extern
-int SCIPbranchcandGetPreviousNExternCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
 
