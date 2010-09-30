@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.44 2010/09/30 09:25:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.45 2010/09/30 09:27:05 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1464,7 +1464,12 @@ applyheurcleanup:
          assert(SCIPvarGetProbindex(subvar) == i);
 
          var = heurdata->var_subscip2scip[i];
-         assert(var != NULL); /* otherwise we should have returned above */
+         if( var == NULL )
+         {
+            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar))); /* otherwise we should have returned above */
+            continue;
+         }
+         assert(var != NULL); 
 
          SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPvarGetLbGlobal(var)) );
          SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPvarGetUbGlobal(var)) );
