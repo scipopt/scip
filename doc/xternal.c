@@ -89,7 +89,7 @@
  *   - \ref DISP    "Display columns"
  *   - \ref EVENT   "Event handler"
  *   - \ref NLPI    "Interfaces to NLP solvers"
- *   - \ref EXPRINT "Expression interpreter"
+ *   - \ref EXPRINT "Interfaces to Expression interpreters"
  *
  * - Miscellaneous
  *   - \ref CODE    "Coding style guidelines"
@@ -4041,9 +4041,10 @@
 /**@page NLPI How to add interfaces to nonlinear programming solvers
  *
  * NLPIs are used to interface a solver for nonlinear programs (NLP).
- * It is used, e.g., to solve convex relaxations of the problem or to find local optimal solutions of
+ * It is used, e.g., to solve convex relaxations of the problem or to find locally optimal solutions of
  * nonlinear relaxations or subproblems.
-
+ * The NLPI has been designed such that it can be used independently from SCIP.
+ *
  * While the NLPI itself corresponds to the solver interface, the NLPIPROBLEM corresponds to the
  * (solver specific) representation of a concrete nonlinear program.
  * An NLP is specified in form of a set of indexed variables with variable bounds, an objective function,
@@ -4057,14 +4058,11 @@
  * provides a set of methods to compute functions values, gradients, Jacobians, and Hessians for a given NLP.
  * See the interface to Ipopt for an example on how to use the NLPIORACLE.
  * 
- * The NLPI has been designed such that it can be used independently from SCIP.
- * 
  * A complete list of all NLPIs contained in this release can be found \ref NLPIS "here".
  *
  * In the following, we explain how the user can add its own NLP solver interface.
  * Take the interface to Ipopt (src/nlpi/nlpi_ipopt.cpp) as an example.
- * Unlike many other plugins, it is written in C++.
- *
+ * Unlike most other plugins, it is written in C++.
  * Additional documentation for the callback methods of an NLPI, in particular for their input parameters, 
  * can be found in the file type_nlpi.h.
  *
@@ -4096,7 +4094,7 @@
  *
  * \par NLPI_PRIORITY: the priority of the NLPI.
  * If an NLP has to be solved, an NLP solver has to be selected.
- * In default settings, the solver which NLPI has the highest priority is selected.
+ * By default, the solver with the NLPI with highest priority is selected.
  * The priority of an NLPI should be set according to performance of the solver:
  * solvers that provide fast algorithms that are usually successful on a wide range of problems should have a high priority.
  * An easy way to list the priorities of all NLPIs is to type "display nlpis" in the interactive shell of SCIP.
@@ -4105,7 +4103,7 @@
  *
  * Below the header "Data structures" you can find structs which are called "struct SCIP_NlpiData" and "struct SCIP_NlpiProblem".
  * In this data structure, you can store the data of your solver interface and of a specific NLP problem.
- * For example, you could store a pointer to the block memory data struction in the SCIP_NlpiData data structure
+ * For example, you could store a pointer to the block memory data structure in the SCIP_NlpiData data structure
  * and store a pointer to an NLPIoracle in the SCIP_NlpiProblem data structure.
  *
  * @section NLPI_INTERFACE Interface Methods
@@ -4278,24 +4276,24 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page EXPRINT How to add interfaces to expression interpreter
+/**@page EXPRINT How to add interfaces to expression interpreters
  *
- * An expression interpreter is used to compute function point-wise and interval-wise values, gradients, and
- * derivatives for algebraic expressions that are given as expression tree.
- * It is used, e.g., by an NLP solver interfaces to compute Jacobians and Hessians for the solver.
+ * An expression interpreter is a tool to compute point-wise and interval-wise the function values, gradients, and
+ * derivatives of algebraic expressions which are given in form of an expression tree.
+ * It is used, e.g., by an NLP solver interface to compute Jacobians and Hessians for the solver.
  * 
  * The expression interpreter interface in SCIP has been implemented similar to those of the LP solver interface (LPI).
- * For one binary, exactly one expression interpreter has to linked.
+ * For one binary, exactly one expression interpreter has to be linked.
  * The expression interpreter API has been designed such that it can be used independently from SCIP.
  * 
  * A complete list of all expression interpreters contained in this release can be found \ref EXPRINTS "here".
  *
  * In the following, we explain how the user can add its own expressions interpreter.
  * Take the interface to CppAD (src/nlpi/exprinterpret_cppad.cpp) as an example.
- * Unlike many other plugins, it is written in C++.
+ * Unlike most other plugins, it is written in C++.
  *
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters, 
- * can be found in the file exprinterpret.h.
+ * can be found in the file src/nlpi/exprinterpret.h.
  *
  * Note that the expression interpreter API has <b>BETA status</b> and thus may change in the next version.
  *
