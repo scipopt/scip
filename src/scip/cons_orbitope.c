@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.22 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.23 2010/09/30 20:09:01 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -873,62 +873,58 @@ SCIP_RETCODE propagateCons(
       lastoneprevrow = lastoneinrow;
    }
 
-   /* for partitioning orbitopes, we check whether fixing any entry to 0 results in a contradiction */
-   if ( ispart )
+   /* check whether fixing any entry to 0 results in a contradiction -> loop through rows in frontiersteps (a.k.a. gamma) */
+   for (j = 0; j < nsteps; ++j)
    {
-      /* loop through rows in frontiersteps (a.k.a. gamma) */
-      for (j = 0; j < nsteps; ++j)
+      int s;
+      int lastoneinrow;
+
+      s = frontiersteps[j];
+      lastoneinrow = lastones[s];
+      assert( 0 <= lastoneinrow && lastoneinrow < nblocks );
+         
+      /* if entry is not fixed to 1 */
+      if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 )
       {
-         int s;
-         int lastoneinrow;
-         
-         s = frontiersteps[j];
-         lastoneinrow = lastones[s];
-         assert( 0 <= lastoneinrow && lastoneinrow < nblocks );
-         
-         /* if entry is not fixed to 1 */
-         if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 )
-         {
-            int betaprev;
-            betaprev = lastoneinrow - 1;
+         int betaprev;
+         betaprev = lastoneinrow - 1;
             
-            /* loop through rows below s */
-            for (i = s+1; i < nspcons; ++i)
+         /* loop through rows below s */
+         for (i = s+1; i < nspcons; ++i)
+         {
+            int beta;
+            beta = -2;
+
+            if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
+               beta = betaprev;
+            else
+               beta = betaprev + 1;
+            assert( -1 <= beta && beta < nblocks );
+               
+            if ( firstnonzeros[i] > beta )
             {
-               int beta;
-               beta = -2;
-               
-               if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
-                  beta = betaprev;
-               else
-                  beta = betaprev + 1;
-               assert( -1 <= beta && beta < nblocks );
-               
-               if ( firstnonzeros[i] > beta )
-               {
-                  SCIP_Bool tightened;
-                  int inferInfo;
-                  
-                  /* can fix (s,lastoneinrow) (a.k.a (s,alpha)) to 1
-                   * (do not need to fix other entries to 0 in partitioning case, since they will be
-                   * automatically fixed by SCIPtightenVarLb.)
-                   */
-                  assert( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 );
-                  SCIPdebugMessage(" -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
-                  
-                  tightened = FALSE;
-                  
-                  /* store position (i,firstnonzeros[i]) */
-                  inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
-                  SCIP_CALL( SCIPinferBinvarCons(scip, vars[s][lastoneinrow], TRUE, cons, inferInfo, infeasible, &tightened) );
-                  
-                  assert( !(*infeasible) );
-                  if ( tightened )
-                     ++(*nfixedvars);
-                  break;
-               }
-               betaprev = beta;
+               SCIP_Bool tightened;
+               int inferInfo;
+
+               /* can fix (s,lastoneinrow) (a.k.a (s,alpha)) to 1
+                * (do not need to fix other entries to 0, since they will be
+                * automatically fixed by SCIPtightenVarLb.)
+                */
+               assert( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 );
+               SCIPdebugMessage(" -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
+
+               tightened = FALSE;
+
+               /* store position (i,firstnonzeros[i]) */
+               inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
+               SCIP_CALL( SCIPinferBinvarCons(scip, vars[s][lastoneinrow], TRUE, cons, inferInfo, infeasible, &tightened) );
+
+               assert( !(*infeasible) );
+               if ( tightened )
+                  ++(*nfixedvars);
+               break;
             }
+            betaprev = beta;
          }
       }
    }
@@ -1111,8 +1107,6 @@ SCIP_RETCODE resolvePropagation(
       char str[SCIP_MAXSTRLEN];
       char tmpstr[SCIP_MAXSTRLEN];
 #endif
-
-      assert( consdata->ispart );
 
       /* if we fixed a variable in the SC to 1 */
       inferinfo -= nspcons * nblocks;
