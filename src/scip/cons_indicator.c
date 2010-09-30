@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.94 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.95 2010/09/30 15:33:08 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3820,6 +3820,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    SCIP_VAR* targetslackvar;
    SCIP_CONS* sourcelincons;
    SCIP_CONS* targetlincons;
+   SCIP_CONSHDLR* conshdlrlinear;
    const char* consname;
 
    assert( scip != NULL );
@@ -3852,7 +3853,9 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    /* get copied version of linear constraint */
    sourcelincons = sourceconsdata->lincons;
    assert( sourcelincons != NULL );
-   SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, sourceconshdlr, varmap, consmap, SCIPconsGetName(sourcelincons), 
+   conshdlrlinear = SCIPfindConshdlr(sourcescip, "linear");
+   assert(conshdlrlinear != NULL);
+   SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons), 
          SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),
          SCIPconsIsPropagated(sourcelincons), SCIPconsIsLocal(sourcelincons), SCIPconsIsModifiable(sourcelincons), SCIPconsIsDynamic(sourcelincons),
          SCIPconsIsRemovable(sourcelincons), SCIPconsIsStickingAtNode(sourcelincons), global, valid) );
