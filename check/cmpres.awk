@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.56 2010/09/03 15:48:45 bzfgamra Exp $
+# $Id: cmpres.awk,v 1.57 2010/09/30 16:38:01 bzfhende Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -173,6 +173,8 @@ BEGIN {
 
    short = 0;  #for each non reference solver, only absolute time and number of nodes are printed 
    printsoltimes = 0; # for reference solver, absolute time to first and best solution are printed, for other solvers the corresponding ratios
+                      #! please NOTE that this additional output is currently only available for SCIP .res-files created with the evalcheck.sh script and
+                      #  the flag printsoltimes = 1 set in check.awk. If other solvers are involved, leave this flag set to 0.
    printsoltimes = !short && printsoltimes; # short deactivates the detailed solution times output
    infinity = 1e+20;
    timegeomshift = 10.0;
@@ -190,8 +192,8 @@ BEGIN {
    onlyfeasible = 0;
    onlyinfeasible = 0;
    onlyfail = 0;
-   exclude = "";
-   texfile = "";
+   exclude = "nexp.150.20.1.5";
+   texfile = "bla.tex";
    texincfile = "";
    texsummaryfile = "";
    texsummaryheader = 0;
@@ -715,8 +717,8 @@ END {
             nodecomp = nodes[s,pidx];
             timecomp = time[s,pidx];
             timeoutcomp = (status[s,pidx] == "timeout");
-	    timetofirstcomp = timetofirst[s,pidx];
-	    timetobestcomp = timetobest[s,pidx];
+	    timetofirstcomp = max(mintime, timetofirst[s,pidx]);
+	    timetobestcomp = max(mintime, timetobest[s,pidx]);
          }
          iseqpath = (iters[s,pidx] == itercomp && nodes[s,pidx] == nodecomp);
          hastimeout = timeoutcomp || (status[s,pidx] == "timeout");
