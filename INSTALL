@@ -39,7 +39,7 @@ compilation settings:
               "gnu", "intel", "compaq", "sun", "insure", ... (see make/ directory)
 
 - $(OPT):     the optimization level of compilation
-              "dbg", "opt", or "prf"
+              "dbg", "opt", or "prf" 
 
 - $(LPS):     the LP solver to use
               "spx", "spx132", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
@@ -66,6 +66,7 @@ Here is what you have to do to get SCIP running:
    - "OPT=opt"         to use optimized compilation mode (default)
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
+   - "OPT=opt-gccold"  to use optimized compilation mode and gnu gcc compiler version less than 4.2
 
    - "LPS=spx"         to use SOPLEX Version >= 1.4.0 as LP solver (default)
    - "LPS=spx132"      to use SOPLEX Version 1.3.2 as LP solver
