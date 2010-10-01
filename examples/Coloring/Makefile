@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.10 2010/09/17 17:02:52 bzfgamra Exp $
+# $Id: Makefile,v 1.11 2010/10/01 16:37:50 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C Coloring example using SCIP as a callable library
@@ -99,8 +99,12 @@ $(BINDIR):
 
 .PHONY: test
 test:		
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastproblem.awk);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(BINDIR)/coloring.$(BASE).$(LPS) $(SETTINGS) $(notdir $(BINDIR)/coloring.$(BASE).$(LPS)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: clean
 clean:
@@ -109,6 +113,10 @@ ifneq ($(OBJDIR),)
 		-rmdir $(OBJDIR)
 endif
 		-rm -f $(MAINFILE)
+
+.PHONY: tags
+tags:
+		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
 .PHONY: depend
 depend:		$(SCIPDIR)
