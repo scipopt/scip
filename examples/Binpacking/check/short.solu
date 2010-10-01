@@ -1,0 +1,9 @@
+=opt=   u20_00.bpa      9
+=opt=   u40_00.bpa     17
+=opt=   u60_00.bpa     27
+=opt=   u80_00.bpa     33
+=opt=   u100_00.bpa    40
+=opt=   u120_00.bpa    48
+=best=  u250_00.bpa    99
+=best=  u500_00.bpa   198
+=best=  u1000_00.bpa  399
