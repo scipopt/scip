@@ -30,7 +30,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
-$NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc \
+$NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
