@@ -21,9 +21,10 @@
  * @author Stefan Heinz
  * @author Mathias Kinder
  * @author Marc Pfetsch
+ * @author Stefan Vigerske
  * @author Robert Waniek
  * @author Kati Wolter
- * @author Stefan Vigerske
+ * @author Michael Winkler
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -140,16 +141,19 @@
  *
  * In this section we describe (few) features and use of the SCIP Makefile. We also give two examples for how to install
  * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
- * \ref EXAMPLE2 "second example" shows how to get CPLEX linked to SCIP without ZIMPL. This is followed by section with
+ * \ref EXAMPLE2 "second example" shows how to get CPLEX linked to SCIP without ZIMPL. This is followed by a section which
  * gives some hints what to do if the \ref COMPILERPROBLEMS "compilation threws some error". We give some comments on
- * how to install SCIP under \ref WINDOWS "WINDOWS". And show \ref RUN "how to start SCIP".
+ * how to install SCIP under \ref WINDOWS "WINDOWS" and show \ref RUN "how to start SCIP".
+ *
+ * If you experience any problems during the installation, you will find help in the \ref INSTALL "INSTALL" file.
  *
  * SCIP contains a makefile system, which allows the individual setting of several parameters. For
  * instance, the following settings are supported:
  *
- * - <code>OPT=\<dbg|opt\></code> Here <code>dbg</code> turns on the debug mode of SCIP. This enables
- *   asserts and avoids macros for several function in order to ease debugging. The default is
- *   <code>opt</code>, which enables the optimized mode.  
+ * - <code>OPT=\<dbg|opt|opt-gccold\></code> Here <code>dbg</code> turns on the debug mode of SCIP. This enables asserts
+ *   and avoids macros for several function in order to ease debugging. The default is <code>opt</code>, which enables
+ *   the optimized mode. The third option <code>opt-gccold</code> will work with older GCC compilers before version
+ *   4.2. We recommend to use newer GCC versions.
  *
  * - <code>LPS=\<clp|cpx|msk|spx|xprs|none\></code> This determines the LP-solver, which should have been
  *   installed separately from SCIP. The options are the following:
@@ -161,13 +165,14 @@
  *      - <code>spx</code>: SoPlex LP-solver (default)
  *      - <code>xprs</code>: XPress LP-solver
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
-      .
- * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available
- *   for SoPlex and CLP)
+ *
+ * - <code>LPSOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized version (or old GCC optimized) version of
+ *   the LP-solver. (currently only available for SoPlex and CLP)
  *
  * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.
- * - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized (default) or debug version of ZIMPL, if ZIMPL support is enabled. \n
- * If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
+ * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
+ *   version of ZIMPL, if ZIMPL support is enabled. \n 
+ *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
  * 
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
@@ -182,7 +187,8 @@
  *
  * You can use other compilers - depending on the system:
  *
- * - <code>COMP=intel</code> Uses of the Intel compiler. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
+ * - <code>COMP=intel</code> Uses of the Intel compiler which is only available with the main optimization flags
+     <code>OPT=\<dbg|opt\></code>. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
  *
  * There is the possibility to watch the compilation more precisely:
  *
@@ -202,7 +208,7 @@
  *   additional makefile information depending on the parameters set.
  * - <code>make/make.project</code> This file contains definitions that are useful for all codes
  *   that use SCIP, for instance, the examples.
- * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf\></code> These file contain system/compiler specific
+ * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\></code> These file contain system/compiler specific
  *   definitions. If you have a yet unsupported compiler, you could copy one of these and modify it
  *   accordingly.
  *

@@ -451,4 +451,4 @@ Now "make READLINE=false" should be compiling without errors.
 Please note that we do NOT support creating the doxygen documentation or readline-usage under Windows.
 
 Since there are no real symlinks in MSYS, the include and library files of SoPlex and ZIMPL are actually copied into the SCIP-lib-folder.
-When you recompile the ZIMPL or SoPlex after compiling SCIP you have to copy the libraries manually into the SCIP-lib-folder and recompile SCIP afterwards.
+When you recompile ZIMPL or SoPlex after compiling SCIP you have to copy the libraries manually into the SCIP-lib-folder and recompile SCIP afterwards.
