@@ -20,7 +20,7 @@ find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/*
 
 echo generating default setting files
-make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false
+make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j
 bin/scip -c "set default set save doc/inc/parameters.set quit"
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
@@ -60,7 +60,7 @@ $NAME/examples/Binpacking/doc/* \
 $NAME/examples/Binpacking/check/short.test $NAME/examples/Binpacking/check/short.solu \
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
-$NAME/examples/Binpacking/data/* \ 
+$NAME/examples/Binpacking/data/*.bpa \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
 $NAME/examples/Coloring/check/short.test $NAME/examples/Coloring/check/short.solu \
 $NAME/examples/Coloring/src/depend.* \
