@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloringplugins.c,v 1.6 2010/09/17 17:02:52 bzfgamra Exp $"
+#pragma ident "@(#) $Id: coloringplugins.c,v 1.7 2010/10/01 20:56:49 bzfwinkm Exp $"
 
 /**@file   coloringplugins.c
  * @brief  SCIP plugins for coloring
@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );
-   SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
+   //   SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
