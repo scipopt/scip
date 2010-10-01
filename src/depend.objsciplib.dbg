@@ -48,7 +48,7 @@ $(LIBOBJDIR)/objscip/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objc
  src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/lpi.h src/objscip/objcloneable.h
+ src/scip/type_history.h src/scip/lpi.h src/objscip/objprobcloneable.h
 $(LIBOBJDIR)/objscip/objdialog.o: src/objscip/objdialog.cpp src/objscip/objdialog.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -249,7 +249,7 @@ $(LIBOBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objprice
  src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/lpi.h src/objscip/objcloneable.h
+ src/scip/type_history.h src/scip/lpi.h src/objscip/objprobcloneable.h
 $(LIBOBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objprobdata.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \

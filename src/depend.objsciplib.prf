@@ -62,7 +62,7 @@ $(LIBOBJDIR)/objscip/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objc
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/tree.h src/scip/misc.h src/objscip/objcloneable.h
+ src/scip/tree.h src/scip/misc.h src/objscip/objprobcloneable.h
 $(LIBOBJDIR)/objscip/objdialog.o: src/objscip/objdialog.cpp src/objscip/objdialog.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -319,7 +319,7 @@ $(LIBOBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objprice
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
- src/scip/tree.h src/scip/misc.h src/objscip/objcloneable.h
+ src/scip/tree.h src/scip/misc.h src/objscip/objprobcloneable.h
 $(LIBOBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objprobdata.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
