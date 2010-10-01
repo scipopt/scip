@@ -60,12 +60,13 @@ $NAME/examples/Binpacking/doc/* \
 $NAME/examples/Binpacking/check/short.test $NAME/examples/Binpacking/check/short.solu \
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
+$NAME/examples/Binpacking/data/* \ 
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
-$NAME/examples/Coloring/check/shart.test $NAME/examples/Coloring/check/short.solu \
+$NAME/examples/Coloring/check/short.test $NAME/examples/Coloring/check/short.solu \
 $NAME/examples/Coloring/src/depend.* \
 $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
-$NAME/examples/Eventhdlr/check/shart.test $NAME/examples/Eventhdlr/check/short.solu \
+$NAME/examples/Eventhdlr/check/short.test $NAME/examples/Eventhdlr/check/short.solu \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
