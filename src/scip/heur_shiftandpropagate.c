@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.13 2010/10/01 10:53:38 bzfheinz Exp $"
-
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.14 2010/10/01 11:35:18 bzfhende Exp $"
+#define SCIP_DEBUG
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
  * @brief  shiftandpropagate primal heuristic
@@ -475,6 +475,7 @@ SCIP_RETCODE initMatrix(
       assert(SCIPisFeasGT(scip, maxval, 0.0) || nrowlpnonz == 0);
         
       matrix->rowmatbegin[i] = currentpointer;
+      nvarsleftinrow[i] = 0;
 
       /* modify the lhs and rhs w.r.t to the rows constant and normalize by 1-norm, i.e divide the lhs and rhs by the 
        * maximum absolute value of the row 
@@ -1350,6 +1351,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          rowweights[r] = DEFAULT_WEIGHT_EQUALITY;
       else
          rowweights[r] = DEFAULT_WEIGHT_INEQUALITY;
+
    }
    colnorms = matrix->colnorms;
 
