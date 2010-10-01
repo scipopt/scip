@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.47 2010/09/30 18:06:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.48 2010/10/01 14:32:39 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1504,10 +1504,18 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    
    if( *result == SCIP_CUTOFF )
    {
-      /* if the subNLP turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
-      if( heurdata->subscipisvalid && SCIPgetNActivePricers(scip) == 0 && !SCIPisInfinity(scip, cutoff) && heurdata->forbidfixings )
+      if( heurdata->subscipisvalid && SCIPgetNActivePricers(scip) == 0 )
       {
-         SCIP_CALL( forbidFixation(scip, heurdata) );
+         /* if the subNLP is valid and turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
+         if( !SCIPisInfinity(scip, cutoff) && heurdata->forbidfixings )
+         {
+            SCIP_CALL( forbidFixation(scip, heurdata) );
+         }
+      }
+      else
+      {
+         /* if the subNLP turned out to be globally infeasible but we are not sure that we have a valid copy, we change to DIDNOTFIND */
+         *result = SCIP_DIDNOTFIND;
       }
    }
 
