@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.64 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.65 2010/10/01 16:30:52 bzfwinkm Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -45,24 +45,10 @@
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
 
-/** ZIMPL_VERSION is defined by ZIMPL version 3.01 and higher. ZIMPL 3.01 made some changes in the interface to SCIP.
- *  ZIMPL_VERSION should be defined in mme.h */
-#if (ZIMPL_VERSION >= 301)
 #include "zimpl/numb.h"
 #include "zimpl/bound.h"
-#endif
-
-/* @Note: The following define should be removed at the 2010 release. */
-/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made some changes in the interface to SCIP.
- *  ZIMPL_VERSION should be defined in mme.h */
-#if (ZIMPL_VERSION >= 300)
 #include "zimpl/mono.h"
-#endif
-/** ZIMPL_VERSION is defined by ZIMPL version 3.01 and higher. ZIMPL 3.01 made some changes in the interface to SCIP.
- *  ZIMPL_VERSION should be defined in mme.h */
-#if (ZIMPL_VERSION >= 301)
 #include "zimpl/term.h"
-#endif
 
 #include "zimpl/xlpglue.h"
 #include "zimpl/zimpllib.h"
@@ -130,9 +116,6 @@ Bool xlp_conname_exists(const char* conname)
    return (SCIPfindCons(scip_, conname) != NULL);
 }
 
-
-/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
-#if (ZIMPL_VERSION >= 300)
 
 /** method creates a linear constraint and is called directly from ZIMPL 
  *
@@ -387,109 +370,6 @@ Bool xlp_addcon_term(
    return FALSE;
 }
 
-#else
-
-/** method creates a linear constraint and is called directly from ZIMPL
- *
- *  @note this method is used by ZIMPL up to version 2.09; 
- */
-Con* xlp_addcon(
-   const char*           name,               /**< constraint name */
-   ConType               type,               /**< constraint type */
-   const Numb*           lhs,                /**< left hand side */
-   const Numb*           rhs,                /**< right hand side */
-   unsigned int          flags               /**< special constraint flags */
-   )
-{
-   SCIP_CONS* cons;
-   SCIP_Real sciplhs;
-   SCIP_Real sciprhs;
-   SCIP_Bool initial;
-   SCIP_Bool separate;
-   SCIP_Bool enforce;
-   SCIP_Bool check;
-   SCIP_Bool propagate;
-   SCIP_Bool local;
-   SCIP_Bool modifiable;
-   SCIP_Bool dynamic;
-   SCIP_Bool removable;
-   Con* zplcon;
-
-   switch( type )
-   {
-   case CON_FREE:
-      sciplhs = -SCIPinfinity(scip_);
-      sciprhs = SCIPinfinity(scip_);
-      break;
-   case CON_LHS:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = SCIPinfinity(scip_);
-      break;
-   case CON_RHS:
-      sciplhs = -SCIPinfinity(scip_);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_RANGE:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_EQUAL:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      assert(sciplhs == sciprhs);/*lint !e777 */
-      break;
-   default:
-      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      readerror_ = TRUE;
-      break;
-   }
-
-   initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
-   separate = TRUE;
-   enforce = TRUE;
-   check = enforce;
-   propagate = TRUE;
-   local = FALSE;
-   modifiable = FALSE;
-   dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
-   removable = dynamic;
-
-   SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-   zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the
-                         * CONS will not be destroyed by SCIPreleaseCons() */
-   SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
-
-   return zplcon;
-}
-
-/** adds coefficient/variable to linear constraint 
- *
- *  @note this method is used by ZIMPL up to version 2.09; 
- */
-void xlp_addtonzo(
-   Var*            var,                /**< variable to add */
-   Con*            con,                /**< constraint */
-   const Numb*     numb                /**< variable coefficient */
-   )
-{
-   SCIP_CONS* scipcons;
-   SCIP_VAR* scipvar;
-   SCIP_Real scipval;
-
-   scipcons = (SCIP_CONS*)con;
-   scipvar = (SCIP_VAR*)var;
-   scipval = numb_todbl(numb);
-
-   SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, scipcons, scipvar, scipval) );
-}
-
-#endif /* end of #if (ZIMPL_VERSION >= 300) */
-
-
 /** method adds an variable; is called directly by ZIMPL */
 Var* xlp_addvar(
    const char*           name,               /**< variable name */
@@ -607,10 +487,6 @@ Var* xlp_addvar(
    return zplvar;
 }
 
-
-/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
-#if (ZIMPL_VERSION >= 300)
-
 Bool xlp_addsos_term(
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
@@ -698,101 +574,6 @@ Bool xlp_addsos_term(
    return FALSE;
 }
 
-#else
-
-/** method adds SOS constraints */
-Sos* xlp_addsos(
-   const char*           name,               /**< constraint name */
-   SosType               type,               /**< SOS type */
-   const Numb*           priority            /**< priority */
-   )
-{  /*lint --e{715}*/
-   SCIP_CONS* cons;
-   SCIP_Bool initial;
-   SCIP_Bool separate;
-   SCIP_Bool enforce;
-   SCIP_Bool check;
-   SCIP_Bool propagate;
-   SCIP_Bool local;
-   SCIP_Bool dynamic;
-   SCIP_Bool removable;
-   Sos* zplsos = NULL;
-
-   switch( type )
-   {
-   case SOS_TYPE1:
-      initial = TRUE;
-      separate = TRUE;
-      enforce = TRUE;
-      check = enforce;
-      propagate = TRUE;
-      local = FALSE;
-      dynamic = FALSE;
-      removable = dynamic;
-
-      SCIP_CALL_ABORT( SCIPcreateConsSOS1(scip_, &cons, name, 0, NULL, NULL,
-            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
-      zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
-			      destroyed by SCIPreleaseCons() */
-      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-      SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
-      break;
-   case SOS_TYPE2:
-      initial = TRUE;
-      separate = TRUE;
-      enforce = TRUE;
-      check = enforce;
-      propagate = TRUE;
-      local = FALSE;
-      dynamic = FALSE;
-      removable = dynamic;
-
-      SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, 
-            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
-      zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
-			      destroyed by SCIPreleaseCons() */
-      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-      SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
-      break;
-   case SOS_ERR:
-      /*lint -fallthrough*/
-   default:
-      SCIPwarningMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos()\n", type);
-      readerror_ = TRUE;
-      break;
-   }
-
-   return zplsos;
-}
-
-/** adds a variable to a SOS constraint */
-void xlp_addtosos(
-   Sos*                  sos,                /**< SOS constraint */ 
-   Var*                  var,                /**< variable to add */
-   const Numb*           weight              /**< weight of the variable */
-   )
-{
-   /* this function should maybe get the type of the sos constraint, this
-      would simplify the code below. */
-   
-   SCIP_CONS* scipcons;
-   SCIP_VAR* scipvar;
-   
-   scipcons = (SCIP_CONS*)sos;
-   scipvar = (SCIP_VAR*)var;
-   
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(scipcons)), "SOS1") == 0 )
-      SCIP_CALL_ABORT( SCIPaddVarSOS1(scip_, scipcons, scipvar, numb_todbl(weight)) );
-   else
-      SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, scipcons, scipvar, numb_todbl(weight)) );
-}
-
-#endif /* end of #if (ZIMPL_VERSION >= 300) */
-
-
-/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
-#if (ZIMPL_VERSION >= 300)
-
 /** retuns the variable name */
 const char* xlp_getvarname(
    const Var*            var                 /**< variable */
@@ -800,9 +581,6 @@ const char* xlp_getvarname(
 {
    return SCIPvarGetName((SCIP_VAR*)var);
 }
-
-#endif /* end of #if (ZIMPL_VERSION >= 300) */
-
 
 /** return variable type */
 VarClass xlp_getclass(
@@ -928,15 +706,6 @@ Bool xlp_hassos(void)
 {
    return TRUE;
 }
-
-#if (ZIMPL_VERSION >= 300)
-#else
-Bool xlp_concheck(const Con* con)
-{  /*lint --e{715}*/
-   return TRUE;
-}
-#endif
-
 
 /*
  * Callback methods of reader
