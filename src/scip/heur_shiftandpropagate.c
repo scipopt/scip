@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.15 2010/10/01 11:37:42 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.16 2010/10/01 13:34:26 bzfwinkm Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -475,7 +475,6 @@ SCIP_RETCODE initMatrix(
       assert(SCIPisFeasGT(scip, maxval, 0.0) || nrowlpnonz == 0);
         
       matrix->rowmatbegin[i] = currentpointer;
-      nvarsleftinrow[i] = 0;
 
       /* modify the lhs and rhs w.r.t to the rows constant and normalize by 1-norm, i.e divide the lhs and rhs by the 
        * maximum absolute value of the row 
@@ -1273,6 +1272,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    int ncutoffs;                  /* counts the number of cutoffs for this execution */
    int nprobings;                 /* counts the number of probings */
    int nredundantrows;            /* the number of redundant rows */
+   int nlprows;                   /* the number LP rows */
 
    SCIP_Bool stored;              /* has the solution been stored? */
    SCIP_Bool initialized;         /* has the matrix been initialized? */ 
@@ -1309,8 +1309,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       heurdata->nlpiters = SCIPgetNLPIterations(scip);
       )
 
+   nlprows = SCIPgetNLPRows(scip);
+
    /* we need an LP */
-   if( SCIPgetNLPRows(scip) == 0 )
+   if( nlprows == 0 )
       return SCIP_OKAY;
       
    *result = SCIP_DIDNOTFIND;
@@ -1324,7 +1326,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    /* init heuristic matrix and working solution */
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nvarsleftinrow, SCIPgetNLPRows(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nvarsleftinrow, nlprows) );
+   BMSclearMemoryArray(nvarsleftinrow, nlprows);
    SCIP_CALL( initMatrix(scip, matrix, heurdata->relaxate, nvarsleftinrow, &initialized) );
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    SCIPsolSetHeur(sol, heur);
