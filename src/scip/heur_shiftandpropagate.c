@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.12 2010/09/27 17:20:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.13 2010/10/01 10:53:38 bzfheinz Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -1127,6 +1127,7 @@ void shiftVariable(
          updateViolations(scip, matrix, rows[i], violatedrows, violatedrowpos, nviolatedrows);
 
       /* decrease number of variables with solution value not set in row */
+      assert(nvarsleftinrow[rows[i]] > 0);
       --nvarsleftinrow[rows[i]];
 
       /* check if infeasibility of row cannot be resolved anymore */
@@ -1608,9 +1609,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       /* case that remaining LP has to be solved */
 
-#ifdef NDEBUG
-      SCIP_Bool retstat;
-#endif
       SCIP_Bool lperror;
 
 #ifndef NDEBUG
@@ -1625,11 +1623,14 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
-      retstat = SCIPsolveProbingLP(scip, -1, &lperror);
-      if( retstat != SCIP_OKAY )
-      { 
-         SCIPwarningMessage("Error while solving LP in SHIFTANDPROPAGATE heuristic; LP solve terminated with code <%d>\n",
-            retstat);
+      {   
+         SCIP_Bool retstat;
+         retstat = SCIPsolveProbingLP(scip, -1, &lperror);
+         if( retstat != SCIP_OKAY )
+         { 
+            SCIPwarningMessage("Error while solving LP in SHIFTANDPROPAGATE heuristic; LP solve terminated with code <%d>\n",
+               retstat);
+         }
       }
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror) );
