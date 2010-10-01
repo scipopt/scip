@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.80 2010/09/30 08:30:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.81 2010/10/01 13:18:42 bzfwinkm Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -294,9 +294,9 @@ SCIP_DECL_DISPCOPY(dispCopyDefault)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for chararcter of best solution */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolfound)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
 {  /*lint --e{715}*/
    SCIP_SOL* sol;
    SCIP_DISPDATA* dispdata;
@@ -321,9 +321,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolfound)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for solving time */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputTime)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolvingTime)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_TIME) == 0);
@@ -334,7 +334,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputTime)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of nodes */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNNodes)
 {  /*lint --e{715}*/
@@ -347,9 +347,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNNodes)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of open nodes */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputNodesleft)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNNodesLeft)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NODESLEFT) == 0);
@@ -360,9 +360,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNodesleft)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of LP iterations */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPIterations)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPITERATIONS) == 0);
@@ -373,9 +373,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of average LP iterations */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpavgiters)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPAvgIters)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPAVGITERS) == 0);
@@ -396,7 +396,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpavgiters)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for depth */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputDepth)
 {  /*lint --e{715}*/
@@ -409,9 +409,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputDepth)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for used memory */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemused)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsed)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMUSED) == 0);
@@ -422,9 +422,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemused)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for maximal depth */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputMaxDepth)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MAXDEPTH) == 0);
@@ -435,9 +435,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for plunging depth */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputPlungedepth)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputPlungeDepth)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PLUNGEDEPTH) == 0);
@@ -448,9 +448,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPlungedepth)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of LP branch candidates */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputNfrac)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNFrac)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NFRAC) == 0);
@@ -464,9 +464,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNfrac)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of external branch candidates */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputNexterncands)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNExternCands)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NEXTERNCANDS) == 0);
@@ -477,9 +477,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNexterncands)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of variables */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputVars)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNVars)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_VARS) == 0);
@@ -490,9 +490,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputVars)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of constraints */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputConss)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNConss)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONSS) == 0);
@@ -503,9 +503,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConss)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of enabled constraints */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurconss)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNCurConss)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCONSS) == 0);
@@ -516,9 +516,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurconss)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of columns in the LP */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurcols)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNCurCols)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCOLS) == 0);
@@ -529,9 +529,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurcols)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of rows in the LP */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurrows)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNCurRows)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURROWS) == 0);
@@ -542,9 +542,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurrows)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of applied cuts */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputCuts)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNAppliedCuts)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CUTS) == 0);
@@ -555,9 +555,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCuts)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of separation rounds */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputSeparounds)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNSepaRounds)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SEPAROUNDS) == 0);
@@ -568,9 +568,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSeparounds)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of current rows in the cut pool */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutPoolSize)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_POOLSIZE) == 0);
@@ -581,9 +581,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of conflicts */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputConflicts)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNConflicts)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
@@ -594,9 +594,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConflicts)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of strong branchings */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputStrongbranchs)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNStrongbranchs)
 {  /*lint --e{715}*/
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_STRONGBRANCHS) == 0);
@@ -607,9 +607,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputStrongbranchs)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for LP objective value */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpobj)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
 {  /*lint --e{715}*/
    SCIP_Real lpobj;
 
@@ -626,9 +626,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpobj)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for the current dualbound */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurDualbound)
 {  /*lint --e{715}*/
    SCIP_Real curdualbound;
 
@@ -645,9 +645,10 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for estimate of best primal solution w.r.t. original
+ *  problem contained in current subtree */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputEstimate)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputLocalOrigEstimate)
 {  /*lint --e{715}*/
    SCIP_Real estimate;
 
@@ -664,9 +665,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputEstimate)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for average dualbound */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputAvgDualbound)
 {  /*lint --e{715}*/
    SCIP_Real avgdualbound;
 
@@ -683,7 +684,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for dualbound */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputDualbound)
 {  /*lint --e{715}*/
@@ -702,7 +703,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputDualbound)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for primalbound */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
 {  /*lint --e{715}*/
@@ -721,7 +722,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for cutoffbound */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutoffbound)
 {  /*lint --e{715}*/
@@ -740,7 +741,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutoffbound)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for gap */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
 {  /*lint --e{715}*/
@@ -762,9 +763,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' */
+/** output method of display column to output file stream 'file' for number of found solutions */
 static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputNsols)
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNSols)
 {  /*lint --e{715}*/
    SCIPinfoMessage(scip, file, "%5"SCIP_LONGINT_FORMAT, SCIPgetNSolsFound(scip));
 
@@ -788,7 +789,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_SOLFOUND, DISP_DESC_SOLFOUND, DISP_HEAD_SOLFOUND,
             SCIP_DISPSTATUS_AUTO, 
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolfound, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolFound, NULL, 
             DISP_WIDT_SOLFOUND, DISP_PRIO_SOLFOUND, DISP_POSI_SOLFOUND, DISP_STRI_SOLFOUND) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_TIME);
@@ -797,7 +798,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_TIME, DISP_DESC_TIME, DISP_HEAD_TIME,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputTime, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolvingTime, NULL, 
             DISP_WIDT_TIME, DISP_PRIO_TIME, DISP_POSI_TIME, DISP_STRI_TIME) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_NNODES);
@@ -815,7 +816,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NODESLEFT, DISP_DESC_NODESLEFT, DISP_HEAD_NODESLEFT,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNodesleft, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNNodesLeft, NULL, 
             DISP_WIDT_NODESLEFT, DISP_PRIO_NODESLEFT, DISP_POSI_NODESLEFT, DISP_STRI_NODESLEFT) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_LPITERATIONS);
@@ -824,7 +825,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_LPITERATIONS, DISP_DESC_LPITERATIONS, DISP_HEAD_LPITERATIONS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLpiterations, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNLPIterations, NULL, 
             DISP_WIDT_LPITERATIONS, DISP_PRIO_LPITERATIONS, DISP_POSI_LPITERATIONS, DISP_STRI_LPITERATIONS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_LPAVGITERS);
@@ -833,7 +834,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_LPAVGITERS, DISP_DESC_LPAVGITERS, DISP_HEAD_LPAVGITERS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLpavgiters, NULL,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNLPAvgIters, NULL,
             DISP_WIDT_LPAVGITERS, DISP_PRIO_LPAVGITERS, DISP_POSI_LPAVGITERS, DISP_STRI_LPAVGITERS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_MEMUSED);
@@ -842,7 +843,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_MEMUSED, DISP_DESC_MEMUSED, DISP_HEAD_MEMUSED,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemused, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemUsed, NULL, 
             DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_DEPTH);
@@ -860,7 +861,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_MAXDEPTH, DISP_DESC_MAXDEPTH, DISP_HEAD_MAXDEPTH,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMaxdepth, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMaxDepth, NULL, 
             DISP_WIDT_MAXDEPTH, DISP_PRIO_MAXDEPTH, DISP_POSI_MAXDEPTH, DISP_STRI_MAXDEPTH) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_PLUNGEDEPTH);
@@ -869,7 +870,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_PLUNGEDEPTH, DISP_DESC_PLUNGEDEPTH, DISP_HEAD_PLUNGEDEPTH,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPlungedepth, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPlungeDepth, NULL, 
             DISP_WIDT_PLUNGEDEPTH, DISP_PRIO_PLUNGEDEPTH, DISP_POSI_PLUNGEDEPTH, DISP_STRI_PLUNGEDEPTH) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_NFRAC);
@@ -878,7 +879,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NFRAC, DISP_DESC_NFRAC, DISP_HEAD_NFRAC,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNfrac, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNFrac, NULL, 
             DISP_WIDT_NFRAC, DISP_PRIO_NFRAC, DISP_POSI_NFRAC, DISP_STRI_NFRAC) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_NEXTERNCANDS);
@@ -887,7 +888,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NEXTERNCANDS, DISP_DESC_NEXTERNCANDS, DISP_HEAD_NEXTERNCANDS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNexterncands, NULL,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNExternCands, NULL,
             DISP_WIDT_NEXTERNCANDS, DISP_PRIO_NEXTERNCANDS, DISP_POSI_NEXTERNCANDS, DISP_STRI_NEXTERNCANDS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_VARS);
@@ -896,7 +897,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_VARS, DISP_DESC_VARS, DISP_HEAD_VARS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputVars, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNVars, NULL, 
             DISP_WIDT_VARS, DISP_PRIO_VARS, DISP_POSI_VARS, DISP_STRI_VARS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_CONSS);
@@ -905,7 +906,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONSS, DISP_DESC_CONSS, DISP_HEAD_CONSS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputConss, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNConss, NULL, 
             DISP_WIDT_CONSS, DISP_PRIO_CONSS, DISP_POSI_CONSS, DISP_STRI_CONSS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_CURCONSS);
@@ -914,7 +915,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CURCONSS, DISP_DESC_CURCONSS, DISP_HEAD_CURCONSS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCurconss, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNCurConss, NULL, 
             DISP_WIDT_CURCONSS, DISP_PRIO_CURCONSS, DISP_POSI_CURCONSS, DISP_STRI_CURCONSS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_CURCOLS);
@@ -923,7 +924,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CURCOLS, DISP_DESC_CURCOLS, DISP_HEAD_CURCOLS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCurcols, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNCurCols, NULL, 
             DISP_WIDT_CURCOLS, DISP_PRIO_CURCOLS, DISP_POSI_CURCOLS, DISP_STRI_CURCOLS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_CURROWS);
@@ -932,7 +933,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CURROWS, DISP_DESC_CURROWS, DISP_HEAD_CURROWS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCurrows, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNCurRows, NULL, 
             DISP_WIDT_CURROWS, DISP_PRIO_CURROWS, DISP_POSI_CURROWS, DISP_STRI_CURROWS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_CUTS);
@@ -941,7 +942,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CUTS, DISP_DESC_CUTS, DISP_HEAD_CUTS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCuts, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNAppliedCuts, NULL, 
             DISP_WIDT_CUTS, DISP_PRIO_CUTS, DISP_POSI_CUTS, DISP_STRI_CUTS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_SEPAROUNDS);
@@ -950,7 +951,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_SEPAROUNDS, DISP_DESC_SEPAROUNDS, DISP_HEAD_SEPAROUNDS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSeparounds, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNSepaRounds, NULL, 
             DISP_WIDT_SEPAROUNDS, DISP_PRIO_SEPAROUNDS, DISP_POSI_SEPAROUNDS, DISP_STRI_SEPAROUNDS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_POOLSIZE);
@@ -959,7 +960,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_POOLSIZE, DISP_DESC_POOLSIZE, DISP_HEAD_POOLSIZE,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPoolsize, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCutPoolSize, NULL, 
             DISP_WIDT_POOLSIZE, DISP_PRIO_POOLSIZE, DISP_POSI_POOLSIZE, DISP_STRI_POOLSIZE) );
    }
    tmpdisp = SCIPfindDisp(scip,DISP_NAME_CONFLICTS);
@@ -968,7 +969,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONFLICTS, DISP_DESC_CONFLICTS, DISP_HEAD_CONFLICTS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputConflicts, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNConflicts, NULL, 
             DISP_WIDT_CONFLICTS, DISP_PRIO_CONFLICTS, DISP_POSI_CONFLICTS, DISP_STRI_CONFLICTS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_STRONGBRANCHS);
@@ -977,7 +978,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_STRONGBRANCHS, DISP_DESC_STRONGBRANCHS, DISP_HEAD_STRONGBRANCHS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputStrongbranchs, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNStrongbranchs, NULL, 
             DISP_WIDT_STRONGBRANCHS, DISP_PRIO_STRONGBRANCHS, DISP_POSI_STRONGBRANCHS, DISP_STRI_STRONGBRANCHS) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_LPOBJ);
@@ -986,7 +987,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_LPOBJ, DISP_DESC_LPOBJ, DISP_HEAD_LPOBJ,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLpobj, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLPObjval, NULL, 
             DISP_WIDT_LPOBJ, DISP_PRIO_LPOBJ, DISP_POSI_LPOBJ, DISP_STRI_LPOBJ) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_CURDUALBOUND);
@@ -995,7 +996,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CURDUALBOUND, DISP_DESC_CURDUALBOUND, DISP_HEAD_CURDUALBOUND,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCurdualbound, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCurDualbound, NULL, 
             DISP_WIDT_CURDUALBOUND, DISP_PRIO_CURDUALBOUND, DISP_POSI_CURDUALBOUND, DISP_STRI_CURDUALBOUND) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_ESTIMATE);
@@ -1004,7 +1005,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_ESTIMATE, DISP_DESC_ESTIMATE, DISP_HEAD_ESTIMATE,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputEstimate, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLocalOrigEstimate, NULL, 
             DISP_WIDT_ESTIMATE, DISP_PRIO_ESTIMATE, DISP_POSI_ESTIMATE, DISP_STRI_ESTIMATE) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_AVGDUALBOUND);
@@ -1013,7 +1014,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_AVGDUALBOUND, DISP_DESC_AVGDUALBOUND, DISP_HEAD_AVGDUALBOUND,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputAvgdualbound, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputAvgDualbound, NULL, 
             DISP_WIDT_AVGDUALBOUND, DISP_PRIO_AVGDUALBOUND, DISP_POSI_AVGDUALBOUND, DISP_STRI_AVGDUALBOUND) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_DUALBOUND);
@@ -1058,7 +1059,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NSOLS, DISP_DESC_NSOLS, DISP_HEAD_NSOLS,
             SCIP_DISPSTATUS_AUTO,
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNsols, NULL, 
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNSols, NULL, 
             DISP_WIDT_NSOLS, DISP_PRIO_NSOLS, DISP_POSI_NSOLS, DISP_STRI_NSOLS) );
    }
 
