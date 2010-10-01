@@ -180,7 +180,8 @@ TAB_SIZE               = 8
 # You can put \n's in the value part of an alias to insert newlines.
 
 ALIASES                = "SCIP=<a href= http://scip.zib.de>SCIP</a>" \
-		       	 "OTHERDOCU=Developer Manual"
+		       	 "OTHERDOCU=Developers Manual" \
+			 "OTHERDOCUTEXT=This manual lists all methods and data types of SCIP, including the internal ones that users should not call. Regular SCIP users are probably less confused by the <a class="qindex" href="../html/index.html">Users Manual</a>."
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C
 # sources only. Doxygen will then generate output that is more tailored for C.
@@ -1089,7 +1090,7 @@ EXT_LINKS_IN_WINDOW    = NO
 # to manually remove any form_*.png images from the HTML output directory
 # to force them to be regenerated.
 
-FORMULA_FONTSIZE       = 20
+FORMULA_FONTSIZE       = 10
 
 # Use the FORMULA_TRANPARENT tag to determine whether or not the images
 # generated for formulas are transparent PNGs. Transparent PNGs are

@@ -55,10 +55,17 @@ $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
+$NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
+$NAME/examples/Binpacking/doc/* \
+$NAME/examples/Binpacking/check/short.test $NAME/examples/Binpacking/check/short.solu \
+$NAME/examples/Binpacking/src/depend.* \
+$NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
+$NAME/examples/Coloring/check/shart.test $NAME/examples/Coloring/check/short.solu \
 $NAME/examples/Coloring/src/depend.* \
 $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
+$NAME/examples/Eventhdlr/check/shart.test $NAME/examples/Eventhdlr/check/short.solu \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
@@ -72,10 +79,6 @@ $NAME/examples/Queens/* \
 $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
 $NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
-$NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
-$NAME/examples/Binpacking/doc/* \
-$NAME/examples/Binpacking/src/depend.* \
-$NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \

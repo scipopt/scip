@@ -31,6 +31,8 @@
 
 /**@mainpage Overview (\OTHERDOCU)
  *
+ * \OTHERDOCUTEXT
+ *
  * @version  2.0.0
  *
  * <b>SCIP Authors:</b>
@@ -57,7 +59,6 @@
  * and has approx. 270'000 lines of C code. See the web
  * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
- * This documentation provides extensive information about SCIP.
  *
  * <b>General Information</b>
  *
