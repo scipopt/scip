@@ -73,6 +73,7 @@
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
  *
  * - \ref MAKE    "Makefiles / Installation information"
+ *
  * - \ref DEBUG   "Debugging"
  *
  * <table cellpadding="0px" border="0" width="100%">
