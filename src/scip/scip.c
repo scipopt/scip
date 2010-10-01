@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.687 2010/09/30 13:56:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.688 2010/10/01 14:45:31 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1549,7 +1549,8 @@ SCIP_RETCODE SCIPcopyConss(
       {
          assert(sourceconss[c] != NULL);
          /* @todo it seems that sourceconss can contain inactive or deleted constraints, so the
-          * following two assert fail from time to time; for now, we just do not copy those constraints */
+          * following two assert fail from time to time; for now, we just do not copy those constraints but set *valid to FALSE
+          * ????????? can we set *valid to TRUE ? */
          if( !SCIPconsIsActive(sourceconss[c]) || SCIPconsIsDeleted(sourceconss[c]) )
          {
             *valid = FALSE;
