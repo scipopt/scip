@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.14 2010/10/01 11:35:18 bzfhende Exp $"
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.15 2010/10/01 11:37:42 bzfhende Exp $"
+
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
  * @brief  shiftandpropagate primal heuristic
