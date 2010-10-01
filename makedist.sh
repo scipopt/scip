@@ -56,7 +56,7 @@ $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshel
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
-$NAME/examples/Binpacking/doc/* \
+$NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
 $NAME/examples/Binpacking/check/short.test $NAME/examples/Binpacking/check/short.solu \
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
