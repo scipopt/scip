@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.30 2010/09/30 13:59:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.31 2010/10/01 17:09:45 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -1614,6 +1614,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    assert(nlrow  != NULL);
    assert(blkmem != NULL);
    assert(set    != NULL);
+   assert(name   != NULL);
    assert(!SCIPsetIsInfinity(set, ABS(constant)));
    assert(nlinvars   == 0 || linvars   != NULL);
    assert(nlinvars   == 0 || lincoefs  != NULL);
