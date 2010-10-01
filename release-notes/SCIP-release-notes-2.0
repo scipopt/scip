@@ -18,6 +18,11 @@ Features
 - Solution counting extended to constraint integer programs, this also
   includes constraint integer programs which contain continuous variables
 
+- External branching candidates (of interest if a relaxator or constraint
+  handler wants to provide branching candidates)
+
+- New branch-and-price example which includes Ryan/Foster branching (binpacking example)
+
 - More support for nonlinear CIPs:
   + Improved constraint handler for quadratic constraints
   + New constraint handler for second order cone constraints
@@ -30,6 +35,10 @@ Interfaces
 ==========
 
 - Improved SoPlex interface
+
+- Improved Xpress interface
+
+- Improved CPLEX interface
 
 - NLP solver interface (NLPI) now independent of SCIP like LPI
 
