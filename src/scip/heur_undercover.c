@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.106 2010/10/01 14:08:56 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.107 2010/10/01 14:43:09 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1643,6 +1643,10 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMSETTING_FEASIBILITY, TRUE) );
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
+
+   /* deactivate expensive pre-root heuristics, since it may happen that the lp relaxation of the subproblem is already
+      infeasible; in this case, we do not want to waste time on heuristics before solvong the root lp */
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
 
    /* forbid recursive call of undercover heuristic */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
