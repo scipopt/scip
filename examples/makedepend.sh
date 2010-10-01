@@ -4,7 +4,7 @@
 #
 
 EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens SamplePricer SamplePricer_C TSP VRP)
-OPTS=(opt dbg)
+OPTS=(opt dbg opt-gccold)
 
 for EXAMPLE in ${EXAMPLES[@]}
 do

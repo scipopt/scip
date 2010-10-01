@@ -4,7 +4,7 @@
 #
 
 LPSS=(cpx spx spx132 xprs msk clp grb qso none)
-OPTS=(opt dbg prf)
+OPTS=(opt dbg prf opt-gccold)
 EXPRINTS=(none cppad)
 
 for OPT in ${OPTS[@]}
