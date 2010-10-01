@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.105 2010/09/29 16:48:50 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.106 2010/10/01 14:08:56 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1065,10 +1065,6 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_Real totalpenalty;
    int i;
 
-#ifndef SCIP_DEBUG
-   SCIP_RETCODE retstat;
-#endif
-
    assert(coveringscip != NULL);
    assert(coveringvars != NULL);
    assert(cover != NULL);
@@ -1098,25 +1094,28 @@ SCIP_RETCODE solveCoveringProblem(
 #endif
  
    /* solve covering problem */
-#ifdef SCIP_DEBUG
+#ifndef NDEBUG
    SCIP_CALL( SCIPpresolve(coveringscip) );
    SCIPdebugMessage("presolved covering problem: %d vars, %d cons\n", SCIPgetNVars(coveringscip), SCIPgetNConss(coveringscip));
    SCIP_CALL( SCIPsolve(coveringscip) );
 #else
    /* errors in a heuristic should not kill the overall solving process, hence in optimized mode, the return code is
     * catched and a warning is printed; only in debug mode, SCIP will stop */
-   retstat = SCIPpresolve(coveringscip);
-   if( retstat != SCIP_OKAY )
    {
-      SCIPwarningMessage("error while presolving covering problem: terminated with code <%d>\n", retstat);
-      return SCIP_OKAY;
-   }
+      SCIP_RETCODE retstat;
+      retstat = SCIPpresolve(coveringscip);
+      if( retstat != SCIP_OKAY )
+      {
+         SCIPwarningMessage("error while presolving covering problem: terminated with code <%d>\n", retstat);
+         return SCIP_OKAY;
+      }
 
-   retstat = SCIPsolve(coveringscip);
-   if( retstat != SCIP_OKAY )
-   {
-      SCIPwarningMessage("error while solving covering problem: terminated with code <%d>\n", retstat);
-      return SCIP_OKAY;
+      retstat = SCIPsolve(coveringscip);
+      if( retstat != SCIP_OKAY )
+      {
+         SCIPwarningMessage("error while solving covering problem: terminated with code <%d>\n", retstat);
+         return SCIP_OKAY;
+      }
    }
 #endif
 
@@ -1579,10 +1578,6 @@ SCIP_RETCODE solveSubproblem(
    int nvars;
    int i;
 
-#ifndef SCIP_DEBUG
-   SCIP_RETCODE retstat;
-#endif
-
    assert(scip != NULL);
    assert(heur != NULL);
    assert(cover != NULL);
@@ -1688,27 +1683,34 @@ SCIP_RETCODE solveSubproblem(
    }
       
    /* solve subproblem */
-#ifdef SCIP_DEBUG
+#ifndef NDEBUG
    SCIP_CALL( SCIPpresolve(subscip) );
    SCIPdebugMessage("presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
    SCIP_CALL( SCIPsolve(subscip) );
-   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #else
    /* errors in a heuristic should not kill the overall solving process, hence in optimized mode, the return code is
     * catched and a warning is printed; only in debug mode, SCIP will stop */
-   retstat = SCIPpresolve(subscip);
-   if( retstat != SCIP_OKAY )
    {
-      SCIPwarningMessage("error while presolving subproblem: terminated with code <%d>\n", retstat);
-      return SCIP_OKAY;
-   }
+      SCIP_RETCODE retstat;
+      retstat = SCIPpresolve(subscip);
+      if( retstat != SCIP_OKAY )
+      {
+         SCIPwarningMessage("error while presolving subproblem: terminated with code <%d>\n", retstat);
+         return SCIP_OKAY;
+      }
 
-   retstat = SCIPsolve(subscip);
-   if( retstat != SCIP_OKAY )
-   {
-      SCIPwarningMessage("error while solving subproblem: terminated with code <%d>\n", retstat);
-      return SCIP_OKAY;
+      retstat = SCIPsolve(subscip);
+      if( retstat != SCIP_OKAY )
+      {
+         SCIPwarningMessage("error while solving subproblem: terminated with code <%d>\n", retstat);
+         return SCIP_OKAY;
+      }
    }
+#endif
+
+#ifdef SCIP_DEBUG
+   /* print solving statistics of subproblem if SCIP_DEBUG is defined */
+   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
    /* store solving status */
