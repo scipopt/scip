@@ -76,7 +76,7 @@ $NAME/examples/MIPSolver/Makefile  $NAME/examples/MIPSolver/INSTALL $NAME/exampl
 $NAME/examples/MIPSolver/doc/scipmip.dxy $NAME/examples/MIPSolver/doc/xternal.c \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.c $NAME/examples/MIPSolver/src/*.cpp $NAME/examples/MIPSolver/src/*.h \
-$NAME/examples/Queens/* \
+$NAME/examples/Queens/* $NAME/examples/Queens/scip_intro.tex \
 $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
 $NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
