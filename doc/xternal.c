@@ -182,6 +182,10 @@
  * 
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
+ * - <code>IPOPT=\<true|false\></code> to enable/disable(default) IPOPT interface (needs IPOPT)
+ *
+ * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter or no expressions interpreter (default)
+ *
  * There are additional parameters for Linux/Gnu compilers:
  *
  * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked via valgrind or
