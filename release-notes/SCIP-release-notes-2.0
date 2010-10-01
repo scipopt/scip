@@ -23,6 +23,8 @@ Features
 
 - New branch-and-price example which includes Ryan/Foster branching (binpacking example)
 
+- New example illustrating the use of an event handler (example/Eventhdlr)
+
 - More support for nonlinear CIPs:
   + Improved constraint handler for quadratic constraints
   + New constraint handler for second order cone constraints
