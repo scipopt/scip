@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.65 2010/09/13 11:28:53 bzfheinz Exp $
+# $Id: check.sh,v 1.66 2010/10/01 16:27:00 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -149,12 +149,12 @@ do
             echo set limits time $TIMELIMIT        >> $TMPFILE
             echo set limits nodes $NODELIMIT       >> $TMPFILE
             echo set limits memory $MEMLIMIT       >> $TMPFILE
-#THREADS not supported yet (version 1.2.1.6)
+	    echo set lp advanced threads $THREADS  >> $TMPFILE
             echo set timing clocktype 1            >> $TMPFILE
             echo set display verblevel 4           >> $TMPFILE
             echo set display freq $DISPFREQ        >> $TMPFILE
             echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-            if test "$LPS" == "none"      
+            if test "$LPS" = "none"      
             then
                 echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
             fi
@@ -162,7 +162,7 @@ do
             echo read $i                           >> $TMPFILE
             echo optimize                          >> $TMPFILE
             echo display statistics                >> $TMPFILE
-#            echo display solution                  >> $TMPFILE
+#           echo display solution                  >> $TMPFILE
             echo checksol                          >> $TMPFILE
             echo quit                              >> $TMPFILE
             echo -----------------------------
@@ -171,7 +171,6 @@ do
             echo -----------------------------
             date +"@03 %s"
             bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ../$BINNAME < $TMPFILE" 2>>$ERRFILE
-#            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; nice -15 ../$BINNAME < $TMPFILE" 2>>$ERRFILE
             date +"@04 %s"
             echo -----------------------------
             date
@@ -200,7 +199,7 @@ date >>$ERRFILE
 if test -e $DONEFILE
 then
     ./evalcheck.sh $OUTFILE
-
+    
     if test "$LOCK" = "true"
     then
         rm -f $RUNFILE
