@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.58 2010/09/30 16:50:47 bzfhende Exp $
+# $Id: cmpres.awk,v 1.59 2010/10/01 14:56:19 bzfheinz Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -192,8 +192,8 @@ BEGIN {
    onlyfeasible = 0;
    onlyinfeasible = 0;
    onlyfail = 0;
-   exclude = "nexp.150.20.1.5";
-   texfile = "bla.tex";
+   exclude = "";
+   texfile = "";
    texincfile = "";
    texsummaryfile = "";
    texsummaryheader = 0;
