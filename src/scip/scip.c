@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.688 2010/10/01 14:45:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.689 2010/10/01 15:40:34 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -470,8 +470,7 @@ void SCIPprintVersion(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   /* ??????????? that the prerelease letter away */
-   SCIPmessageFPrintInfo(file, "SCIP version %d.%d.%dc",
+   SCIPmessageFPrintInfo(file, "SCIP version %d.%d.%d",
       SCIPmajorVersion(), SCIPminorVersion(), SCIPtechVersion());
 #if SCIP_SUBVERSION > 0
    SCIPmessageFPrintInfo(file, ".%d", SCIPsubversion());

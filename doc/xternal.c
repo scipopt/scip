@@ -29,8 +29,9 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
- * @version  2.0.0c
+/**@mainpage Overview (\OTHERDOCU)
+ *
+ * @version  2.0.0
  *
  * <b>SCIP Authors:</b>
  * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
@@ -60,15 +61,18 @@
  *
  * <b>General Information</b>
  *
- * - \ref PUBLICMETHODS "List of callable functions"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
+ *
+ * - \ref PUBLICMETHODS "List of callable functions"
+ * - \ref PARAMETERS "List of all SCIP parameters"
+ *
  * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
- * - \ref MAKE    "Makefiles / Installation information"
- * - \ref DEBUG   "Debugging"
  * - \ref TEST    "How to run automated tests with SCIP"
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
- * - \ref PARAMETERS "List of all SCIP parameters"
+ *
+ * - \ref MAKE    "Makefiles / Installation information"
+ * - \ref DEBUG   "Debugging"
  *
  * <table cellpadding="0px" border="0" width="100%">
  *   <tr>
@@ -5205,15 +5209,18 @@
  */
 
 /**@defgroup PUBLICMETHODS Public Methods 
- * @brief This page lists headers which contain methods that can be used via the callable library.
+ *
+ * @brief This page lists headers which contain methods that can be used via the callable library. If you are in the <a
+ * href="../html/index.html">User Manual</a> you only find methods which are public and therefore, allowed to be
+ * used. In the <a href="../html_devel/index.html">Developer Manual</a> you find, however, all methods.
  *
  * All the headers listed above include functions which are allowed to be called by external users. Besides those
  * functions it is also valid to call methods that are listed in one of the headers of the (default) plugins, e.g.,
- * cons_linear.h.
+ * cons_linear.h. 
  *
- * If you are locking for information about a particular object of SCIP, such as a variable or a constraint, you should first search
- * the corresponding "pub_<...>.h" header. E.g., in case of a constraint pub_cons.h. If you need some information about the
- * overall problem, you should start searching in scip.h.
+ * If you are locking for information about a particular object of SCIP, such as a variable or a constraint, you should
+ * first search the corresponding "pub_<...>.h" header. E.g., in case of a constraint pub_cons.h. If you need some
+ * information about the overall problem, you should start searching in scip.h.
  *
  * Since there is a huge amount of methods in scip.h, these methods are grouped into different categories. These
  * categories are:

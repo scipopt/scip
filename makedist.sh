@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="2.0.0c"
+VERSION="2.0.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -18,6 +18,10 @@ find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/*
+
+echo generating default setting files
+make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false
+bin/scip -c "set default set save doc/inc/parameters.set quit"
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
