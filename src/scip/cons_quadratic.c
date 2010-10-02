@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.136 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.137 2010/10/02 16:36:58 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -134,6 +134,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENS heuristic */
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
+   SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
 
    SCIP_HEUR*            subnlpheur;                /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
@@ -3420,6 +3421,213 @@ SCIP_RETCODE presolveUpgrade(
       SCIPfreeBufferArray(scip, upgdconss);
    }
 
+   return SCIP_OKAY;
+}
+
+/** helper function for presolveDisaggregate */
+static
+SCIP_RETCODE presolveDisaggregateMarkComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   quadvaridx,         /**< index of quadratic variable to mark */
+   SCIP_HASHMAP*         var2component,      /**< variables to components mapping */
+   int                   componentnr         /**< the component number to mark to */ 
+   )
+{
+   SCIP_QUADVARTERM* quadvarterm;
+   SCIP_VAR* othervar;
+   int othervaridx;
+   int i;
+   
+   assert(consdata != NULL);
+   assert(quadvaridx >= 0);
+   assert(quadvaridx < consdata->nquadvars);
+   assert(var2component != NULL);
+   assert(componentnr >= 0);
+   
+   quadvarterm = &consdata->quadvarterms[quadvaridx];
+   
+   if( SCIPhashmapExists(var2component, quadvarterm->var) )
+   {
+      /* if we saw the variable before, then it should have the same component number */
+      assert((int)(size_t)SCIPhashmapGetImage(var2component, quadvarterm->var) == componentnr);
+      return SCIP_OKAY;
+   }
+   
+   /* assign component number to variable */
+   SCIP_CALL( SCIPhashmapInsert(var2component, quadvarterm->var, (void*)(size_t)componentnr) );
+   
+   /* assign same component number to all variables this variable is multiplied with */
+   for( i = 0; i < quadvarterm->nadjbilin; ++i )
+   {
+      othervar = consdata->bilinterms[quadvarterm->adjbilin[i]].var1 == quadvarterm->var ?
+         consdata->bilinterms[quadvarterm->adjbilin[i]].var2 :
+         consdata->bilinterms[quadvarterm->adjbilin[i]].var1;
+      SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, othervar, &othervaridx) );
+      assert(othervaridx >= 0);
+      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, othervaridx, var2component, componentnr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** for quadratic constraints that consists of a sum of quadratic terms, disaggregates the sum into a set of constraints by introducing auxiliary variables */
+static
+SCIP_RETCODE presolveDisaggregate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
+   SCIP_CONS*            cons,               /**< source constraint to try to convert */
+   SCIP_Bool*            success             /**< buffer to store whether a disaggregation was done */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_HASHMAP* var2component;
+   int ncomponents;
+   int i;
+   int comp;
+   SCIP_CONS** auxconss;
+   SCIP_VAR** auxvars;
+   SCIP_Real* auxcoefs;
+   char name[SCIP_MAXSTRLEN];
+   
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(success != NULL);
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   *success = FALSE;
+   
+   if( consdata->nquadvars <= 1 )
+      return SCIP_OKAY;
+
+   /* sort quadratic variable terms here, so we can later search in it without reordering the array */
+   SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
+   
+   /* check how many quadratic terms with non-overlapping variables we have
+    * in other words, the number of components in the sparsity graph of the quadratic term matrix */
+   ncomponents = 0;
+   SCIP_CALL( SCIPhashmapCreate(&var2component, SCIPblkmem(scip), SCIPcalcHashtableSize(consdata->nquadvars)) );
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      /* if variable was marked already, skip it */
+      if( SCIPhashmapExists(var2component, (void*)consdata->quadvarterms[i].var) )
+         continue;
+      
+      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, i, var2component, ncomponents) );
+      ++ncomponents;
+   }
+   assert(ncomponents >= 1);
+   
+   /* if there is only one component, we cannot disaggregate
+    * @todo we could still split the constraint into several while keeping the number of variables sharing several constraints as small as possible */
+   if( ncomponents == 1 )
+   {
+      SCIPhashmapFree(&var2component);
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &auxconss, ncomponents) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &auxvars,  ncomponents) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &auxcoefs, ncomponents) );
+   
+   /* create auxiliary variables and empty constraints for each component */
+   for( comp = 0; comp < ncomponents; ++comp )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp%d", SCIPconsGetName(cons), comp);
+      
+      SCIP_CALL( SCIPcreateVar(scip, &auxvars[comp], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+         SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
+      
+      SCIP_CALL( SCIPcreateConsQuadratic2(scip, &auxconss[comp], name, 0, NULL, NULL, 0, NULL, 0, NULL,
+         SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : 0.0,
+         SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : 0.0,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+         SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      
+      auxcoefs[comp] = SCIPinfinity(scip);
+   }
+   
+   /* add quadratic variables to each component constraint
+    * delete adjacency information */
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->quadvarterms[i].var);
+      assert(comp >= 0);
+      assert(comp < ncomponents);
+      
+      /* add variable term to corresponding constraint */
+      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, auxconss[comp], consdata->quadvarterms[i].var, consdata->quadvarterms[i].lincoef, consdata->quadvarterms[i].sqrcoef) );
+      
+      /* reduce coefficient of aux variable */
+      if( !SCIPisZero(scip, consdata->quadvarterms[i].lincoef) && ABS(consdata->quadvarterms[i].lincoef) < auxcoefs[comp] )
+         auxcoefs[comp] = ABS(consdata->quadvarterms[i].lincoef);
+      if( !SCIPisZero(scip, consdata->quadvarterms[i].sqrcoef) && ABS(consdata->quadvarterms[i].sqrcoef) < auxcoefs[comp] )
+         auxcoefs[comp] = ABS(consdata->quadvarterms[i].sqrcoef);
+      
+      SCIPfreeBlockMemoryArray(scip, &consdata->quadvarterms[i].adjbilin, consdata->quadvarterms[i].adjbilinsize);
+      consdata->quadvarterms[i].nadjbilin = 0;
+      consdata->quadvarterms[i].adjbilinsize = 0;
+   }
+   
+   /* add bilinear terms to each component constraint */
+   for( i = 0; i < consdata->nbilinterms; ++i )
+   {
+      comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var1);
+      assert(comp == (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var2));
+      assert(!SCIPisZero(scip, consdata->bilinterms[i].coef));
+      
+      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, auxconss[comp], 
+         consdata->bilinterms[i].var1, consdata->bilinterms[i].var2, consdata->bilinterms[i].coef) );
+      
+      if( ABS(consdata->bilinterms[i].coef) < auxcoefs[comp] )
+         auxcoefs[comp] = ABS(consdata->bilinterms[i].coef);
+   }
+
+   /* forget about bilinear terms in cons */
+   SCIPfreeBlockMemoryArray(scip, &consdata->bilinterms, consdata->bilintermssize);
+   consdata->nbilinterms = 0;
+   consdata->bilintermssize = 0;
+   
+   /* remove quadratic variable terms from cons */
+   for( i = consdata->nquadvars - 1; i >= 0; --i )
+   {
+      SCIP_CALL( delQuadVarTermPos(scip, cons, i) );
+   }
+   assert(consdata->nquadvars == 0);
+
+   /* add auxiliary variables to auxiliary constraints
+    * add aux vars and constraints to SCIP 
+    * add aux vars to this constraint */
+   SCIPdebugMessage("add %d constraints for disaggregation of quadratic constraint <%s>\n", ncomponents, SCIPconsGetName(cons));
+   SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, consdata->nlinvars + ncomponents) );
+   for( comp = 0; comp < ncomponents; ++comp )
+   {
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp]) );
+      
+      SCIP_CALL( SCIPaddVar(scip, auxvars[comp]) );
+      
+      SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
+      SCIPdebug( SCIPprintCons(scip, auxconss[comp], NULL) );
+      
+      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], 1.0 / auxcoefs[comp]) );
+      
+      SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
+   } 
+   
+   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+
+   SCIPfreeBufferArray(scip, &auxconss);
+   SCIPfreeBufferArray(scip, &auxvars);
+   SCIPfreeBufferArray(scip, &auxcoefs);
+   SCIPhashmapFree(&var2component);
+   
+   *success = TRUE;
+   
    return SCIP_OKAY;
 }
 
@@ -7019,6 +7227,13 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          }
       }
       
+      if( !consdata->ispresolved && conshdlrdata->disaggregate )
+      {
+         SCIP_Bool disaggrsuccess;
+         
+         SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], &disaggrsuccess) );
+      }
+      
       if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
       { /* all variables fixed or removed, constraint function is 0.0 now */
          SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) ); /* well, there shouldn't be any variables left anyway */
@@ -7959,6 +8174,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",
+         "whether to disaggregate quadratic parts that decompose into a sum of non-overlapping quadratic terms",
+         &conshdlrdata->disaggregate, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,
