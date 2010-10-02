@@ -1,3 +1,10 @@
+SCIP version NEXT
+===============
+
+fixed bugs:
+- fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
+
+
 SCIP version 2.0.0
 ===============
 
