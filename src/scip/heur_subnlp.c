@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.48 2010/10/01 14:32:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.49 2010/10/02 15:18:51 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1073,7 +1073,7 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPvarGetOrigvarSum(&subvar, &scalar, &constant) );
       if( subvar == NULL )
       {
-         startpoint[i] = MIN(MAX(0.0, SCIPvarGetLbGlobal(subvar)), SCIPvarGetUbGlobal(subvar));  /*lint !e666*/
+         startpoint[i] = constant;
          continue;
       }
 
