@@ -4,6 +4,10 @@ SCIP version NEXT
 fixed bugs:
 - fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
 
+parameters:
+- added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
+- added possible value 'e' for <constraints/soc/nlpform> to enable convex exponential-sqrt form for SOC constraint representation in NLP
+
 
 SCIP version 2.0.0
 ===============
