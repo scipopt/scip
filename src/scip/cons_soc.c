@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.59 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.60 2010/10/02 16:43:30 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -349,6 +349,92 @@ SCIP_RETCODE createNlRow(
 
    switch( conshdlrdata->nlpform )
    {
+      case 'e':
+      {
+         /* construct expression exp(\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} - alpha_{n+1}(x_{n+1} + beta_{n+1})) */
+
+         if( consdata->nvars > 0 )
+         {
+            SCIP_EXPR* expr;
+            SCIP_EXPR* exprterm;
+            SCIP_EXPR* expr2;
+            SCIP_EXPRTREE* exprtree;
+
+            if( consdata->constant != 0.0 )
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_CONST, consdata->constant) );  /* gamma */
+            }
+            else
+            {
+               exprterm = NULL;
+            }
+
+            for( i = 0; i < consdata->nvars; ++i )
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, i) );  /* x_i */
+               if( consdata->offsets[i] != 0.0 )
+               {
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->offsets[i]) );  /* beta_i */
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_PLUS, expr, expr2) );  /* x_i + beta_i */
+               }
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_SQUARE, expr) );  /* (x_i + beta_i)^2 */
+               if( consdata->coefs[i] != 1.0 )
+               {
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->coefs[i]) );  /* alpha_i */
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MUL, expr, expr2) );  /* alpha_i * (x_i + beta_i)^2 */
+               }
+               if( exprterm != NULL )
+               {
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_PLUS, exprterm, expr) );
+               }
+               else
+               {
+                  exprterm = expr;
+               }
+            }
+
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_SQRT, exprterm) );  /* sqrt(gamma + sum_i (...)^2) */
+
+            if( consdata->rhsvar != NULL )
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, consdata->nvars) );  /* x_{n+1} */
+               if( consdata->rhsoffset != 0.0 )
+               {
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->rhsoffset) );  /* beta_{n+1} */
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_PLUS, expr, expr2) );  /* x_{n+1} + beta_{n+1} */
+               }
+               if( consdata->rhscoeff != 1.0 )
+               {
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->rhscoeff) );  /* alpha_{n+1} */
+                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MUL, expr, expr2) );  /* alpha_{n+1} * (x_{n+1} + beta_{n+1}) */
+               }
+            }
+            else
+            {
+               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_CONST, consdata->rhscoeff * consdata->rhsoffset) );
+            }
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_MINUS, exprterm, expr) ); /* sqrt(gamma + sum_i (...)^2) - alpha_{n+1} * (x_{n+1} + beta_{n+1}) */
+
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_EXP, exprterm) ); /* exp(sqrt(gamma + sum_i (...)^2) - alpha_{n+1} * (x_{n+1} + beta_{n+1})) */
+
+            SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, exprterm, consdata->nvars+1, 0, NULL) );
+
+            SCIP_CALL( SCIPexprtreeSetVars(exprtree, consdata->nvars, consdata->vars) );
+            SCIP_CALL( SCIPexprtreeAddVars(exprtree, 1, &consdata->rhsvar) );
+
+            SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+               0.0,
+               0, NULL, NULL,
+               0, NULL, 0, NULL,
+               exprtree, -SCIPinfinity(scip), 1.0) );
+
+            SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+            break;
+         }
+         /* if there are no left-hand-side variables, then we let the 's' case handle it */
+      }
+
       case 's':
       {
          /* construct expression \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} */
@@ -3696,8 +3782,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
       defaultnlpform = 's';
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/nlpform",
-      "which formulation to use when adding a SOC constraint to the NLP (q: nonconvex quadratic form, s: convex sqrt form)",
-      &conshdlrdata->nlpform,          FALSE, defaultnlpform, "qs", NULL, NULL) );
+      "which formulation to use when adding a SOC constraint to the NLP (q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form)",
+      &conshdlrdata->nlpform,          FALSE, defaultnlpform, "qse", NULL, NULL) );
 
    return SCIP_OKAY;
 }
