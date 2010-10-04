@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.107 2010/09/27 17:20:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.108 2010/10/04 11:43:11 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -3394,7 +3394,7 @@ SCIP_RETCODE SCIPwriteLp(
          SCIP_VAR* slackvar;
          SCIP_VAR** linvars;
          SCIP_Real* linvals;
-         int nLinvars;
+         int nlinvars;
          int cnt;
          int rhs;
 
@@ -3418,20 +3418,23 @@ SCIP_RETCODE SCIPwriteLp(
          /* collect linear constraint information (remove slack variable) */
          linvars = SCIPgetVarsLinear(scip, lincons);
          linvals = SCIPgetValsLinear(scip, lincons);
-         nLinvars = SCIPgetNVarsLinear(scip, lincons);
+         nlinvars = SCIPgetNVarsLinear(scip, lincons);
          assert( linvars != NULL );
          assert( linvals != NULL );
 
-         if ( nLinvars > 0 && ! SCIPconsIsDeleted(lincons) )
+         if ( nlinvars > 0 && ! SCIPconsIsDeleted(lincons) )
          {
             (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(binvar) );
-            SCIPinfoMessage(scip, file, " %s: %s = %d ->", consname, varname, rhs);
+            if ( strlen(consname) > 0 )
+               SCIPinfoMessage(scip, file, " %s: %s = %d ->", consname, varname, rhs);
+            else
+               SCIPinfoMessage(scip, file, " %s = %d ->", varname, rhs);
 
-            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nLinvars-1) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nLinvars-1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nlinvars-1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nlinvars-1) );
 
             cnt = 0;
-            for (v = 0; v < nLinvars; ++v)
+            for (v = 0; v < nlinvars; ++v)
             {
                var = linvars[v];
                if ( var != slackvar )
@@ -3440,7 +3443,7 @@ SCIP_RETCODE SCIPwriteLp(
                   consvals[cnt++] = linvals[v];
                }
             }
-            assert( nLinvars == 0 || cnt == nLinvars-1 );
+            assert( nlinvars == 0 || cnt == nlinvars-1 );
 
             SCIP_CALL( printQuadraticCons(scip, file, "", consvars, consvals, cnt, NULL, 0, NULL, 0, 
                SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons), transformed) );
