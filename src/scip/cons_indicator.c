@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.99 2010/10/04 12:08:23 bzfpfets Exp $"
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.100 2010/10/04 13:39:51 bzfgleix Exp $"
+
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
 
