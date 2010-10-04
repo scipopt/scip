@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.108 2010/10/04 15:27:52 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.109 2010/10/04 18:02:14 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -54,7 +54,6 @@
 #define DEFAULT_RECOVERDIV      0.9          /**< fraction of covering variables in the last cover which need to change their value when re-covering */
 #define DEFAULT_BEFORECUTS      TRUE         /**< should undercover called at root node before cut separation? */
 #define DEFAULT_FIXINTFIRST     FALSE        /**< should integer variables in the cover be fixed first? */
-#define DEFAULT_GLOBALBOUNDS    FALSE        /**< should global bounds on variables be used instead of local bounds at focus node? */
 #define DEFAULT_LOCKSROUNDING   TRUE         /**< shall LP values for integer vars be rounded according to locks? */
 #define DEFAULT_ONLYCONVEXIFY   FALSE        /**< should we only fix/dom.red. variables creating nonconvexity? */
 #define DEFAULT_POSTNLP         TRUE         /**< should the nlp heuristic be called to polish a feasible solution? */
@@ -1640,7 +1639,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
 
    /* deactivate expensive pre-root heuristics, since it may happen that the lp relaxation of the subproblem is already
-      infeasible; in this case, we do not want to waste time on heuristics before solvong the root lp */
+      infeasible; in this case, we do not want to waste time on heuristics before solving the root lp */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
 
    /* forbid recursive call of undercover heuristic */
@@ -2045,7 +2044,6 @@ SCIP_RETCODE SCIPapplyUndercover(
       while( ndives <= heurdata->maxreorders && !success )
       {
          SCIP_Bool infeas;
-         SCIP_Bool atroot;
          SCIP_Bool lpsolved;
          SCIP_Bool reordered;
 
@@ -2059,21 +2057,9 @@ SCIP_RETCODE SCIPapplyUndercover(
             break;
 
          /* start probing in original problem */
-         atroot = SCIPgetDepth(scip) == 0;
          lpsolved = SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL;
          SCIP_CALL( SCIPstartProbing(scip) );
          ndives++;
-
-         /* if we want to use global bounds and are not at the root node, reset bounds */
-         if( !atroot && !heurdata->globalbounds )
-         {
-            SCIPdebugMessage("resetting bounds to global bounds\n");
-            for( i = nvars-1; i >= 0; i-- )
-            {
-               SCIP_CALL( SCIPchgVarLbProbing(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
-               SCIP_CALL( SCIPchgVarUbProbing(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
-            }
-         }
 
          /* round-fix-propagate-analyze-backtrack for each variable in the cover */
          nfixedints = 0;
@@ -2692,6 +2678,9 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* create undercover primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
+   /* always use local bounds */
+   heurdata->globalbounds = FALSE;
+
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
@@ -2756,10 +2745,6 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/fixintfirst",
          "should integer variables in the cover be fixed first?",
          &heurdata->fixintfirst, TRUE, DEFAULT_FIXINTFIRST, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/globalbounds",
-         "should global bounds on variables be used instead of local bounds at focus node?",
-         &heurdata->globalbounds, TRUE, DEFAULT_GLOBALBOUNDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/locksrounding",
          "shall LP values for integer vars be rounded according to locks?",
