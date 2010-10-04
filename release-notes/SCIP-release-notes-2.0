@@ -8,6 +8,8 @@ Features
 
 - New rounding and propagation heuristics, rapid learning
 
+- Added the feasibility pump to 2.0
+
 - New constraint handlers for linking constraints (only Beta), cumulative constraints,
   and for breaking orbitopal symmetries
 
