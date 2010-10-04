@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.98 2010/10/04 11:59:02 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.99 2010/10/04 12:08:23 bzfpfets Exp $"
 #define SCIP_DEBUG
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3975,6 +3975,16 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       *valid = FALSE;
       return SCIP_OKAY;
    }
+
+   /* get copied version of linear constraint */
+   sourcelincons = sourceconsdata->lincons;
+   assert( sourcelincons != NULL );
+   conshdlrlinear = SCIPfindConshdlr(sourcescip, "linear");
+   assert(conshdlrlinear != NULL);
+   SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons), 
+         SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),
+         SCIPconsIsPropagated(sourcelincons), SCIPconsIsLocal(sourcelincons), SCIPconsIsModifiable(sourcelincons), SCIPconsIsDynamic(sourcelincons),
+         SCIPconsIsRemovable(sourcelincons), SCIPconsIsStickingAtNode(sourcelincons), global, valid) );
 
    if ( *valid )
    {
