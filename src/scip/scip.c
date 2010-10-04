@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.689 2010/10/01 15:40:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.690 2010/10/04 10:08:33 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1477,6 +1477,7 @@ SCIP_RETCODE SCIPcopyConss(
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
+   assert(valid      != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -1506,6 +1507,8 @@ SCIP_RETCODE SCIPcopyConss(
    sourceconshdlrs = SCIPgetConshdlrs(sourcescip);
    assert(nsourceconshdlrs == 0 || sourceconshdlrs != NULL);
    assert(SCIPisTransformed(sourcescip));
+
+   *valid = TRUE;
 
    /* copy constraints: loop through all (source) constraint handlers */  
    for( i = 0; i < nsourceconshdlrs; ++i )
@@ -1664,6 +1667,7 @@ SCIP_RETCODE SCIPcopy(
    SCIP_HASHMAP* localconsmap;
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
+   SCIP_Bool consscopyvalid;
    char name[SCIP_MAXSTRLEN];
 
    assert(sourcescip != NULL);
@@ -1715,9 +1719,10 @@ SCIP_RETCODE SCIPcopy(
    SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, localvarmap, localconsmap, global) );
 
    /* copy all constraints */
-   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, valid) );
+   SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
+   (*valid) = *valid && consscopyvalid;
 
-   SCIPdebugMessage("Copying constraints was%s valid.\n", *valid ? "" : " not");
+   SCIPdebugMessage("Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
 
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
