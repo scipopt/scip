@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.690 2010/10/04 10:08:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.691 2010/10/04 20:33:55 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1550,23 +1550,27 @@ SCIP_RETCODE SCIPcopyConss(
       for( c = 0; c < nsourceconss; ++c )
       {
          assert(sourceconss[c] != NULL);
-         /* @todo it seems that sourceconss can contain inactive or deleted constraints, so the
-          * following two assert fail from time to time; for now, we just do not copy those constraints but set *valid to FALSE
-          * ????????? can we set *valid to TRUE ? */
-         if( !SCIPconsIsActive(sourceconss[c]) || SCIPconsIsDeleted(sourceconss[c]) )
+         if( SCIPconsIsDeleted(sourceconss[c]) )
          {
-            *valid = FALSE;
-            SCIPdebugMessage("did not copy inactive or deleted constraint <%s>\n", SCIPconsGetName(sourceconss[c]));
+            SCIPdebugMessage("did not copy deleted constraint <%s>\n", SCIPconsGetName(sourceconss[c]));
             continue;
          }
+         /* @todo it seems that sourceconss can contain inactive constraints, so the assert below fail from time to time
+          * for now, we just do not copy those constraints but set *valid to FALSE
+          * ????????? can we set *valid to TRUE, even if we are in a node but global is TRUE ? */
+         if( !SCIPconsIsActive(sourceconss[c]) )
+         {
+            *valid = FALSE;
+            SCIPdebugMessage("did not copy inactive constraint <%s>\n", SCIPconsGetName(sourceconss[c]));
+            continue;
+         }
+         assert(SCIPconsIsActive(sourceconss[c]));
          /* skip copying local constraints when creating a global copy */
          if( global && SCIPconsIsLocal(sourceconss[c]) )
          {
             SCIPdebugMessage("did not copy active local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
             continue;
          }
-         assert(SCIPconsIsActive(sourceconss[c]));
-         assert(!SCIPconsIsDeleted(sourceconss[c]));
          assert(!global || !SCIPconsIsLocal(sourceconss[c]));
          assert(global || SCIPconsIsEnforced(sourceconss[c]));
 
