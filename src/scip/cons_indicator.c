@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.100 2010/10/04 13:39:51 bzfgleix Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.101 2010/10/04 16:10:41 bzfpfets Exp $"
 
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3089,6 +3089,9 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
  *  an upper bound on the value of \f$s\f$. If \f$M\f$ is too large the inequality is not
  *  inserted. Depending on the parameter @a addCouplingCons we add a variable upper bound or a row
  *  (in consInitlpIndicator()).
+ *
+ *  @warning We can never delete linear constraints, because we need them to get the right values
+ *  for the slack variables!
  */
 static
 SCIP_DECL_CONSPRESOL(consPresolIndicator)
@@ -3187,11 +3190,6 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
             /* delete indicator constraint */
             assert( ! SCIPconsIsModifiable(cons) );
             SCIP_CALL( SCIPdelCons(scip, cons) );
-            ++(*ndelconss);
-
-            /* delete linear constraint */
-            assert( ! SCIPconsIsModifiable(consdata->lincons) );
-            SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
             ++(*ndelconss);
 
             *result = SCIP_SUCCESS;
