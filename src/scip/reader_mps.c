@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.140 2010/09/30 11:54:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.141 2010/10/04 11:47:09 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -2140,7 +2140,12 @@ SCIP_RETCODE readIndicators(
 
       /* check whether we need the negated variable */
       if ( *mpsinputField4(mpsi) == '0' )
-	 binvar = SCIPvarGetNegatedVar(binvar);
+      {
+         SCIP_VAR* var;
+         SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
+	 binvar = var;
+         assert( binvar != NULL );
+      }
       else
       {
 	 if ( *mpsinputField4(mpsi) != '1' )
@@ -2212,7 +2217,7 @@ SCIP_RETCODE readIndicators(
 	    break;
 	 }
       }
-      
+
       /* create slack variable */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indslack_%s", SCIPconsGetName(lincons));
       SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
@@ -2762,17 +2767,20 @@ SCIP_RETCODE checkVarnames(
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
    {
+      size_t l;
+
       var = vars[v];
       assert( var != NULL );
-      
-      if( strlen(SCIPvarGetName(var)) >= MPS_MAX_NAMELEN )
+
+      l = strlen(SCIPvarGetName(var));
+
+      if( l >= MPS_MAX_NAMELEN )
       {
          faulty++;
          (*maxnamelen) = MPS_MAX_NAMELEN - 1;
       }
       else
       {
-         size_t l = strlen(SCIPvarGetName(var));
          (*maxnamelen) = MAX(*maxnamelen, l);
       }
  
@@ -2810,13 +2818,13 @@ SCIP_RETCODE checkConsnames(
    char* consname;
    int faulty;
    int i;
-   
+
    assert(scip != NULL);
    assert(maxnamelen != NULL);
 
    faulty = 0;
    *error = FALSE;
-   
+
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, consnames, nconss) );
 
@@ -2829,39 +2837,39 @@ SCIP_RETCODE checkConsnames(
 
       /* in case the transformed probelms is written only constraint are posted which are enabled in the current node */
       assert(!transformed || SCIPconsIsEnabled(cons));
+
+      l = strlen(SCIPconsGetName(cons));
       
-      if( strlen(SCIPconsGetName(cons)) >= MPS_MAX_NAMELEN )
+      if( l >= MPS_MAX_NAMELEN )
       {
          faulty++;
          (*maxnamelen) = MPS_MAX_NAMELEN - 1;
       }
 
-      l = strlen(SCIPconsGetName(cons));
-
       if( l == 0 )
       {
          SCIPwarningMessage("At least one name of a constraint is empty, so file will be written with generic names.\n");
-         
+
          --i;  /*lint !e445*/
          for( ; i >= 0; --i)  /*lint !e445*/
          {
             SCIPfreeBufferArray(scip, &((*consnames)[i]));
          }
-         SCIPfreeBufferArray(scip, &consnames);
-         
+         SCIPfreeBufferArray(scip, consnames);
+
          *error = TRUE;
 
          return SCIP_OKAY;
       }
 
       (*maxnamelen) = MAX(*maxnamelen, l);
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
       (void) SCIPsnprintf(consname, (int)(*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
-      
+
       (*consnames)[i] = consname;
    }
-   
+
    if( faulty > 0 )
    {
       SCIPwarningMessage("there are %d constraint names which have to be cut down to %d characters; LP might be corrupted\n", 
@@ -2879,6 +2887,7 @@ void printColumnSection(
    FILE*              file,               /**<  output file, or NULL if standard output should be used */
    SPARSEMATRIX*      matrix,             /**< sparse matrix containing the entries */
    SCIP_HASHMAP*      varnameHashmap,     /**< map from SCIP_VAR* to variable name */
+   SCIP_HASHTABLE*    indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
    unsigned int       maxnamelen          /**< maximum name length */
    )
 {
@@ -2890,8 +2899,7 @@ void printColumnSection(
    int recordcnt;
 
    /* sort sparse matrix w.r.t. the variable indices */
-   SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, 
-         SCIPvarComp, matrix->nentries);
+   SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, SCIPvarComp, matrix->nentries);
 
    /* print COLUMNS section */
    SCIPinfoMessage(scip, file, "COLUMNS\n");
@@ -2902,6 +2910,13 @@ void printColumnSection(
    {
       var = matrix->columns[v];
       assert( var != NULL );
+
+      /* skip slack variables in output */
+      if ( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
+      {
+         ++v;
+         continue;
+      }
          
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection)
       {
@@ -3089,6 +3104,7 @@ void printBoundSection(
    int                naggvars,           /**< number of aggregated variables */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    const char**       varnames,           /**< array with variable names */
+   SCIP_HASHTABLE*    indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
    unsigned int       maxnamelen          /**< maximum name length */
    )
 {
@@ -3110,6 +3126,10 @@ void printBoundSection(
    {
       var = vars[v];
       assert( var != NULL );
+
+      /* skip slack variables in output */
+      if ( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
+         continue;
 
       /* get variable name */
       varname = varnames[v];
@@ -3212,7 +3232,9 @@ void printBoundSection(
          }
       }
 
-      /* print upper bound, infinity has to be printed for integer! variables, because during reading an mps file no upper bound of an integer variable means that the upper bound will be set to 1 instead of +infinity (like it is for continuous variables)*/
+      /* print upper bound, infinity has to be printed for integer (!) variables, because during
+       * reading an mps file no upper bound of an integer variable means that the upper bound will
+       * be set to 1 instead of +infinity (like it is for continuous variables) */
       if( SCIPisInfinity(scip, ub) )
       {
          if( !sectionName )
@@ -3356,7 +3378,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    int naggvars = 0;
    int saggvars;
    SCIP_HASHTABLE* varAggregatedHash;
-
+   SCIP_HASHTABLE* indicatorSlackHash;
 
    SCIP_VAR** consvars;
    int nconsvars;
@@ -3414,9 +3436,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* create hashtable for storing aggregated variables */
    saggvars = nvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, saggvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregatedHash, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, 
-         NULL) );
-   
+   SCIP_CALL( SCIPhashtableCreate(&varAggregatedHash, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), 3*nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+
    /* initialize sparse matrix */
    SCIP_CALL( initializeMatrix(scip, &matrix, (nvars * 2)) );
    assert( matrix->sentries >= nvars );
@@ -3606,6 +3628,14 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       }
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
+         SCIP_VAR* slackvar;
+
+         /* store slack variable in hash */
+         slackvar = SCIPgetSlackVarIndicator(cons);
+         assert( slackvar != NULL );
+         assert( !SCIPhashtableExists(indicatorSlackHash, (void*) slackvar) );
+         SCIP_CALL( SCIPhashtableInsert(indicatorSlackHash, (void*) slackvar) );
+
          /* store constraint */
          consIndicator[nConsIndicator++] = cons;
          continue;
@@ -3770,6 +3800,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* free hash table */
    SCIPhashtableFree(&varAggregatedHash);
 
+   if ( nConsIndicator == 0 )
+   {
+      SCIPhashtableFree(&indicatorSlackHash);
+      assert( indicatorSlackHash == NULL );
+   }
+
    if( naggvars > 0 )
    {
       /* construct variables name of the needed aggregated variables and
@@ -3788,13 +3824,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* create variable name */
          var = aggvars[c];
          
-         if( strlen(SCIPvarGetName(var)) >= MPS_MAX_NAMELEN )
+         l = strlen(SCIPvarGetName(var));
+         if( l >= MPS_MAX_NAMELEN )
             maxnamelen = MPS_MAX_NAMELEN - 1;
          else
-         {
-            l = strlen(SCIPvarGetName(var));
             maxnamelen = MAX(maxnamelen, l);
-         }
 
          SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
          (void) SCIPsnprintf(namestr,  MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
@@ -3831,7 +3865,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    }
    
    /* output COLUMNS section */
-   printColumnSection(scip, file, matrix, varnameHashmap, maxnamelen);
+   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
    
    /* output RHS section */
    printRhsSection(scip, file, conss, nconss, consnames, rhss, transformed, maxnamelen);
@@ -3841,7 +3875,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       printRangeSection(scip, file, conss, nconss, consnames, transformed, maxnamelen);
       
    /* output BOUNDS section */
-   printBoundSection(scip, file, vars, nvars, aggvars, naggvars, transformed, varnames, maxnamelen);
+   printBoundSection(scip, file, vars, nvars, aggvars, naggvars, transformed, varnames, indicatorSlackHash, maxnamelen);
 
    /* print SOS section */
    if( nConsSOS1 > 0 || nConsSOS2 > 0 )
@@ -4119,13 +4153,13 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    }
 
    /* print indicator section */
-   if( nConsIndicator > 0 )
+   if ( nConsIndicator > 0 )
    {
       SCIPinfoMessage(scip, file, "INDICATORS\n");
       SCIPdebugMessage("start printing INDICATOR section\n");
 
       /* output each indicator constraint */
-      for ( c = 0; c < nConsIndicator; ++c )
+      for (c = 0; c < nConsIndicator; ++c)
       {
          SCIP_VAR* binvar;
          SCIP_CONS* lincons;
@@ -4134,17 +4168,47 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          binvar = SCIPgetBinaryVarIndicator(cons);
          lincons = SCIPgetLinearConsIndicator(cons);
 
-         /* create value string */
+         /* create variable and value strings */
          if ( SCIPvarIsNegated(binvar) )
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.0);
+         {
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 0);
+            assert( SCIPvarGetNegatedVar(binvar) != NULL );
+            assert( SCIPhashmapExists(varnameHashmap, SCIPvarGetNegatedVar(binvar)) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, SCIPvarGetNegatedVar(binvar));
+         }
          else
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 1.0);
+         {
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 1);
+            assert ( SCIPhashmapExists(varnameHashmap, binvar) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, binvar);
+         }
 
+         /* write records */
          printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
-         printRecord(scip, file, SCIPvarGetName(binvar), valuestr, maxnamelen);
+         printRecord(scip, file, varname, valuestr, maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
       }
    }
+
+   /* free matrix data structure */
+   freeMatrix(scip, matrix);
+
+   /* free slackvar hashtable */
+   if ( indicatorSlackHash != NULL )
+      SCIPhashtableFree(&indicatorSlackHash);
+
+   /* free variable hashmap */
+   SCIPhashmapFree(&varnameHashmap);
+
+   SCIPfreeBufferArray(scip, &aggvars);
+   SCIPfreeBufferArray(scip, &rhss);
+
+   /* free buffer arrays for SOS1, SOS2, and quadratic */
+   SCIPfreeBufferArray(scip, &consIndicator);
+   SCIPfreeBufferArray(scip, &consSOC);
+   SCIPfreeBufferArray(scip, &consQuadratic);
+   SCIPfreeBufferArray(scip, &consSOS2);
+   SCIPfreeBufferArray(scip, &consSOS1);
 
    /* free variable and constraint name array */
    for( v = 0; v < nvars + naggvars; ++v )
@@ -4163,22 +4227,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIPfreeBufferArray(scip, &consnames[c]);
    }
    SCIPfreeBufferArray(scip, &consnames);
-   
-   /* free matrix data structure */
-   freeMatrix(scip, matrix);
-
-   /* free variable hashmap */
-   SCIPhashmapFree(&varnameHashmap);
-
-   SCIPfreeBufferArray(scip, &aggvars);
-   SCIPfreeBufferArray(scip, &rhss);
-
-   /* free buffer arrays for SOS1, SOS2, and quadratic */
-   SCIPfreeBufferArray(scip, &consIndicator);
-   SCIPfreeBufferArray(scip, &consSOS1);
-   SCIPfreeBufferArray(scip, &consSOS2);
-   SCIPfreeBufferArray(scip, &consQuadratic);
-   SCIPfreeBufferArray(scip, &consSOC);
 
    /* print end of data line */
    SCIPinfoMessage(scip, file, "ENDATA");
