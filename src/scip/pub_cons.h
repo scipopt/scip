@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.43 2010/09/06 16:10:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.44 2010/10/05 14:50:10 bzfpfets Exp $"
 
 /**@file   pub_cons.h
  * @ingroup PUBLICMETHODS
@@ -91,6 +91,12 @@ SCIP_CONS** SCIPconshdlrGetEnfoConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets array with checked constraints of constraint handler; this is local information */
+extern
+SCIP_CONS** SCIPconshdlrGetCheckConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets total number of existing transformed constraints of constraint handler */
 extern
 int SCIPconshdlrGetNConss(
@@ -100,6 +106,12 @@ int SCIPconshdlrGetNConss(
 /** gets number of enforced constraints of constraint handler; this is local information */
 extern
 int SCIPconshdlrGetNEnfoConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of checked constraints of constraint handler; this is local information */
+extern
+int SCIPconshdlrGetNCheckConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

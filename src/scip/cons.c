@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.215 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.216 2010/10/05 14:50:10 bzfpfets Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3394,6 +3394,16 @@ SCIP_CONS** SCIPconshdlrGetEnfoConss(
    return conshdlr->enfoconss;
 }
 
+/** gets array with checked constraints of constraint handler; this is local information */
+SCIP_CONS** SCIPconshdlrGetCheckConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->checkconss;
+}
+
 /** gets total number of existing transformed constraints of constraint handler */
 int SCIPconshdlrGetNConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -3412,6 +3422,16 @@ int SCIPconshdlrGetNEnfoConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nenfoconss;
+}
+
+/** gets number of checkedconstraints of constraint handler; this is local information */
+int SCIPconshdlrGetNCheckConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->ncheckconss;
 }
 
 /** gets number of active constraints of constraint handler */
