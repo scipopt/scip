@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.103 2010/10/05 17:56:40 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.104 2010/10/05 18:02:29 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -4018,6 +4018,12 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
+
+   /* free empty constraint */
+   if ( SCIPconsIsDeleted(sourcelincons) )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
+   }   
 
    return SCIP_OKAY;
 }
