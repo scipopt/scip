@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.97.2.1 2010/10/05 15:56:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.97.2.2 2010/10/05 19:40:54 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2885,9 +2885,14 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
                (SCIP_EVENTDATA*)*consdata, -1) );
       }
 
-      /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible ?????????? */
+      /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible */
       assert( (*consdata)->lincons != NULL );
-      SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
+
+      /* release linear constraint if it is transformed as well - otherwise initpre has not been called */
+      if ( SCIPconsIsTransformed((*consdata)->lincons) )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
+      }
    }
    else
    {
@@ -2986,6 +2991,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
       SCIP_Real* vals;
       SCIP_VAR** vars;
       SCIP_VAR* slackvar;
+      SCIP_Bool foundslackvar;
       int nvars;
       int i;
       
@@ -2993,12 +2999,19 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
       vals = SCIPgetValsLinear(scip, sourcedata->lincons);
       nvars = SCIPgetNVarsLinear(scip, sourcedata->lincons);
       slackvar = sourcedata->slackvar;
+      foundslackvar = FALSE;
       for (i = 0; i < nvars; ++i)
       {
-         if ( vars[i] != slackvar && (! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i])) )
-            break;
+         if ( vars[i] == slackvar )
+            foundslackvar = TRUE;
+         else
+         {
+            if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
+               break;
+         }
       }
-      if ( i == nvars )
+      /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
+      if ( i == nvars && foundslackvar )
       {
          SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT) );
       }
@@ -3059,7 +3072,6 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-      SCIP_CONS* cons;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
@@ -3071,12 +3083,17 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
       /* if not happend already, get transformed linear constraint */
       assert( consdata->lincons != NULL );
       assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
-      assert( ! SCIPconsIsTransformed(consdata->lincons) );
-      
-      SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &cons) );
-      assert( cons != NULL );
-      SCIP_CALL( SCIPcaptureCons(scip, cons) );
-      consdata->lincons = cons;
+
+      /* in a restart the linear constraint might already be transformed */
+      if ( ! SCIPconsIsTransformed(consdata->lincons) )
+      {
+         SCIP_CONS* translincons;
+
+         SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &translincons) );
+         assert( translincons != NULL );
+         SCIP_CALL( SCIPcaptureCons(scip, translincons) );
+         consdata->lincons = translincons;
+      }
    }
 
    return SCIP_OKAY;
@@ -4014,11 +4031,11 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
 
-   /* free empty linear constraint if necessary */
+   /* free empty constraint */
    if ( SCIPconsIsDeleted(sourcelincons) )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
-   }
+   }   
 
    return SCIP_OKAY;
 }
