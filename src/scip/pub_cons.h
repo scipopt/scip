@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.44 2010/10/05 14:50:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.45 2010/10/05 20:14:07 bzfheinz Exp $"
 
 /**@file   pub_cons.h
  * @ingroup PUBLICMETHODS
@@ -79,7 +79,10 @@ void SCIPconshdlrSetData(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
-/** gets array with active constraints of constraint handler */
+/** gets array with active constraints of constraint handler; a constraint is active if it is global and was not removed
+ *  during presolving or it was added locally (in that case the local flag is TRUE) and the current node belongs to the
+ *  corresponding sub tree
+ */ 
 extern
 SCIP_CONS** SCIPconshdlrGetConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -115,7 +118,10 @@ int SCIPconshdlrGetNCheckConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets number of active constraints of constraint handler */
+/** gets number of active constraints of constraint handler; a constraint is active if it is global and was not removed
+ *  during presolving or it was added locally (in that case the local flag is TRUE) and the current node belongs to the
+ *  corresponding sub tree
+ */ 
 extern
 int SCIPconshdlrGetNActiveConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */

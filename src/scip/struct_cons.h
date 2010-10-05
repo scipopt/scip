@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.54 2010/08/31 17:44:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.55 2010/10/05 20:14:07 bzfheinz Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -73,7 +73,11 @@ struct SCIP_Cons
    unsigned int          stickingatnode:1;   /**< TRUE iff the node should always be kept at the node where it was added */
    unsigned int          original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int          deleteconsdata:1;   /**< TRUE iff constraint data has to be deleted if constraint is freed */
-   unsigned int          active:1;           /**< TRUE iff constraint is active in the current node */
+   unsigned int          active:1;           /**< TRUE iff constraint is active in the current node; a constraint is
+                                              *   active if it is global and was not removed during presolving or it was
+                                              *   added locally (in that case the local flag is TRUE) and the current
+                                              *   node belongs to the corresponding sub tree
+                                              */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int          deleted:1;          /**< TRUE iff constraint was globally deleted */
@@ -152,7 +156,10 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSCOPY    ((*conscopy));      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
-   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative ones */
+   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative
+                                              *   ones; a constraint is active if it is global and was not removed
+                                              *   during presolving or it was added locally (in that case the local flag
+                                              *   is TRUE) and the current node belongs to the corresponding sub tree */
    SCIP_CONS**           initconss;          /**< array with active constraints that must enter the LP with their initial representation */
    SCIP_CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
    SCIP_CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
