@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.691 2010/10/04 20:33:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.692 2010/10/05 16:08:47 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1515,64 +1515,55 @@ SCIP_RETCODE SCIPcopyConss(
    {
       SCIP_CONS** sourceconss;
       SCIP_CONS* targetcons;
-      
+      SCIP_Bool succeed;      
       int nsourceconss;
       int c;         
-      SCIP_Bool succeed;
    
       assert(sourceconshdlrs[i] != NULL);
 
       /* constraint handlers have to explicitly set the succeed pointer to TRUE */
       succeed = FALSE; 
-
-      /* for a global copy, copy all constraints that are globally active, for a local copy, copy all constraints that
-       * are locally enforced, in order to also get local constraints, e.g. from branching
+      
+      /* Get all active constraints for copying; this array contains all active constraints;
+       * constraints are active if they are globally valid and not deleted after presolving OR they
+       * were locally added during the search and we are currently in a node which belongs to the
+       * corresponding subtree.
        */
-      if( global )
-      {      
-         nsourceconss = SCIPconshdlrGetNConss(sourceconshdlrs[i]);
-         sourceconss = SCIPconshdlrGetConss(sourceconshdlrs[i]);
-      }
-      else
+      nsourceconss = SCIPconshdlrGetNActiveConss(sourceconshdlrs[i]);
+      sourceconss = SCIPconshdlrGetConss(sourceconshdlrs[i]);
+
+#if 0
+      /* @todo using the following might reduce the number of copied constraints - check whether this is better */
+      /* Get all checked constraints for copying; this included local constraints */
+      if ( ! global )
       {
-         nsourceconss = SCIPconshdlrGetNEnfoConss(sourceconshdlrs[i]);
-         sourceconss = SCIPconshdlrGetEnfoConss(sourceconshdlrs[i]);
+         nsourceconss = SCIPconshdlrGetNCheckConss(sourceconshdlrs[i]);
+         sourceconss = SCIPconshdlrGetCheckConss(sourceconshdlrs[i]);
       }
+
+#endif
 
       assert(nsourceconss == 0 || sourceconss != NULL);
-      
-      if( nsourceconss > 0 )
+
+      if ( nsourceconss > 0 )
       {
          SCIPdebugMessage("Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
       }
-      
+
       /* copy all constraints of one constraint handler */  
       for( c = 0; c < nsourceconss; ++c )
       {
+         /* all constraints have to be active */
          assert(sourceconss[c] != NULL);
-         if( SCIPconsIsDeleted(sourceconss[c]) )
-         {
-            SCIPdebugMessage("did not copy deleted constraint <%s>\n", SCIPconsGetName(sourceconss[c]));
-            continue;
-         }
-         /* @todo it seems that sourceconss can contain inactive constraints, so the assert below fail from time to time
-          * for now, we just do not copy those constraints but set *valid to FALSE
-          * ????????? can we set *valid to TRUE, even if we are in a node but global is TRUE ? */
-         if( !SCIPconsIsActive(sourceconss[c]) )
-         {
-            *valid = FALSE;
-            SCIPdebugMessage("did not copy inactive constraint <%s>\n", SCIPconsGetName(sourceconss[c]));
-            continue;
-         }
          assert(SCIPconsIsActive(sourceconss[c]));
-         /* skip copying local constraints when creating a global copy */
+         assert(!SCIPconsIsDeleted(sourceconss[c]));
+
+         /* in case of copying the global problem we have to ignore the local constraints which are active */
          if( global && SCIPconsIsLocal(sourceconss[c]) )
          {
             SCIPdebugMessage("did not copy active local constraint <%s> when creating global copy\n", SCIPconsGetName(sourceconss[c]));
             continue;
          }
-         assert(!global || !SCIPconsIsLocal(sourceconss[c]));
-         assert(global || SCIPconsIsEnforced(sourceconss[c]));
 
          /* use the copy constructor of the constraint handler and creates and captures the constraint if possible */
          targetcons = NULL;
