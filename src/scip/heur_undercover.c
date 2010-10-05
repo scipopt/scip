@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.109 2010/10/04 18:02:14 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.107.2.1 2010/10/05 00:19:58 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1138,12 +1138,8 @@ SCIP_RETCODE solveCoveringProblem(
       totalpenalty += SCIPvarGetObj(coveringvars[i]);
    }
 
-   /* print solution if we are in SCIP's debug mode */
-   assert(SCIPgetBestSol(coveringscip) != NULL);
-   SCIPdebugMessage("found a feasible cover: %d/%d variables fixed, normalized penalty=%g\n\n",
+   SCIPdebugMessage("found a feasible cover: %d/%d variables fixed, normalized penalty=%f\n\n",
       *coversize, SCIPgetNOrigVars(coveringscip), SCIPgetSolOrigObj(coveringscip, SCIPgetBestSol(coveringscip))/(totalpenalty+SCIPsumepsilon(coveringscip)));
-   SCIPdebug( SCIP_CALL( SCIPprintSol(coveringscip, SCIPgetBestSol(coveringscip), NULL, FALSE) ) );
-   SCIPdebugMessage("\r                                                  \n");
 
    *success = TRUE;
 
@@ -1332,9 +1328,10 @@ SCIP_RETCODE getFixingValue(
             SCIP_CALL( SCIPchgVarBoundsDiveNLP(scip, relaxvar, lb, ub) );
          }
 
-         /* activate nlp solver output if we are in SCIP's debug mode */
-         SCIPdebug( SCIP_CALL( SCIPnlpSetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, 1) ) );
-
+#ifdef SCIP_DEBUG
+         /* activate nlp solver output in SCIP's debug mode */
+         SCIP_CALL( SCIPnlpSetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
          /* set starting point to lp solution */
          SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
@@ -1565,7 +1562,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Longint          nodelimit,          /**< node limit */
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
-   SCIP_Bool*            validsolved,        /**< was problem constructed from a valid copy and solved (proven optimal or infeasible)? */
+   SCIP_Bool*            solved,             /**< was problem solved (proven optimal or infeasible)? */
    SCIP_SOL**            sol,                /**< best solution found in subproblem (if feasible); *sol must be NULL, solution will be created */
    SCIP_Longint*         nusednodes          /**< number of nodes used for solving the subproblem */
    )
@@ -1576,6 +1573,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
 
+   SCIP_Bool success;
    int nvars;
    int i;
 
@@ -1588,12 +1586,12 @@ SCIP_RETCODE solveSubproblem(
    assert(memorylimit > 0.0);
    assert(nodelimit >= 1);
    assert(nstallnodes >= 1);
-   assert(validsolved != NULL);
+   assert(solved != NULL);
    assert(sol != NULL);
    assert(*sol == NULL);
    assert(nusednodes != NULL);
 
-   *validsolved = FALSE;
+   *solved = FALSE;
    *nusednodes = 0;
 
    /* get heuristic data */
@@ -1611,8 +1609,16 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, validsolved) );
-   SCIPdebugMessage("problem copied, copy %svalid\n", validsolved ? "" : "in");
+   success = FALSE;
+   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, &success) );
+
+   if( !success )
+   {
+      SCIPdebugMessage("creating subproblem failed, terminating\n");
+      goto TERMINATE;
+   }
+   else
+      SCIPdebugMessage("subproblem created successfully\n");
 
    /* store subproblem variables */
    for( i = nvars-1; i >= 0; i-- )
@@ -1622,7 +1628,7 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* fix subproblem variables in the cover */
-   SCIPdebugMessage("fixing variables\n");
+   SCIPdebugMessage("fixing variables in the cover\n");
    for( i = coversize-1; i >= 0; i-- )
    {
       assert(cover[i] >= 0);
@@ -1633,13 +1639,12 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* set the parameters such that good solutions are found fast */
-   SCIPdebugMessage("setting subproblem parameters\n");
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMSETTING_FEASIBILITY, TRUE) );
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
 
    /* deactivate expensive pre-root heuristics, since it may happen that the lp relaxation of the subproblem is already
-      infeasible; in this case, we do not want to waste time on heuristics before solving the root lp */
+      infeasible; in this case, we do not want to waste time on heuristics before solvong the root lp */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
 
    /* forbid recursive call of undercover heuristic */
@@ -1662,15 +1667,14 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
 
-   /* if there is already a solution, add an objective cutoff; note: this does not affect the validity of the subproblem
-    * if we find solutions later, thus we do not set *validsolved to FALSE */
+   /* if there is already a solution, add an objective cutoff */
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real cutoff;
       SCIP_Real upperbound;
 
       assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
-      upperbound = SCIPgetUpperbound(scip);
+      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
       if( SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
          cutoff = (upperbound >= 0 ? 1.0 - heurdata->minimprove : 1.0 + heurdata->minimprove) * upperbound;
@@ -1679,12 +1683,9 @@ SCIP_RETCODE solveSubproblem(
 
       cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
-
-      SCIPdebugMessage("adding objective cutoff=%g (minimprove=%g)\n", cutoff, heurdata->minimprove);
    }
       
    /* solve subproblem */
-   SCIPdebugMessage("solving subproblem started\n");
 #ifndef NDEBUG
    SCIP_CALL( SCIPpresolve(subscip) );
    SCIPdebugMessage("presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
@@ -1710,23 +1711,21 @@ SCIP_RETCODE solveSubproblem(
    }
 #endif
 
-   /* print solving statistics of subproblem if we are in SCIP's debug mode */
-   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+#ifdef SCIP_DEBUG
+   /* print solving statistics of subproblem if SCIP_DEBUG is defined */
+   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
 
-   /* store solving status; note: if we proved infeasibility in presence of an objective cutoff beyond the primal bound,
-    * the subproblem was not a valid copy */
-   *validsolved = *validsolved && (SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL
-      || (SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE && (SCIPgetNSols(scip) == 0 || heurdata->minimprove <= 0.0)));
+   /* store solving status */
+   *solved = SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL;
    *nusednodes = SCIPgetNNodes(subscip);
 
-   /* if a solution was found for the subproblem, create corresponding solution in the original problem */
-   if( SCIPgetNSols(subscip) > 0 )
+   /* if a solution was found for the subproblem, create corresponding solution in the original problem; if solution
+    * status is infeasible, only try if this might be due to artificially increased primal bound */
+   if( SCIPgetNSols(subscip) > 0 && (SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE || heurdata->minimprove > 0.0) )
    {
       SCIP_SOL** subsols;
-      SCIP_Bool success;
       int nsubsols;
-
-      assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE || heurdata->minimprove > 0.0);
 
       /* create solution */
       SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
@@ -1760,12 +1759,17 @@ SCIP_RETCODE solveSubproblem(
       }
 
       /* if the best subproblem solution was not accepted in the original problem, we do not trust the solving status */
-      *validsolved = *validsolved && i == 1;
+      *solved = *solved && i == 1;
    }
 
-   /* free variable mapping hash map, array of subproblem variables, and subproblem */
+ TERMINATE:
+   /* free variable mapping hash map */
    SCIPhashmapFree(&varmap);
+
+   /* free array of subproblem variables */
    SCIPfreeBufferArray(scip, &subvars);
+
+   /* free subproblem */
    SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
@@ -2244,26 +2248,26 @@ SCIP_RETCODE SCIPapplyUndercover(
       {
          SCIP_SOL* sol;
          SCIP_Longint nsubnodes;
-         SCIP_Bool validsolved;
+         SCIP_Bool solved;
 
          SCIPdebugMessage("heuristic successfully fixed %d variables (%d integral, %d continuous) during probing\n",
             nfixedints+nfixedconts, nfixedints, nfixedconts); /*lint !e771*/
 
          /* solve sub-CIP and pass feasible solutions to original problem */
          success = FALSE;
-         validsolved = FALSE;
+         solved = FALSE;
          sol = NULL;
          nsubnodes = 0;
 
          SCIP_CALL( solveSubproblem(scip, heur, coversize, cover, fixingvals,
-               timelimit, memorylimit, heurdata->maxnodes, nstallnodes, &validsolved, &sol, &nsubnodes) );
+               timelimit, memorylimit, heurdata->maxnodes, nstallnodes, &solved, &sol, &nsubnodes) );
 
          /* update number of sub-CIP nodes used by heuristic so far */
          heurdata->nusednodes += nsubnodes;
 
-         /* if the subproblem was constructed from a valid copy and solved, try to forbid the assignment of fixing
-          * values to variables in the cover */
-         if( validsolved )
+         /* if solved, try to forbid the assignment of fixing values to variables in the cover; this is only valid if we
+          * have not imposed an upperbound smaller than the one currently valid and no pricers are active */
+         if( solved && heurdata->minimprove <= 0.0 && SCIPgetNActivePricers(scip) == 0 )
          {
             SCIP_Real maxvarsfac;
             SCIP_Bool useconf;
@@ -2296,7 +2300,7 @@ SCIP_RETCODE SCIPapplyUndercover(
             /* call nlp local search heuristic unless it has failed too often */
             if( heurdata->postnlp && heurdata->npostnlpfails < MAXPOSTNLPFAILS )
             {
-               if( validsolved )
+               if( solved )
                {
                   SCIPdebugMessage("subproblem solved to optimality, skipping nlp local search\n");
                }
@@ -2590,7 +2594,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       timelimit -= SCIPgetSolvingTime(scip);
    if( timelimit <= 2*MINTIMELEFT )
    {
-      SCIPdebugMessage("skipping undercover heuristic: time left=%g\n", timelimit);
+      SCIPdebugMessage("skipping undercover heuristic: time left=%f\n", timelimit);
       return SCIP_OKAY;
    }
 
