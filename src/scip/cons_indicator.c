@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.101 2010/10/04 16:10:41 bzfpfets Exp $"
-
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.102 2010/10/05 16:09:25 bzfpfets Exp $"
+/* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
 
@@ -2140,6 +2140,18 @@ SCIP_RETCODE propIndicator(
    {
       SCIP_CONS* lincons;
 
+      /* if the slack variable is fixed to zero */
+      if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
+      {
+         SCIPdebugMessage("Slack variable fixed to zero, delete redundant indicator constraint <%s>.\n",   SCIPconsGetName(cons));
+
+         /* delete constraint */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         ++(*nGen);
+      }
+
       /* Note that because of possible mulit-aggregation we cannot simply remove the indicator
        * constraint if the linear constraint is not active or disabled - see the note in @ref
        * PREPROC. We have to check whether the slackvariable is not locked by a constraint.
@@ -2174,21 +2186,9 @@ SCIP_RETCODE propIndicator(
          }
       }
 
-      /* The following is possible by drastically increases memory consumption, because the linear
-       * constraints have to be stored in each node. */
-#if 0
-      /* if the binary variable is fixed to 0 */
-      if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
-      {
-         SCIPdebugMessage("binary variable <%s> is fixed to be 0, disabeling linear constraint.\n", SCIPvarGetName(consdata->binvar));
-
-         /* delete constraint locally */
-         assert( !SCIPconsIsModifiable(lincons) );
-         SCIP_CALL( SCIPdelConsLocal(scip, lincons) );
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         ++(*nGen);
-      }
-#endif
+      /* We cannot remove linear constraints, because of the reasons stated in
+       * consPresolIndicator(). Moreover, it would drastically increase memory consumption, because
+       * the linear constraints have to be stored in each node. */
    }
 
    return SCIP_OKAY;
@@ -2725,16 +2725,17 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          SCIP_CALL( SCIPdisableCons(scip, consdata->lincons) );
       }
       else
-
-      /* add constraint to alternative LP if not already done */
-      if ( conshdlrdata->sepaAlternativeLP && consdata->colIndex < 0 )
       {
-         SCIPdebugMessage("Adding column for <%s> to alternative LP ...\n", SCIPconsGetName(conss[c]));
-         SCIP_CALL( addAltLPConstraint(scip, conshdlr, consdata->lincons, consdata->slackvar, 1.0, &consdata->colIndex) );
-         SCIPdebugMessage("Colum index for <%s>: %d\n", SCIPconsGetName(conss[c]), consdata->colIndex);
+         /* add constraint to alternative LP if not already done */
+         if ( conshdlrdata->sepaAlternativeLP && consdata->colIndex < 0 )
+         {
+            SCIPdebugMessage("Adding column for <%s> to alternative LP ...\n", SCIPconsGetName(conss[c]));
+            SCIP_CALL( addAltLPConstraint(scip, conshdlr, consdata->lincons, consdata->slackvar, 1.0, &consdata->colIndex) );
+            SCIPdebugMessage("Colum index for <%s>: %d\n", SCIPconsGetName(conss[c]), consdata->colIndex);
 #ifdef SCIP_OUTPUT
-         SCIP_CALL( SCIPprintCons(scip, consdata->lincons, NULL) );
+            SCIP_CALL( SCIPprintCons(scip, consdata->lincons, NULL) );
 #endif
+         }
       }
    }
 
@@ -3318,7 +3319,13 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
       
       /* add implications */
       SCIP_CALL( SCIPaddVarImplication(scip, consdata->binvar, TRUE, consdata->slackvar, SCIP_BOUNDTYPE_UPPER, 0.0, &infeasible, &nbdchgs) );
-      assert( ! infeasible );
+      
+      /* infeasible might be true if preprocessing was truncated */
+      if ( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         break;
+      }
       /* note: nbdchgs == 0 is not necessarily true, because preprocessing might be truncated. */
    }
 
@@ -3961,28 +3968,29 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert( sourceconsdata != NULL );
 
-   /* if the linear constraint is disabled or not active -> do not copy (may happen due to (multi-)aggregation) */
-   /* FIXME !!! if we do a global copy of the problem while we are in some node, this constraint and the corresponding linear one may be disabled
-    * in this case we should still copy the constraint
-    * how can we distinguish this from the case that the linear constraint was disabled ????????????? */ 
-   if ( !SCIPconsIsEnabled(sourceconsdata->lincons) )
-   {
-      SCIPdebugMessage("Linear constraint <%s> disabled! Do not copy indicator constraint <%s>.\n",
-         SCIPconsGetName(sourceconsdata->lincons), SCIPconsGetName(sourcecons));
-      *cons = NULL;
-      *valid = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* get copied version of linear constraint */
+   /* get linear constraint */
    sourcelincons = sourceconsdata->lincons;
-   assert( sourcelincons != NULL );
-   conshdlrlinear = SCIPfindConshdlr(sourcescip, "linear");
-   assert(conshdlrlinear != NULL);
-   SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons), 
-         SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),
-         SCIPconsIsPropagated(sourcelincons), SCIPconsIsLocal(sourcelincons), SCIPconsIsModifiable(sourcelincons), SCIPconsIsDynamic(sourcelincons),
-         SCIPconsIsRemovable(sourcelincons), SCIPconsIsStickingAtNode(sourcelincons), global, valid) );
+
+   /* if the constraint has been deleted -> create empty constraint (multi-aggregation might still contain slackvariable, so indicator is valid) */
+   if ( SCIPconsIsDeleted(sourcelincons) )
+   {
+      SCIPdebugMessage("Linear constraint <%s> deleted! Create empty linear constraint.\n", SCIPconsGetName(sourceconsdata->lincons));
+
+      SCIP_CALL( SCIPcreateConsLinear(scip, &targetlincons, "dummy", 0, NULL, NULL, 0.0, SCIPinfinity(scip),
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, targetlincons) );
+   }
+   else
+   {
+      /* get copied version of linear constraint */
+      assert( sourcelincons != NULL );
+      conshdlrlinear = SCIPfindConshdlr(sourcescip, "linear");
+      assert(conshdlrlinear != NULL);
+      SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons),
+            SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),
+            SCIPconsIsPropagated(sourcelincons), SCIPconsIsLocal(sourcelincons), SCIPconsIsModifiable(sourcelincons), SCIPconsIsDynamic(sourcelincons),
+            SCIPconsIsRemovable(sourcelincons), SCIPconsIsStickingAtNode(sourcelincons), global, valid) );
+   }
 
    if ( *valid )
    {
@@ -3992,7 +4000,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       sourceslackvar = sourceconsdata->slackvar;
       assert( sourcebinvar != NULL );
       assert( sourceslackvar != NULL );
-      
+
       /* find copied variables corresponding to binvar and slackvar */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, consmap, global) );
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, consmap, global) );
@@ -4004,6 +4012,12 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
+   }
+
+   /* free empty linear constraint if necessary */
+   if ( SCIPconsIsDeleted(sourcelincons) )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
    }
 
    return SCIP_OKAY;
