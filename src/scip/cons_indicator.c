@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.102 2010/10/05 16:09:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.103 2010/10/05 17:56:40 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2885,9 +2885,14 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
                (SCIP_EVENTDATA*)*consdata, -1) );
       }
 
-      /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible ?????????? */
+      /* can there be cases where lincons is NULL, e.g., if presolve found the problem infeasible */
       assert( (*consdata)->lincons != NULL );
-      SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
+
+      /* release linear constraint if it is transformed as well - otherwise initpre has not been called */
+      if ( SCIPconsIsTransformed((*consdata)->lincons) )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
+      }
    }
    else
    {
@@ -4012,12 +4017,6 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
-   }
-
-   /* free empty linear constraint if necessary */
-   if ( SCIPconsIsDeleted(sourcelincons) )
-   {
-      SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
    }
 
    return SCIP_OKAY;
