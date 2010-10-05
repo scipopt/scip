@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.109 2010/10/04 18:02:14 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.110 2010/10/05 15:49:55 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -2296,9 +2296,9 @@ SCIP_RETCODE SCIPapplyUndercover(
             /* call nlp local search heuristic unless it has failed too often */
             if( heurdata->postnlp && heurdata->npostnlpfails < MAXPOSTNLPFAILS )
             {
-               if( validsolved )
+               if( nfixedconts == 0 && validsolved )
                {
-                  SCIPdebugMessage("subproblem solved to optimality, skipping nlp local search\n");
+                  SCIPdebugMessage("subproblem solved to optimality while all covering variables are integral, hence skipping nlp local search\n");
                }
                else if( timelimit <= MINTIMELEFT )
                {
