@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.94 2010/07/01 22:57:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.95 2010/10/07 21:03:19 bzfheinz Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -610,6 +610,34 @@ SCIP_Bool primalExistsSol(
    return FALSE;
 }
 
+/** check if we are willing to check the solution for feasibility */
+static
+SCIP_Bool solOfInterest(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int*                  insertpos           /**< pointer to store the insert position of that solution */
+   )
+{
+   SCIP_Real obj;
+
+   obj = SCIPsolGetObj(sol, set, prob);
+   
+   /* search the position to insert solution in storage */
+   if( set->misc_improvingsols && obj > primal->upperbound )
+      return FALSE;
+   
+   /* find insert position for the solution */
+   (*insertpos) = primalSearchSolPos(primal, set, prob, sol);
+   
+   if( (*insertpos) < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, *insertpos) )
+      return TRUE;
+   
+   return FALSE;
+}
+
 /** adds primal solution to solution storage by copying it */
 SCIP_RETCODE SCIPprimalAddSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -630,13 +658,14 @@ SCIP_RETCODE SCIPprimalAddSol(
    assert(sol != NULL);
    assert(stored != NULL);
 
-   /* search the position to insert solution in storage */
-   insertpos = primalSearchSolPos(primal, set, prob, sol);
+   insertpos = -1;
 
-   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, insertpos) )
+   if( solOfInterest(primal, set, stat, prob, sol, &insertpos) )
    {
       SCIP_SOL* solcopy;
 
+      assert(insertpos >= 0 && insertpos < set->limit_maxsol);
+      
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
       
@@ -672,11 +701,12 @@ SCIP_RETCODE SCIPprimalAddSolFree(
    assert(*sol != NULL);
    assert(stored != NULL);
 
-   /* search the position to insert solution in storage */
-   insertpos = primalSearchSolPos(primal, set, prob, *sol);
-
-   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, *sol, insertpos) )
+   insertpos = -1;
+   
+   if( solOfInterest(primal, set, stat, prob, *sol, &insertpos) )
    {
+      assert(insertpos >= 0 && insertpos < set->limit_maxsol);
+
       /* insert solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, *sol, insertpos) );
 
@@ -779,10 +809,9 @@ SCIP_RETCODE SCIPprimalTrySol(
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || set->misc_exactsolve;
 
-   /* search the position to insert solution in storage */
-   insertpos = primalSearchSolPos(primal, set, prob, sol);
+   insertpos = -1;
 
-   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, insertpos) )
+   if( solOfInterest(primal, set, stat, prob, sol, &insertpos) )
    {
       /* check solution for feasibility */
       SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, prob, printreason, checkbounds, checkintegrality, checklprows, &feasible) );
@@ -793,7 +822,9 @@ SCIP_RETCODE SCIPprimalTrySol(
    if( feasible )
    {
       SCIP_SOL* solcopy;
-      
+
+      assert(insertpos >= 0 && insertpos < set->limit_maxsol);
+
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
       
@@ -840,10 +871,9 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || set->misc_exactsolve;
 
-   /* search the position to insert solution in storage */
-   insertpos = primalSearchSolPos(primal, set, prob, *sol);
+   insertpos = -1;
 
-   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, *sol, insertpos) )
+   if( solOfInterest(primal, set, stat, prob, *sol, &insertpos) )
    {
       /* check solution for feasibility */
       SCIP_CALL( SCIPsolCheck(*sol, blkmem, set, stat, prob, printreason, checkbounds, checkintegrality, checklprows, &feasible) );
@@ -853,6 +883,8 @@ SCIP_RETCODE SCIPprimalTrySolFree(
 
    if( feasible )
    {
+      assert(insertpos >= 0 && insertpos < set->limit_maxsol);
+
       /* insert solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, *sol, insertpos) );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.259 2010/10/07 19:58:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.260 2010/10/07 21:03:19 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -202,7 +202,7 @@
                                                  *   freed (in case of bender decomposition this parameter should be set
                                                  *   to FALSE and therefore can be used to collect statistics over all
                                                  *   runs) */
-
+#define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be check which improve or equal the primal bound */
 
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -1140,6 +1140,12 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/resetstat",
          "should the statistics be reseted if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/improvingsols",
+         "should only solutions be check which improve or equal the primal bound",
+         &(*set)->misc_improvingsols, FALSE, SCIP_DEFAULT_MISC_IMPROVINGSOLS,
          NULL, NULL) );
    
    /* node selection */
