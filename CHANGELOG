@@ -7,6 +7,8 @@ fixed bugs:
 - fixed bug in reader_mps: indicator constraints do not output the slack variables anymore
 - fixed bug in heur_undercover: removed option globalbounds, since we are not allowed to relax bounds at a probing node
 - fixed bug in SCIPcopyConss: copy all active constraints (including disabled ones)
+- fixed bug w.r.t. looseobjval; the coounting of number of loose variables in the LP data structure was incorrect in case a 
+  variable got aggregated or multi-aggregated 
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint

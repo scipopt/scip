@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.143 2010/09/18 19:26:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.144 2010/10/07 10:09:41 bzfheinz Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1138,6 +1138,12 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
    SCIP_VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
    );
 
+/** decrease the number of loose variables by one */
+extern
+void SCIPlpDecNLoosevars(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** stores the LP solution in the columns and rows */
 extern
 SCIP_RETCODE SCIPlpGetSol(
@@ -1458,7 +1464,7 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpDiving(lp)                (lp)->diving
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
-
+ 
 #endif
 
 #ifdef __cplusplus

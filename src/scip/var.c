@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.304 2010/09/21 20:09:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.305 2010/10/07 10:09:41 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3242,6 +3242,13 @@ SCIP_RETCODE SCIPvarFix(
       obj = var->obj;
       SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
 
+      /* since we change the variable type form loose to multi aggregated, we have to adjust the number of loose
+       * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
+       * gets adjusted automatically, due to the event SCIP_EVENTTYPE_OBJCHANGED which dropped in the moment where the
+       * objective of this variable is set to zero
+       */
+      SCIPlpDecNLoosevars(lp);
+
       /* change variable's bounds to fixed value (thereby removing redundant implications and variable bounds) */
       holelistFree(&var->glbdom.holelist, blkmem);
       holelistFree(&var->locdom.holelist, blkmem);
@@ -4303,7 +4310,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
             tmpscalars[v] = tmpscalars[ntmpvars - 1];
             --ntmpvars;
          }
-            
       }
       
       /* this means that x = x + a_1*y_1 + ... + a_n*y_n + c */
@@ -4365,6 +4371,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
       SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+
+      /* since we change the variable type form loose to multi aggregated, we have to adjust the number of loose
+       * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
+       * gets adjusted automatically, due to the event SCIP_EVENTTYPE_OBJCHANGED which dropped in the moment where the
+       * objective of this variable is set to zero
+       */
+      SCIPlpDecNLoosevars(lp);
 
       /* unlock all rounding locks */
       nlocksdown = var->nlocksdown;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.360 2010/09/24 10:26:20 bzfschwa Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.361 2010/10/07 10:09:41 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and data structures
@@ -13043,7 +13043,9 @@ SCIP_RETCODE SCIPlpUpdateDelVar(
 
    /* update the loose variables counter */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
-      lp->nloosevars--;
+   {
+      SCIPlpDecNLoosevars(lp);
+   }
 
    return SCIP_OKAY;
 }
@@ -13064,7 +13066,7 @@ SCIP_RETCODE lpUpdateVarColumn(
    assert(lp->nloosevars > 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
-
+   
    obj = SCIPvarGetObj(var);
 
    /* update loose objective value corresponding to the deletion of variable */
@@ -13084,14 +13086,8 @@ SCIP_RETCODE lpUpdateVarColumn(
       else
          lp->looseobjval -= ub * obj;
    }
-   lp->nloosevars--;
-
-   /* get rid of numerical problems: set loose objective value explicitly to zero, if no loose variables remain */
-   if( lp->nloosevars == 0 )
-   {
-      assert(lp->looseobjvalinf == 0);
-      lp->looseobjval = 0.0;
-   }
+   
+   SCIPlpDecNLoosevars(lp);
 
    return SCIP_OKAY;
 }
@@ -13304,6 +13300,24 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
    }
 
    return SCIP_OKAY;
+}
+
+/** decrease the number of loose variables by one */
+void SCIPlpDecNLoosevars(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->nloosevars > 0);
+   
+   lp->nloosevars--;
+
+   /* get rid of numerical problems: set loose objective value explicitly to zero, if no loose variables remain */
+   if( lp->nloosevars == 0 )
+   {
+      assert(lp->looseobjvalinf == 0);
+      lp->looseobjval = 0.0;
+   }
 }
 
 /** stores the LP solution in the columns and rows */
