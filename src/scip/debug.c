@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.43 2010/09/21 20:09:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.44 2010/10/07 18:48:27 bzfheinz Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -146,6 +146,7 @@ SCIP_RETCODE readSolfile(
          (*vals)[i] = (*vals)[i-1];
       }
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*names)[i], name, strlen(name)+1) );
+      SCIPdebugMessage("found variable <%s>: value <%g>\n", (*names)[i], val);
       (*vals)[i] = val;
       (*nvals)++;
    }
@@ -493,6 +494,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
       /* get solution value of variable in debugging solution */
       var = SCIPcolGetVar(cols[i]);
       SCIP_CALL( getSolutionValue(set, var, &solval) );
+
       if( solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          minactivity += vals[i] * solval;
