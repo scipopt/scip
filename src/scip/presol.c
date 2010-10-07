@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.51 2010/09/27 17:20:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.52 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -183,28 +183,31 @@ SCIP_RETCODE SCIPpresolInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(presol->presolclock);
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(presol->presolclock);
 
-   presol->lastnfixedvars = 0;
-   presol->lastnaggrvars = 0;
-   presol->lastnchgvartypes = 0;
-   presol->lastnchgbds = 0;
-   presol->lastnaddholes = 0;
-   presol->lastndelconss = 0;
-   presol->lastnupgdconss = 0;
-   presol->lastnchgcoefs = 0;
-   presol->lastnchgsides = 0;
-   presol->nfixedvars = 0;
-   presol->naggrvars = 0;
-   presol->nchgvartypes = 0;
-   presol->nchgbds = 0;
-   presol->naddholes = 0;
-   presol->ndelconss = 0;
-   presol->nupgdconss = 0;
-   presol->nchgcoefs = 0;
-   presol->nchgsides = 0;
-   presol->wasdelayed = 0;
-
+      presol->lastnfixedvars = 0;
+      presol->lastnaggrvars = 0;
+      presol->lastnchgvartypes = 0;
+      presol->lastnchgbds = 0;
+      presol->lastnaddholes = 0;
+      presol->lastndelconss = 0;
+      presol->lastnupgdconss = 0;
+      presol->lastnchgcoefs = 0;
+      presol->lastnchgsides = 0;
+      presol->nfixedvars = 0;
+      presol->naggrvars = 0;
+      presol->nchgvartypes = 0;
+      presol->nchgbds = 0;
+      presol->naddholes = 0;
+      presol->ndelconss = 0;
+      presol->nupgdconss = 0;
+      presol->nchgcoefs = 0;
+      presol->nchgsides = 0;
+      presol->wasdelayed = 0;
+   }
+   
    /* call initialization method of presolver */
    if( presol->presolinit != NULL )
    {

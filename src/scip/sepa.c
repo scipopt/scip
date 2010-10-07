@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.76 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.77 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -208,18 +208,21 @@ SCIP_RETCODE SCIPsepaInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(sepa->sepaclock);
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(sepa->sepaclock);
 
-   sepa->lastsepanode = -1;
-   sepa->ncalls = 0;
-   sepa->ncutoffs = 0;
-   sepa->ncutsfound = 0;
-   sepa->nconssfound = 0;
-   sepa->ndomredsfound = 0;
-   sepa->ncallsatnode = 0;
-   sepa->ncutsfoundatnode = 0;
-   sepa->lpwasdelayed = FALSE;
-   sepa->solwasdelayed = FALSE;
+      sepa->lastsepanode = -1;
+      sepa->ncalls = 0;
+      sepa->ncutoffs = 0;
+      sepa->ncutsfound = 0;
+      sepa->nconssfound = 0;
+      sepa->ndomredsfound = 0;
+      sepa->ncallsatnode = 0;
+      sepa->ncutsfoundatnode = 0;
+      sepa->lpwasdelayed = FALSE;
+      sepa->solwasdelayed = FALSE;
+   }
 
    if( sepa->sepainit != NULL )
    {

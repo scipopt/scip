@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.692 2010/10/05 16:08:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.693 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4050,7 +4050,7 @@ SCIP_RETCODE SCIPfreeProb(
       }
       assert(scip->set->nactivepricers == 0);
 
-      /* free problem and problem statistics datastructures */
+      /* free problem and problem statistics data structures */
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
@@ -6594,8 +6594,11 @@ SCIP_RETCODE freeTransform(
    /* free all debug data */ 
    SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
 
-   /* reset statistics to the point before the problem was transformed */
-   SCIPstatReset(scip->stat);
+   if( scip->set->misc_resetstat )
+   {
+      /* reset statistics to the point before the problem was transformed */
+      SCIPstatReset(scip->stat);
+   }
 
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
@@ -19642,6 +19645,30 @@ SCIP_RETCODE SCIPstopClock(
    SCIP_CALL( checkStage(scip, "SCIPstopClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIPclockStop(clck, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** starts the current solving time */
+SCIP_RETCODE SCIPstartSolvingTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstartSolvingTime", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockStart(scip->stat->solvingtime, scip->set);
+
+   return SCIP_OKAY;
+}
+
+/** stops the current solving time in seconds */
+SCIP_RETCODE SCIPstopSolvingTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPstopSolvingTime", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPclockStop(scip->stat->solvingtime, scip->set);
 
    return SCIP_OKAY;
 }

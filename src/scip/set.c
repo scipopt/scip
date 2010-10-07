@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.258 2010/09/27 17:20:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.259 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -197,6 +197,11 @@
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reseted if the transformed problem is
+                                                 *   freed otherwise the statistics get reset after original problem is
+                                                 *   freed (in case of bender decomposition this parameter should be set
+                                                 *   to FALSE and therefore can be used to collect statistics over all
+                                                 *   runs) */
 
 
 /* Node Selection */
@@ -1131,6 +1136,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_permutationseed, FALSE, SCIP_DEFAULT_MISC_PERMUTATIONSEED, -1, INT_MAX,
          NULL, NULL) );
 
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/resetstat",
+         "should the statistics be reseted if the transformed problem is freed (in case of a benders decomposition this parameter should be set to FALSE)",
+         &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
+         NULL, NULL) );
+   
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "nodeselection/childsel",
@@ -3000,7 +3011,7 @@ SCIP_RETCODE SCIPsetInitPlugins(
    )
 {
    int i;
-
+   
    assert(set != NULL);
 
    /* active variable pricers */

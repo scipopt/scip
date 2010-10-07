@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.216 2010/10/05 14:50:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.217 2010/10/07 19:58:11 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2005,55 +2005,58 @@ SCIP_RETCODE SCIPconshdlrInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(conshdlr->presoltime);
-   SCIPclockReset(conshdlr->sepatime);
-   SCIPclockReset(conshdlr->enfolptime);
-   SCIPclockReset(conshdlr->enfopstime);
-   SCIPclockReset(conshdlr->proptime);
-   SCIPclockReset(conshdlr->checktime);
-
-   conshdlr->nsepacalls = 0;
-   conshdlr->nenfolpcalls = 0;
-   conshdlr->nenfopscalls = 0;
-   conshdlr->npropcalls = 0;
-   conshdlr->ncheckcalls = 0;
-   conshdlr->ncutoffs = 0;
-   conshdlr->ncutsfound = 0;
-   conshdlr->nconssfound = 0;
-   conshdlr->ndomredsfound = 0;
-   conshdlr->nchildren = 0;
-   conshdlr->lastpropdomchgcount = -1;
-   conshdlr->lastenfolpdomchgcount = -1;
-   conshdlr->lastenfopsdomchgcount = -1;
-   conshdlr->lastenfolpnode = -1;
-   conshdlr->lastenfopsnode = -1;
-   conshdlr->maxnactiveconss = conshdlr->nactiveconss;
-   conshdlr->startnactiveconss = 0;
-   conshdlr->lastsepalpcount = -1;
-   conshdlr->lastenfolplpcount = -1;
-   conshdlr->lastnusefulpropconss = 0;
-   conshdlr->lastnusefulsepaconss = 0;
-   conshdlr->lastnusefulenfoconss = 0;
-   conshdlr->lastnfixedvars = 0;
-   conshdlr->lastnaggrvars = 0;
-   conshdlr->lastnchgvartypes = 0;
-   conshdlr->lastnchgbds = 0;
-   conshdlr->lastnaddholes = 0;
-   conshdlr->lastndelconss = 0;
-   conshdlr->lastnupgdconss = 0;
-   conshdlr->lastnchgcoefs = 0;
-   conshdlr->lastnchgsides = 0;
-   conshdlr->nfixedvars = 0;
-   conshdlr->naggrvars = 0;
-   conshdlr->nchgvartypes = 0;
-   conshdlr->nchgbds = 0;
-   conshdlr->naddholes = 0;
-   conshdlr->ndelconss = 0;
-   conshdlr->nupgdconss = 0;
-   conshdlr->nchgcoefs = 0;
-   conshdlr->nchgsides = 0;
-   conshdlr->ageresetavg = AGERESETAVG_INIT;
-
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(conshdlr->presoltime);
+      SCIPclockReset(conshdlr->sepatime);
+      SCIPclockReset(conshdlr->enfolptime);
+      SCIPclockReset(conshdlr->enfopstime);
+      SCIPclockReset(conshdlr->proptime);
+      SCIPclockReset(conshdlr->checktime);
+      
+      conshdlr->nsepacalls = 0;
+      conshdlr->nenfolpcalls = 0;
+      conshdlr->nenfopscalls = 0;
+      conshdlr->npropcalls = 0;
+      conshdlr->ncheckcalls = 0;
+      conshdlr->ncutoffs = 0;
+      conshdlr->ncutsfound = 0;
+      conshdlr->nconssfound = 0;
+      conshdlr->ndomredsfound = 0;
+      conshdlr->nchildren = 0;
+      conshdlr->lastpropdomchgcount = -1;
+      conshdlr->lastenfolpdomchgcount = -1;
+      conshdlr->lastenfopsdomchgcount = -1;
+      conshdlr->lastenfolpnode = -1;
+      conshdlr->lastenfopsnode = -1;
+      conshdlr->maxnactiveconss = conshdlr->nactiveconss;
+      conshdlr->startnactiveconss = 0;
+      conshdlr->lastsepalpcount = -1;
+      conshdlr->lastenfolplpcount = -1;
+      conshdlr->lastnusefulpropconss = 0;
+      conshdlr->lastnusefulsepaconss = 0;
+      conshdlr->lastnusefulenfoconss = 0;
+      conshdlr->lastnfixedvars = 0;
+      conshdlr->lastnaggrvars = 0;
+      conshdlr->lastnchgvartypes = 0;
+      conshdlr->lastnchgbds = 0;
+      conshdlr->lastnaddholes = 0;
+      conshdlr->lastndelconss = 0;
+      conshdlr->lastnupgdconss = 0;
+      conshdlr->lastnchgcoefs = 0;
+      conshdlr->lastnchgsides = 0;
+      conshdlr->nfixedvars = 0;
+      conshdlr->naggrvars = 0;
+      conshdlr->nchgvartypes = 0;
+      conshdlr->nchgbds = 0;
+      conshdlr->naddholes = 0;
+      conshdlr->ndelconss = 0;
+      conshdlr->nupgdconss = 0;
+      conshdlr->nchgcoefs = 0;
+      conshdlr->nchgsides = 0;
+      conshdlr->ageresetavg = AGERESETAVG_INIT;
+   }
+   
    /* call initialization method of constraint handler */
    if( conshdlr->consinit != NULL )
    {

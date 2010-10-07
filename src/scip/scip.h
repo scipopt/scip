@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.441 2010/09/30 13:56:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.442 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -7105,6 +7105,18 @@ extern
 SCIP_RETCODE SCIPstopClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
+   );
+
+/** starts the current solving time */
+extern
+SCIP_RETCODE SCIPstartSolvingTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** stops the current solving time in seconds */
+extern
+SCIP_RETCODE SCIPstopSolvingTime(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets the measured time of a clock in seconds */

@@ -17,6 +17,11 @@ parameters:
 - change default value of parameter "nodeselection/restartdfs/selectbestfreq" 100
 - added parameter "nodeselection/restartdfs/countonlyleafs" in node selector restart dfs which can be used to select 
   the counting process of processed nodes 
+- added parameter <misc/resetstat> which state if the statistics should be reseted if the transformed problem is freed 
+  (in case of a benders decomposition this parameter should be set to FALSE) default value is TRUE
+
+interface:
+- new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
 
 SCIP version 2.0.0
 ===============

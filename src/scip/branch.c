@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.103 2010/09/30 08:30:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.104 2010/10/07 19:58:11 bzfheinz Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1221,17 +1221,19 @@ SCIP_RETCODE SCIPbranchruleInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(branchrule->branchclock);
-
-   branchrule->nlpcalls = 0;
-   branchrule->nexterncalls = 0;
-   branchrule->npseudocalls = 0;
-   branchrule->ncutoffs = 0;
-   branchrule->ncutsfound = 0;
-   branchrule->nconssfound = 0;
-   branchrule->ndomredsfound = 0;
-   branchrule->nchildren = 0;
-
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(branchrule->branchclock);
+      branchrule->nlpcalls = 0;
+      branchrule->nexterncalls = 0;
+      branchrule->npseudocalls = 0;
+      branchrule->ncutoffs = 0;
+      branchrule->ncutsfound = 0;
+      branchrule->nconssfound = 0;
+      branchrule->ndomredsfound = 0;
+      branchrule->nchildren = 0;
+   }
+   
    if( branchrule->branchinit != NULL )
    {
       SCIP_CALL( branchrule->branchinit(set->scip, branchrule) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.80 2010/09/27 17:20:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.81 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -221,12 +221,15 @@ SCIP_RETCODE SCIPheurInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(heur->heurclock);
-
-   heur->delaypos = -1;
-   heur->ncalls = 0;
-   heur->nsolsfound = 0;
-   heur->nbestsolsfound = 0;
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(heur->heurclock);
+      
+      heur->delaypos = -1;
+      heur->ncalls = 0;
+      heur->nsolsfound = 0;
+      heur->nbestsolsfound = 0;
+   }
 
    if( heur->heurinit != NULL )
    {

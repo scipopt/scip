@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.88 2010/07/01 17:44:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.89 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -115,16 +115,6 @@ void SCIPstatMark(
    )
 {
    assert(stat != NULL);
-   assert(stat->marked_nvaridx == -1);
-   assert(stat->marked_ncolidx == -1);
-   assert(stat->marked_nrowidx == -1);
-   assert(stat->lpcount == 0);
-   assert(stat->nlps == 0);
-   assert(stat->nprimallps == 0);
-   assert(stat->nduallps == 0);
-   assert(stat->nlexduallps == 0);
-   assert(stat->nbarrierlps == 0);
-   assert(stat->nnlps == 0);
 
    stat->marked_nvaridx = stat->nvaridx;
    stat->marked_ncolidx = stat->ncolidx;

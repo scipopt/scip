@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.33 2010/09/14 10:43:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.34 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -187,10 +187,13 @@ SCIP_RETCODE SCIPpricerInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(pricer->pricerclock);
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(pricer->pricerclock);
 
-   pricer->ncalls = 0;
-   pricer->nvarsfound = 0;
+      pricer->ncalls = 0;
+      pricer->nvarsfound = 0;
+   }
 
    if( pricer->pricerinit != NULL )
    {

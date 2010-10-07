@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.103 2010/09/10 09:24:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.104 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -252,6 +252,10 @@ struct SCIP_Set
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
    int                   misc_permutationseed;/**< seed value for permuting the problem after the problem was tranformed 
                                                *   (-1: no permutation) */
+   SCIP_Bool             misc_resetstat;     /**< should the statistics be reseted if the transformed problem is freed
+                                              *   otherwise the statistics get reset after original problem is freed (in
+                                              *   case of bender decomposition this parameter should be set to FALSE and
+                                              *   therefore can be used to collect statistics over all runs) */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

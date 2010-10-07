@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.28 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.29 2010/10/07 19:58:12 bzfheinz Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -178,10 +178,13 @@ SCIP_RETCODE SCIPrelaxInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(relax->relaxclock);
-   relax->ncalls = 0;
-   relax->lastsolvednode = -1;
-
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(relax->relaxclock);
+      relax->ncalls = 0;
+      relax->lastsolvednode = -1;
+   }
+   
    if( relax->relaxinit != NULL )
    {
       SCIP_CALL( relax->relaxinit(set->scip, relax) );
