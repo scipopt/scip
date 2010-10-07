@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.162 2010/09/30 11:06:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.163 2010/10/07 16:52:28 bzfviger Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -169,7 +169,7 @@ void confgraphWriteNode(
 
    fprintf(confgraphfile, "  node\n");
    fprintf(confgraphfile, "  [\n");
-   fprintf(confgraphfile, "    id      %d\n", (int)idptr);
+   fprintf(confgraphfile, "    id      %d\n", (int)(size_t)idptr);
    fprintf(confgraphfile, "    label   \"%s\"\n", label);
    fprintf(confgraphfile, "    graphics\n");
    fprintf(confgraphfile, "    [\n");
@@ -202,8 +202,8 @@ void confgraphWriteEdge(
 
    fprintf(confgraphfile, "  edge\n");
    fprintf(confgraphfile, "  [\n");
-   fprintf(confgraphfile, "    source  %d\n", (int)source);
-   fprintf(confgraphfile, "    target  %d\n", (int)target);
+   fprintf(confgraphfile, "    source  %d\n", (int)(size_t)source);
+   fprintf(confgraphfile, "    target  %d\n", (int)(size_t)target);
    fprintf(confgraphfile, "    graphics\n");
    fprintf(confgraphfile, "    [\n");
    fprintf(confgraphfile, "      fill    \"%s\"\n", color);
@@ -334,9 +334,9 @@ void confgraphMarkConflictset(
 
    confgraphnconflictsets++;
    (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "conf %d (%d)", confgraphnconflictsets, conflictset->validdepth);
-   confgraphWriteNode((void*)confgraphnconflictsets, label, "rectangle", "#ff00ff", "#000000");
+   confgraphWriteNode((void*)(size_t)confgraphnconflictsets, label, "rectangle", "#ff00ff", "#000000");
    for( i = 0; i < conflictset->nbdchginfos; ++i )
-      confgraphWriteEdge((void*)confgraphnconflictsets, conflictset->bdchginfos[i], "#ff00ff");
+      confgraphWriteEdge((void*)(size_t)confgraphnconflictsets, conflictset->bdchginfos[i], "#ff00ff");
 }
 
 #endif
@@ -1951,7 +1951,7 @@ SCIP_RETCODE SCIPconflictAddBound(
       return SCIP_OKAY;
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
-   SCIPdebugMessage(" -> adding bound <%s> %s %g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] to candidates\n",
+   SCIPdebugMessage(" -> adding bound <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, info:%d] to candidates\n",
       SCIPvarGetName(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
       boundtype == SCIP_BOUNDTYPE_LOWER ?
