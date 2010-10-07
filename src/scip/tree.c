@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.245 2010/09/07 21:45:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.246 2010/10/07 18:58:04 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5731,7 +5731,7 @@ void SCIPnodeGetAncestorBranchingPath(
                                                * nodeswitches[i] = i holds */
    int*                  nnodes,              /**< number of nodes in the nodeswitch array */
    int                   nodeswitchsize       /**< available slots in node switch array */                                                                    
- )
+   )
 {
    assert(node != NULL);
    assert(branchvars != NULL);
