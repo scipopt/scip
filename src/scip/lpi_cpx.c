@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.138 2010/09/06 15:14:15 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.139 2010/10/08 17:37:34 bzfwinkm Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -1516,7 +1516,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
 
    invalidateSolution(lpi);
 
-   SCIP_CALL( ensureValMem(lpi, CPXgetnumcols(cpxenv, lpi->cpxlp)) );
+   SCIP_CALL( ensureValMem(lpi, CPXgetnumrows(cpxenv, lpi->cpxlp)) );
 
    /* get the column */
    SCIP_CALL( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
