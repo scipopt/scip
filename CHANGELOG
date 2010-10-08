@@ -9,6 +9,7 @@ fixed bugs:
 - fixed bug in SCIPcopyConss: copy all active constraints (including disabled ones)
 - fixed bug w.r.t. looseobjval; the coounting of number of loose variables in the LP data structure was incorrect in case a 
   variable got aggregated or multi-aggregated 
+- fixed bug in debug.c w.r.t. checking of constraints and continuous variables
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint

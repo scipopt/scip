@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.44 2010/10/07 18:48:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.45 2010/10/08 12:36:32 bzfheinz Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -845,18 +845,40 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    /* check, whether at least one literals is TRUE in the debugging solution */
    for( i = 0; i < nbdchginfos; ++i )
    {
-      SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
+      SCIP_VAR* var;
+      SCIP_Real newbound;
+      
+      var = SCIPbdchginfoGetVar(bdchginfos[i]);
+      newbound = SCIPbdchginfoGetNewbound(bdchginfos[i]);
+
+      SCIP_CALL( getSolutionValue(set, var, &solval) );
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_OKAY;
       if( SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER )
       {
-         if( SCIPsetIsLT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
-            return SCIP_OKAY;
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsLE(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
+         else
+         {
+            if( SCIPsetIsLT(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
       }
       else
       {
-         if( SCIPsetIsGT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
-            return SCIP_OKAY;
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsGE(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
+         else
+         {
+            if( SCIPsetIsGT(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
       }
    }
 
