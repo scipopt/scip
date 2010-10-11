@@ -6,6 +6,7 @@ fixed bugs:
 - fixed bug w.r.t. looseobjval; the coounting of number of loose variables in the LP data structure was incorrect in case a 
   variable got aggregated or multi-aggregated 
 - fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
+- fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
 
 SCIP version 2.0.0
 ===============
