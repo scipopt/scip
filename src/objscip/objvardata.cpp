@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.18 2010/09/10 18:15:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.19 2010/10/11 19:36:56 bzfwinkm Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -134,10 +134,20 @@ SCIP_DECL_VARCOPY(varCopyObj)
    /* call virtual method of probdata object */
    SCIP_CALL( sourcedata->objvardata->scip_copy(scip, sourcescip, sourcevar, varmap, consmap, targetvar, &objvardata, result) ); /*lint !e40*/
    
-   /* create transformed user problem data */
-   *targetdata = new SCIP_VARDATA;
-   (*targetdata)->objvardata = objvardata; /*lint !e40*/
-   (*targetdata)->deleteobject = sourcedata->deleteobject;
+   if( objvardata != NULL )
+   {
+      assert(*result == SCIP_SUCCESS);
+      
+      /* create transformed user problem data */
+      *targetdata = new SCIP_VARDATA;
+      (*targetdata)->objvardata = objvardata; /*lint !e40*/
+      (*targetdata)->deleteobject = sourcedata->deleteobject;
+   }
+   else
+   {
+      assert(*result == SCIP_DIDNOTRUN);
+      *targetdata = NULL;
+   }
    
    return SCIP_OKAY;
 }

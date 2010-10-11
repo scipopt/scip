@@ -11,6 +11,7 @@ fixed bugs:
   variable got aggregated or multi-aggregated 
 - fixed bug in debug.c w.r.t. checking of constraints and continuous variables
 - fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
+- fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
