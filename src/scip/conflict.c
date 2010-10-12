@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.163 2010/10/07 16:52:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.164 2010/10/12 03:21:27 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3622,9 +3622,9 @@ SCIP_RETCODE undoBdchgsDualfarkas(
 
             SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
             assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
-               || SCIPsetIsEQ(set, lpilhs, row->lhs - row->constant));
+               || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
             assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
-               || SCIPsetIsEQ(set, lpirhs, row->rhs - row->constant));
+               || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
          }
 #endif
 
