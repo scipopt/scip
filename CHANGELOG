@@ -2,11 +2,18 @@ SCIP version NEXT
 ===============
 
 fixed bugs:
+- fixed bug in SCIPcopyConss (valid was not initialized to TRUE)
+- fixed bug in reader_mps: indicator constraints do not output the slack variables anymore
 - fixed bug in heur_undercover: removed option globalbounds, since we are not allowed to relax bounds at a probing node
+- fixed bug in SCIPcopyConss: copy all active constraints (including disabled ones)
+- corrected behavior of the copy function in cons_indicator.c: create artificial linear constraint if linear constraint was deleted
+- fixed bug in cons_indicator.c: presolving cannot delete linear constraints; several other minor bugfixes
 - fixed bug w.r.t. looseobjval; the coounting of number of loose variables in the LP data structure was incorrect in case a 
   variable got aggregated or multi-aggregated 
 - fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
 - fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
+- fixed bug in reader_mps: indicator constraints do not output the slack variables anymore
+
 
 SCIP version 2.0.0
 ===============
