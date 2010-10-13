@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.105 2010/10/05 19:39:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.106 2010/10/13 15:52:44 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2138,8 +2138,6 @@ SCIP_RETCODE propIndicator(
    }
    else
    {
-      SCIP_CONS* lincons;
-
       /* if the slack variable is fixed to zero */
       if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
       {
@@ -2154,37 +2152,8 @@ SCIP_RETCODE propIndicator(
 
       /* Note that because of possible mulit-aggregation we cannot simply remove the indicator
        * constraint if the linear constraint is not active or disabled - see the note in @ref
-       * PREPROC. We have to check whether the slackvariable is not locked by a constraint.
+       * PREPROC.
        */
-
-      /* if the linear constraint is not active or disabled */
-      lincons = consdata->lincons;
-      if ( ! SCIPconsIsActive(lincons) || ! SCIPconsIsEnabled(lincons) )
-      {
-         assert( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->slackvar), 0.0) );
-         assert( SCIPvarGetStatus(consdata->slackvar) != SCIP_VARSTATUS_MULTAGGR );
-
-         /* if the slack variable is only locked by the current indicator constraint */
-         if ( SCIPvarGetNLocksDown(consdata->slackvar) == 0 && SCIPvarGetNLocksUp(consdata->slackvar) == 1 )
-         {
-            SCIP_Bool infeasible, tightened;
-
-            SCIPdebugMessage("Slack variable <%s> is only locked by the indicator constraint -> fix it to 0 and delete indicator constraint.\n",
-               SCIPvarGetName(consdata->slackvar));
-
-            /* fix slackvariable to 0 */
-            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, 0.0, cons, 2, FALSE, &infeasible, &tightened) );
-            assert( ! infeasible );
-            if ( tightened )
-               ++(*nGen);
-
-            /* delete constraint */
-            assert( ! SCIPconsIsModifiable(cons) );
-            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-            SCIP_CALL( SCIPresetConsAge(scip, cons) );
-            ++(*nGen);
-         }
-      }
 
       /* We cannot remove linear constraints, because of the reasons stated in
        * consPresolIndicator(). Moreover, it would drastically increase memory consumption, because
@@ -3823,11 +3792,9 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
 /** propagation conflict resolving method of constraint handler
  *
- *  We check which bound changes were the reason for infeasibility. We
- *  use that @a inferinfo is 0 if the binary variable has bounds that
- *  fix it to be nonzero (these bounds are the reason). Likewise
- *  @a inferinfo is 1 if the slack variable * has bounds that fix it to
- *  be nonzero.
+ *  We check which bound changes were the reason for infeasibility. We use that @a inferinfo is 0 if
+ *  the binary variable has bounds that fix it to be nonzero (these bounds are the reason). Likewise
+ *  @a inferinfo is 1 if the slack variable has bounds that fix it to be nonzero.
  */
 static
 SCIP_DECL_CONSRESPROP(consRespropIndicator)
@@ -3846,7 +3813,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( inferinfo == 0 || inferinfo == 1 || inferinfo == 2 );
+   assert( inferinfo == 0 || inferinfo == 1 );
    assert( consdata->linconsActive );
 
    /* if the binary variable was the reason */
@@ -3861,15 +3828,12 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    else
    {
       /* if the slack variable was the reason */
-      if ( inferinfo == 1 )
-      {
-         assert( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
-         assert( infervar != consdata->slackvar );
+      assert( inferinfo == 1 );
+      assert( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
+      assert( infervar != consdata->slackvar );
 
-         SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
-         *result = SCIP_SUCCESS;
-      }
-      /* otherwise the reason was a disabled/deactivated linear constraint -> cannot resolve conflict */
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
+      *result = SCIP_SUCCESS;
    }
 
    return SCIP_OKAY;
