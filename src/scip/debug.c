@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.43 2010/09/21 20:09:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.43.2.1 2010/10/15 06:33:08 bzfviger Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -493,6 +493,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
       /* get solution value of variable in debugging solution */
       var = SCIPcolGetVar(cols[i]);
       SCIP_CALL( getSolutionValue(set, var, &solval) );
+
       if( solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          minactivity += vals[i] * solval;
@@ -843,18 +844,40 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    /* check, whether at least one literals is TRUE in the debugging solution */
    for( i = 0; i < nbdchginfos; ++i )
    {
-      SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
+      SCIP_VAR* var;
+      SCIP_Real newbound;
+      
+      var = SCIPbdchginfoGetVar(bdchginfos[i]);
+      newbound = SCIPbdchginfoGetNewbound(bdchginfos[i]);
+
+      SCIP_CALL( getSolutionValue(set, var, &solval) );
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_OKAY;
       if( SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER )
       {
-         if( SCIPsetIsLT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
-            return SCIP_OKAY;
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsLE(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
+         else
+         {
+            if( SCIPsetIsLT(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
       }
       else
       {
-         if( SCIPsetIsGT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
-            return SCIP_OKAY;
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsGE(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
+         else
+         {
+            if( SCIPsetIsGT(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
       }
    }
 
