@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.106 2010/10/13 15:52:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.107 2010/10/15 06:45:07 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2116,7 +2116,7 @@ SCIP_RETCODE propIndicator(
       }
 
       /* if slackvar is fixed to be nonzero */
-      if ( SCIPisPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
+      if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
       {
          SCIPdebugMessage("slack variable <%s> is fixed to be nonzero, fixing binary variable <%s> to 0.\n",
             SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
