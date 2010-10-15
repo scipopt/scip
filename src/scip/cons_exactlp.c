@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.26 2010/08/03 21:18:15 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.27 2010/10/15 01:25:16 bzfsteff Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -27,6 +27,9 @@
 //#define PRESOL_OUT /* only for debugging ?????????? */
 //#define BOUNDING_OUT /* only for debugging ?????????? */
 //#define USEOBJLIM /*??????????????*/ 
+
+#define STORE_INTERA /* build the interval version of constraint matrix for provedboundinterval() */
+
 
 /**@file   cons_exactlp.c
  * @ingroup CONSHDLRS 
@@ -128,6 +131,9 @@ struct SCIP_ConshdlrData
    char                  psintpointselection;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point
                                               *   'A'rbitrary interior point in dual form, 't'wo stage optimized interior point) */
    SCIP_Bool             psuseintpoint;      /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
+
+   SCIP_Bool             intervalvalcon;     /**< was the interval representation of the matrix data construced? */
+   SCIP_INTERVAL*        intervalval;        /**< stores interval representation of matrix values interval*/
 };
 
 /** constraint data for exactlp constraints */
@@ -739,6 +745,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->lpexconstructed = FALSE;
    (*conshdlrdata)->psdatacon = FALSE;
    (*conshdlrdata)->lastenfopsnode = NULL;
+   (*conshdlrdata)->intervalvalcon = FALSE;
 
    mpq_init((*conshdlrdata)->pseudoobjval);
    mpq_set_d((*conshdlrdata)->pseudoobjval, 0.0);
@@ -781,6 +788,11 @@ SCIP_RETCODE conshdlrdataFree(
          mpq_clear((*conshdlrdata)->interiorpt[i]);
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->interiorpt);
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->includedcons);
+   }
+
+   if( (*conshdlrdata)->intervalvalcon != FALSE )
+   {
+      SCIPfreeMemoryArray(scip, &(*conshdlrdata)->intervalval);
    }
 
    if( (*conshdlrdata)->rectfactor != NULL)
@@ -5551,6 +5563,7 @@ SCIP_RETCODE provedBoundInterval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_Bool             usefarkas,  
    SCIP_Real*            boundval            /**< value of dual bound */
    )
 {
@@ -5568,9 +5581,6 @@ SCIP_RETCODE provedBoundInterval(
    SCIP_Real* ycol;
    int i;
    int j;
-
-   int usefarkas;
-   usefarkas = 0;//for now
 
    /* process bound changes */
    processBoundchgs(scip, conshdlrdata, consdata);
@@ -5606,11 +5616,17 @@ SCIP_RETCODE provedBoundInterval(
       {
          SCIPintervalSetBounds(&rhsinter[j], 
             mpqGetRealRelax(scip, consdata->lhs[j], GMP_RNDD), mpqGetRealRelax(scip, consdata->lhs[j], GMP_RNDU));
+         // if lhs is not finite fix y to zero
+         //         if( SCIPisInfinity(scip, -1.0 * rhsinter[j].inf) )
+         // y[j]= 0.0;
       }
       else if( SCIPisFeasNegative(scip, y[j]) )
       {
          SCIPintervalSetBounds(&rhsinter[j], 
             mpqGetRealRelax(scip, consdata->rhs[j], GMP_RNDD), mpqGetRealRelax(scip, consdata->rhs[j], GMP_RNDU));     
+         // if rhs is not finite fix y to zero
+         //if( SCIPisInfinity(scip, rhsinter[j].sup) )
+         // y[j]= 0.0;
       }
       else
       {
@@ -5650,7 +5666,51 @@ SCIP_RETCODE provedBoundInterval(
    {
       SCIPintervalSet(&atyinter[j], 0.0);
    }
+   // THE UPDATED CODE WILL STORE THE INTERVAL REPRESENTATION OF THE VAL MATRIX
+   // instead of recomputing it every time here.
+   // instead of using "intertemp" we will use an array conshdlrdata->intervalval
 
+#ifdef STORE_INTERA
+   if(!conshdlrdata->intervalvalcon)
+   {
+
+      SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->intervalval, consdata->nnonz) );
+      for( j = 0; j < consdata->nconss; ++j )
+      {
+         for( i = consdata->beg[j]; i < consdata->beg[j] + consdata->len[j]; ++i )
+         {
+            SCIPintervalSetBounds(&conshdlrdata->intervalval[i], 
+               mpqGetRealRelax(scip, consdata->val[i], GMP_RNDD), mpqGetRealRelax(scip, consdata->val[i], GMP_RNDU));
+         }
+      }
+      conshdlrdata->intervalvalcon = TRUE;
+   }
+
+   /* compute infimums of -A^Ty */
+   roundmode = getRoundingMode();
+   setRoundingModeDownwards();
+   for( j = 0; j < consdata->nconss; ++j )
+   {
+      for( i = consdata->beg[j]; i < consdata->beg[j] + consdata->len[j]; ++i )
+      {
+         SCIPintervalMulScalarInf(SCIPinfinity(scip), &intertemp, conshdlrdata->intervalval[i], -1.0 * y[j]);
+         SCIPintervalAddInf(SCIPinfinity(scip), &atyinter[consdata->ind[i]], atyinter[consdata->ind[i]], intertemp); 
+      }
+
+   }
+   /* compute supremums of -A^Ty */
+   setRoundingModeUpwards();
+   for( j = 0; j < consdata->nconss; ++j )
+   {
+      for( i = consdata->beg[j]; i < consdata->beg[j] + consdata->len[j]; ++i )
+      {
+         SCIPintervalMulScalarSup(SCIPinfinity(scip), &intertemp, conshdlrdata->intervalval[i], -1.0 * y[j]);
+         SCIPintervalAddSup(SCIPinfinity(scip), &atyinter[consdata->ind[i]], atyinter[consdata->ind[i]], intertemp); 
+      }
+   } 
+   setRoundingMode(roundmode);
+
+#else
    /* compute infimums of -A^Ty */
    roundmode = getRoundingMode();
    setRoundingModeDownwards();
@@ -5663,17 +5723,6 @@ SCIP_RETCODE provedBoundInterval(
          SCIPintervalMulScalarInf(SCIPinfinity(scip), &intertemp, intertemp, -1.0 * y[j]);
          SCIPintervalAddInf(SCIPinfinity(scip), &atyinter[consdata->ind[i]], atyinter[consdata->ind[i]], intertemp); 
       }
-
-#ifndef NDEBUG
-      //     for( i = col->nlprows; i < col->len; ++i )
-      //{
-      // assert(col->rows[i] != NULL);
-      // assert(col->rows[i]->lppos == -1);
-      // assert(col->rows[i]->dualsol == 0.0);
-      // assert(col->rows[i]->dualfarkas == 0.0);
-      // assert(col->linkpos[i] >= 0);
-      //}
-#endif
    }
    /* compute supremums of -A^Ty */
    setRoundingModeUpwards();
@@ -5686,20 +5735,9 @@ SCIP_RETCODE provedBoundInterval(
          SCIPintervalMulScalarSup(SCIPinfinity(scip), &intertemp, intertemp, -1.0 * y[j]);
          SCIPintervalAddSup(SCIPinfinity(scip), &atyinter[consdata->ind[i]], atyinter[consdata->ind[i]], intertemp); 
       }
-
-
-#ifndef NDEBUG
-      //for( i = col->nlprows; i < col->len; ++i )
-      //{
-      // assert(col->rows[i] != NULL);
-      // assert(col->rows[i]->lppos == -1);
-      // assert(col->rows[i]->dualsol == 0.0);
-      // assert(col->rows[i]->dualfarkas == 0.0);
-      // assert(col->linkpos[i] >= 0);
-      //}
-#endif
-   }   
+   } 
    setRoundingMode(roundmode);
+#endif
 
    /* create c vector and x vector in interval arithmetic and compute min{(c^T - y^TA)x} */
    for( j = 0; j < consdata->nvars; ++j )
@@ -5737,6 +5775,8 @@ SCIP_RETCODE provedBoundInterval(
    return SCIP_OKAY;
 
 }
+
+
 /** compute safe dual bound by Neumaier and Shcherbina Bound using exact rational arithmetic.
  * Considering the primal of the form:
  * min c'x
@@ -5758,6 +5798,7 @@ SCIP_RETCODE provedBoundRational(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_Bool             usefarkas,
    mpq_t*                boundval            /**< value of dual bound */
    )
 {
@@ -5801,7 +5842,10 @@ SCIP_RETCODE provedBoundRational(
     */
    for( i = 0; i < nconss; i++ )
    {
-      mpq_set_d(mpqtemp, SCIProwGetDualsol(consdata->rows[i]));
+      if( usefarkas )
+         mpq_set_d(mpqtemp, SCIProwGetDualfarkas(consdata->rows[i]));
+      else
+         mpq_set_d(mpqtemp, SCIProwGetDualsol(consdata->rows[i]));
       
       /* lhs constraint */
       if( mpq_sgn(mpqtemp) > 0 )
@@ -5839,7 +5883,10 @@ SCIP_RETCODE provedBoundRational(
    /* calculate violation of equality constraints r=c-A^ty */
    for( i = 0; i < nvars; i++ )
    {
-      mpq_set(violation[i], consdata->obj[i]);
+      if( usefarkas )
+         mpq_set_ui(violation[i], 0, 1);
+      else
+         mpq_set(violation[i], consdata->obj[i]);
    }
    
    /* A^ty for y corresponding to primal constraints */
@@ -5898,7 +5945,10 @@ SCIP_RETCODE provedBoundRational(
    rval = 0;
    for( i = 0; i < nvars; i++ )
    {
-      mpq_set(violation[i], consdata->obj[i]);
+      if( usefarkas )
+         mpq_set_ui(violation[i],0,1);
+      else
+         mpq_set(violation[i], consdata->obj[i]);
       /* SUBTRACT Ax to get violation b-Ax */
       /* subtract A(approxdualsol) */
    }
@@ -7265,7 +7315,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
       {
          SCIP_Real dualobjval;                                     
 
-         SCIP_CALL( provedBoundInterval(scip, conshdlrdata, consdata, &dualobjval) );
+         SCIP_CALL( provedBoundInterval(scip, conshdlrdata, consdata, FALSE, &dualobjval) );
 
 #ifdef DETAILED_DEBUG /*????????? */          
          oldlb = SCIPgetLocalLowerbound(scip);                                                                     
@@ -7289,7 +7339,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          mpq_t dualobjval;                                     
 
          mpq_init(dualobjval);
-         SCIP_CALL( provedBoundRational(scip, conshdlrdata, consdata, &dualobjval) );
+         SCIP_CALL( provedBoundRational(scip, conshdlrdata, consdata, FALSE, &dualobjval) );
 
 #ifdef DETAILED_DEBUG /*????????? */          
          oldlb = SCIPgetLocalLowerbound(scip);                                                                     
@@ -7437,47 +7487,243 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_TIMELIMIT )
       return SCIP_OKAY;
 
-   /* constructs exact LP of current node */
-   constructCurrentLPEX(scip, conshdlrdata, consdata);
-
-   /* updates lower bound of current node wrt the pseudo objective value */
-   if( !SCIPuseFPRelaxation(scip) )
+   /* try to prove infeasibility */
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && 
+      (!SCIPuseFPRelaxation(scip) || SCIPdualBoundMethod(scip) != 'n') )
    {
-      SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
-            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+#ifdef NEWSTATISTICS /* ??????????????? */
+      /* start timing */
+      if( SCIPdualBoundMethod(scip) != 'e' )
+         SCIPstartClock(scip, conshdlrdata->provedinfeaslptime);
+#endif
+
+      switch( SCIPdualBoundMethod(scip) )
+      {
+      case 'p':
+         {
+#ifdef PSFORINFEASLP /*????????????????????*/
+            mpq_t dualobjval;                                     
+#ifdef DETAILED_DEBUG5 /*????????? */
+            SCIP_Real oldlb;
+#endif
+            SCIP_Bool success;
+
+            SCIPdebugMessage("Proving infeasibility by project and shift method\n");
+            
+            /* nothing can be done if requirements for project and shift method are not satisfied */
+            if( conshdlrdata->psdatafail )
+            {
+#ifdef NEWSTATISTICS /* ??????????????? */
+               /* update number of fails */
+               conshdlrdata->nfailprovedinfeaslp++;
+#endif
+               break;
+            }            
+            /* construct data needed for project and shift method if not done yet */
+            SCIP_CALL( constructPSData(scip, conshdlrdata, consdata) );
+            if( conshdlrdata->psdatafail )
+            {
+#ifdef NEWSTATISTICS /* ??????????????? */
+               /* update number of fails */
+               conshdlrdata->nfailprovedinfeaslp++;
+#endif
+               break;
+            }
+
+            /* try to prove infeasibility by reparing solution with cutoff bound exceeding objective value */
+            mpq_init(dualobjval);
+            SCIP_CALL( getPSdualbound(scip, conshdlrdata, consdata, &dualobjval, &success) );
+            if( success ) 
+            {
+#ifdef DETAILED_DEBUG5 /*????????? */
+               oldlb = SCIPgetLocalLowerbound(scip);
+#endif
+
+               SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+
+#ifdef DETAILED_DEBUG5 /*????????? */
+               if( oldlb < SCIPgetLocalLowerbound(scip) )
+               {
+                  printf/*SCIPdebugMessage*/("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip)); /*??????????????????????*/
+               }
+               else
+               {
+                  printf/*SCIPdebugMessage*/("lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip)); /*??????????????????????*/
+               }
+#endif
+
+               /* check if node can be cut off by bounding, i.e., whether constructing was successful */
+               if( SCIPgetLocalLowerbound(scip) >= SCIPgetCutoffbound(scip) )
+               {
+
+                  SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n", SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip));
+                  *result = SCIP_CUTOFF;
+               }
+#ifdef NEWSTATISTICS /* ??????????????? */
+               else
+               {
+                  /* update number of fails */
+                  conshdlrdata->nfailprovedinfeaslp++;
+               }
+#endif
+            }
+#ifdef NEWSTATISTICS /* ??????????????? */
+            else
+            {
+               /* update number of fails */
+               conshdlrdata->nfailprovedinfeaslp++;
+            }
+#endif
+            
+            mpq_clear(dualobjval);
+#endif
+            break;
+         }
+      case 'n':         
+      case 'v':
+      case 'r':
+      case 'x':
+         {
+            mpq_t dualobjval;                                     
+            
+            mpq_init(dualobjval);
+
+            SCIP_CALL( provedBoundRational(scip, conshdlrdata, consdata, TRUE, &dualobjval) );
+            
+            /* check if node can be cut off by bounding, i.e., whether constructing was successful */
+            if( mpqGetRealRelax(scip, dualobjval, GMP_RNDD) > 0.0 )
+            {
+               SCIPdebugMessage("node is cut off by bounding (ray cost =%g)\n", mpqGetRealRelax(scip, dualobjval, GMP_RNDD));
+               *result = SCIP_CUTOFF;
+            }
+            else
+            {
+               SCIPdebugMessage("node not cut off by provedboundrational (ray cost =%g)\n", mpqGetRealRelax(scip, dualobjval, GMP_RNDD)); 
+            }
+            mpq_clear(dualobjval);
+            
+            break;
+         }
+      case 'e':
+         break;
+      case 'i':
+         {
+            SCIP_Real dualobjval;
+            SCIP_CALL( provedBoundInterval(scip, conshdlrdata, consdata, TRUE, &dualobjval) );
+
+            /* check if node can be cut off by bounding, i.e., whether constructing was successful */
+            if( dualobjval > 0.0 )
+            {
+               SCIPdebugMessage("node is cut off by bounding (ray cost =%g)\n", dualobjval);
+               *result = SCIP_CUTOFF;
+            }
+            else
+            {
+               SCIPdebugMessage("node not cut off by provedbound interval (ray cost =%g)\n",dualobjval); 
+            }
+            break;
+         }         
+      default:
+         SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", SCIPdualBoundMethod(scip));
+         return SCIP_PARAMETERWRONGVAL;
+      }
+
+#ifdef NEWSTATISTICS /* ??????????????? */
+      if( SCIPdualBoundMethod(scip) != 'e' )
+      {
+         /* stop timing and update number of calls */
+         SCIPstopClock(scip, conshdlrdata->provedinfeaslptime);
+         conshdlrdata->nprovedinfeaslp++;
+      }
+#endif
    }
 
-   /* if the inexact LP was solved at the node, load LP state from inexact LP into exact LP solver */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_NOTSOLVED )
+   /* solve LP exactly in order to show that node can be pruned or to find a solution to branch on */
+   if( *result != SCIP_CUTOFF )
    {
-      SCIP_CALL( loadLPState(scip, conshdlrdata) );
+#ifdef NEWSTATISTICS /* ??????????????? */
+      /* start timing */
+      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
+      {
+         if( SCIPdualBoundMethod(scip) == 'e' )
+            SCIPstartClock(scip, conshdlrdata->provedinfeaslptime);
+         else            
+            SCIPstartClock(scip, conshdlrdata->exactinfeaslptime);
+      }
+      else
+         SCIPstartClock(scip, conshdlrdata->exactunsollptime);
+#endif
+
+      /* constructs exact LP of current node */
+      constructCurrentLPEX(scip, conshdlrdata, consdata);
+
+      /* updates lower bound of current node wrt the pseudo objective value */
+      if( !SCIPuseFPRelaxation(scip) )
+      {
+         SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
+               mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+      }
+
+      /* if the inexact LP was solved at the node, load LP state from inexact LP into exact LP solver */
+      if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_NOTSOLVED )
+      {
+         SCIP_CALL( loadLPState(scip, conshdlrdata) );
+      }
+
+      /* solve exact LP */
+      algo = 'd'; /* todo: what should be done here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
+      switch( algo )
+      {
+      case 'd':
+         SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
+         break;
+
+      case 'p':
+         SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_PRIMALSIMPLEX, &lperror) );
+         break;
+
+      default:
+         SCIPerrorMessage("invalid parameter setting <%c> for exact LP algorithm\n", algo);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+
+      if( lperror )
+      {
+         SCIPerrorMessage("exact LP solver returns error: case not handled yet\n");
+         return SCIP_ERROR;
+      }
+      
+      /* evaluate result of exact LP solver */
+      //      SCIP_CALL( evaluateLPEX(scip, conss[0], conshdlrdata, consdata, result) );
+      // using older version here instead due to error   
+      SCIP_CALL( evaluateLPEX(scip, conshdlrdata, consdata, result) );
+
+
+
+#ifdef NEWSTATISTICS /* ??????????????? */
+      /* stop timing and update number of calls */
+      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
+      {
+         if( SCIPdualBoundMethod(scip) == 'e' )
+         {
+            SCIPstopClock(scip, conshdlrdata->provedinfeaslptime);
+            conshdlrdata->nprovedinfeaslp++;
+         }
+         else
+         {
+            SCIPstopClock(scip, conshdlrdata->exactinfeaslptime);
+            conshdlrdata->nexactinfeaslp++;
+         }
+         if( *result == SCIP_BRANCHED )
+            conshdlrdata->nwrongexactinfeaslp++;
+      }
+      else
+      {
+         SCIPstopClock(scip, conshdlrdata->exactunsollptime);
+         conshdlrdata->nexactunsollp++;
+      }
+#endif
    }
-
-   /* solve exact LP */
-   algo = 'd'; /* todo: what should be done here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
-   switch( algo )
-   {
-   case 'd':
-      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
-      break;
-
-   case 'p':
-      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_PRIMALSIMPLEX, &lperror) );
-      break;
-
-   default:
-      SCIPerrorMessage("invalid parameter setting <%c> for exact LP algorithm\n", algo);
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
-   if( lperror )
-   {
-      SCIPerrorMessage("exact LP solver returns error: case not handled yet\n");
-      return SCIP_ERROR;
-   }
-
-   /* evaluate result of exact LP solver */
-   SCIP_CALL( evaluateLPEX(scip, conshdlrdata, consdata, result) );
 
    SCIPdebugMessage(" -> enforcing pseudo solution returned result <%d>\n", *result);
 
@@ -7485,13 +7731,16 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
     *  - decide whether it is possible and useful to support working on a pseudo solution 
     *    (inexact from scip or exact from exactlp conshdlr) in addition 
     */
-   
+   /* @todo: note that in case we do something more clever here than solving the LP exactly, we have to ensure that in case all variables are
+    * fixed, i.e., an LP remains (SCIPbranchcandGetNPseudoCands(branchcand) == 0 && prob->ncontvars > 0 ), we solve the node!!! 
+    * thus, we have to solve the LP exactly as a last resort (i.e., if we could not cut off the node or create a branching)
+    */
+      
    /* remember that current node is the one at which a pseudo solution was enforced last */
    conshdlrdata->lastenfopsnode = SCIPgetCurrentNode(scip);
 
    return SCIP_OKAY;
 }
-
 
 /** feasibility check method of constraint handler for integral solutions */
 static
