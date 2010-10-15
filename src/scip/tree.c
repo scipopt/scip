@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.246 2010/10/07 18:58:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.247 2010/10/15 06:44:12 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2095,6 +2095,7 @@ void SCIPnodeSetEstimate(
 {
    assert(node != NULL);
    assert(stat != NULL);
+   assert(newestimate >= node->lowerbound);
 
    node->estimate = newestimate;
 }
