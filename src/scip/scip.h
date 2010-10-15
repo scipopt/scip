@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.10 2010/08/03 21:18:15 bzfsteff Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.11 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -551,6 +551,14 @@ SCIP_RETCODE SCIPwriteParams(
 /** resets all parameters to their default values */
 extern
 SCIP_RETCODE SCIPresetParams(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
+ *  For that misc/exactsolve has to be set appropriately. 
+ */ 
+extern
+SCIP_RETCODE SCIPsetExactsolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

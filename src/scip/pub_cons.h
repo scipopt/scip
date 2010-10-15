@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.35.2.2 2010/03/22 16:05:31 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.35.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   pub_cons.h
  * @ingroup PUBLICMETHODS
@@ -349,6 +349,11 @@ SCIP_Bool SCIPconshdlrIsInitialized(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** force enforcement of constaint handler for LP and pseudo solution */
+extern
+void SCIPconshdlrForceEnforcement(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
 
 
 

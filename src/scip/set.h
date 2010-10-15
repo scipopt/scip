@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.98.2.2 2010/03/22 16:05:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.98.2.3 2010/10/15 16:39:17 bzfwolte Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -278,6 +278,14 @@ SCIP_RETCODE SCIPsetWriteParams(
 /** resets all parameters to their default values */
 extern
 SCIP_RETCODE SCIPsetResetParams(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
+ *  For that misc/exactsolve has to be set appropriately. 
+ */ 
+extern
+SCIP_RETCODE SCIPsetSetExactsolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

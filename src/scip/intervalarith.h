@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.10.2.2 2010/03/22 16:05:25 bzfwolte Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.10.2.3 2010/10/15 16:39:15 bzfwolte Exp $"
 
-/**@file   intervalarith.h
+/**@file   scip/intervalarith.h
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,11 +41,57 @@ struct SCIP_Interval
 };
 typedef struct SCIP_Interval SCIP_INTERVAL;
 
-
+/** rounding mode of floating point operations (upwards, downwards, nearest, ...)
+ * exact values depend on machine and compiler, so we define a corresponding enum in the header file */
+typedef int SCIP_ROUNDMODE;
 
 /*
  * Interval arithmetic operations
  */
+
+/** returns whether rounding mode control is available */
+extern
+SCIP_Bool SCIPintervalHasRoundingControl(
+   void
+   );
+
+/** sets rounding mode of floating point operations */
+extern
+void SCIPintervalSetRoundingMode(
+   SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
+   );
+
+/** gets current rounding mode of floating point operations */
+extern
+SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
+   void
+   );
+
+/** sets rounding mode of floating point operations to downwards rounding */
+extern
+void SCIPintervalSetRoundingModeDownwards(
+   void
+   );
+
+/** sets rounding mode of floating point operations to upwards rounding */
+extern
+void SCIPintervalSetRoundingModeUpwards(
+   void
+   );
+
+#ifndef NDEBUG
+
+/** returns infimum of interval */
+extern
+SCIP_Real SCIPintervalGetInf(
+   SCIP_INTERVAL         interval            /**< interval */
+   );
+
+/** returns supremum of interval */
+extern
+SCIP_Real SCIPintervalGetSup(
+   SCIP_INTERVAL         interval            /**< interval */
+   );
 
 /** stores given value as interval */
 extern
@@ -61,10 +108,9 @@ void SCIPintervalSetBounds(
    SCIP_Real             sup                 /**< value to store as supremum */
    );
 
-/** sets interval to empty interval, which will be [infinity, -infinity] */
+/** sets interval to empty interval, which will be [1.0, -1.0] */
 extern
 void SCIPintervalSetEmpty(
-   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
    );
 
@@ -87,6 +133,26 @@ SCIP_Bool SCIPintervalIsEntire(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
+
+#else
+
+/* In optimized mode, some methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ * With SCIPintervalSetBounds we need to be a bit careful, since i and s could use resultant->inf and resultant->sup,
+ * e.g., SCIPintervalSetBounds(&resultant, -resultant->sup, -resultant->inf).
+ * So we need to make sure that we first evaluate both terms before setting resultant. 
+ */
+
+#define SCIPintervalGetInf(interval)               (interval).inf
+#define SCIPintervalGetSup(interval)               (interval).sup
+#define SCIPintervalSet(resultant, value)          do { (resultant)->inf = (value); (resultant)->sup = (resultant)->inf; } while( FALSE )
+#define SCIPintervalSetBounds(resultant, i, s)     do { SCIP_Real scipintervaltemp; scipintervaltemp = (s); (resultant)->inf = (i); (resultant)->sup = scipintervaltemp; } while( FALSE )
+#define SCIPintervalSetEmpty(resultant)            do { (resultant)->inf = 1.0; (resultant)->sup = -1.0; } while( FALSE )
+#define SCIPintervalSetEntire(infinity, resultant) do { (resultant)->inf = -(infinity); (resultant)->sup =  (infinity); } while( FALSE )
+#define SCIPintervalIsEmpty(operand)               ( (operand).sup < (operand).inf )
+#define SCIPintervalIsEntire(infinity, operand)    ( (operand).inf <= -(infinity) && (operand).sup >= (infinity) )
+
+#endif
 
 /** indicates whether operand1 is contained in operand2 */
 extern
@@ -112,6 +178,23 @@ void SCIPintervalUnify(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
+/** adds operand1 and operand2 and stores infimum of result in infimum of resultant */
+extern
+void SCIPintervalAddInf(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** adds operand1 and operand2 and stores supremum of result in supremum of resultant */
+extern
+void SCIPintervalAddSup(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
 
 /** adds operand1 and operand2 and stores result in resultant */
 extern
@@ -129,6 +212,16 @@ void SCIPintervalAddScalar(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** adds vector operand1 and vector operand2 and stores result in vector resultant */
+extern
+void SCIPintervalAddVectors(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< array of resultant intervals of operation */
+   int                   length,             /**< length of arrays */
+   SCIP_INTERVAL*        operand1,           /**< array of first operands of operation */
+   SCIP_INTERVAL*        operand2            /**< array of second operands of operation */
    );
 
 /** substracts operand2 from operand1 and stores result in resultant */
@@ -164,6 +257,24 @@ void SCIPintervalUndoSub(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
+/** multiplies operand1 with operand2 and stores infimum of result in infimum of resultant */
+extern
+void SCIPintervalMulInf(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation; can be +/-inf */
+   SCIP_INTERVAL         operand2            /**< second operand of operation; can be +/-inf */
+   );
+
+/** multiplies operand1 with operand2 and stores supremum of result in supremum of resultant */
+extern
+void SCIPintervalMulSup(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation; can be +/-inf */
+   SCIP_INTERVAL         operand2            /**< second operand of operation; can be +/-inf */
+   );
+
 /** multiplies operand1 with operand2 and stores result in resultant */
 extern
 void SCIPintervalMul(
@@ -171,6 +282,24 @@ void SCIPintervalMul(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** multiplies operand1 with scalar operand2 and stores infimum of result in infimum of resultant */
+extern
+void SCIPintervalMulScalarInf(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation; can be +/- inf */
+   );
+
+/** multiplies operand1 with scalar operand2 and stores supremum of result in supremum of resultant */
+extern
+void SCIPintervalMulScalarSup(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation; can be +/- inf */
    );
 
 /** multiplies operand1 with scalar operand2 and stores result in resultant */
@@ -200,6 +329,50 @@ void SCIPintervalDivScalar(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** computes the scalar product of two vectors of intervals and stores result in resultant */
+extern
+void SCIPintervalScalprod(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_INTERVAL*        operand1,           /**< first  vector as array of intervals */
+   SCIP_INTERVAL*        operand2            /**< second vector as array of intervals */
+   );
+
+/** computes the scalar product of a vector of intervals and a vector of scalars and stores infimum of result in infimum 
+ *  of resultant 
+ */
+extern
+void SCIPintervalScalprodScalarsInf(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_INTERVAL*        operand1,           /**< first vector as array of intervals */
+   SCIP_Real*            operand2            /**< second vector as array of scalars; can have +/-inf entries */
+   );
+
+/** computes the scalar product of a vector of intervals and a vector of scalars and stores supremum of result in supremum
+ *  of resultant 
+ */
+extern
+void SCIPintervalScalprodScalarsSup(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_INTERVAL*        operand1,           /**< first vector as array of intervals */
+   SCIP_Real*            operand2            /**< second vector as array of scalars; can have +/-inf entries */
+   );
+
+/** computes the scalar product of a vector of intervals and a vector of scalars and stores result in resultant */
+extern
+void SCIPintervalScalprodScalars(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   int                   length,             /**< length of vectors */
+   SCIP_INTERVAL*        operand1,           /**< first vector as array of intervals */
+   SCIP_Real*            operand2            /**< second vector as array of scalars; can have +/-inf entries */
    );
 
 /** squares operand and stores result in resultant */
@@ -366,18 +539,6 @@ void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
 );
-
-/** returns infimum of interval */
-extern
-SCIP_Real SCIPintervalGetInf(
-   SCIP_INTERVAL         interval            /**< interval */
-   );
-
-/** returns supremum of interval */
-extern
-SCIP_Real SCIPintervalGetSup(
-   SCIP_INTERVAL         interval            /**< interval */
-   );
 
 #ifdef __cplusplus
 }

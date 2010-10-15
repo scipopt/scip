@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.86.2.2 2010/03/22 16:05:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.86.2.3 2010/10/15 16:39:15 bzfwolte Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -974,19 +974,19 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    if( eventdata->varidx >= 0 )
    { /* make linrange[varidx] invalid */
-      SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->linrange[eventdata->varidx]);
+      SCIPintervalSetEmpty(&consdata->linrange[eventdata->varidx]);
    }
    else
    { /* make quadrange, quadrangevar[-varidx-1], and some bilinrange invalid */
       assert(consdata->nquadvars > 0);
       assert(-eventdata->varidx-1 < consdata->nquadvars);
-      SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->quadrange);
+      SCIPintervalSetEmpty(&consdata->quadrange);
       if( !SCIPintervalIsEmpty(consdata->quadrangevar[-eventdata->varidx-1]) )
       {
          int i;
-         SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->quadrangevar[-eventdata->varidx-1]);
+         SCIPintervalSetEmpty(&consdata->quadrangevar[-eventdata->varidx-1]);
          for( i = 0; i < consdata->nadjbilin[-eventdata->varidx-1]; ++i )
-            SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->bilinrange[consdata->adjbilin[-eventdata->varidx-1][i]]);
+            SCIPintervalSetEmpty(&consdata->bilinrange[consdata->adjbilin[-eventdata->varidx-1][i]]);
       }
    }
 
@@ -1016,24 +1016,24 @@ SCIP_RETCODE catchVarEvents(
    SCIP_CALL( SCIPreallocMemoryArray(scip, &consdata->linbndchgeventdata, consdata->nlinvars) );
    for( i = 0; i < consdata->nlinvars; ++i )
    {
-      SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->linrange[i]);
+      SCIPintervalSetEmpty(&consdata->linrange[i]);
       consdata->linbndchgeventdata[i].consdata = consdata;
       consdata->linbndchgeventdata[i].varidx = i;
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[i], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, &consdata->linbndchgeventdata[i], NULL) );
       consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->linvars[i]);
    }
    SCIP_CALL( SCIPreallocMemoryArray(scip, &consdata->quadbndchgeventdata, consdata->nquadvars) );
-   SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->quadrange);
+   SCIPintervalSetEmpty(&consdata->quadrange);
    for( i = 0; i < consdata->nquadvars; ++i )
    {
-      SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->quadrangevar[i]);
+      SCIPintervalSetEmpty(&consdata->quadrangevar[i]);
       consdata->quadbndchgeventdata[i].consdata = consdata;
       consdata->quadbndchgeventdata[i].varidx   = -i-1;
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvars[i], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, &consdata->quadbndchgeventdata[i], NULL) );
       consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->quadvars[i]);
    }
    for( i = 0; i < consdata->nbilinterms; ++i )
-      SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->bilinrange[i]);
+      SCIPintervalSetEmpty(&consdata->bilinrange[i]);
    consdata->ispropagated = FALSE;
 
    return SCIP_OKAY;

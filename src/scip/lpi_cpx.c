@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114.2.2 2010/03/22 16:05:25 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
+//#define PROOF_OUT /* only for debugging ??????????????????*/
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -2734,8 +2735,16 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    SCIPdebugMessage("calling CPLEX dual farkas: %d cols, %d rows\n",
       CPXgetnumcols(cpxenv, lpi->cpxlp), CPXgetnumrows(cpxenv, lpi->cpxlp));
-
+#ifdef PROOF_OUT /* only for debugging ??????????????????*/
+   {
+      SCIP_Real tmp;
+      tmp = 0;
+      CHECK_ZERO( CPXdualfarkas(cpxenv, lpi->cpxlp, dualfarkas, &tmp) );
+      printf("proof = %.20f, lpisolstat=%d\n", tmp, lpi->solstat);
+   }
+#else
    CHECK_ZERO( CPXdualfarkas(cpxenv, lpi->cpxlp, dualfarkas, NULL) );
+#endif
 
    return SCIP_OKAY;
 }

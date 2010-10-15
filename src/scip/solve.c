@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.12 2010/05/06 01:19:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.13 2010/10/15 16:39:17 bzfwolte Exp $"
+//#define SCIP_DEBUG /*??????????????*/
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1508,6 +1509,8 @@ SCIP_RETCODE priceAndCutLoop(
    /* price-and-cut loop */
    npricedcolvars = prob->ncolvars;
    mustprice = TRUE;
+   /* if all the variables are already in the LP, we don't need to price */
+   mustprice = mustprice && !SCIPprobAllColsInLP(prob, set, lp);
    mustsepa = separate;
    delayedsepa = FALSE;
    *cutoff = FALSE;
@@ -2224,6 +2227,8 @@ SCIP_RETCODE enforceConstraints(
          *infeasible = TRUE;
          *solvelpagain = TRUE;
          resolved = TRUE;
+         lp->solved = FALSE; /* to force resolving the LP (needed in exact mode) */
+         SCIPconshdlrForceEnforcement(set->conshdlrs_enfo[h]); /* to force second call of enforcement (needed in exact mode) */
          SCIPtreeSetFocusNodeLP(tree, TRUE); /* the node's LP must be solved */
          break;
 
@@ -2369,7 +2374,7 @@ SCIP_RETCODE applyBounding(
          *cutoff = TRUE;
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
-         if( pseudoobjval >= primal->cutoffbound )
+         if( !set->misc_exactsolve && pseudoobjval >= primal->cutoffbound )
          {
             SCIP_CALL( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
          }
@@ -2649,26 +2654,16 @@ SCIP_RETCODE solveNode(
          }
 
          /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
-          * we have to forget about the LP and use the pseudo solution instead
+          * we have to forget about the LP and use the pseudo solution instead; 
+          * if all variables are fixed, i.e, an LP remains, it will be solved exactly as a last resort in the exact constraints handler (enfops)
           */
          if( !(*cutoff) && !lperror && set->misc_exactsolve && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
             && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
          {
-            if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && prob->ncontvars > 0 )
-            {
-               SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %d, all variables are fixed, %d continuous vars\n",
-                  stat->nnodes, stat->nlps, prob->ncontvars);
-               SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
-               /**@todo call PerPlex */
-               return SCIP_LPERROR;
-            }
-            else
-            {
-               SCIPtreeSetFocusNodeLP(tree, FALSE);
-               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n",
-                  stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
-            }
+            SCIPtreeSetFocusNodeLP(tree, FALSE);
+            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n",
+               stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
          }
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */

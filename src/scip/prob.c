@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.92.2.3 2010/03/22 16:05:30 bzfwolte Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.92.2.4 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -37,6 +37,9 @@
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#ifdef EXACTSOLVE
+#include "scip/cons_exactlp.h"
+#endif
 
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
@@ -1551,13 +1554,40 @@ void SCIPprobPrintPseudoSol(
 /** outputs problem statistics */
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    assert(prob != NULL);
 
+#ifdef EXACTSOLVE
+   SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
+
+   if( set->misc_exactsolve )
+   {
+      assert(prob->conss != NULL);
+      assert(prob->nconss == 1);
+      SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds)\n",
+         prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
+         SCIPgetNInfinitBounds(prob->conss[0]), SCIPgetNLargeBounds(prob->conss[0]));
+      SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
+         prob->startnconss, prob->maxnconss, SCIPgetNConssExactlp(prob->conss[0]), 
+         SCIPuseFPRelaxation(set->scip) ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
+         SCIPgetNSplitconssExactlp(prob->conss[0]));
+      SCIPmessageFPrintInfo(file, "  Nonzeros         : %d (%d integral)\n", SCIPgetNNonzExactlp(prob->conss[0]), 
+         SCIPgetNIntegralExactlp(prob->conss[0]));
+      SCIPmessageFPrintInfo(file, "  Max Coef Ratio   : %.0f\n", SCIPgetCoefRatioExactlp(set->scip, prob->conss[0]));
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+         prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+      SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+   }   
+#else
    SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
    SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+#endif
 }

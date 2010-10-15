@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.13.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.13.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   pub_paramset.h
  * @ingroup PUBLICMETHODS
@@ -230,6 +230,15 @@ extern
 SCIP_RETCODE SCIPparamSetToDefault(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   );
+
+/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
+ *  For that misc/exactsolve has to be set appropriately. 
+ */ 
+extern
+SCIP_RETCODE SCIPparamsetSetExactsolve(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets heuristics to aggressive */

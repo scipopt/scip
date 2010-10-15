@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.42.2.2 2010/03/22 16:05:29 bzfwolte Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.42.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1228,6 +1228,59 @@ SCIP_RETCODE paramWrite(
    return SCIP_OKAY;
 }
 
+/** if a bool parameter exits with the given parameter name it is set to the new value */
+static
+SCIP_RETCODE paramSetBool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           paramname,          /**< parameter name */
+   SCIP_Bool             value               /**< new value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_BOOL);
+      SCIP_CALL( SCIPparamSetBool(param, scip, value) );
+   }
+#ifndef NDEBUG
+   else
+   {
+      SCIPwarningMessage("unknown hard coded bool parameter <%s>\n", paramname);
+   }
+#endif
+   
+   return SCIP_OKAY;
+}
+
+/** if an integer parameter exits with the given parameter name it is set to the new value */
+static
+SCIP_RETCODE paramSetInt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           paramname,          /**< parameter name */
+   int                   value               /**< new value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   if( param != NULL )
+   {
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
+      SCIP_CALL( SCIPparamSetInt(param, scip, value) );
+   }
+#ifndef NDEBUG
+   else
+   {
+      SCIPwarningMessage("unknown hard coded int parameter <%s>\n", paramname);
+   }
+#endif
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -2125,6 +2178,47 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 
    return SCIP_OKAY;
 }
+
+/** sets parameters that are supported by EXACTSOLVE flag; note, this does not enable exact MIP solving. 
+ *  For that misc/exactsolve has to be set appropriately. 
+ */ 
+SCIP_RETCODE SCIPparamsetSetExactsolve(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   /* reset all parameter to default */
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, scip) );
+
+   /* turn off restarts */
+   SCIP_CALL( paramSetInt(scip, paramset, "presolving/maxrestarts", 0) );
+
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/maxprerounds", 0) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/maxprerounds", 0) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/maxprerounds", 0) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/maxprerounds", -1) );
+
+   /* turn off domain propagation */
+   SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxrounds", 0) );
+   SCIP_CALL( paramSetInt(scip, paramset, "propagating/maxroundsroot", 0) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/propfreq", -1) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/propfreq", -1) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/propfreq", -1) );
+
+   /* turn off conflict analysis */
+   SCIP_CALL( paramSetBool(scip, paramset, "conflict/enable", FALSE) );
+
+   /* turn off separation of LP solution, except for exactlp constraint handler where dual bound computation
+    * takes place at every node
+    */
+   SCIP_CALL( paramSetInt(scip, paramset, "separating/maxstallrounds", -1) ); 
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/sepafreq", -1) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/sepafreq", -1) );
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/sepafreq", 1) );
+
+   return SCIP_OKAY;
+}
+
 
 /** sets heuristics to aggressive */
 SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(

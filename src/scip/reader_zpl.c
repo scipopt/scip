@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.10 2010/03/30 20:33:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.11 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -85,6 +85,8 @@ static mpq_t* lb_ = NULL;
 static mpq_t* ub_ = NULL;
 static mpq_t* obj_ = NULL;
 static int nvars_ = 0;
+static int ninfbounds_ = 0;
+static int nlargebounds_ = 0;
 static int varssize_ = 0;
 
 static int* beg_ = NULL;
@@ -92,13 +94,18 @@ static int* len_ = NULL;
 static mpq_t* lhs_ = NULL;
 static mpq_t* rhs_ = NULL;
 static int nconss_ = 0;
+static int nsplitconss_ = 0;
 static int consssize_ = 0;
 
 static mpq_t* val_ = NULL;
 static int* ind_ = NULL;
 static int nnonz_ = 0;
+static int nintegral_ = 0;
 static int nonzsize_ = 0;
+static mpq_t minabsval_;
+static mpq_t maxabsval_;
 static SCIP_Bool objneedscaling_ = FALSE;
+#define LARGEBOUND              1e+06
 #endif
 
 
@@ -401,15 +408,16 @@ Bool xlp_addcon_term(
 }
 #else
 /** method stores a linear constraint in the constraints matrix and checks whether it has to be split into lhs and rhs 
- *  constraints
+ *  constraints for building an FP relaxation
  */
 static
 Bool storeConstraint(
    ConType               type,               /**< constraint type */
-   const Term*           term      
+   const Term*           term
    )
 {
    Bool split;
+   mpq_t absval;
    int i;
 
    assert(nconss_ >= 0);
@@ -419,24 +427,22 @@ Bool storeConstraint(
   
    /* store coefficients of constraint */
    split = FALSE;
+   mpq_init(absval);
    for( i = 0; i < term_get_elements(term); i++ )
    {
       SCIP_VAR* scipvar;
       int varidx;
-
-      assert(SCIPuseFPRelaxation(scip_) || !split); 
 
       /* coefficient of variable */
       assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
       assert(mono_is_linear(term_get_element(term, i)));
       numb_get_mpq(mono_get_coeff(term_get_element(term, i)), val_[nnonz_]);
 
-      /* we have to split the row into lhs and rhs part if
-       *  - we use an FP relaxation for calculating dual bounds,
+      /* when we use an FP relaxation for calculating dual bounds, we have to split the row into lhs and rhs part if
        *  - lhs and rhs of constraints are not -inf and inf, respectively, and
        *  - current coefficient is not FP representable
        */
-      if( SCIPuseFPRelaxation(scip_) && (type == CON_RANGE || type == CON_EQUAL) )
+      if( type == CON_RANGE || type == CON_EQUAL )
          split = split || !mpqIsReal(scip_, val_[nnonz_]);
 
       /* index of variable */
@@ -451,9 +457,22 @@ Bool storeConstraint(
          SCIPvarGetName(scipvar), numb_todbl(mono_get_coeff(term_get_element(term, i))), val_[nnonz_]);
 #endif
 
+      /* update number of inetgral nonzero coefficients */
+      if( mpqIsIntegral(val_[nnonz_]) )
+         nintegral_++;
+
+      /* update minimum and maximal absolute nonzero constraint matrix, lhs, or rhs entry */
+      mpq_abs(absval, val_[nnonz_]);
+      if( mpq_cmp(absval, maxabsval_) > 0 )
+         mpq_set(maxabsval_, absval);
+      if( mpq_cmp(absval, minabsval_) < 0 )
+         mpq_set(minabsval_, absval);
+ 
       /* update number of nonzero coefficients */
       nnonz_++;
+
    }
+   mpq_clear(absval);
 
 #ifdef READER_OUT  /*???????????????*/
    gmp_printf("new: %d: beg=%d, len=%d\n", nconss_, beg_[nconss_], len_[nconss_]);
@@ -493,6 +512,9 @@ Bool xlp_addcon_term(
    const Term*           term      
    )
 {
+   SCIP_Bool lhsgiven;
+   SCIP_Bool rhsgiven;
+   mpq_t absval;
    int  maxdegree;
    int  i;
 
@@ -592,6 +614,10 @@ Bool xlp_addcon_term(
    }   
 #endif
 
+   lhsgiven = FALSE;
+   rhsgiven = FALSE;
+   mpq_init(absval);
+
    /* get exact lhs and rhs for exactlp constraint handler */
    switch( type )
    {
@@ -602,19 +628,25 @@ Bool xlp_addcon_term(
    case CON_LHS:
       numb_get_mpq(lhs, lhs_[nconss_]);
       mpq_set(rhs_[nconss_], *posInfinity(conshdlrdata_));
+      lhsgiven = TRUE;
       break;
    case CON_RHS:
       mpq_set(lhs_[nconss_], *negInfinity(conshdlrdata_));
       numb_get_mpq(rhs, rhs_[nconss_]);
+      rhsgiven = TRUE;
       break;
    case CON_RANGE:
       numb_get_mpq(lhs, lhs_[nconss_]);
       numb_get_mpq(rhs, rhs_[nconss_]);
+      lhsgiven = TRUE;
+      rhsgiven = TRUE;
       break;
    case CON_EQUAL:
       numb_get_mpq(lhs, lhs_[nconss_]);
       numb_get_mpq(rhs, rhs_[nconss_]);
       assert(mpq_equal(lhs_[nconss_], rhs_[nconss_]) != 0);
+      lhsgiven = TRUE;
+      rhsgiven = TRUE;
       break;
    default:
       SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
@@ -623,6 +655,26 @@ Bool xlp_addcon_term(
       readerror_ = TRUE;
       break;
    }
+
+   /* update minimum and maximal absolute nonzero constraint matrix, lhs, or rhs entry */
+   if( lhsgiven && mpq_sgn(lhs_[nconss_]) != 0 )
+   {
+      mpq_abs(absval, lhs_[nconss_]);
+      if( mpq_cmp(absval, maxabsval_) > 0 )
+         mpq_set(maxabsval_, absval);
+      if( mpq_cmp(absval, minabsval_) < 0 )
+         mpq_set(minabsval_, absval);
+   }
+   if( rhsgiven && mpq_sgn(rhs_[nconss_]) != 0 )
+   {
+      mpq_abs(absval, rhs_[nconss_]);
+      if( mpq_cmp(absval, maxabsval_) > 0 )
+         mpq_set(maxabsval_, absval);
+      if( mpq_cmp(absval, minabsval_) < 0 )
+         mpq_set(minabsval_, absval);
+   }
+
+   mpq_clear(absval);
 
    if( (flags & LP_FLAG_CON_SEPAR) != 0 )
    {
@@ -644,7 +696,11 @@ Bool xlp_addcon_term(
 
          split = storeConstraint(type, term);
 
+         /* update number of linear constraints that need to be split in case of an FP relaxation */
          if( split )
+            nsplitconss_++;
+
+         if( SCIPuseFPRelaxation(scip_) && split )
          {
             assert(type == CON_RANGE || type == CON_EQUAL);
 
@@ -1061,6 +1117,13 @@ Var* xlp_addvar(
       ub = 0.0;
       break;
    }
+
+   /* update of variables with infinite oder large bounds */
+   if( bound_get_type(lower) == BOUND_MINUS_INFTY || bound_get_type(upper) == BOUND_INFTY  ) 
+      ninfbounds_++;
+   else if( lb <= -LARGEBOUND || ub >= LARGEBOUND ) 
+      nlargebounds_++;
+   
 
    /* get variable type */
    switch( usevarclass )
@@ -1554,7 +1617,7 @@ void xlp_addtocost(
       
       mpq_clear(tmp);
    }
-
+   
    /* change objective coefficient of variable in exactlp constraint handler and in FP problem */
    mpq_add(obj_[varidx], obj_[varidx], scipvalmpq);
    SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, SCIPvarGetObj(scipvar) + scipval) );
@@ -1747,6 +1810,12 @@ SCIP_DECL_READERREAD(readerReadZpl)
    {
       mpq_init(val_[i]);
    }
+
+   /* initialize minimum and maximal absolute nonzero constraint matrix, lhs, or rhs entry */
+   mpq_init(minabsval_);
+   mpq_init(maxabsval_);
+   mpq_set(minabsval_, *posInfinity(conshdlrdata_));
+   mpq_set(maxabsval_, *negInfinity(conshdlrdata_));
 #endif
 
    /* get the parameter string */
@@ -1977,8 +2046,9 @@ SCIP_DECL_READERREAD(readerReadZpl)
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "exactlp");
    
 
-   SCIP_CALL_ABORT( SCIPcreateConsExactlp(scip, &cons, consname, objsense_, nvars_, obj_, lb_, ub_, nconss_, lhs_, rhs_, 
-         nnonz_, beg_, len_, ind_, val_, objneedscaling_, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, 
+   SCIP_CALL_ABORT( SCIPcreateConsExactlp(scip, &cons, consname, objsense_, nvars_, ninfbounds_, nlargebounds_, obj_, lb_,
+         ub_, nconss_, nsplitconss_, lhs_, rhs_, nnonz_, nintegral_, beg_, len_, ind_, val_, minabsval_, maxabsval_, 
+         objneedscaling_, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, 
          stickingatnode) );
    SCIP_CALL_ABORT( SCIPaddCons(scip, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip, &cons) );
@@ -2031,9 +2101,12 @@ SCIP_DECL_READERREAD(readerReadZpl)
    {
       mpq_clear(val_[i]);
    }
+   mpq_clear(minabsval_);
+   mpq_clear(maxabsval_);
    SCIPfreeMemoryArray(scip_, &ind_);
    SCIPfreeMemoryArray(scip_, &val_);
    nnonz_ = 0;
+   nintegral_ = 0;
    nonzsize_ = 0;
 
    /* free constraint specific information */ 
@@ -2048,6 +2121,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    SCIPfreeMemoryArray(scip_, &len_);
    SCIPfreeMemoryArray(scip_, &beg_);
    nconss_ = 0;
+   nsplitconss_ = 0;
    consssize_ = 0;
 
    /* free variable specific information */ 
@@ -2067,6 +2141,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
    SCIPfreeMemoryArray(scip_, &lb_);
    SCIPfreeMemoryArray(scip_, &vars_);
    nvars_ = 0;
+   ninfbounds_ = 0;
+   nlargebounds_ = 0;
    varssize_ = 0;
 #endif
 

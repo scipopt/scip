@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.51.2.2 2010/03/22 16:05:29 bzfwolte Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.51.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
+//#define EST_OUT /*????????????????*/
 
 /**@file   nodesel_bfs.c
  * @ingroup NODESELECTORS
@@ -241,9 +242,25 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
    lowerbound1 = SCIPnodeGetLowerbound(node1);
    lowerbound2 = SCIPnodeGetLowerbound(node2);
    if( SCIPisLT(scip, lowerbound1, lowerbound2) )
+   {
+#ifdef EST_OUT /*????????????????*/
+      SCIPdebugMessage("node %lld: lb=%.14f est=%.14f, node %lld: lb=%.14f est=%.14f --> choose node %lld\n", SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1),
+         SCIPnodeGetNumber(node1), lowerbound2, SCIPnodeGetEstimate(node2),
+            SCIPnodeGetNumber(node1));
+#endif
+
       return -1;
+   }
    else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
+   {
+#ifdef EST_OUT /*????????????????*/
+      SCIPdebugMessage("node %lld: lb=%.14f est=%.14f, node %lld: lb=%.14f est=%.14f --> choose node %lld\n", SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1),
+         SCIPnodeGetNumber(node1), lowerbound2, SCIPnodeGetEstimate(node2),
+            SCIPnodeGetNumber(node2));
+#endif
+
       return +1;
+   }
    else
    {
       SCIP_Real estimate1;
@@ -251,10 +268,25 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
 
       estimate1 = SCIPnodeGetEstimate(node1);
       estimate2 = SCIPnodeGetEstimate(node2);
+
       if( SCIPisLT(scip, estimate1, estimate2) )
+      {
+#ifdef EST_OUT /*????????????????*/
+         SCIPdebugMessage("node %lld: est=%.14f, node %lld: est=%.14f --> choose node %lld\n", SCIPnodeGetNumber(node1), estimate1, SCIPnodeGetNumber(node1), estimate2,
+            SCIPnodeGetNumber(node1));
+#endif
+
          return -1;
+      }
       else if( SCIPisGT(scip, estimate1, estimate2) )
+      {
+#ifdef EST_OUT /*????????????????*/
+         SCIPdebugMessage("node %lld: est=%.14f, node %lld: est=%.14f --> choose node %lld\n", SCIPnodeGetNumber(node1), estimate1, SCIPnodeGetNumber(node1), estimate2,
+            SCIPnodeGetNumber(node2));
+#endif
+
          return +1;
+      }
       else
       {
          SCIP_NODETYPE nodetype1;
@@ -262,6 +294,10 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
 
          nodetype1 = SCIPnodeGetType(node1);
          nodetype2 = SCIPnodeGetType(node2);
+#ifdef EST_OUT /*????????????????*/
+         SCIPdebugMessage("node %lld: est=%.14f, node %lld: est=%.14f --> choose node xxx\n", SCIPnodeGetNumber(node1), estimate1, SCIPnodeGetNumber(node1), estimate2);
+#endif
+
          if( nodetype1 == SCIP_NODETYPE_CHILD && nodetype2 != SCIP_NODETYPE_CHILD )
             return -1;
          else if( nodetype1 != SCIP_NODETYPE_CHILD && nodetype2 == SCIP_NODETYPE_CHILD )

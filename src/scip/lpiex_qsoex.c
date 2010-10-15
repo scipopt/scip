@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.11 2010/06/11 08:35:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.12 2010/10/15 16:39:16 bzfwolte Exp $"
 //#define SCIP_DEBUG /*?????????????????*/
 //#define SCIP_DEBUG2 /*?????????????????*/
 //#define USEOBJLIM /*??????????????*/ 
@@ -1789,7 +1789,7 @@ SCIP_RETCODE SCIPlpiexGetSolFeasibility(
       *primalfeasible = 1;
 
 #ifdef USEOBJLIM /*??????????????*/ 
-   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT) 
+   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT ) 
 #else
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE ) /* ?????????????????? */
 #endif
@@ -1935,7 +1935,7 @@ SCIP_Bool SCIPlpiexIsDualFeasible(
    SCIPdebugMessage("checking for dual feasibility\n");
 
 #ifdef USEOBJLIM /*??????????????*/ 
-   return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT); 
+   return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT ); 
 #else
    return (lpi->solstat == QS_LP_OPTIMAL);  /* ?????????????*/
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.59.2.2 2010/03/22 16:05:30 bzfwolte Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.59.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -375,6 +375,7 @@ void SCIPprobPrintPseudoSol(
 extern
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 

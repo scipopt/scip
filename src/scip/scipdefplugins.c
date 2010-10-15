@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.5 2010/03/22 16:05:35 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.6 2010/10/15 16:39:17 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -54,6 +54,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 
       SCIP_CALL( SCIPincludeDispDefault(scip) );
       SCIP_CALL( SCIPincludeDialogDefault(scip) );
+      /* load parameter settings needed to ensure correct behavior of EXACTSOLVE flag */
+      /* @todo: the parameters set in SCIPsetExactsolve() are for a pure branch and bound alorithm. they have to be 
+       * adapted when other solving techniques, like presolving, are modified s.t. they can be used for exact MIP solving.
+       * ????????????
+       */
+      SCIP_CALL( SCIPsetExactsolve(scip) );
 #else
       SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
       SCIP_CALL( SCIPincludeConshdlrAnd(scip) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.126.2.3 2010/03/22 16:05:25 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.126.2.4 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1037,6 +1037,14 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    );
 
+/** stores dual LP solution with infinite objective value in the columns and rows if dual LP is unbounded */
+extern
+SCIP_RETCODE SCIPlpGetUnboundedDualSol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** stores LP solution with infinite objective value in the columns and rows */
 extern
 SCIP_RETCODE SCIPlpGetUnboundedSol(
@@ -1153,6 +1161,7 @@ extern
 SCIP_RETCODE SCIPlpGetProvedLowerbound(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            bound               /**< pointer to store proven dual bound */
    );
 
@@ -1161,6 +1170,7 @@ extern
 SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            proved              /**< pointer to store whether infeasibility is proven */
    );
 

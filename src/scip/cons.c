@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.166.2.2 2010/03/22 16:05:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.166.2.3 2010/10/15 16:39:15 bzfwolte Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3784,6 +3784,20 @@ SCIP_Bool SCIPconshdlrIsInitialized(
    assert(conshdlr != NULL);
 
    return conshdlr->initialized;
+}
+
+/** force enforcement of constaint handler for LP and pseudo solution */
+void SCIPconshdlrForceEnforcement(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->lastenfolplpcount = -1;
+   conshdlr->lastenfolpdomchgcount = -1;
+   conshdlr->lastenfopsdomchgcount = -1;
+   conshdlr->lastenfolpnode = -1;
+   conshdlr->lastenfopsnode = -1;
 }
 
 

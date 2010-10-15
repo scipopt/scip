@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.77.2.2 2010/03/22 16:05:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.77.2.3 2010/10/15 16:39:17 bzfwolte Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -58,6 +58,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
@@ -96,6 +98,8 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
+   SCIPclockFree(&(*stat)->provedfeaslptime);
+   SCIPclockFree(&(*stat)->provedinfeaslptime);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -149,6 +153,8 @@ void SCIPstatReset(
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->nodeactivationtime);
+   SCIPclockReset(stat->provedfeaslptime);
+   SCIPclockReset(stat->provedinfeaslptime);
 
    SCIPhistoryReset(stat->glbhistory);
 
@@ -260,6 +266,11 @@ void SCIPstatResetCurrentRun(
    stat->ncreatednodesrun = 0;
    stat->nactivatednodes = 0;
    stat->ndeactivatednodes = 0;
+   stat->nprovedfeaslp = 0;
+   stat->nfailprovedfeaslp = 0;
+   stat->nprovedinfeaslp = 0;
+   stat->nfailprovedinfeaslp = 0;
+   stat->nabortprovedinfeaslp = 0;
    stat->nbacktracks = 0;
    stat->ndelayedcutoffs = 0;
    stat->nreprops = 0;

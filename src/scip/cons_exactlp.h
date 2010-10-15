@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.7 2010/06/11 08:35:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.8 2010/10/15 16:39:15 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -108,17 +108,23 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    const char*           name,               /**< name of constraint */
    SCIP_OBJSEN           objsen,             /**< objective sense */
    int                   nvars,              /**< number of variables */
+   int                   ninfbounds,         /**< number of variables with infinite bound in safe dual bounding method */
+   int                   nlargebounds,       /**< number of variables with large bound in safe dual bounding method */
    mpq_t*                obj,                /**< objective function values of variables */
    mpq_t*                lb,                 /**< lower bounds of variables */
    mpq_t*                ub,                 /**< upper bounds of variables */
    int                   nconss,             /**< number of constraints */
+   int                   neqconss,           /**< number of equalities */
    mpq_t*                lhs,                /**< left hand sides of constraints */
    mpq_t*                rhs,                /**< right hand sides of constraints */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
+   int                   nintegral,          /**< number of integral nonzero elements in the constraint matrix */
    int*                  beg,                /**< start index of each constraint in ind and val array */
    int*                  len,                /**< number of nonzeros in val array corresponding to constraint */
    int*                  ind,                /**< variable indices (var->probindex) of constraint matrix entries */
    mpq_t*                val,                /**< values of nonzero constraint matrix entries (and some zeros) */
+   mpq_t                 minabsval,          /**< minimum absolute nonzero constraint matrix, lhs, or rhs entry */
+   mpq_t                 maxabsval,          /**< maximum absolute nonzero constraint matrix, lhs, or rhs entry */
    SCIP_Bool             objneedscaling,     /**< do objective function values need to be scaled because some are not FP representable? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
@@ -280,11 +286,183 @@ void SCIPvarGetLbGlobalExactlp(
    );
 
 /** gets exact global upper bound of variable */
+extern
 void SCIPvarGetUbGlobalExactlp(
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< problem variable */
    mpq_t                 ub                  /**< pointer to store global upper bound */
    );
+
+/** gets worst global bound of variable with respect to the objective function */
+extern
+void SCIPvarGetWorstGlobalBoundExactlp(
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   mpq_t                 bound               /**< pointer to store worst bound */
+   );
+
+/*
+ * problem and solving process statistics methods
+ */
+
+/** gets total number of linear constraints handled by exactlp constraint */
+extern
+int SCIPgetNConssExactlp(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets total number of constraints handled by exactlp constraint that were split */
+extern
+int SCIPgetNSplitconssExactlp(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets number of nonzero entries in linear constraints handled by exactlp constraint */
+extern
+int SCIPgetNNonzExactlp(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets number of integral nonzero entries in linear constraints handled by exactlp constraint */
+extern
+int SCIPgetNIntegralExactlp(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets ration of maximum and minimum absolute nonzero constraint matrix, lhs, or rhs entry */
+extern
+SCIP_Real SCIPgetCoefRatioExactlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets total number variables with infinite bound needed in safe dual bounding method */
+extern
+int SCIPgetNInfinitBounds(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets total number variables with large bound needed in safe dual bounding method */
+extern
+int SCIPgetNLargeBounds(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets time needed for safe dual bound computation for feasible LPs */
+extern
+SCIP_Real SCIPgetProvedfeaslpTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets time needed for safe verification for infeasible LPs */
+extern
+SCIP_Real SCIPgetProvedinfeaslpTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of times, safe dual bound computation for feasible LPs was called */
+extern
+SCIP_Longint SCIPgetNProvedfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** number of times, safe verification for infeasible LPs was called */
+extern
+SCIP_Longint SCIPgetNProvedinfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of times, safe dual bound computation for feasible LPs failed */
+extern
+SCIP_Longint SCIPgetNFailProvedfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** number of times, safe verification for infeasible LPs failed */
+extern
+SCIP_Longint SCIPgetNFailProvedinfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** number of times, safe verification for infeasible LPs was aborted because no approximate certificate was given */
+extern
+SCIP_Longint SCIPgetNAbortProvedinfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets time needed for exact integrality verification for feasible LPs */
+extern
+SCIP_Real SCIPgetExactfeaslpTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets time needed for exact verification for infeasible LPs */
+extern
+SCIP_Real SCIPgetExactinfeaslpTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets time needed for exact LP solve for unsolved LP */
+extern
+SCIP_Real SCIPgetExactunsollpTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/** gets number of times, exact integrality verification for feasible LPs was called */
+extern
+SCIP_Longint SCIPgetNExactfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of times, exact verification for infeasible LPs was called */
+extern
+SCIP_Longint SCIPgetNExactinfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of times, exact LP solver is called for unsolved LP */
+extern
+SCIP_Longint SCIPgetNExactunsollp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of times, claimed integral LP solution was fractional */
+extern
+SCIP_Longint SCIPgetNWrongExactfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of times, claimed infeasible LP was feasible */
+extern
+SCIP_Longint SCIPgetNWrongExactinfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** computes relative difference of given safe dual bound and exact dual bound at current node and updates statistics */
+extern
+SCIP_RETCODE SCIPcomputeDualboundQuality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             safedualbound       /**< safe dual bound to compute quality for */
+   );
+
+/** gets numbers of safe dual bounds with zero, small, medium, and large relative difference */
+extern
+void SCIPgetNDualboundDiff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         nzerodbdiff,        /**< pointer to store number of dual bounds with zero relativ difference */
+   SCIP_Longint*         nsmalldbdiff,       /**< pointer to store number of dual bounds with small relativ difference */
+   SCIP_Longint*         nmediumdbdiff,      /**< pointer to store number of dual bounds with medium relativ difference */
+   SCIP_Longint*         nlargedbdiff        /**< pointer to store number of dual bounds with large relativ difference */
+   );
+
+/** returns whether the quality of the safe dual bounds was computed */
+extern
+SCIP_Bool SCIPhasDualboundDiff(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 
 #ifdef __cplusplus
 }

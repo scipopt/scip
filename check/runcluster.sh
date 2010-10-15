@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: runcluster.sh,v 1.8.2.3 2010/03/22 16:05:02 bzfwolte Exp $
+# $Id: runcluster.sh,v 1.8.2.4 2010/10/15 16:39:15 bzfwolte Exp $
 OUTFILE=/scratch/$BASENAME.out
 ERRFILE=/scratch/$BASENAME.err
 TMPFILE=$SCIPPATH/results/$BASENAME.tmp
@@ -27,6 +27,7 @@ date                                >> $OUTFILE
 date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
+ulimit -s 81920
 $SCIPPATH/../$BINNAME < $TMPFILE   >> $OUTFILE 2>>$ERRFILE
 date +"@04 %s"                      >> $OUTFILE
 echo -----------------------------  >> $OUTFILE

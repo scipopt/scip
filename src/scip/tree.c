@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.201.2.6 2010/03/22 16:05:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.201.2.7 2010/10/15 16:39:17 bzfwolte Exp $"
+//#define EST_OUT /*??????????????????*/
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1943,8 +1944,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
          SCIP_Bool proved;
          
          /* checks whether an exact certificate for infeasibility exists */
-         SCIP_CALL( SCIPlpIsInfeasibilityProved(lp, set, &proved) );
-
+         SCIP_CALL( SCIPlpIsInfeasibilityProved(lp, set, stat, &proved) );
          if( proved )
             lpobjval = SCIPsetInfinity(set);  /* node will be cut off */
          else
@@ -1952,7 +1952,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       }
       else
       {
-         SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
+         SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, stat, &lpobjval) );
       }
       break;
    case 'u':
@@ -1997,6 +1997,9 @@ void SCIPnodeSetEstimate(
    assert(node != NULL);
    assert(stat != NULL);
 
+#ifdef EST_OUT /*??????????????????*/
+   SCIPdebugMessage("node %lld: est=%f \t -> est=%f\n", SCIPnodeGetNumber(node), node->estimate, newestimate);
+#endif
    node->estimate = newestimate;
 }
 
@@ -5250,12 +5253,23 @@ SCIP_NODE* SCIPtreeGetBestNode(
 
    /* return the best of the three */
    bestnode = bestchild;
+#ifdef EST_OUT /*????????????????*/
+   SCIPdebugMessage("bestchild=%lld, bestsib=%lld, bestleaf=%lld\n", 
+      bestchild == NULL ? -1: SCIPnodeGetNumber(bestchild), 
+      bestsibling == NULL ? -1 : SCIPnodeGetNumber(bestsibling), 
+      bestleaf == NULL ? -1 : SCIPnodeGetNumber(bestleaf));
+#endif
    if( bestsibling != NULL && (bestnode == NULL || SCIPnodeselCompare(nodesel, set, bestsibling, bestnode) < 0) )
       bestnode = bestsibling;
    if( bestleaf != NULL && (bestnode == NULL || SCIPnodeselCompare(nodesel, set, bestleaf, bestnode) < 0) )
       bestnode = bestleaf;
 
    assert(SCIPtreeGetNLeaves(tree) == 0 || bestnode != NULL);
+
+#ifdef EST_OUT /*????????????????*/
+   SCIPdebugMessage("---> bestnode=%lld\n", 
+      bestnode == NULL ? -1 : SCIPnodeGetNumber(bestnode));
+#endif
 
    return bestnode;
 }

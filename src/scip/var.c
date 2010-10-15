@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.218.2.4 2010/03/22 16:05:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.218.2.5 2010/10/15 16:39:17 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4490,7 +4490,8 @@ SCIP_RETCODE SCIPvarChgObj(
 
    SCIPdebugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
 
-   if( !SCIPsetIsEQ(set, var->obj, newobj) )
+   if( (!set->misc_usefprelax && !SCIPsetIsEQ(set, var->obj, newobj)) 
+      || (set->misc_usefprelax && var->obj != newobj) )
    {
       switch( SCIPvarGetStatus(var) )
       {
@@ -4549,7 +4550,8 @@ SCIP_RETCODE SCIPvarAddObj(
 
    SCIPdebugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
 
-   if( !SCIPsetIsZero(set, addobj) )
+   if( (!set->misc_usefprelax && !SCIPsetIsZero(set, addobj)) 
+      || (set->misc_usefprelax && addobj != 0.0) )
    {
       SCIP_Real oldobj;
       int i;
