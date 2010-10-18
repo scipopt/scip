@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.17 2010/10/07 16:47:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.18 2010/10/18 19:57:35 bzfwinkm Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -1286,7 +1286,12 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    *result = SCIP_DIDNOTRUN;
    SCIPdebugMessage("entering execution method of shift and propagate heuristic\n");
 
+   /* we have to collect the number of different variable types before we start probing since during probing variable
+    * can be created (e.g., cons_xor.c)
+    */ 
    ndiscvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
 
    /* heuristic is obsolete if there are only continuous variables */
    if( ndiscvars == 0 )
@@ -1358,8 +1363,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
    colnorms = matrix->colnorms;
 
-   nbinvars = SCIPgetNBinVars(scip);
-   nintvars = SCIPgetNIntVars(scip);
    nimplvars = ndiscvars - (nbinvars + nintvars);
    assert(nbinvars >= 0);
    assert(nintvars >= 0);
