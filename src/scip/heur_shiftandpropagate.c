@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.16 2010/10/01 13:34:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.16.2.1 2010/10/18 19:51:05 bzfwinkm Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -210,8 +210,8 @@ void relaxVar(
    ub = SCIPvarGetUbGlobal(var);
    lb = SCIPvarGetLbGlobal(var);
    
-   SCIPdebugMessage("Relaxating variable <%d> with lb <%g> and ub <%g>\n",
-      probindex, lb, ub);
+   SCIPdebugMessage("Relaxating variable <%s> (probindex %d) with lb <%g> and ub <%g>\n",
+		    SCIPvarGetName(var), probindex, lb, ub);
 
    /* relax variable from all its constraints */
    for( r = 0; r < ncolvals; ++r )
@@ -373,8 +373,8 @@ void transformVariable(
       
       matrix->transformshiftvals[colindex] = bound;
 
-      SCIPdebugMessage("Variable <%d> transformed. LB <%g> --> <%g>, UB <%g>--><%g>\n",
-         colindex, lb, 0.0, ub, matrix->upperbounds[colindex]);
+      SCIPdebugMessage("Variable <%s> (colindex %d) transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
+		       SCIPvarGetName(var), colindex, lb, 0.0, ub, matrix->upperbounds[colindex]);
    }
 }
 
@@ -1286,7 +1286,12 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    *result = SCIP_DIDNOTRUN;
    SCIPdebugMessage("entering execution method of shift and propagate heuristic\n");
 
+   /* we have to collect the number of different variable types before we start probing since during probing variable
+    * can be created (e.g., cons_xor.c)
+    */ 
    ndiscvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
 
    /* heuristic is obsolete if there are only continuous variables */
    if( ndiscvars == 0 )
@@ -1358,8 +1363,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
    colnorms = matrix->colnorms;
 
-   nbinvars = SCIPgetNBinVars(scip);
-   nintvars = SCIPgetNIntVars(scip);
    nimplvars = ndiscvars - (nbinvars + nintvars);
    assert(nbinvars >= 0);
    assert(nintvars >= 0);

@@ -12,6 +12,7 @@ fixed bugs:
 - fixed bug in debug.c w.r.t. checking of constraints and continuous variables
 - fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
 - fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
+- fixed bug in heur_shiftandpropagate where some variables were initialized too late
 
 SCIP version 2.0.0
 ===============
