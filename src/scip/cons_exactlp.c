@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.28 2010/10/15 16:39:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.29 2010/10/19 19:04:20 bzfsteff Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -2992,7 +2992,7 @@ SCIP_RETCODE constructPSData(
    SCIP_ROW** rows;
 
    
-   assert(!conshdlrdata->psdatafail);
+   //   assert(!conshdlrdata->psdatafail);
    assert(consdata->nconss > 0);
    
    /* if the ps data was already constructed, exit */
@@ -5120,6 +5120,37 @@ SCIP_RETCODE constructPSData(
    return SCIP_OKAY;
 }
 
+
+/* This function will check the condition required for the project and shift method to work
+ * given the current settings of the parameters.  If it has not already been called, this will
+ * call constructPSData
+ */
+static
+SCIP_RETCODE checkPSConditions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_Bool*            success             /**< do the conditions hold? */
+   )
+{
+   /* if constructPSData was not already constructed, call constructPSData */ 
+   if( conshdlrdata->psdatacon )
+   {  
+      SCIP_CALL( constructPSData(scip, conshdlrdata, consdata) );
+   }
+   
+   /* check if constructPSData was successful */   
+   if( conshdlrdata->psdatafail )     
+      *success = FALSE;
+   else
+      *success = TRUE;
+   
+   return SCIP_OKAY;
+}
+
+
+
+
 /** compute safe dual bound by project and shift method.
  *  projection step (to ensure that equalities are satisfied):  
  *   - compute error in equalities: r=c-Ay^ 
@@ -5158,8 +5189,8 @@ SCIP_RETCODE getPSdualbound(
    mpq_t dualbound;
    SCIP_COL** cols;
 
-   assert(conshdlrdata->psdatacon);
-   assert(!conshdlrdata->psdatafail);
+   //   assert(conshdlrdata->psdatacon);
+   //   assert(!conshdlrdata->psdatafail);
 
    *success = TRUE;
 
