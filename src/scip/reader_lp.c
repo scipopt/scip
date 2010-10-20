@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.108 2010/10/04 11:43:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.109 2010/10/20 13:51:38 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -3422,7 +3422,8 @@ SCIP_RETCODE SCIPwriteLp(
          assert( linvars != NULL );
          assert( linvals != NULL );
 
-         if ( nlinvars > 0 && ! SCIPconsIsDeleted(lincons) )
+         /* linvars always contains slack variable, thus nlinvars >= 1 */
+         if ( nlinvars > 1 && ! SCIPconsIsDeleted(lincons) )
          {
             (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(binvar) );
             if ( strlen(consname) > 0 )
@@ -3446,7 +3447,7 @@ SCIP_RETCODE SCIPwriteLp(
             assert( nlinvars == 0 || cnt == nlinvars-1 );
 
             SCIP_CALL( printQuadraticCons(scip, file, "", consvars, consvals, cnt, NULL, 0, NULL, 0, 
-               SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons), transformed) );
+                  SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons), transformed) );
 
             SCIPfreeBufferArray(scip, &consvars);
             SCIPfreeBufferArray(scip, &consvals);
