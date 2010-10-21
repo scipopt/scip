@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.317 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.318 2010/10/21 09:35:26 bzfgleix Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2961,7 +2961,7 @@ SCIP_RETCODE solveNode(
                   }
 
                   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                     "(node: %"SCIP_LONGINT_FORMAT") forcing the solution of an LP ...\n", stat->nnodes, stat->nlps);
+                     "(node %"SCIP_LONGINT_FORMAT") forcing the solution of an LP ...\n", stat->nnodes, stat->nlps);
 
                   /* solve the LP in the next loop */
                   SCIPtreeSetFocusNodeLP(tree, TRUE);
