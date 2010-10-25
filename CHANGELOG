@@ -1,6 +1,10 @@
 SCIP version NEXT
 ===============
 
+performance improvements:
+- SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
+  this fixes timeouts on instances where devex converges very slowly
+
 fixed bugs:
 - fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
 - fixed bug in SCIPcopyConss (valid was not initialized to TRUE)
