@@ -1,6 +1,10 @@
 SCIP version 2.0.1
 ===============
 
+performance improvements:
+- SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
+  this fixes timeouts on instances where devex converges very slowly
+
 fixed bugs:
 - fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
 - fixed bugs in SCIPcopyConss: copy all active constraints (including disabled ones), *valid was not initialized to TRUE
@@ -13,6 +17,7 @@ fixed bugs:
 - fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
 - fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
 - fixed bug in heur_shiftandpropagate where some variables were initialized too late
+
 
 SCIP version 2.0.0
 ===============
