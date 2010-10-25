@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.31 2010/10/01 17:09:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.32 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -47,7 +47,7 @@
 #include "scip/event.h"
 #include "scip/pub_lp.h"
 #include "nlpi/nlpi.h"
-#include "scip/pub_expression.h"
+#include "scip/pub_expraddl.h"
 #include "scip/struct_nlp.h"
 /* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
 #include "scip/struct_set.h"

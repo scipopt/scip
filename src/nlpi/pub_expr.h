@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expression.h,v 1.1 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expr.h,v 1.1 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file   nlpi/pub_expression.h
  * @brief  methods for expressions and expression trees
@@ -27,7 +27,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "nlpi/type_expression.h"
+#include "nlpi/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
 #include "scip/intervalarith.h"
 

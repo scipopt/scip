@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.11 2010/09/27 17:20:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.12 2010/10/25 04:27:34 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -28,7 +28,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "nlpi/type_expression.h"
+#include "nlpi/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {

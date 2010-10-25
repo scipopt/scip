@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlp.h,v 1.6 2010/09/14 11:09:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlp.h,v 1.7 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file   struct_nlp.h
  * @brief  datastructures for NLP management
@@ -53,7 +53,7 @@
 #include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "nlpi/type_nlpi.h"
-#include "nlpi/type_expression.h"
+#include "nlpi/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {

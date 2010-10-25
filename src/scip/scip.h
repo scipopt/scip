@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.442 2010/10/07 19:58:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.443 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -71,7 +71,7 @@
 #include "scip/pub_dialog.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
-#include "scip/pub_expression.h"
+#include "scip/pub_expraddl.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_implics.h"

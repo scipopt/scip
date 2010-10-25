@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.388 2010/10/01 21:00:53 bzfheinz Exp $
+# $Id: Makefile,v 1.389 2010/10/25 04:27:33 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -322,7 +322,7 @@ ALLSRC		+=	$(LPILIBSRC)
 
 NLPILIBCOBJ	= nlpi/nlpi.o \
 		  nlpi/nlpioracle.o \
-		  nlpi/expression.o \
+		  nlpi/expr.o \
 		  blockmemshell/memory.o \
 		  scip/misc.o \
 		  scip/intervalarith.o \
@@ -458,7 +458,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
-			scip/expression.o \
+			scip/expraddl.o \
 			scip/fileio.o \
 			scip/heur.o \
 			scip/history.o \

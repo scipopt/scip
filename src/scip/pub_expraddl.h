@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expression.h,v 1.1 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expraddl.h,v 1.1 2010/10/25 04:27:33 bzfviger Exp $"
 
-/**@file   scip/pub_expression.h
- * @brief  more methods for expressions and expression trees
+/**@file   scip/pub_expraddl.h
+ * @brief  additional methods for expressions and expression trees
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  *
@@ -33,7 +33,7 @@
 #include "scip/type_var.h"
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
-#include "nlpi/pub_expression.h"
+#include "nlpi/pub_expr.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret.h,v 1.6 2010/08/29 16:25:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret.h,v 1.7 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file   exprinterpret.h
  * @brief  methods to interpret (evaluate) an expression tree "fast"
@@ -35,7 +35,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "nlpi/type_expression.h"
+#include "nlpi/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
 #include "scip/intervalarith.h"
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.28 2010/09/28 10:13:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.29 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -24,7 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "nlpi/nlpioracle.h"
-#include "nlpi/pub_expression.h"
+#include "nlpi/pub_expr.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/pub_misc.h"
 

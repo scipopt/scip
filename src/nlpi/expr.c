@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.28 2010/09/27 18:34:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.1 2010/10/25 04:27:33 bzfviger Exp $"
 
-/**@file   nlpi/expression.c
+/**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -25,8 +25,8 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "nlpi/pub_expression.h"
-#include "nlpi/struct_expression.h"
+#include "nlpi/pub_expr.h"
+#include "nlpi/struct_expr.h"
 #include "nlpi/exprinterpret.h"
 
 #include "scip/intervalarith.h"

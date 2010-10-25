@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.25 2010/09/29 17:36:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.26 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -24,7 +24,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "nlpi/pub_expression.h"
+#include "nlpi/pub_expr.h"
 #include "nlpi/exprinterpret.h"
 
 #include <cmath>

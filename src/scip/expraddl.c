@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.13 2010/09/13 10:44:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: expraddl.c,v 1.1 2010/10/25 04:27:33 bzfviger Exp $"
 
-/**@file   scip/expression.c
- * @brief  more methods for expressions and expression trees
+/**@file   scip/expraddl.c
+ * @brief  additional methods for expressions and expression trees
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  *
@@ -30,7 +30,7 @@
 
 #include "scip/scip.h"
 
-#include "nlpi/struct_expression.h"
+#include "nlpi/struct_expr.h"
 
 /** translate from one value of infinity to another
  *

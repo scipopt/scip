@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.7 2010/09/06 17:38:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.8 2010/10/25 04:27:33 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -35,7 +35,7 @@
 #include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
-#include "nlpi/type_expression.h"
+#include "nlpi/type_expr.h"
 #include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus

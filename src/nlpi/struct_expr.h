@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expression.h,v 1.5 2010/09/06 10:51:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expr.h,v 1.1 2010/10/25 04:27:34 bzfviger Exp $"
 
 /**@file   struct_expression.h
  * @brief  data definitions for expressions and expression trees
@@ -26,7 +26,7 @@
 #define __SCIP_STRUCT_EXPRESSION_H__
 
 #include "scip/def.h"
-#include "nlpi/type_expression.h"
+#include "nlpi/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
 #include "blockmemshell/memory.h"
 
