@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.693 2010/10/07 19:58:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.694 2010/10/25 00:55:05 bzfgleix Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5219,7 +5219,7 @@ int SCIPgetNConss(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -5244,7 +5244,7 @@ SCIP_CONS** SCIPgetConss(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {

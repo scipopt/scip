@@ -1,6 +1,9 @@
 SCIP version NEXT
 ===============
 
+interface:
+- allow access of transformed constraints in SCIP_STAGE_TRANSFORMED
+
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
   this fixes timeouts on instances where devex converges very slowly
