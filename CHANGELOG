@@ -2,6 +2,7 @@ SCIP version NEXT
 ===============
 
 interface:
+- new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
 - allow access of transformed constraints in SCIP_STAGE_TRANSFORMED
 
 performance improvements:
@@ -36,9 +37,6 @@ parameters:
 - added parameter <misc/improvingsols> which state if only solution which have a better (or equal) primal bound 
   as the best know one are checked  is TRUE; this is of interest if the check of a solution is expensive; 
   default value is FALSE
-
-interface:
-- new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
 
 SCIP version 2.0.0
 ===============
