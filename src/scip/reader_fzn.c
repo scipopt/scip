@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.60 2010/09/28 21:18:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.61 2010/10/26 03:31:05 bzfheinz Exp $"
 
 /**@file   reader_fzn.c
  * @ingroup FILEREADERS 
@@ -38,13 +38,14 @@
 #include <ctype.h>
 
 #include "scip/cons_and.h"
+#include "scip/cons_cumulative.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_or.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_xor.h"
 #include "scip/pub_misc.h"
 #include "scip/reader_fzn.h"
@@ -678,6 +679,13 @@ SCIP_Bool getNextToken(
    assert(fzninput != NULL);
    assert(fzninput->bufpos < FZN_BUFFERLEN);
 
+   /* if the current line got marked as comment get the next line */
+   if( fzninput->comment && !getNextLine(fzninput) )
+   {
+      SCIPdebugMessage("(line %d) end of file\n", fzninput->linenumber);
+      return FALSE;
+   }
+   
    /* check the token stack */
    if( fzninput->npushedtokens > 0 )
    {
@@ -1760,6 +1768,20 @@ SCIP_RETCODE parseConstantArray(
    return SCIP_OKAY;
 }
 
+/** parse predicate expression */
+static
+SCIP_RETCODE parsePredicate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA*      readerdata,         /**< reader data */
+   FZNINPUT*             fzninput            /**< FZN reading data */
+   )
+{
+   /* mark predicate expression as comment such that it gets skiped */
+   fzninput->comment = TRUE;
+   
+   return SCIP_OKAY;
+}
+
 /** parse array expression */
 static
 SCIP_RETCODE parseArray(
@@ -2512,7 +2534,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       /* parse operand variable array */
       SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
          
-      /* check error and for the komma between the variable array and side value */
+      /* check error and for the comma between the variable array and side value */
       if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
       {
          if( hasError(fzninput) )            
@@ -2527,7 +2549,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 1) );
       resvar = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[0]);
          
-      /* check error and for the komma between the variable array and side value */
+      /* check error and for the comma between the variable array and side value */
       if( hasError(fzninput) || resvar == NULL )
       {
          if( hasError(fzninput) )            
@@ -2658,7 +2680,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       /* pares coefficients array */
       SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );  
 
-      /* check error and for the komma between the coefficient and variable array */
+      /* check error and for the comma between the coefficient and variable array */
       if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
       {
          if( !hasError(fzninput) )            
@@ -2670,7 +2692,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       /* pares variable array */
       SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
       
-      /* check error and for the komma between the variable array and side value */
+      /* check error and for the comma between the variable array and side value */
       if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
       {
          if( !hasError(fzninput) )            
@@ -2772,6 +2794,115 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    return SCIP_OKAY;
 }
    
+/** creates an alldifferent constraint */
+static
+CREATE_CONSTRAINT(createCumulativeOpCons)
+{  /*lint --e{715}*/
+   SCIP_CONS* cons;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   int* durations;
+   int* demands;
+   SCIP_Real val;
+   int capacity;
+   char assignment[FZN_BUFFERLEN];
+
+   int nvars;
+   int ndurations;
+   int ndemads;
+   int size;
+   int i;
+
+   assert(scip != NULL);
+   assert(fzninput != NULL);
+
+   /* check if the function identifier name is array operation */
+   if( !equalTokens(ftokens[0], "cumulative") )
+      return SCIP_OKAY;
+   
+   size = 10;
+   nvars = 0;
+   ndurations = 0;
+   ndemads = 0;
+
+   SCIPdebugMessage("parse cumulative expression\n");
+
+   /* pares start time variable array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
+   SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
+
+   /* check error and for the comma between the variable array and side value */
+   if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+   {
+      if( !hasError(fzninput) )            
+         syntaxError(scip, fzninput, "expected token <,>");
+      
+      goto TERMINATE;
+   }
+
+   /* pares job duration array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
+   SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &ndurations, size) );
+   
+   SCIP_CALL( SCIPallocBufferArray(scip, &durations, ndurations) );
+   for( i = 0; i < ndurations; ++i )
+      durations[i] = (int)vals[i];
+   
+   /* check error and for the comma between the variable array and side value */
+   if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+   {
+      if( !hasError(fzninput) )            
+         syntaxError(scip, fzninput, "expected token <,>");
+      
+      goto TERMINATE;
+   }
+
+   /* pares job demand array */
+   SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &ndemads, size) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &demands, ndemads) );
+   for( i = 0; i < ndemads; ++i )
+      demands[i] = (int)vals[i];
+
+   /* check error and for the comma between the variable array and side value */
+   if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+   {
+      if( !hasError(fzninput) )            
+         syntaxError(scip, fzninput, "expected token <,>");
+      
+      goto TERMINATE;
+   }
+
+   /* parse cumulative capacity */
+   flattenAssignment(scip, fzninput, assignment);
+   parseValue(scip, fzninput, &val, assignment);
+   capacity = (int)val;
+   
+   assert(nvars == ndurations);
+   assert(nvars == ndemads);
+
+   /* create cumulative constraint */
+   SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, fname, nvars, vars, durations, demands, capacity,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+   
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+   /* add and release the constraint to the problem */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   *created = TRUE;
+
+ TERMINATE:
+   /* free buffers */
+   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &durations);
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /* function pointer array containing all function which can create a constraint */
 static CREATE_CONSTRAINT((*constypes[])) =  {
    createCoercionOpCons,
@@ -2780,10 +2911,11 @@ static CREATE_CONSTRAINT((*constypes[])) =  {
    createArrayOpCons,
    createComparisonOpCons,
    createAlldifferentOpCons,
+   createCumulativeOpCons
 };
 
 /** size of the function pointer array */
-static int nconstypes = 6;
+static int nconstypes = 7;
 
 
 /** parse constraint expression */
@@ -2988,7 +3120,7 @@ SCIP_RETCODE parseSolveItem(
          /* pares coefficients array for integer variables */
          SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );  
       
-         /* check error and for the komma between the coefficient and variable array */
+         /* check error and for the comma between the coefficient and variable array */
          if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
          {
             if( !hasError(fzninput) )            
@@ -3000,7 +3132,7 @@ SCIP_RETCODE parseSolveItem(
          /* pares coefficients array for continuous variables */
          SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, MAX(size, nvals)) );  
          
-         /* check error and for the komma between the coefficient and variable array */
+         /* check error and for the comma between the coefficient and variable array */
          if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
          {
             if( !hasError(fzninput) )            
@@ -3012,7 +3144,7 @@ SCIP_RETCODE parseSolveItem(
          /* pares integer variable array */
          SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
 
-         /* check error and for the komma between the variable array and side value */
+         /* check error and for the comma between the variable array and side value */
          if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
          {
             if( !hasError(fzninput) )            
@@ -3090,7 +3222,12 @@ SCIP_RETCODE readFZNFile(
       /* read the first token (keyword) of a new statement */
       if( getNextToken(fzninput) )
       {  
-         if( equalTokens(fzninput->token, "array") )
+         if( equalTokens(fzninput->token, "predicate") )
+         {
+            /* parse array expression containing constants or variables */
+            SCIP_CALL( parsePredicate(scip, readerdata, fzninput) );
+         }
+         else if( equalTokens(fzninput->token, "array") )
          {
             /* parse array expression containing constants or variables */
             SCIP_CALL( parseArray(scip, readerdata, fzninput) );
@@ -3165,7 +3302,11 @@ SCIP_RETCODE readFZNFile(
          
          if( hasError(fzninput) )
             break;
-
+         
+         /* if the current statement got marked as comment continue with the next line */
+         if( fzninput->comment )
+            continue;
+         
          /* each statement should be closed with a semicolon */
          if( !getNextToken(fzninput) )
             syntaxError(scip, fzninput, "expected semicolon");

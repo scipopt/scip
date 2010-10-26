@@ -38,6 +38,9 @@ parameters:
   as the best know one are checked  is TRUE; this is of interest if the check of a solution is expensive; 
   default value is FALSE
 
+features:
+- flatzinc reader is now capable to read cumulative constraints
+
 SCIP version 2.0.0
 ===============
 
