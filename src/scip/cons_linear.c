@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.389 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.390 2010/10/26 03:15:52 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9555,7 +9555,7 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
          SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap, consmap, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
-   assert(cons != NULL);
+   assert(cons != NULL || *valid == FALSE);
 
    return SCIP_OKAY;
 }   
@@ -10386,8 +10386,15 @@ SCIP_RETCODE SCIPcopyConsLinear(
 
    if( nvars == 0 )
    {
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
+      if( SCIPisGT(scip, lhs, rhs) )
+      {
+         *valid = FALSE;
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
       return SCIP_OKAY;
    }
    
