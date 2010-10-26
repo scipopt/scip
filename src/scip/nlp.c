@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.32 2010/10/25 04:27:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.33 2010/10/26 22:36:16 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -2808,6 +2808,7 @@ SCIP_RETCODE SCIPnlrowPrint(
    /* print nonquadratic part */
    if( nlrow->exprtree != NULL )
    {
+      SCIPmessageFPrintInfo(file, " + ");
       SCIP_CALL( SCIPexprtreePrintWithNames(nlrow->exprtree, file) );
    }
 
