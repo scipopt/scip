@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.49 2010/10/02 15:18:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.50 2010/10/26 02:59:02 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -329,10 +329,10 @@ SCIP_RETCODE freeSubSCIP(
    assert(heurdata != NULL);
   
    assert(heurdata->subscip != NULL);
-   assert(heurdata->nlpstatistics != NULL);
    
    /* free NLP statistics */
-   SCIPnlpStatisticsFree(&heurdata->nlpstatistics);
+   if( heurdata->nlpstatistics != NULL )
+      SCIPnlpStatisticsFree(&heurdata->nlpstatistics);
    assert(heurdata->nlpstatistics == NULL);
   
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );
