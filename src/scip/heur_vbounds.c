@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_vbounds.c,v 1.1 2010/10/27 09:46:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_vbounds.c,v 1.2 2010/10/27 22:48:58 bzfheinz Exp $"
 
 /**@file   heur_vbounds.h
  * @ingroup PRIMALHEURISTICS
- * @brief  variable bound primal heuristic
+ * @brief  LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -33,9 +33,9 @@
 
 
 #define HEUR_NAME             "vbounds"
-#define HEUR_DESC             "primal heuristic template"
+#define HEUR_DESC             "LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood"
 #define HEUR_DISPCHAR         'V'
-#define HEUR_PRIORITY         10000
+#define HEUR_PRIORITY         -1106000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -309,28 +309,68 @@ static
 SCIP_RETCODE applyVbounds(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP_VAR**            probvars,           /**< variables to fix during probing */
    int                   nlbvars,            /**< number of variables to use the lower bound */
    int                   nubvars,            /**< number of variables to use the upper bound */
-   SCIP_Real             timelimit,          /**< timelimit for the subproblem                                   */        
-   SCIP_Real             memorylimit,        /**< memorylimit for the subproblem                                 */
-   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
-   SCIP_RESULT*          result              /**< result data structure */
+   SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_HEURDATA* heurdata;
+   SCIP_VAR** vars;
+   SCIP_Real timelimit;                      /* timelimit for the subproblem        */
+   SCIP_Real memorylimit;
+   SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
    SCIP_Bool infeasible;
+   int nvars;
    
    assert(heur != NULL);
+   assert(heurdata != NULL);
 
    /* initialize default values */
    infeasible = FALSE;
+
+   /* get variable data of original problem */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    
+   if( nlbvars + nubvars < nvars * heurdata->minfixingrate )
+      return SCIP_OKAY;
+
+   assert(nlbvars + nubvars > 0);
+
+   /* calculate the maximal number of branching nodes until heuristic is aborted */
+   nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+   
+   /* reward variable bounds heuristic if it succeeded often */
+   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   nstallnodes += heurdata->nodesofs;
+
+   /* determine the node limit for the current process */
+   nstallnodes -= heurdata->usednodes;
+   nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
+
+   /* check whether we have enough nodes left to call subproblem solving */
+   if( nstallnodes < heurdata->minnodes )
+   {
+      SCIPdebugMessage("skipping "HEUR_NAME": nstallnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->minnodes);
+      return SCIP_OKAY;
+   }
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if( !SCIPisInfinity(scip, memorylimit) )   
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+   if( timelimit < 10.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("apply variable bounds heuristic at node %lld on %d variable lower bound and %d variable upper bounds\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nlbvars, nubvars);
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -342,19 +382,15 @@ SCIP_RETCODE applyVbounds(
    if( !infeasible )
    {
       SCIP* subscip; 
-      SCIP_VAR** vars;
       SCIP_VAR** subvars;
       SCIP_HASHMAP* varmap;
       SCIP_Bool valid;
-      int nvars;
       int i;
 
       valid = FALSE;
       
       SCIPinfoMessage(scip, NULL, "-----------subscip is needed-------------\n");
 
-      /* get variable data of original problem */
-      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
          
       /* create subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
@@ -431,7 +467,7 @@ SCIP_RETCODE applyVbounds(
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifndef NDEBUG
+#ifdef NDEBUG
       {
          SCIP_RETCODE retstat;
          retstat = SCIPpresolve(subscip);
@@ -457,7 +493,7 @@ SCIP_RETCODE applyVbounds(
 
          SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->maxnodes);
          
-#ifndef NDEBUG
+#ifdef NDEBUG
          {
             SCIP_RETCODE retstat;
             retstat = SCIPsolve(subscip);
@@ -586,11 +622,7 @@ static
 SCIP_DECL_HEUREXEC(heurExecVbounds)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_Real timelimit;                      /* timelimit for the subproblem        */
-   SCIP_Real memorylimit;
-   SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
-   int nvars;
-
+   
    assert( heur != NULL );
    assert( scip != NULL );
    assert( result != NULL );
@@ -603,38 +635,6 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* calculate the maximal number of branching nodes until heuristic is aborted */
-   nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
-   
-   /* reward variable bounds heuristic if it succeeded often */
-   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
-   nstallnodes += heurdata->nodesofs;
-
-   /* determine the node limit for the current process */
-   nstallnodes -= heurdata->usednodes;
-   nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
-
-   /* check whether we have enough nodes left to call subproblem solving */
-   if( nstallnodes < heurdata->minnodes )
-   {
-      SCIPdebugMessage("skipping "HEUR_NAME": nstallnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->minnodes);
-      return SCIP_OKAY;
-   }
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if( !SCIPisInfinity(scip, memorylimit) )   
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit < 10.0 || memorylimit <= 0.0 )
-      return SCIP_OKAY;
-
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
    if( !heurdata->initialized )
    {
       SCIP_CALL( initCandLists(scip, heurdata) );
@@ -642,30 +642,17 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
    
    if( !heurdata->applicable )
       return SCIP_OKAY;
-
+   
    *result = SCIP_DIDNOTFIND;
-   nvars = SCIPgetNVars(scip);
 
    /* try variable lower bounds */
-   if( heurdata->nlbvars >= heurdata->minfixingrate * nvars )
-   {
-      SCIP_CALL( applyVbounds(scip, heur, heurdata->lbvars, heurdata->nlbvars, 0, timelimit, memorylimit, nstallnodes, result) );
-   }
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->lbvars, heurdata->nlbvars, 0, result) );
 
    /* try variable upper bounds */
-   if( heurdata->nubvars >= heurdata->minfixingrate * nvars )
-   {
-      SCIP_CALL( applyVbounds(scip, heur, heurdata->ubvars, 0, heurdata->nubvars, timelimit, memorylimit, nstallnodes, result) );
-   }
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->ubvars, 0, heurdata->nubvars, result) );
 
    /* try variable lower and upper bounds which respect to objective coefficients */
-   
-   /* call heuristic */
-   if( heurdata->nlbimpvars + heurdata->nubimpvars >= heurdata->minfixingrate * nvars )
-   {
-      SCIP_CALL( applyVbounds(scip, heur, heurdata->impvars, heurdata->nlbimpvars, heurdata->nubimpvars, timelimit, memorylimit, nstallnodes, result) );
-   }
-
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->impvars, heurdata->nlbimpvars, heurdata->nubimpvars, result) );
    
    return SCIP_OKAY;
 }
