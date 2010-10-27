@@ -40,6 +40,7 @@ parameters:
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
+- new heuristic vbounds which use the variables lower and upper bounds to fix variable and performs a neighborhood search
 
 SCIP version 2.0.0
 ===============
