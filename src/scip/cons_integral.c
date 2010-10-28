@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.57 2010/09/25 18:27:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.58 2010/10/28 17:31:23 bzfwinkm Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -178,7 +178,11 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    if( checkintegrality )
    {
-      for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
+      int ninteger;
+
+      ninteger = nbin + nint;
+
+      for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
          if( !SCIPisFeasIntegral(scip, solval) )
@@ -190,6 +194,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
                SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
                   SCIPvarGetName(vars[v]), solval);
             }
+            break;
          }
       }
    }

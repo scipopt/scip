@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.65 2010/10/04 11:48:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.66 2010/10/28 17:31:23 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1253,7 +1253,9 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool issoftcons;
    SCIP_Real weight;
 
+   assert(scip != NULL);
    assert(opbinput != NULL);
+   assert(nNonlinearConss != NULL);
    
    weight = -SCIPinfinity(scip);
 
@@ -1285,7 +1287,8 @@ SCIP_RETCODE readConstraints(
          {
             assert(ncoefs == 1);
             opbinput->topcost = coefs[0];
-         } SCIPdebugMessage("Weighted Boolean Optimization problem has topcost of %g\n", opbinput->topcost);
+         } 
+         SCIPdebugMessage("Weighted Boolean Optimization problem has topcost of %g\n", opbinput->topcost);
       }
       else if( ncoefs > 0 )
          syntaxError(scip, opbinput, "expected constraint sense '=' or '>='");
@@ -1324,10 +1327,10 @@ SCIP_RETCODE readConstraints(
    /* check if we reached the line end */
    if( !getNextToken(opbinput) || !isEndLine(opbinput) )
    {
-  	  /*
-      *(opbinput->token) = '\0';
-      *(opbinput->tokenbuf) = '\0';
-      */
+      /*
+       *(opbinput->token) = '\0';
+       *(opbinput->tokenbuf) = '\0';
+       */
       syntaxError(scip, opbinput, "expected endline character ';'");
       goto TERMINATE;
    }
@@ -1543,7 +1546,7 @@ SCIP_RETCODE readConstraints(
          if( created )
          {
             /* we have already created one indicator constraint with the same indicator variable */
-            SCIP_CALL( SCIPaddCons(scip, cons) );  /*lint !e644*/
+            SCIP_CALL( SCIPaddCons(scip, cons) ); /*lint !e644*/
             SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1620,6 +1623,9 @@ SCIP_RETCODE getMaxAndConsDim(
    char* commentstart;
    char* nproducts;
    int i;
+
+   assert(scip != NULL);
+   assert(opbinput != NULL);
 
    stop = FALSE;
    commentstart = NULL;
@@ -1705,6 +1711,7 @@ SCIP_RETCODE readOPBFile(
    int nNonlinearConss;
    int i;
 
+   assert(scip != NULL);
    assert(opbinput != NULL);
    
    /* open file */
@@ -2049,7 +2056,7 @@ SCIP_RETCODE computeAndConstraintInfos(
                
                /* try to resolve containing ands */
                (*nandvars)[r] = (*nandvars)[r] + (*nandvars)[pos] - 1;
-               SCIP_CALL( SCIPreallocMemoryArray(scip, &((*andvars)[r]), (*nandvars)[r]) );  /*lint !e866 */
+               SCIP_CALL( SCIPreallocMemoryArray(scip, &((*andvars)[r]), (*nandvars)[r]) ); /*lint !e866 */
                
                for( a = (*nandvars)[pos] - 1; a >= 0; --a )
                   (*andvars)[r][(*nandvars)[r] - a - 1] = (*andvars)[pos][a];
@@ -2149,7 +2156,7 @@ SCIP_RETCODE writeOpbObjective(
    int const*const       nandvars,           /**< array of numbers of corresponding and-variables */
    SCIP_OBJSENSE const   objsense,           /**< objective sense */
    SCIP_Real const       objscale,           /**< scalar applied to objective function; external objective value is
-					     extobj = objsense * objscale * (intobj + objoffset) */
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real const       objoffset,          /**< objective offset from bound shifting and fixing */
    char const*const      multisymbol,        /**< the multiplication symbol to use between coefficient and variable */
    SCIP_Bool const       existands,          /**< does some and-constraints exist? */
@@ -2567,13 +2574,12 @@ SCIP_RETCODE printLinearCons(
    const char*           multisymbol         /**< the multiplication symbol to use between coefficient and variable */
    )
 {
-   int v;
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
    int nactivevars;
-   SCIP_Real activeconstant = 0.0;
+   SCIP_Real activeconstant;
    SCIP_Longint mult;
-
+   int v;
 
    assert( scip != NULL );
    assert( vars != NULL );
@@ -2582,6 +2588,8 @@ SCIP_RETCODE printLinearCons(
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
+
+   activeconstant = 0.0;
    
    /* duplicate variable and value array */
    nactivevars = nvars;
@@ -2619,7 +2627,6 @@ SCIP_RETCODE printLinearCons(
          printRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, &mult, multisymbol);
       }
 
-      
       if( !SCIPisInfinity(scip, rhs) )
       {
          mult *= -1;
@@ -2836,7 +2843,7 @@ static
 SCIP_RETCODE writeOpbRelevantAnds(
    SCIP*const            scip,               /**< SCIP data structure */
    FILE*const            file,               /**< output file, or NULL if standard output should be used */
-   SCIP_VAR** const      resvars,            /**< array of resultant variables */
+   SCIP_VAR**const       resvars,            /**< array of resultant variables */
    int const             nresvars,           /**< number of resultant variables */
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
    int const*const       nandvars,           /**< array of numbers of corresponding and-variables */
