@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_vbounds.c,v 1.3 2010/10/29 02:28:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_vbounds.c,v 1.4 2010/10/29 03:13:34 bzfheinz Exp $"
 
 /**@file   heur_vbounds.c
  * @ingroup PRIMALHEURISTICS
@@ -50,6 +50,13 @@
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_MAXPROPROUNDS 2         /* maximum number of propagation rounds during probing */
 
+/* enable statistic output by defining macro STATISTIC_INFORMATION */
+#ifdef STATISTIC_INFORMATION
+#define STATISTIC(x)                x 
+#else
+#define STATISTIC(x)             /**/
+#endif
+
 /*
  * Data structures
  */
@@ -79,6 +86,35 @@ struct SCIP_HeurData
 };
 
 /*
+ * Hash map callback methods
+ */
+
+/** hash key retrieval function for variables */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyVar)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the indices of both variables are equal */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
+{  /*lint --e{715}*/
+   if ( key1 == key2 )
+      return TRUE;
+   return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValVar)
+{  /*lint --e{715}*/
+   assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
+   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
+}
+
+
+/*
  * Local methods
  */
 
@@ -101,7 +137,7 @@ void heurdataReset(
 
 /** initialitze candidate lists */
 static
-SCIP_RETCODE initCandLists(
+SCIP_RETCODE initializeCandsLists(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< structure containing heurdata */
    )
@@ -111,6 +147,7 @@ SCIP_RETCODE initCandLists(
    SCIP_VAR** lbvars;
    SCIP_VAR** ubvars;
    SCIP_VAR** impvars;
+   SCIP_HASHTABLE* collectedvars;
    int nallvars;
    int nvars;
    int nlbvars;
@@ -141,11 +178,16 @@ SCIP_RETCODE initCandLists(
    /* create the topological sorted variable array with respect to the variable upper bounds */
    SCIP_CALL( SCIPcreateTopoSortedVars(scip, allvars, nallvars, NULL, vars, &nvars, ubvars, &nubvars, FALSE) );
    
+   /* create hash table for variables whcih are alreadz collected */
+   SCIP_CALL( SCIPhashtableCreate(&collectedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(nallvars), hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+
    /* collect variables which improve the objective by fixing them to suggested bound  */
    for( v = 0; v < nlbvars; ++v )
    {
       if( SCIPisGE(scip, SCIPvarGetObj(lbvars[v]), 0.0) )
       {
+         SCIPhashtableInsert(collectedvars, lbvars[v]);
+         assert(nlbimpvars < nallvars);
          impvars[nlbimpvars] = lbvars[v];
          nlbimpvars++;
       }
@@ -153,12 +195,16 @@ SCIP_RETCODE initCandLists(
 
    for( v = 0; v < nubvars; ++v )
    {
-      if( SCIPisLE(scip, SCIPvarGetObj(ubvars[v]), 0.0) )
+      if( SCIPisLE(scip, SCIPvarGetObj(ubvars[v]), 0.0) && !SCIPhashtableExists(collectedvars, ubvars[v])  )
       {
+         assert(nlbimpvars + nubimpvars < nallvars);
          impvars[nlbimpvars + nubimpvars] = ubvars[v];
          nubimpvars++;
       }
    }
+   
+   /* free hash table */
+   SCIPhashtableFree(&collectedvars);
 
    /* check if the candidate lists contain enough candidates */
    if( nlbvars >= heurdata->minfixingrate * nallvars )
@@ -185,7 +231,7 @@ SCIP_RETCODE initCandLists(
          SCIP_CALL( SCIPcaptureVar(scip, heurdata->ubvars[v]) );
       }
    }
-   if( nlbimpvars + nubimpvars >= heurdata->minfixingrate * nallvars )
+   if( nlbvars > nlbimpvars && nubvars > nubimpvars && nlbimpvars + nubimpvars >= heurdata->minfixingrate * nallvars )
    {
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->impvars, impvars, nlbimpvars + nubimpvars) );
       heurdata->nlbimpvars = nlbimpvars;
@@ -208,7 +254,14 @@ SCIP_RETCODE initCandLists(
    /* initialize data */
    heurdata->usednodes = 0;
    heurdata->initialized = TRUE;
-   
+
+   STATISTIC(
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "lbvars %.3g\%, ubvars %.3g\%, impvars %.3g\% (%s)\n", 
+         (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars, 
+         ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
+      )
+      
    return SCIP_OKAY;
 }
 
@@ -389,9 +442,6 @@ SCIP_RETCODE applyVbounds(
 
       valid = FALSE;
       
-      SCIPinfoMessage(scip, NULL, "-----------subscip is needed-------------\n");
-
-         
       /* create subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
       
@@ -637,7 +687,7 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
 
    if( !heurdata->initialized )
    {
-      SCIP_CALL( initCandLists(scip, heurdata) );
+      SCIP_CALL( initializeCandsLists(scip, heurdata) );
    }
    
    if( !heurdata->applicable )
@@ -645,15 +695,15 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
    
    *result = SCIP_DIDNOTFIND;
 
+   /* try variable lower and upper bounds which respect to objective coefficients */
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->impvars, heurdata->nlbimpvars, heurdata->nubimpvars, result) );
+   
    /* try variable lower bounds */
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->lbvars, heurdata->nlbvars, 0, result) );
 
    /* try variable upper bounds */
    SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->ubvars, 0, heurdata->nubvars, result) );
 
-   /* try variable lower and upper bounds which respect to objective coefficients */
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->impvars, heurdata->nlbimpvars, heurdata->nubimpvars, result) );
-   
    return SCIP_OKAY;
 }
 
