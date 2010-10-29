@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.214 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.215 2010/10/29 10:42:47 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -5008,6 +5008,34 @@ SCIP_RETCODE tightenWeightsLift(
       ++tmp3;
 
       /* initialize the arrays of inserted zero items */
+      /* first add the implications (~x == 1 -> x == 0) */
+      {
+         SCIP_Bool implvalue;
+         int probindex;
+
+         probindex = SCIPvarGetProbindex(var);
+         assert(0 <= probindex && probindex < nbinvars);
+         
+	 implvalue = !value;
+            
+         /* insert the item into the list of the implied variable/value */
+         assert( !zeroiteminserted[implvalue][probindex] );
+            
+         if( firstidxs[implvalue][probindex] == 0 )
+         {
+            tmpboolindices2[tmp2] = implvalue;
+            tmpindices2[tmp2] = probindex;
+            ++tmp2;
+         }
+         SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
+               &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
+               &memlimitreached) );
+         zeroiteminserted[implvalue][probindex] = TRUE;
+         tmpboolindices[tmp] = implvalue;
+         tmpindices[tmp] = probindex;
+         ++tmp;
+      }
+
       /* get implications of the knapsack item fixed to one: x == 1 -> y == (1-v);
        * the negation of these implications (y == v -> x == 0) are the ones that we are interested in
        */
@@ -5023,6 +5051,9 @@ SCIP_RETCODE tightenWeightsLift(
          assert(SCIPvarIsBinary(implvars[j]));
          probindex = SCIPvarGetProbindex(implvars[j]);
          assert(probindex < nbinvars);
+
+         /* this assert should hold, but if not there is a old continue later on */
+         assert(probindex >= 0);
 
          /* consider only implications with active implvar */
          if( probindex < 0 )

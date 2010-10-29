@@ -8,6 +8,7 @@ interface:
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
   this fixes timeouts on instances where devex converges very slowly
+- fixing lifting of new knapsack items which are negated items of already included items, this could lead to very long presolving
 
 fixed bugs:
 - fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
