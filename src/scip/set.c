@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.260 2010/10/07 21:03:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.261 2010/10/29 11:07:00 bzfwinkm Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1541,6 +1541,16 @@ SCIP_RETCODE SCIPsetFree(
    BMSfreeMemory(set);
 
    return SCIP_OKAY;
+}
+
+/** returns current stage of SCIP */
+SCIP_STAGE SCIPsetGetStage(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->stage;
 }
 
 /** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set */

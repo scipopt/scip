@@ -25,6 +25,7 @@ fixed bugs:
 - fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
 - fixed bug in heur_shiftandpropagate where some variables were initialized too late
+- fixed bug in cons.c which didn't allow the changing of the separation and enforcement flag of a constraint in the problem stage
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint

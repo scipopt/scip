@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.134 2010/09/27 14:37:11 bzfschwa Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.135 2010/10/29 11:07:00 bzfwinkm Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -104,6 +104,12 @@ extern
 SCIP_RETCODE SCIPsetFree(
    SCIP_SET**            set,                /**< pointer to SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** returns current stage of SCIP */
+extern
+SCIP_STAGE SCIPsetGetStage(
+   SCIP_SET*             set                 /**< pointer to SCIP settings */
    );
 
 /** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set */
