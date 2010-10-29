@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.360.2.1 2010/10/07 10:03:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.360.2.2 2010/10/29 15:10:03 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and data structures
@@ -12268,7 +12268,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable 
           * FASTMIP and solve again.
           */
-         if( set->nactivepricers > 0 && (set->lp_fastmip > 0) && lp->lpihasfastmip )
+         if( !SCIPprobAllColsInLP(prob, set, lp) && (set->lp_fastmip > 0) && lp->lpihasfastmip )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
