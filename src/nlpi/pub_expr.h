@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expr.h,v 1.1 2010/10/25 04:27:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expr.h,v 1.2 2010/10/29 02:28:04 bzfviger Exp $"
 
-/**@file   nlpi/pub_expression.h
+/**@file   nlpi/pub_expr.h
  * @brief  methods for expressions and expression trees
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

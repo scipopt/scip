@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_vbounds.c,v 1.2 2010/10/27 22:48:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_vbounds.c,v 1.3 2010/10/29 02:28:04 bzfviger Exp $"
 
-/**@file   heur_vbounds.h
+/**@file   heur_vbounds.c
  * @ingroup PRIMALHEURISTICS
  * @brief  LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood
  * @author Timo Berthold

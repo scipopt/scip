@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expr.h,v 1.1 2010/10/25 04:27:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expr.h,v 1.2 2010/10/29 02:28:04 bzfviger Exp $"
 
-/**@file   struct_expression.h
+/**@file   struct_expr.h
  * @brief  data definitions for expressions and expression trees
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

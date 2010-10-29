@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expr.h,v 1.1 2010/10/25 04:27:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expr.h,v 1.2 2010/10/29 02:28:04 bzfviger Exp $"
 
-/**@file   type_expression.h
+/**@file   type_expr.h
  * @brief  type definitions for expressions and expression trees
  * @ingroup TYPEDEFINITIONS
  * @author Stefan Vigerske
