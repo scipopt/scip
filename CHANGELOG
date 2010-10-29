@@ -26,6 +26,7 @@ fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
 - fixed bug in heur_shiftandpropagate where some variables were initialized too late
 - fixed bug in cons.c which didn't allow the changing of the separation and enforcement flag of a constraint in the problem stage
+- fixed bug in lp.c where in case of objlimit reached and fastmip not all variables where priced because of an incorrect dual solution
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
