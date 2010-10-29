@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.61 2010/10/26 03:31:05 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.62 2010/10/29 03:17:19 bzfheinz Exp $"
 
 /**@file   reader_fzn.c
  * @ingroup FILEREADERS 
@@ -3503,12 +3503,12 @@ SCIP_RETCODE printRow(
    {
       if( hasfloats )
       {
-         flattenFloat(scip,vals[v],buffy);
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s, ",buffy);
+         flattenFloat(scip,vals[v], buffy);
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s, ", buffy);
       }
       else
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f, ",vals[v]);
-      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f, ", vals[v]);
+      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), buffer) );
    }
 
    /* print last coefficient */
@@ -3517,12 +3517,12 @@ SCIP_RETCODE printRow(
       if( hasfloats )
       {
          flattenFloat(scip,vals[nvars-1],buffy);
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",buffy);
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s", buffy);
       }
       else
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f",vals[nvars-1]);
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f", vals[nvars-1]);
 
-      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
+      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), buffer) );
    }   
 
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "], [") );
@@ -3537,7 +3537,7 @@ SCIP_RETCODE printRow(
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s, ", SCIPvarGetName(var), SCIPvarGetProbindex(var) < fznoutput->ndiscretevars ? "_float" : "");
       else
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s, ", SCIPvarGetName(var) );
-      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
+      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), buffer) );
    }
 
    /* print last variable */
@@ -3717,7 +3717,7 @@ SCIP_RETCODE writeFzn(
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE      objsense,           /**< objective sense */
    SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-					     extobj = objsense * objscale * (intobj + objoffset) */
+	 				   *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
@@ -3865,10 +3865,10 @@ SCIP_RETCODE writeFzn(
    fznoutput.consbufferpos = 0;
    fznoutput.castbufferpos = 0;
    
-   SCIP_CALL( SCIPallocBufferArray(scip,&fznoutput.varhasfloat,ndiscretevars) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&fznoutput.varbuffer,FZN_BUFFERLEN) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&fznoutput.castbuffer,FZN_BUFFERLEN) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&fznoutput.consbuffer,FZN_BUFFERLEN) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.varhasfloat, ndiscretevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.varbuffer, FZN_BUFFERLEN) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.castbuffer, FZN_BUFFERLEN) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.consbuffer, FZN_BUFFERLEN) );
    fznoutput.consbufferlen = FZN_BUFFERLEN;
    fznoutput.varbufferlen = FZN_BUFFERLEN;
    fznoutput.castbufferlen = FZN_BUFFERLEN;
@@ -3968,6 +3968,56 @@ SCIP_RETCODE writeFzn(
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
       }
+      else if(  strcmp(conshdlrname, "cumualtaive") == 0 )
+      {
+         int* intvals;
+         
+         consvars = SCIPgetVarsCumulative(scip, cons);
+         nconsvars = SCIPgetNVarsCumulative(scip, cons);
+         
+         SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), "cumulative([") );
+         
+         for( v = 0; v < nconsvars; ++v )
+         {
+            if( v < nconsvars - 1)
+               (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s, ", SCIPvarGetName(consvars[v]) );
+            else
+               (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(consvars[v]) );
+
+            SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), varname) );
+         }
+
+         SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), "], [") );
+         
+         intvals = SCIPgetDurationsCumulative(scip, cons);
+         
+         for( v = 0; v < nconsvars; ++v )
+         {
+            if( v < nconsvars - 1)
+               (void) SCIPsnprintf(buffy, SCIP_MAXSTRLEN, "%d, ", intvals[v] );
+            else
+               (void) SCIPsnprintf(buffy, SCIP_MAXSTRLEN, "%d", intvals[v] );
+
+            SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), buffy) );
+         }
+         
+         SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), "], [") );
+
+         intvals = SCIPgetDemandsCumulative(scip, cons);
+         
+         for( v = 0; v < nconsvars; ++v )
+         {
+            if( v < nconsvars - 1)
+               (void) SCIPsnprintf(buffy, SCIP_MAXSTRLEN, "%d, ", intvals[v] );
+            else
+               (void) SCIPsnprintf(buffy, SCIP_MAXSTRLEN, "%d", intvals[v] );
+
+            SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), buffy) );
+         }
+         (void) SCIPsnprintf(buffy, SCIP_MAXSTRLEN, "], %d);\n", SCIPgetCapacityCumulative(scip, cons) );
+
+         SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), buffy) );
+      }
       else
       {
          SCIPwarningMessage("constraint handler <%s> can not print flatzinc format\n", conshdlrname );
@@ -3989,7 +4039,7 @@ SCIP_RETCODE writeFzn(
 
       if( !SCIPisZero(scip,obj) )
       {
-         /* Only discrete variables with integral objective coefficient will be put to the int part of the objective */
+         /* only discrete variables with integral objective coefficient will be put to the int part of the objective */
          if( v < ndiscretevars && SCIPisIntegral(scip, objscale*obj) )
          {
             intobjvars[nintobjvars] = v;
