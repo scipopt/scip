@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.215 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.215.2.1 2010/10/29 11:03:56 bzfwinkm Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4976,7 +4976,11 @@ SCIP_RETCODE SCIPconsSetSeparated(
 
    if( cons->separate != separate )
    {
-      if( cons->enabled && cons->sepaenabled )
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
+      {
+         cons->separate = separate;
+      }
+      else if( cons->enabled && cons->sepaenabled )
       {
          if( separate )
          {
@@ -5005,7 +5009,11 @@ SCIP_RETCODE SCIPconsSetEnforced(
 
    if( cons->enforce != enforce )
    {
-      if( cons->enabled )
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
+      {
+         cons->enforce = enforce;
+      }
+      else if( cons->enabled )
       {
          if( enforce )
          {
