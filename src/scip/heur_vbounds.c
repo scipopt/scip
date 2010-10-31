@@ -12,7 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_vbounds.c,v 1.4 2010/10/29 03:13:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_vbounds.c,v 1.5 2010/10/31 02:18:50 bzfheinz Exp $"
+
+#define STATISTIC_INFORMATION
+#define SCIP_DEBUG
 
 /**@file   heur_vbounds.c
  * @ingroup PRIMALHEURISTICS
@@ -39,7 +42,7 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
@@ -273,9 +276,12 @@ SCIP_RETCODE applyVboundsFixings(
    SCIP_VAR**            vars,               /**< variables to fix during probing */
    int                   nlbvars,            /**< number of variables to use the lower bound */
    int                   nubvars,            /**< number of variables to use the upper bound */
-   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
+   SCIP_SOL*             sol,                /**< working solution */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
+   SCIP_RESULT*          result              /**< pointer to store the result (solution founbd) */
    )
 {
+   SCIP_Bool success;
    int v;
 
    /* for each variable in topological order: start at best bound (MINIMIZE: neg coeff --> ub, pos coeff: lb) */
@@ -293,17 +299,44 @@ SCIP_RETCODE applyVboundsFixings(
       {
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, vars[v], SCIPvarGetLbLocal(vars[v])) );
-         SCIPdebugMessage("fix variable <%s> to lower bound\n", SCIPvarGetName(vars[v]));
+         SCIPdebugMessage("fixing %d: variable <%s> to lower bound <%g> (%d pseudo conds)\n", 
+            v, SCIPvarGetName(vars[v]), SCIPvarGetLbLocal(vars[v]), SCIPgetNPseudoBranchCands(scip));
       }
       else
       {
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, vars[v], SCIPvarGetUbLocal(vars[v])) );
-         SCIPdebugMessage("fix variable <%s> to upper bound\n", SCIPvarGetName(vars[v]));
+         SCIPdebugMessage("fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n", 
+            v, SCIPvarGetName(vars[v]), SCIPvarGetUbLocal(vars[v]), SCIPgetNPseudoBranchCands(scip));
       }
 
       /* check if problem is already infeasible */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
+
+      if( !(*infeasible) )
+      {
+         /* create solution from probing run and try to round it */
+         SCIP_CALL( SCIPlinkCurrentSol(scip, sol) );
+         SCIP_CALL( SCIProundSol(scip, sol, &success) );
+
+         if( success )
+         {
+            SCIPdebugMessage("vbound heuristic found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
+            
+            /* try to add solution to SCIP */
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &success) );
+            
+            /* check, if solution was feasible and good enough */
+            if( success )
+            {
+               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               *result = SCIP_FOUNDSOL;
+               
+               if( SCIPisStopped(scip) )
+                  break;
+            }
+         }
+      }
    }
 
    SCIPdebugMessage("probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
@@ -317,7 +350,7 @@ SCIP_RETCODE createNewSol(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< RENS heuristic structure                            */
+   SCIP_SOL*             newsol,             /**< working solution */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
@@ -325,7 +358,6 @@ SCIP_RETCODE createNewSol(
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
         
    assert( scip != NULL );
    assert( subscip != NULL );
@@ -345,12 +377,10 @@ SCIP_RETCODE createNewSol(
    /* copy the solution */
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
        
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -370,6 +400,7 @@ SCIP_RETCODE applyVbounds(
    )
 {
    SCIP_VAR** vars;
+   SCIP_SOL* newsol;
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
@@ -428,8 +459,11 @@ SCIP_RETCODE applyVbounds(
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
+   /* create temporary solution */
+   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+
    /* apply the variable fixings */
-   SCIP_CALL( applyVboundsFixings(scip, heurdata, probvars, nlbvars, nubvars, &infeasible ) );
+   SCIP_CALL( applyVboundsFixings(scip, heurdata, probvars, nlbvars, nubvars, newsol, &infeasible, result) );
 
    /* if a solution has been found --> fix all other variables by subscip if necessary */
    if( !infeasible )
@@ -565,7 +599,7 @@ SCIP_RETCODE applyVbounds(
 
          for( i = 0; i < nsubsols && !success; ++i )
          {
-            SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+            SCIP_CALL( createNewSol(scip, subscip, subvars, newsol, subsols[i], &success) );
          }
          if( success )
             *result = SCIP_FOUNDSOL;
@@ -580,6 +614,9 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPfree(&subscip) );
    }
 
+   /* free solution */
+   SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+   
    /* exit probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
    
