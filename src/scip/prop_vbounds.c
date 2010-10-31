@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.12 2010/09/27 17:20:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.13 2010/10/31 02:27:50 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -761,14 +761,6 @@ SCIP_DECL_PROPINITSOL(propInitsolVbounds)
    {
       SCIP_CALL( SCIPcaptureVar(scip, propdata->vars[v]) );
    }
-   for( v = 0; v < propdata->nlbvars; ++v )
-   {
-      SCIP_CALL( SCIPcaptureVar(scip, propdata->lbvars[v]) );
-   }
-   for( v = 0; v < propdata->nubvars; ++v )
-   {
-      SCIP_CALL( SCIPcaptureVar(scip, propdata->ubvars[v]) );
-   }
 
    /* catch variable events */
    SCIP_CALL( catchEvents(scip, propdata) );
@@ -797,14 +789,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    for( v = 0; v < propdata->nvars; ++v )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &propdata->vars[v]) );
-   }
-   for( v = 0; v < propdata->nlbvars; ++v )
-   {
-      SCIP_CALL( SCIPreleaseVar(scip, &propdata->lbvars[v]) );
-   }
-   for( v = 0; v < propdata->nubvars; ++v )
-   {
-      SCIP_CALL( SCIPreleaseVar(scip, &propdata->ubvars[v]) );
    }
 
    /* free hash map */
@@ -987,7 +971,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
          assert(vbvars[i] != NULL);
          if( !SCIPhashtableExists(connected, vbvars[i]) )
          {
-            SCIP_CALL( SCIPhashtableSafeInsert(connected, vbvars[i]) );
+            SCIP_CALL( SCIPhashtableInsert(connected, vbvars[i]) );
          }
       }
    }
