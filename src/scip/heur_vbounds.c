@@ -12,10 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_vbounds.c,v 1.5 2010/10/31 02:18:50 bzfheinz Exp $"
-
-#define STATISTIC_INFORMATION
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: heur_vbounds.c,v 1.6 2010/10/31 05:18:44 bzfheinz Exp $"
 
 /**@file   heur_vbounds.c
  * @ingroup PRIMALHEURISTICS
