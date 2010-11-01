@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.443 2010/10/25 04:27:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.444 2010/11/01 04:04:20 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -3595,6 +3595,14 @@ SCIP_RETCODE SCIPprintVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** writes variable bound graph to file */
+extern
+SCIP_RETCODE SCIPwriteVarsVboundGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             lowerbound          /**< variable lower bounds? (otherwise variable upper bounds) */
    );
 
 /**@} */

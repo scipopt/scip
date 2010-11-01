@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.305 2010/10/07 10:09:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.306 2010/11/01 04:04:21 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9192,6 +9192,27 @@ int SCIPvarCompare(
 SCIP_DECL_SORTPTRCOMP(SCIPvarComp)
 {
    return SCIPvarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
+}
+
+/** hash key retrieval function for variables */
+SCIP_DECL_HASHGETKEY(SCIPvarGetHashkey)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the indices of both variables are equal */
+SCIP_DECL_HASHKEYEQ(SCIPvarIsHashkeyEq)
+{  /*lint --e{715}*/
+   if ( key1 == key2 )
+      return TRUE;
+   return FALSE;
+}
+
+/** returns the hash value of the key */
+SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal)
+{  /*lint --e{715}*/
+   assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
+   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
 
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable

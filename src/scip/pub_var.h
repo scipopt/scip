@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.82 2010/08/16 16:56:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.83 2010/11/01 04:04:20 bzfheinz Exp $"
 
 /**@file   pub_var.h
  * @ingroup PUBLICMETHODS
@@ -101,6 +101,18 @@ int SCIPvarCompare(
 /** comparison method for sorting variables by non-decreasing index */
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPvarComp);
+
+/** hash key retrieval function for variables */
+extern
+SCIP_DECL_HASHGETKEY(SCIPvarGetHashkey);
+
+/** returns TRUE iff the indices of both variables are equal */
+extern
+SCIP_DECL_HASHKEYEQ(SCIPvarIsHashkeyEq);
+
+/** returns the hash value of the key */
+extern
+SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal);
 
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 extern
