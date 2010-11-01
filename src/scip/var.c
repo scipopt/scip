@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.306 2010/11/01 04:04:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.307 2010/11/01 11:07:59 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3693,23 +3693,16 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, FALSE) );
       assert( multrequiredsize <= multvarssize );
    }
-   /**@note After the flattening the multi aggregation might resolve
-    * to be in fact an aggregation (or even a fixing?).  This issue is
-    * not resolved right now, since var->data.multaggr.nvars < 2
-    * should not cause toubles.  However, one may loose performance
-    * hereby, since aggregated variables are easier to handle.
+   /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
+    * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause toubles. However, one
+    * may loose performance hereby, since aggregated variables are easier to handle.
     * 
-    * Note, that there are two cases where
-    * SCIPvarFlattenAggregationGraph() is called: The easier one is
-    * that it is called while installing the multi-aggregation. in
-    * principle, the described issue could be handled straightforward
-    * in this case by aggregating or fixing the variable instead.  The
-    * more complicated case is the one, when the multiaggregation is
-    * used, e.g., in linear presolving (and the variable is already
-    * declared to be multiaggregatied).
+    * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
+    * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
+    * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
+    * multiaggregation is used, e.g., in linear presolving (and the variable is already declared to be multiaggregated).
     *
-    * By now, it is not allowed to fix or aggregate multi-aggregated
-    * variables which would be necessary in this case.
+    * By now, it is not allowed to fix or aggregate multi-aggregated variables which would be necessary in this case.
     *
     * The same issue appears in the SCIPvarGetProbvar...() methods.
     */
