@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.70 2010/09/27 17:20:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.71 2010/11/01 16:32:19 bzfgamra Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -569,11 +569,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
+   *result = SCIP_DIDNOTRUN;
+
    /* don't dive two times at the same node */
    if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTRUN;
 
    /* only call feaspump once at the root */
    if( SCIPgetDepth(scip) == 0 && SCIPheurGetNCalls(heur) > 0 )

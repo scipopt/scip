@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.218 2010/10/29 11:07:00 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.219 2010/11/01 16:32:19 bzfgamra Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4569,7 +4569,7 @@ SCIP_RETCODE SCIPconsCreate(
 
 /** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
- *  a constraint is creates and captures;
+ *  a constraint is created and captured;
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
