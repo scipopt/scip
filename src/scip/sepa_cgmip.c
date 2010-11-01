@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.33 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.34 2010/11/01 10:34:45 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -959,6 +959,9 @@ SCIP_RETCODE createSubscip(
       row = rows[i];
       assert( row != NULL );
 
+      mipdata->ylhs[i] = NULL;
+      mipdata->yrhs[i] = NULL;
+
       /* skip modifiable rows and local rows, unless allowed */
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
 	 continue;
@@ -972,11 +975,7 @@ SCIP_RETCODE createSubscip(
          {
             /* check for name "cgcut..." */
             if ( rowname[0] == 'c' && rowname[1] == 'g' && rowname[2] == 'c' && rowname[3] == 'u' && rowname[4] == 't' )
-            {
-               mipdata->ylhs[i] = NULL;
-               mipdata->yrhs[i] = NULL;
                continue;
-            }
          }
       }
 
@@ -1000,11 +999,6 @@ SCIP_RETCODE createSubscip(
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
 	    ++cnt;
 	 }
-	 else
-	 {
-	    mipdata->ylhs[i] = NULL;
-	    mipdata->yrhs[i] = NULL;
-	 }
       }
       else
       {
@@ -1017,9 +1011,7 @@ SCIP_RETCODE createSubscip(
 		  -sepadata->objweight, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->ylhs[i]) );
 	    ++cnt;
-	 }
-	 else
-	    mipdata->ylhs[i] = NULL;
+         }
 
 	 /* create variable for rhs of row if necessary */
 	 if ( ! SCIPisInfinity(scip, rhs[i]) && 
@@ -1031,8 +1023,6 @@ SCIP_RETCODE createSubscip(
 	    SCIP_CALL( SCIPaddVar(subscip, mipdata->yrhs[i]) );
 	    ++cnt;
 	 }
-	 else
-	    mipdata->yrhs[i] = NULL;
       }
    }
    assert( (int) cnt <= 2 * nrows );
@@ -1734,7 +1724,10 @@ SCIP_RETCODE computeCut(
 
       /* skip modifiable rows and local rows, unless allowed */
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+      {
+         assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
 	 continue;
+      }
 
 #ifndef NDEBUG
       rowname = SCIProwGetName(row);
@@ -1781,7 +1774,10 @@ SCIP_RETCODE computeCut(
 
       /* skip modifiable rows and local rows, unless allowed */
       if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+      {
+         assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
 	 continue;
+      }
 
       /* get weight from solution */
       weight = 0.0;
@@ -2368,6 +2364,8 @@ SCIP_RETCODE createCGCutsCMIR(
 	 weights[k] = 0;
 	 if ( mipdata->ylhs[k] != NULL )
 	 {
+            assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
+
 	    val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[k]);
 	    assert( ! SCIPisFeasNegative(subscip, val) );
 
@@ -2376,6 +2374,8 @@ SCIP_RETCODE createCGCutsCMIR(
 	 }
 	 if ( mipdata->yrhs[k] != NULL )
 	 {
+            assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
+
 	    val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[k]);
 	    assert( ! SCIPisFeasNegative(subscip, val) );
 
