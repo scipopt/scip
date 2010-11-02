@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.152 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.153 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -253,7 +253,7 @@ SCIP_RETCODE consdataPrint(
    SCIPinfoMessage(scip, file, "logicor(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars) );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE) );
    
    /* close bracket */
    SCIPinfoMessage(scip, file, ")");
@@ -2414,6 +2414,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    int requiredsize;
    int varssize;
    int nvars;
+   int pos;
    
    SCIPdebugMessage("parse <%s> as logicor constraint\n", str);
 
@@ -2433,7 +2434,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
    /* parse string */
-   SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+   SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
    
    if( *success )
    {
@@ -2445,7 +2446,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
          
          /* parse string again with the correct size of the variable array */
-         SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+         SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
       }
       
       assert(*success);

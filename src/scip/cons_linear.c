@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.391 2010/10/26 03:23:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.392 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -1163,14 +1163,12 @@ SCIP_RETCODE consdataFree(
 
 /** prints linear constraint in CIP format to file stream */
 static
-void consdataPrint(
+SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int v;
-   
    assert(scip != NULL);
    assert(consdata != NULL);
 
@@ -1185,17 +1183,8 @@ void consdataPrint(
       SCIPinfoMessage(scip, file, "0 ");
    else
    {
-      for( v = 0; v < consdata->nvars; ++v )
-      {
-#if 0
-         SCIPinfoMessage(scip, file, "%+.15g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
-#else
-         SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]),
-            SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY ? 'B' :
-            SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_INTEGER ? 'I' :
-            SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
-#endif
-      }
+      /* post linear sum of the linear constraint */
+      SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, consdata->vals, consdata->nvars, TRUE) );
    }
    
    /* print right hand side */
@@ -1207,6 +1196,8 @@ void consdataPrint(
       SCIPinfoMessage(scip, file, ">= %.15g", consdata->lhs);
    else
       SCIPinfoMessage(scip, file, " [free]");
+
+   return SCIP_OKAY;
 }
 
 /** invalidates pseudo activity and activity bounds, such that they are recalculated in next get */
@@ -9524,7 +9515,7 @@ SCIP_DECL_CONSPRINT(consPrintLinear)
    assert( conshdlr != NULL );
    assert( cons != NULL );
    
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
     
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.129 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.130 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -497,13 +497,13 @@ SCIP_RETCODE consdataPrint(
    assert(consdata != NULL);
 
    /* print resultant */
-   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar) );
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, FALSE) );
 
    /* start the variable list */
    SCIPinfoMessage(scip, file, " == and(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars) );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE) );
 
    /* close the variable list */
    SCIPinfoMessage(scip, file, ")");
@@ -2660,37 +2660,25 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_VAR* resvar;
-   char* strcopy;
-   char* token;
-   char* saveptr;
    int requiredsize;
    int varssize;
    int nvars;
+   int pos;
    
    SCIPdebugMessage("pasre <%s> as and constraint\n", str);
 
-   /* copy string for truncating it */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
-
-   /* cutoff "and" form the constraint string */
-   token = SCIPstrtok(strcopy, "=", &saveptr ); 
+   pos = 0;
 
    /* parse variable name */ 
-   SCIP_CALL( SCIPparseVarName(scip, token, &resvar) );
+   SCIP_CALL( SCIPparseVarName(scip, str, pos, &resvar, &pos) );
 
    if( resvar == NULL )
    {
-      SCIPdebugMessage("resultant variable %s does not exist \n", token);
+      SCIPdebugMessage("resultant variable does not exist \n");
       *success = FALSE;
    }
    else
    {
-      /* cutoff "and" form the constraint string */
-      (void)SCIPstrtok(NULL, "(", &saveptr ); 
-
-      /* cutoff ")" form the constraint string */
-      token = SCIPstrtok(NULL, ")", &saveptr ); 
-   
       varssize = 100;
       nvars = 0;
 
@@ -2698,7 +2686,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
       /* pasre string */
-      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+      SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
    
       if( *success )
       {
@@ -2710,12 +2698,12 @@ SCIP_DECL_CONSPARSE(consParseAnd)
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
             
             /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+            SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
          }
          
          assert(*success);
          assert(varssize >= requiredsize);
-
+         
          /* create and constraint */
          SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, nvars, vars, 
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
@@ -2724,9 +2712,6 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       /* free variable buffer */
       SCIPfreeBufferArray(scip, &vars);
    }
-   
-   /* free string buffer */
-   SCIPfreeBufferArray(scip, &strcopy);
    
    return SCIP_OKAY;
 }

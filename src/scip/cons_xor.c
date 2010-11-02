@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.84 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.85 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -373,30 +373,28 @@ SCIP_RETCODE consdataFree(
 
 /** prints xor constraint to file stream */
 static
-void consdataPrint(
+SCIP_RETCODE consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< xor constraint data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             endline             /**< should an endline be set? */
    )
 {
-   int v;
-
    assert(consdata != NULL);
-   assert(consdata->nvars >= 1);
 
-   /* print coefficients */
+   /* start variable list */
    SCIPinfoMessage(scip, file, "xor(");
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      if( v > 0 )
-         SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
-   }
-   SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
 
+   /* print variable list */
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE) );
+
+   /* close variable list and write right hand side */
+   SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
+   
    if( endline )
       SCIPinfoMessage(scip, file, "\n");
+
+   return SCIP_OKAY;
 }
 
 /** adds coefficient to xor constraint */
@@ -764,7 +762,7 @@ SCIP_RETCODE applyFixings(
    assert(nchgcoefs != NULL);
 
    SCIPdebugMessage("before fixings: ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    v = 0;
    while( v < consdata->nvars )
@@ -813,7 +811,7 @@ SCIP_RETCODE applyFixings(
    SCIP_CALL( consdataSort(scip, consdata) );
 
    SCIPdebugMessage("after sort    : ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    /* delete pairs of equal or negated variables; scan from back to front because deletion doesn't affect the
     * order of the front variables
@@ -846,7 +844,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMessage("after fixings : ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
+   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
 
    return SCIP_OKAY;
 }
@@ -2268,7 +2266,7 @@ SCIP_DECL_CONSPRINT(consPrintXor)
    assert( conshdlr != NULL );
    assert( cons != NULL );
  
-   consdataPrint(scip, SCIPconsGetData(cons), file, FALSE);
+   SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file, FALSE) );
     
    return SCIP_OKAY;
 }
@@ -2325,7 +2323,70 @@ SCIP_DECL_CONSCOPY(consCopyXor)
 
 
 /** constraint parsing method of constraint handler */
-#define consParseXor NULL
+static
+SCIP_DECL_CONSPARSE(consParseXor)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   int requiredsize;
+   int varssize;
+   int nvars;
+   int pos;
+   
+   SCIPdebugMessage("pasre <%s> as xor constraint\n", str);
+   
+   varssize = 100;
+   nvars = 0;
+   pos = 0;
+
+   /* allocate buffer array for variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+
+   /* pasre string */
+   SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
+   
+   if( *success )
+   {
+      SCIP_Real rhs;
+
+      /* check if the size of the variable array was great enough */
+      if( varssize < requiredsize )
+      {
+         /* reallocate memory */
+         varssize = requiredsize;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+         
+         /* parse string again with the correct size of the variable array */
+         SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
+      }
+      
+      assert(*success);
+      assert(varssize >= requiredsize);
+      
+      SCIPdebugMessage("successfully parsed %d variables\n", nvars);
+
+      /* search for the equal symbol */
+      while( str[pos] != '=' )
+         pos++;
+
+      pos++;
+      
+      if( SCIPstrGetValue(str, pos, &rhs, &pos) )
+      {
+         /* create or constraint */
+         SCIP_CALL( SCIPcreateConsXor(scip, cons, name, rhs, nvars, vars, 
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+  
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) ); 
+      }
+      else 
+         *success = FALSE;
+   }
+
+   /* free variable buffer */
+   SCIPfreeBufferArray(scip, &vars);
+     
+   return SCIP_OKAY;
+}
 
 
 

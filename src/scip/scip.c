@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.695 2010/11/01 04:04:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.696 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -29,6 +29,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
@@ -7100,7 +7101,9 @@ SCIP_RETCODE SCIPcreateVar(
 SCIP_RETCODE SCIPwriteVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
-   SCIP_VAR*             var                 /**< variable array to output */
+   SCIP_VAR*             var,                /**< variable array to output */
+   SCIP_Bool             type                /**< should the variable type be also posted */
+
    )
 {
    assert(scip != NULL);
@@ -7121,11 +7124,14 @@ SCIP_RETCODE SCIPwriteVarName(
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(var));
    }
 
-   /* print vatiable type */
-   SCIPinfoMessage(scip, file, "[%c]", 
-      SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? 'B' :
-      SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? 'I' :
-      SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+   if( type )
+   {
+      /* print vatiable type */
+      SCIPinfoMessage(scip, file, "[%c]", 
+         SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? 'B' :
+         SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? 'I' :
+         SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+   }
    
    return SCIP_OKAY;
 }
@@ -7137,7 +7143,8 @@ SCIP_RETCODE SCIPwriteVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to output */
-   int                   nvars               /**< number of variables */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             type                /**< should the variable type be also posted */
    )
 {
    int v;
@@ -7152,7 +7159,7 @@ SCIP_RETCODE SCIPwriteVarsList(
       }
       
       /* print variable name */
-      SCIP_CALL( SCIPwriteVarName(scip, file, vars[v]) );
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[v], type) );
    }
 
    return SCIP_OKAY;
@@ -7168,7 +7175,8 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
    FILE*                 file,               /**< the text file to store the information into, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to outpout */
    SCIP_Real*            vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
-   int                   nvars               /**< number of variables */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             type                /**< should the variable type be also posted */
    )
 {
    int v;
@@ -7183,7 +7191,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
          SCIPinfoMessage(scip, file, " + ");
       
       /* print variable name */
-      SCIP_CALL( SCIPwriteVarName(scip, file, vars[v]) );
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[v], type) );
    }
    
    return SCIP_OKAY;
@@ -7235,72 +7243,49 @@ SCIP_RETCODE SCIPparseVar(
 }
 
 /** parses the given string for a variable name and stores the variable in the corresponding pointer if such a variable
- *  exits
+ *  exits and returns the position where the parsing stopped 
  */
 SCIP_RETCODE SCIPparseVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
-   SCIP_VAR**            var                 /**< pointer to store the problem variable, or NULL if it does not exit */
+   int                   pos,                /**< position to start */
+   SCIP_VAR**            var,                /**< pointer to store the problem variable, or NULL if it does not exit */
+   int*                  endpos              /**< position where the parsing stopped */
    )
 {
-   SCIP_Bool negated;
-   char* strcopy;
-   char* saveptr;
-   char* varname;
-
+   char varname[SCIP_MAXSTRLEN];
+   
    SCIP_CALL( checkStage(scip, "SCIPparseVarName", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   /* copy input string such that it can be truncated */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int) strlen(str)+1) );
-
-   /* start truncation of the string */
-   varname = SCIPstrtok(strcopy, ">", &saveptr);
-
-   if( varname == NULL )
-   {
-      SCIPerrorMessage("invalid variable name string given: could not find '>'\n");
-      SCIPfreeBufferArray(scip, &strcopy);
-      return SCIP_INVALIDDATA;
-   }
-
-   /* cutoff all characters which do not belong to the variable name */
-   while( *varname != '<' && *varname != '\0' )
-      varname++;
+   
+   SCIPstrCopySection(str, pos, '<', '>', varname, SCIP_MAXSTRLEN, endpos); 
 
    if( *varname == '\0' )
    {
       SCIPerrorMessage("invalid variable name string given: could not find '<'\n");
-      SCIPfreeBufferArray(scip, &strcopy);
       return SCIP_INVALIDDATA;
    }
-
-   /* cutoff the '<' */
-   varname++;
-
+   
    /* check if we have a negated variable */
    if( *varname == '~' )
    {
-      /* cutoff the '~' */
-      varname++;
-      negated = TRUE;
-      SCIPdebugMessage("parsed negated variable name <%s>\n", varname);
+      SCIPdebugMessage("parsed negated variable name <%s>\n", &varname[1]);
+
+      /* search for the variable and ignore '~' */
+      (*var) = SCIPfindVar(scip, &varname[1]);
+      
+      if( *var  != NULL )
+      {
+         SCIP_CALL( SCIPgetNegatedVar(scip, *var, var) );
+      }
    }
    else
    {
-      negated = FALSE;
       SCIPdebugMessage("parsed variable name <%s>\n", varname);
+      
+      /* search for the variable */
+      (*var) = SCIPfindVar(scip, varname);
    }
    
-   /* search for the variable */
-   (*var) = SCIPfindVar(scip, varname);
-   
-   if( negated )
-   {
-      SCIP_CALL( SCIPgetNegatedVar(scip, *var, var) );
-   }
-   
-   /* free buffer */
-   SCIPfreeBufferArray(scip, &strcopy);
-
    return SCIP_OKAY;
 }
 
@@ -7317,25 +7302,21 @@ SCIP_RETCODE SCIPparseVarName(
 SCIP_RETCODE SCIPparseVarsList( 
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
+   int                   pos,                /**< position to start */
    SCIP_VAR**            vars,               /**< array to store the parsed variable */
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   int*                  endpos,             /**< position where the parsing stopped */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
    )
 {
    SCIP_VAR** tmpvars;
    SCIP_VAR* var;
-   char* line;
-   char* varname;
-   char* saveptr;
    int ntmpvars;
    int v;
    
    SCIP_CALL( checkStage(scip, "SCIPparseVarsList", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   /* copy input string such that it can be truncated */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &line, str, (int) strlen(str)+1) );
 
    /* allocate buffer memory for temporary storing the parsed variables */
    SCIP_CALL (SCIPallocBufferArray(scip, &tmpvars, varssize) );
@@ -7343,28 +7324,29 @@ SCIP_RETCODE SCIPparseVarsList(
    ntmpvars = 0;
    (*success) = TRUE;
    
-   /* start truncation of thr string */
-   varname = SCIPstrtok(line, ",", &saveptr);
-      
    do
    {
       /* parse variable name */ 
-      SCIP_CALL( SCIPparseVarName(scip, varname, &var) );
+      SCIP_CALL( SCIPparseVarName(scip, str, pos, &var, &pos) );
 
       if( var == NULL )
       {
-         SCIPdebugMessage("variable with name <%s> does not exist\n", varname);
+         SCIPdebugMessage("variable with name <%s> does not exist\n", SCIPvarGetName(var));
          (*success) = FALSE;
          break;
       }
-
+      
       /* store the variable in the tmp array */
       if( ntmpvars < varssize )
          tmpvars[ntmpvars] = var;
       
       ntmpvars++;
+
+      /* skip white space */
+      while( isspace(str[pos]) )
+         pos++;
    }
-   while( (varname = SCIPstrtok(NULL, ",", &saveptr)) != NULL );
+   while( str[pos] == ',' );
 
    /* if all variable name searches were successfully and the variable array has enough slots copy the collected
     * variables 
@@ -7383,8 +7365,115 @@ SCIP_RETCODE SCIPparseVarsList(
 
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &tmpvars);
-   SCIPfreeBufferArray(scip, &line);
 
+   return SCIP_OKAY;
+}
+
+/** parse the given string as linear sum of variables and coefficients (c1 \<x1\> + c2 \<x2\> + ... + cn \<xn\>) 
+ *  (see SCIPwriteVarsLinearsum() ); if it was successful, the pointer success is set to TRUE
+ *
+ *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
+ *
+ *  If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
+ *  except that the required size is stored in the corresponding integer; the reason for this approach is that we cannot
+ *  reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP memory
+ *  functions).
+ */
+SCIP_RETCODE SCIPparseVarsLinearsum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to parse */
+   int                   pos,                /**< position to start parsing the string */
+   SCIP_VAR**            vars,               /**< array to store the parsed variables */
+   SCIP_Real*            vals,               /**< array to store the parsed coefficients */
+   int*                  nvars,              /**< pointer to store number of parsed variables */
+   int                   varssize,           /**< size of the variable array */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   int*                  endpos,             /**< pointer to store where the parsing ended */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   )
+{
+#if 0
+   SCIP_VAR** tmpvars;
+   SCIP_Real* tmpvals;
+   SCIP_VAR* var;
+   SCIP_Real value;
+   SCIP_Bool linmonom;
+   int ntmpvars;
+   int v;
+   
+   SCIP_CALL( checkStage(scip, "SCIPparseVarsLinearsum", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* allocate buffer memory for temporary storing the parsed variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvals, varssize) );
+
+   ntmpvars = 0;
+   (*success) = TRUE;
+   (*endpos) = pos;
+  
+   /* check for the first coefficient */
+   if( SCIPstrGetValue(str, pos, &value, &pos) )
+   {
+      linmonom = TRUE;
+      
+      while( linmonom )
+      {
+         (*endpos) = pos;
+
+      
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, str, pos, &var, &pos) );
+      
+      if( var == NULL )
+         break;
+      
+      nextpos = pos; 
+      
+      /* check if the bext token is a variable name again */
+      SCIP_CALL( SCIPparseVarName(scip, str, pos, &nextvar, &pos) );
+      
+      if( nextvar != NULL )
+      {
+      }
+      (*endpos) = )
+      
+ 
+      if( var == NULL )
+      {
+         SCIPdebugMessage("variable with does not exist\n");
+         (*success) = FALSE;
+         break;
+      }
+
+      /* store the variable in the tmp array */
+      if( ntmpvars < varssize )
+      {
+         tmpvars[ntmpvars] = var;
+         tmpvals[ntmpvars] = value;
+      }
+      ntmpvars++;
+   }
+ 
+   /* if all variable name searches were successfully and the variable array has enough slots copy the collected
+    * variables 
+    */
+   if( (*success) && ntmpvars <= varssize )
+   {
+      for( v = 0; v < ntmpvars; ++v )
+         vars[v] = tmpvars[v];
+      
+      (*nvars) = ntmpvars;
+   }
+   else
+      (*nvars) = 0;
+   
+   (*requiredsize) = ntmpvars;
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &tmpvals);
+   SCIPfreeBufferArray(scip, &tmpvars);
+   SCIPfreeBufferArray(scip, &line);
+#endif
    return SCIP_OKAY;
 }
 

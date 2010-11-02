@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.87 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.88 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -480,13 +480,13 @@ SCIP_RETCODE consdataPrint(
    assert(consdata != NULL);
 
    /* print resultant */
-   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar) );
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->resvar, FALSE) );
 
    /* start the variable list */
    SCIPinfoMessage(scip, file, " == or(");
 
    /* print variable list */
-   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars) );
+   SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, FALSE) );
 
    /* close the variable list */
    SCIPinfoMessage(scip, file, ")");
@@ -1846,6 +1846,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    int requiredsize;
    int varssize;
    int nvars;
+   int pos;
    
    SCIPdebugMessage("pasre <%s> as or constraint\n", str);
 
@@ -1856,7 +1857,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    token = SCIPstrtok(strcopy, "=", &saveptr ); 
 
    /* parse variable name */ 
-   SCIP_CALL( SCIPparseVarName(scip, token, &resvar) );
+   SCIP_CALL( SCIPparseVarName(scip, token, 0, &resvar, &pos) );
 
    if( resvar == NULL )
    {
@@ -1878,7 +1879,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
       /* pasre string */
-      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+      SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
    
       if( *success )
       {
@@ -1890,7 +1891,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
             
             /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, success) );
+            SCIP_CALL( SCIPparseVarsList(scip, token, 0, vars, &nvars, varssize, &requiredsize, &pos, success) );
          }
          
          assert(*success);

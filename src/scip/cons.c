@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.219 2010/11/01 16:32:19 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.220 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4671,41 +4671,36 @@ SCIP_RETCODE SCIPconsParse(
    char* copystr;
    char* token;
    char* saveptr;
-
+   int pos;
+   
    assert(cons != NULL);
 
    (*success) = FALSE;
-   
-   /* copy string */
-   SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
-   
-   /* parse constraint handler name */
-   token = SCIPstrtok(copystr, " []", &saveptr);
-   if( token == NULL )
-   {
-      SCIPerrorMessage("error parsing constraint handler name from the following line:\n%s\n", str);
-      return SCIP_READERROR;
-   }
-   (void) SCIPsnprintf(conshdlrname, (int) strlen(token)+1, "%s", token);
-   
-   /* parse constraint name */
-   token = SCIPstrtok(NULL, " <>", &saveptr);
-   if( token == NULL )
-   {
-      SCIPerrorMessage("error parsing constraint name from the following line:\n%s\n", str);
-      return SCIP_READERROR;
-   }
-   (void) SCIPsnprintf(consname, (int) strlen(token) + 1, "%s", token);
+   pos = 0;
+ 
+   /* scan constant handler name */
+   SCIPstrCopySection(str, pos, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &pos);
+   SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
 
-   token = SCIPstrtok(NULL, ":;", &saveptr);
-   if( token == NULL )
-   {
-      SCIPerrorMessage("error parsing constraint from the following line:\n%s\n", str);
-      return SCIP_READERROR;
-   }
+   /* scan constraint name */
+   SCIPstrCopySection(str, pos, '<', '>', consname, SCIP_MAXSTRLEN, &pos);
+   SCIPdebugMessage("constraint name <%s>\n", consname);
+   
+   /* skip colon */
+   assert(str[pos] == ':');
+   pos++;
+
+   /* skip space */
+   assert(str[pos] == ' ');
+   pos++;
    
    /* check if a constraint handler with parsed name exists */
    conshdlr = SCIPsetFindConshdlr(set, conshdlrname);
+
+   SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, &str[pos], strlen(&str[pos])+1) );
+   
+   token = SCIPstrtok(copystr, ";", &saveptr);
+   assert(token != NULL);
 
    if( conshdlr != NULL && conshdlr->consparse != NULL )
    {

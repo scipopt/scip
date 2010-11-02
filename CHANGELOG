@@ -8,6 +8,12 @@ interface:
   these methods can be used to check, propagate, or resolve the propagation of a cumulative condition
 - new methods SCIPstrGetValue() and SCIPstrCopySection() in pub_misc.h; these methods can be used to 
   convert a string into a SCIP_Real value and to copy a substring.
+- the methods SCIPwriteVarName() SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() have new parameter named "type" 
+  of type SCIP_Bool; these parameter determines if the variable type should be written or not
+- the methods SCIPparseVarName() and SCIPparseVarsList() got two new parameters names "pos" and "endpos"; the parameter pos 
+  determines the current position in the the string which gets parsed and the pointer to an int (endpos) returns
+  the position where the current parsing stopped
+- prototype for methods SCIPparseVarsLinearsum()
 
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
@@ -48,6 +54,7 @@ parameters:
 features:
 - flatzinc reader is now capable to read cumulative constraints
 - new heuristic vbounds which use the variables lower and upper bounds to fix variable and performs a neighborhood search
+- the xor constraint handler can now parse its constraints
 
 SCIP version 2.0.0
 ===============

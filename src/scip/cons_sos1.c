@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.42 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.43 2010/11/02 01:11:18 bzfheinz Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS
@@ -1726,7 +1726,7 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
    {
       if ( j > 0 )
          SCIPinfoMessage(scip, file, ", ");
-      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->Vars[j]) );
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->Vars[j], FALSE) );
       if ( consdata->weights == NULL )
          SCIPinfoMessage(scip, file, " (%d)", j+1);
       else
