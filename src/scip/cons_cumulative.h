@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.h,v 1.2 2010/09/21 10:13:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.h,v 1.3 2010/11/02 00:40:11 bzfheinz Exp $"
 
 /**@file   cons_cumulative.h
  * @brief  constraint handler for cumulative constraints
@@ -118,6 +118,52 @@ extern
 int* SCIPgetDemandsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** check for the given starting time variables with their demands and durations if the cumulative conditions for the
+ *  given solution is satisfied 
+ */
+extern
+SCIP_RETCODE SCIPcheckCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   SCIP_Bool*            violated,           /**< pointer to store if the cumulative condition is violated */
+   SCIP_CONS*            cons,               /**< constraint which is checked */
+   SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
+   );
+   
+/** propagate the given cumulative condition */
+extern
+SCIP_RETCODE SCIPpropCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint which gets propagated */
+   int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
+   SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
+   );
+
+/** resolve propagation w.r.t. the cumulative condition */
+SCIP_RETCODE SCIPrespropCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
+   int                   inferinfo,          /**< the user information */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    );
 
 /** create a new cumulative profile for the given capacity */

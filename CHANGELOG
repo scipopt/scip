@@ -4,6 +4,9 @@ SCIP version NEXT
 interface:
 - new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
 - allow access of transformed constraints in SCIP_STAGE_TRANSFORMED
+- new methods SCIPcheckCumulativeCondition(), SCIPpropCumulativeCondition, and SCIPrespropCumulativeCondition in cons_cumulative.h;
+  these methods can be used to check, propagate, or resolve the propagation of a cumulative condition
+
 
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.18 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.19 2010/11/02 00:40:11 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -1670,27 +1670,28 @@ SCIP_RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
-/** check if the given constraiviont is valid; checks each starting point of a job whether the remaining capacity is at
- *  least zero or not. If not (*violated) is set to TRUE
+/** check for the given starting time variables with their demands and durations if the cumulative conditions for the
+ *  given solution is satisfied 
  */
 static
-SCIP_RETCODE checkCons(
+SCIP_RETCODE checkCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to be checked */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   SCIP_Bool*            violated,           /**< pointer to store if the constraint is violated */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   SCIP_Bool*            violated,           /**< pointer to store if the cumulative condition is violated */
+   SCIP_CONS*            cons,               /**< constraint which is checked */
    SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
    )
 {
-   SCIP_CONSDATA* consdata;
-
-   int* startsolvalues; /* stores when each job is starting */
-   int* endsolvalues;   /* stores when each job ends */
+   int* startsolvalues;       /* stores when each job is starting */
+   int* endsolvalues;         /* stores when each job ends */
    int* startindices;         /* we will sort the startsolvalues, thus we need to know which index of a job it corresponds to */
    int* endindices;           /* we will sort the endsolvalues, thus we need to know which index of a job it corresponds to */
-
-   int nvars;
-
+   
    int freecapacity;
    int curtime;            /* point in time which we are just checking */
    int endindex;           /* index of endsolvalues with: endsolvalues[endindex] > curtime */
@@ -1698,21 +1699,16 @@ SCIP_RETCODE checkCons(
    int j;
 
    assert(scip != NULL);
-   assert(cons != NULL);
    assert(violated != NULL);
 
-   SCIPdebugMessage("check cumulative constraints <%s>\n", SCIPconsGetName(cons));
+   (*violated) = FALSE;
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   nvars = consdata->nvars;
-
-   /* check if for each point in time the cumulative capacity is enforced  */
    if( nvars == 0 )
       return SCIP_OKAY;
-
-   assert(consdata->vars != NULL);
+   
+   assert(vars != NULL);
+   assert(demands != NULL);
+   assert(durations != NULL);
 
    /* compute time points where we have to check whether capacity constraint is infeasible or not */
    SCIP_CALL( SCIPallocBufferArray(scip, &startsolvalues, nvars) );
@@ -1724,12 +1720,12 @@ SCIP_RETCODE checkCons(
    for ( j = 0; j < nvars; ++j )
    {
       /* the constraint of the cumulative constraint handler should be called after the integrality check */
-      assert(SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->vars[j])));
+      assert(SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j])));
       
-      startsolvalues[j] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, consdata->vars[j]));
+      startsolvalues[j] = convertBoundToInt(scip, SCIPgetSolVal(scip, sol, vars[j]));
       startindices[j] = j;
       
-      endsolvalues[j] = startsolvalues[j] + consdata->durations[j];
+      endsolvalues[j] = startsolvalues[j] + durations[j];
       endindices[j] = j;
    }
 
@@ -1757,7 +1753,7 @@ SCIP_RETCODE checkCons(
 #endif
 
    endindex = 0;
-   freecapacity = consdata->capacity;
+   freecapacity = capacity;
 
    /* check each start point of a job whether the capacity is kept or not */
    for( j = 0; j < nvars; ++j )
@@ -1765,20 +1761,20 @@ SCIP_RETCODE checkCons(
       curtime = startsolvalues[j];
 
       /* subtract all capacity needed up to this point */
-      freecapacity -= consdata->demands[startindices[j]];
+      freecapacity -= demands[startindices[j]];
       while( j+1 < nvars && startsolvalues[j+1] == curtime )
       {
          j++;
-         freecapacity -= consdata->demands[startindices[j]];
+         freecapacity -= demands[startindices[j]];
       }
 
       /* free all capacity usages of jobs that are no longer running */
       while( endindex < nvars && curtime >= endsolvalues[endindex] )
       {
-         freecapacity += consdata->demands[endindices[endindex]];
+         freecapacity += demands[endindices[endindex]];
          ++endindex;
       }
-      assert(freecapacity <= consdata->capacity);
+      assert(freecapacity <= capacity);
 
       /* check freecapacity to be smaller than zero */
       if( freecapacity < 0 )
@@ -1790,18 +1786,21 @@ SCIP_RETCODE checkCons(
          {
             int i;
 
+            /* first state the violated constraints */
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            
+            /* second state the reason */
             SCIPinfoMessage(scip, NULL, 
                "violation: at time point %d available capacity = %d, needed capacity = %d\n",
-               curtime, consdata->capacity, consdata->capacity - freecapacity);
+               curtime, capacity, capacity - freecapacity);
             
             for(i = 0; i < j; ++i )
             {
-               if( startsolvalues[i] + consdata->durations[startindices[i]] > curtime )
+               if( startsolvalues[i] + durations[startindices[i]] > curtime )
                { 
                   SCIPinfoMessage(scip, NULL, "activity %s, start = %i, duration = %d, demand = %d \n",
-                     SCIPvarGetName(consdata->vars[startindices[i]]), startsolvalues[i], consdata->durations[startindices[i]],
-                     consdata->demands[startindices[i]]);
+                     SCIPvarGetName(vars[startindices[i]]), startsolvalues[i], durations[startindices[i]],
+                     demands[startindices[i]]);
                }
             }
          }
@@ -1815,6 +1814,35 @@ SCIP_RETCODE checkCons(
    SCIPfreeBufferArray(scip, &endsolvalues);
    SCIPfreeBufferArray(scip, &startsolvalues);
    
+   return SCIP_OKAY;
+}
+/** check if the given constrait is valid; checks each starting point of a job whether the remaining capacity is at
+ *  least zero or not. If not (*violated) is set to TRUE
+ */
+static
+SCIP_RETCODE checkCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be checked */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_Bool*            violated,           /**< pointer to store if the constraint is violated */
+   SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(violated != NULL);
+
+   SCIPdebugMessage("check cumulative constraints <%s>\n", SCIPconsGetName(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check the cumulative condition */
+   SCIP_CALL( checkCumulativeCondition(scip, sol, consdata->nvars, consdata->vars, 
+         consdata->durations, consdata->demands, consdata->capacity, violated, cons, printreason) );
+      
    return SCIP_OKAY;
 }
 
@@ -1927,7 +1955,11 @@ SCIP_RETCODE consCheckRedundancy(
 static
 SCIP_RETCODE analyzeConflictCoreTimesCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to analyzed */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
    SCIP_VAR*             infervar,           /**< inference variable */
    int                   leftbound,          /**< left bound of the responsible time window */
    int                   rightbound,         /**< right bound of the responsible time window */
@@ -1939,18 +1971,16 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
    )
 {
    SCIP_VAR** corevars;
-   SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    int* startvalues;      /* stores when core of each job is starting */
    int* endvalues;        /* stores when core of each job ends */
    int* startindices;     /* we will sort the startvalues, thus we need to know wich index of a job it corresponds to */
    int* endindices;       /* we will sort the endvalues, thus we need to know wich index of a job it corresponds to */
-   int* demands;
+   int* coredemands;
    
    int* conflictids;      /* array where we store job indices of running jobs that are probably in a conflict */
    int nconflictids;
 
-   int nvars;
    int j; 
    int i; 
 
@@ -1962,35 +1992,30 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
       
    int ncores;
    
-   assert(cons != NULL);
+   assert(nvars > 0);
    assert(leftbound < rightbound);
    assert(success != NULL);
    assert(inferdemand > 0);
 
-   /* process constraint */
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   
    SCIPdebugMessage("analyze reason of '%s' bound change of variable <%s>(%d)[%d], bounds [%d,%d], cap = %d \n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar), 
-      inferduration, inferdemand, leftbound, rightbound, consdata->capacity );
+      inferduration, inferdemand, leftbound, rightbound, capacity );
 
    *success = FALSE;
    
-   nvars = consdata->nvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &corevars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &startvalues, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &endvalues, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &startindices, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &endindices, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &demands, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coredemands, nvars) );
 
    ncores = 0;
 
    /* compute all cores of the variables which lay in the considered time window except the inference variable */
    for ( j = 0; j < nvars; ++j )
    {
-      var = consdata->vars[j];
+      var = vars[j];
       assert(var != NULL);
 
       if( var == infervar )
@@ -2003,17 +2028,17 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
       assert(SCIPisIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
       
       corelb = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE));
-      coreub = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) + consdata->durations[j];
+      coreub = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) + durations[j];
       
       if( corelb < coreub && leftbound < coreub && rightbound > corelb )
       {
          SCIPdebugMessage("core bounds(%d):%s [%d; %d] <%d>\n", 
-            j, SCIPvarGetName(var), corelb, coreub, consdata->demands[j]);
+            j, SCIPvarGetName(var), corelb, coreub, demands[j]);
          
          corevars[ncores] = var;
          startvalues[ncores] = corelb;
          endvalues[ncores] = coreub;
-         demands[ncores] = consdata->demands[j];
+         coredemands[ncores] = demands[j];
          startindices[ncores] = ncores;
          endindices[ncores] = ncores;
          ncores++;
@@ -2027,7 +2052,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
    nconflictids = 0;
    endindex = 0;
    curtime = 0;
-   freecapacity = consdata->capacity - inferdemand;
+   freecapacity = capacity - inferdemand;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conflictids, ncores) );
    
@@ -2040,7 +2065,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
       if( j < ncores )
       {
          curtime = startvalues[j];
-         freecapacity -= demands[startindices[j]];
+         freecapacity -= coredemands[startindices[j]];
          conflictids[nconflictids] = startindices[j];
          ++nconflictids;
       
@@ -2049,7 +2074,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
          {
             ++j;
             SCIPdebugMessage("   start of %d\n", startindices[j]);
-            freecapacity -= demands[startindices[j]];
+            freecapacity -= coredemands[startindices[j]];
             conflictids[nconflictids] = startindices[j];
             ++nconflictids;
          }
@@ -2063,7 +2088,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
       while( endindex < ncores && curtime >= endvalues[endindex] )
       {
          SCIPdebugMessage("   end of %d\n", endindices[endindex]);
-         freecapacity += demands[endindices[endindex]];
+         freecapacity += coredemands[endindices[endindex]];
          
          for( i = 0; i < nconflictids; ++i )
          {
@@ -2092,7 +2117,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
             assert(conflictids[i] < nvars);
             assert(corevars[conflictids[i]] != NULL);
             SCIPdebugMessage("report <%s> with demand %d\n", 
-               SCIPvarGetName(corevars[conflictids[i]]), demands[conflictids[i]]);
+               SCIPvarGetName(corevars[conflictids[i]]), coredemands[conflictids[i]]);
 
             SCIP_CALL( SCIPaddConflictUb( scip, corevars[conflictids[i]], bdchgidx) );
             SCIP_CALL( SCIPaddConflictLb( scip, corevars[conflictids[i]], bdchgidx) );
@@ -2107,7 +2132,7 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
 
    /* free all buffer arrays */
    SCIPfreeBufferArray(scip, &conflictids);
-   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &coredemands);
    SCIPfreeBufferArray(scip, &endindices);
    SCIPfreeBufferArray(scip, &startindices);
    SCIPfreeBufferArray(scip, &endvalues);
@@ -2121,7 +2146,12 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
 static
 SCIP_RETCODE initializeConflictAnalysisCoreTimes(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to analyzed */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint which gets analyzed */
    SCIP_VAR*             var,                /**< inference variable */
    int                   leftbound,          /**< left bound of the responsible time window */
    int                   rightbound,         /**< right bound of the responsible time window */
@@ -2147,11 +2177,12 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimes(
  
    SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(var));
    
-   SCIP_CALL( analyzeConflictCoreTimesCumulative(scip, cons, var, leftbound, rightbound, duration, demand, boundtype, NULL, &success) );
+   SCIP_CALL( analyzeConflictCoreTimesCumulative(scip, nvars, vars, durations, demands, capacity,
+         var, leftbound, rightbound, duration, demand, boundtype, NULL, &success) );
    assert(success);
-
+   
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
-
+   
    return SCIP_OKAY;
 }
 
@@ -2161,7 +2192,11 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimes(
 static
 SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to analyzed */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
    SCIP_VAR*             inferbinvar,        /**< inference variable */
    SCIP_VAR*             intvar,             /**< integer variable corresponding to binary variable */
    int                   timepoint,          /**< point in time, where capacity will be exceeded */    
@@ -2171,12 +2206,10 @@ SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
    )
 {
    SCIP_VAR** corevars;
-   SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    int* indices;          /* we will sort the demands, thus we need to know wich index of a job it corresponds to */
-   int* demands;
+   int* coredemands;
    
-   int nvars;
    int j; 
    
    int corelb;
@@ -2184,32 +2217,27 @@ SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
    int freecapacity;       /* remaining capacity */
    int ncores;
    
-   assert(cons != NULL );
+   assert(scip != NULL );
    assert(success != NULL );
    assert(inferdemand > 0 );
    assert(SCIPvarGetType(inferbinvar) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarGetType(intvar) == SCIP_VARTYPE_INTEGER);
 
-   /* process constraint */
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   
    SCIPdebugMessage("analyze reason of bound change of variable <%s>[%d], cap = %d because of capacity at time %d\n",
-      SCIPvarGetName(inferbinvar), inferdemand, consdata->capacity, timepoint );
+      SCIPvarGetName(inferbinvar), inferdemand, capacity, timepoint );
 
    *success = FALSE;
    
-   nvars = consdata->nvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &corevars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &indices, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &demands, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coredemands, nvars) );
 
    ncores = 0;
 
    /* compute all cores of the variables which lay in the considered time window except the inference variable */
    for ( j = 0; j < nvars; ++j )
    {
-      var = consdata->vars[j];
+      var = vars[j];
       assert(var != NULL);
 
       if( intvar == var )
@@ -2219,24 +2247,24 @@ SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
        * inference variable add this job to the array 
        */
       corelb = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE));
-      coreub = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) + consdata->durations[j];
+      coreub = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) + durations[j];
       
       if( corelb < coreub && timepoint < coreub && timepoint >= corelb )
       {
          SCIPdebugMessage("core bounds(%d):%s [%d; %d] <%d>\n", 
-            j, SCIPvarGetName(var), corelb, coreub, consdata->demands[j]);
+            j, SCIPvarGetName(var), corelb, coreub, demands[j]);
          
          corevars[ncores] = var;
-         demands[ncores] = consdata->demands[j];
+         coredemands[ncores] = demands[j];
          indices[ncores] = ncores;
          ncores++;
       }
    }
  
    /* sort the arrays not-decreasing according to startvalues and endvalues (and sort the indices in the same way) */
-   SCIPsortDownIntInt(demands, indices, ncores);
+   SCIPsortDownIntInt(coredemands, indices, ncores);
    
-   freecapacity = consdata->capacity - inferdemand;
+   freecapacity = capacity - inferdemand;
    
    /* check each start point of a job whether the capacity is respected  or not */
    for( j = 0; (j < ncores) && (freecapacity > 0); ++j )
@@ -2253,7 +2281,7 @@ SCIP_RETCODE analyzeConflictCoreTimesBinvarsCumulative(
    assert(*success);
 
    /* free all buffer arrays */
-   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &coredemands);
    SCIPfreeBufferArray(scip, &indices);
    SCIPfreeBufferArray(scip, &corevars);
 
@@ -2271,19 +2299,26 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimesBinvars(
    int                   demand              /**< demand of the inference variable */
    )
 {
+   SCIP_CONSDATA* consdata;
    SCIP_Bool success;
 
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   
    SCIPdebugMessage("initialize conflict analysis\n");
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
    
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
    /* integer variable is not responsible with its bounds! */
    SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(binvar));
    
-   SCIP_CALL( analyzeConflictCoreTimesBinvarsCumulative(scip, cons, binvar, intvar, timepoint, demand, NULL, &success) );
+   SCIP_CALL( analyzeConflictCoreTimesBinvarsCumulative(scip, consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
+         binvar, intvar, timepoint, demand, NULL, &success) );
    assert(success);
 
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -2295,7 +2330,12 @@ SCIP_RETCODE initializeConflictAnalysisCoreTimesBinvars(
 static
 SCIP_RETCODE updateBounds(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< cumulative constraint that is propagated */ 
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint which is propagated */
    CUMULATIVEPROFILE*    profile,            /**< profile to use */
    SCIP_VAR*             var,                /**< the variable the bounds should be updated */
    int                   duration,           /**< the duration of the given variable */
@@ -2327,7 +2367,8 @@ SCIP_RETCODE updateBounds(
       SCIPdebugMessage("infeasibility detected during change of lower bound of <%s> from %d to %d\n", SCIPvarGetName(var), lb, newlb);
       
       /* initialize conflict analysis */
-      SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, cons, var, lb, ub+duration, duration, demand, SCIP_BOUNDTYPE_LOWER) );
+      SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, nvars, vars, durations, demands, capacity,
+            cons, var, lb, ub+duration, duration, demand, SCIP_BOUNDTYPE_LOWER) );
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -2356,7 +2397,8 @@ SCIP_RETCODE updateBounds(
    {
       SCIPdebugMessage("infeasibility detected during change of upper bound of <%s> from %d to %d\n", SCIPvarGetName(var), ub, newub);
       /* initialize conflict analysis */
-      SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, cons, var, lb, ub+duration, duration, demand, SCIP_BOUNDTYPE_UPPER) );
+      SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, nvars, vars, durations, demands, capacity, 
+            cons, var, lb, ub+duration, duration, demand, SCIP_BOUNDTYPE_UPPER) );
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -2377,20 +2419,24 @@ SCIP_RETCODE updateBounds(
    return SCIP_OKAY;
 }
 
-/** a cumulative constraint is infeasible if its capacity is exceeded at a time where jobs cannot be shifted (core)
- *  anymore we build up a cumulative profile of all cores of jobs and try to improve bounds of all jobs 
+/** a cumulative condition is not satisfied if its capacity is exceeded at a time where jobs cannot be shifted (core)
+ *  anymore we build up a cumulative profile of all cores of jobs and try to improve bounds of all jobs
  */
 static
 SCIP_RETCODE propagateCores(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to be checked */
-   SCIP_Bool*            cutoff,             /**< pointer to store if the constraint is infeasible */
-   int*                  nbdchgs             /**< pointer to store the number of bound changes */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint which is propagated */
+   int*                  nbdchgs,            /**< pointer to store the number of bound changes */
+   SCIP_Bool*            cutoff             /**< pointer to store if the constraint is infeasible */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
    CUMULATIVEPROFILE* profile;
+   SCIP_VAR* var;
    SCIP_Bool* cores;
    SCIP_Bool* fixeds;
 
@@ -2399,21 +2445,17 @@ SCIP_RETCODE propagateCores(
    int demand;
    int duration;
    int oldnbdchgs;
-   int nvars;
    int ncores;
    int j;
    
    assert(scip != NULL);
+   assert(nvars > 0);
    assert(cons != NULL);
-   
-   SCIPdebugMessage("check cores of cumulative constraint <%s>\n", SCIPconsGetName(cons));
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-	
+   SCIPdebugMessage("check/propgate cores of cumulative condition of constraint <%s>\n", SCIPconsGetName(cons));
+
    oldnbdchgs = *nbdchgs;
 
-   nvars = consdata->nvars;
    SCIP_CALL(SCIPallocBufferArray(scip, &cores, nvars) );
    SCIP_CALL(SCIPallocBufferArray(scip, &fixeds, nvars) );
 	
@@ -2421,14 +2463,14 @@ SCIP_RETCODE propagateCores(
    infeasible = FALSE;
    ncores = 0;
 
-   SCIP_CALL( SCIPprofileCreate(scip, &profile, consdata->capacity, 4*nvars) );
+   SCIP_CALL( SCIPprofileCreate(scip, &profile, capacity, 4*nvars) );
    
    /* insert all cores */
    for( j = 0; j < nvars; ++j )
    {
-      var = consdata->vars[j];
-      duration = consdata->durations[j];
-      demand =  consdata->demands[j];
+      var = vars[j];
+      duration = durations[j];
+      demand =  demands[j];
       assert(demand > 0);
 
       assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
@@ -2441,7 +2483,8 @@ SCIP_RETCODE propagateCores(
          SCIPdebugMessage("infeasibility due to cores\n");
          
          /* initialize the contflic analyze */
-         SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, cons, var, convertBoundToInt(scip, SCIPvarGetUbLocal(var)), 
+         SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, nvars, vars, durations, demands, capacity,
+               cons, var, convertBoundToInt(scip, SCIPvarGetUbLocal(var)), 
                convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration, duration, demand,  SCIP_BOUNDTYPE_LOWER) );
          *cutoff = TRUE;
          break;
@@ -2456,9 +2499,9 @@ SCIP_RETCODE propagateCores(
       /* start checking each job whether bounds can be improved */
       for( j = 0; j < nvars; ++j )
       {
-         var = consdata->vars[j];
-         duration = consdata->durations[j];
-         demand =  consdata->demands[j];
+         var = vars[j];
+         duration = durations[j];
+         demand =  demands[j];
          assert(demand > 0);
          assert(duration > 0);
 
@@ -2471,7 +2514,8 @@ SCIP_RETCODE propagateCores(
          }
          
          /* try to improve bounds */
-         SCIP_CALL( updateBounds(scip, cons, profile, var, duration, demand, cutoff, nbdchgs) );
+         SCIP_CALL( updateBounds(scip, nvars, vars, durations, demands, capacity, 
+               cons, profile, var, duration, demand, cutoff, nbdchgs) );
          
          if( *cutoff )
             break;
@@ -2496,7 +2540,7 @@ SCIP_RETCODE propagateCores(
    SCIPprofileFree(scip, &profile);
    SCIPfreeBufferArray(scip, &fixeds);
    SCIPfreeBufferArray(scip, &cores);
-	
+   
    return SCIP_OKAY;
 }
 
@@ -3577,33 +3621,30 @@ SCIP_RETCODE addRelaxation(
 static
 SCIP_RETCODE analyzeConflictEnergeticReasoning(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to propagate */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
    SCIP_VAR*             infervar,           /**< variable whose bound change is to be explained */
    INFERINFO             inferinfo,          /**< inference info containing position of correct bdchgids */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_Bool*            success             /**< pointer to store if we could explain the bound change */
    )
 {
-   SCIP_CONSDATA* consdata;
-   
    int est;
    int lct;
 
-   int nvars;
    int j;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(nvars > 0);
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_4_ENERGETICREASONING);
    
-   SCIPdebugMessage("repropagate energetic reasoning for constraint <%s> and variable <%s>\n", 
-      SCIPconsGetName(cons), infervar == NULL ? "null" : SCIPvarGetName(infervar));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
+   SCIPdebugMessage("repropagate energetic reasoning for variable <%s>\n", 
+      infervar == NULL ? "null" : SCIPvarGetName(infervar));
+   
    *success = FALSE;
-   nvars = consdata->nvars;
 
    est = inferInfoGetEst(inferinfo);
    lct = inferInfoGetLct(inferinfo); 
@@ -3613,13 +3654,13 @@ SCIP_RETCODE analyzeConflictEnergeticReasoning(
    for( j = 0; j < nvars; ++j ) 
    {
       SCIP_VAR* var;
-      var = consdata->vars[j];      
+      var = vars[j];      
       
       if( var == infervar )
          continue;
 
       /* report all jobs with non-empty intersection with [est_omega; lct_omega]*/
-      if( convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + consdata->durations[j] >= est
+      if( convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + durations[j] >= est
          && convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) <= lct )
       {         
          SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
@@ -3649,6 +3690,8 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
    SCIP_CONSDATA* consdata;
    SCIP_Bool success;
    
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
    SCIPdebugMessage("initialize conflict analysis for energetic reasoning\n");
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
@@ -3670,7 +3713,9 @@ SCIP_RETCODE initializeConflictAnalysisEnergeticReasoning(
       SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
    }
    
-   SCIP_CALL( analyzeConflictEnergeticReasoning(scip, cons, infervar, inferinfo, NULL, &success) );
+   SCIP_CALL( analyzeConflictEnergeticReasoning(scip, 
+         consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
+         infervar, inferinfo, NULL, &success) );
    assert(success);
 
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -4130,7 +4175,11 @@ SCIP_RETCODE performEnergeticReasoning(
 static
 SCIP_RETCODE analyzeShortConflictEdgeFinding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to propagate */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
    SCIP_VAR*             infervar,           /**< variable whose bound change is to be explained */
    INFERINFO             inferinfo,          /**< inference info containing position of correct bdchgids */
    int                   inferdemand,        /**< demand of inference variable */
@@ -4140,8 +4189,6 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
    SCIP_Bool*            success             /**< pointer to store if we could explain the bound change */
    )
 {
-   SCIP_CONSDATA* consdata;
-   
    SCIP_Real neededenergy;
 
    int* varids;          /* array of job indices that intersect the omega-interval */
@@ -4154,20 +4201,15 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
 
    int energy;
    int inferenergy;
-   int nvars;
    int j;
    
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(nvars > 0);
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING);
    
-   SCIPdebugMessage("repropagate edge-finding with short reasons for constraint <%s> and variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(infervar));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   SCIPdebugMessage("repropagate edge-finding with short reasons for variable <%s>\n", SCIPvarGetName(infervar));
 
    *success = FALSE;
-   nvars = consdata->nvars;
    sizeenergies = 0;
 
    est_omega = inferInfoGetEst(inferinfo);
@@ -4183,7 +4225,7 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
       int lb;
       int ub;
 
-      var = consdata->vars[j];      
+      var = vars[j];      
       
       if( var == infervar )
          continue;
@@ -4192,9 +4234,9 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
       ub = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
       /* report all jobs running in [est_omega; lct_omega] (these might be too much, but ok) */
-      if( lb >= est_omega &&  ub + consdata->durations[j] <= lct_omega )
+      if( lb >= est_omega &&  ub + durations[j] <= lct_omega )
       {         
-         energies[sizeenergies] = consdata->durations[j]*consdata->demands[j];
+         energies[sizeenergies] = durations[j] * demands[j];
          varids[sizeenergies] = j;         
          sizeenergies++;
       }  
@@ -4203,7 +4245,7 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
    SCIPsortDownIntInt(energies, varids, sizeenergies);
 
    delta_omega = lct_omega - est_omega;
-   neededenergy = (consdata->capacity - inferdemand) * delta_omega / (SCIP_Real)inferdemand;
+   neededenergy = (capacity - inferdemand) * delta_omega / (SCIP_Real)inferdemand;
    inferenergy = inferdemand * inferduration;
 
    /* report conflicting jobs until enough energy is reported */
@@ -4213,12 +4255,12 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
       SCIP_Real remaining;
       energy += energies[j];
       
-      SCIP_CALL( SCIPaddConflictUb(scip, consdata->vars[varids[j]], bdchgidx) );
-      SCIP_CALL( SCIPaddConflictLb(scip, consdata->vars[varids[j]], bdchgidx) );     
+      SCIP_CALL( SCIPaddConflictUb(scip, vars[varids[j]], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars[varids[j]], bdchgidx) );     
 
       remaining = SCIPfeasCeil(scip, (SCIP_Real)energy - neededenergy);
 
-      if( remaining >= inferdiff && energy + inferenergy > consdata->capacity * delta_omega )
+      if( remaining >= inferdiff && energy + inferenergy > capacity * delta_omega )
       {
          *success = TRUE;
          break; 
@@ -4229,7 +4271,7 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
       {
          SCIPdebugMessage("enough energ for C-c_i\n");
       }
-      if( energy + inferenergy > consdata->capacity * delta_omega )
+      if( energy + inferenergy > capacity * delta_omega )
       {
          SCIPdebugMessage("enough energy for C\n");
       }
@@ -4254,32 +4296,28 @@ SCIP_RETCODE analyzeShortConflictEdgeFinding(
 static
 SCIP_RETCODE analyzeConflictEdgeFinding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to propagate */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
    SCIP_VAR*             infervar,           /**< variable whose bound change is to be explained */
    INFERINFO             inferinfo,          /**< inference info containing position of correct bdchgids */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_Bool*            success             /**< pointer to store if we could explain the bound change */
    )
 {
-   SCIP_CONSDATA* consdata;
-   
    int est_omega;
    int lct_omega;
-
-   int nvars;
    int j;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(nvars > 0);
    assert(inferInfoGetProprule(inferinfo) == PROPRULE_3_EDGEFINDING);
    
-   SCIPdebugMessage("repropagate edge-finding for constraint <%s> and variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(infervar));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
+   SCIPdebugMessage("repropagate edge-finding variable <%s>\n", SCIPvarGetName(infervar));
 
    *success = FALSE;
-   nvars = consdata->nvars;
 
    est_omega = inferInfoGetEst(inferinfo);
    lct_omega = inferInfoGetLct(inferinfo);
@@ -4288,14 +4326,14 @@ SCIP_RETCODE analyzeConflictEdgeFinding(
    for( j = 0; j < nvars; ++j ) 
    {
       SCIP_VAR* var;
-      var = consdata->vars[j];      
+      var = vars[j];      
       
       if( var == infervar )
          continue;
 
       /* report all jobs running in [est_omega; lct_omega] (these might be too much, but ok) */
       if( convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) >= est_omega
-         && convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) + consdata->durations[j] <= lct_omega )
+         && convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) + durations[j] <= lct_omega )
       {         
          SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );     
@@ -4317,7 +4355,12 @@ SCIP_RETCODE analyzeConflictEdgeFinding(
 static
 SCIP_RETCODE initializeConflictAnalysisEdgeFinding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to analyzed */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint to be analyzed */
    SCIP_VAR*             infervar,           /**< inference variable */
    INFERINFO             inferinfo           /**< inference info */
    )
@@ -4334,15 +4377,237 @@ SCIP_RETCODE initializeConflictAnalysisEdgeFinding(
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
    /* add lower and upper bound of variable which leads to the infeasibilty */
-   SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL ) );
-   SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL ) );
+   SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
+   SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
  
    SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
    
-   SCIP_CALL( analyzeConflictEdgeFinding(scip, cons, infervar, inferinfo, NULL, &success) );
+   SCIP_CALL( analyzeConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
+         infervar, inferinfo, NULL, &success) );
    assert(success);
 
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** resolve propagation w.r.t. the cumulative condition */
+static
+SCIP_RETCODE respropCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
+   int                   inferinfo,          /**< the user information */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{
+   SCIP_VAR* var;
+   
+   INFERINFO struct_inferinfo;
+
+   SCIP_Bool success;
+   
+   int inferdemand;
+   int inferduration;  /* needed for upperbound resolve process */
+   int j;
+   
+   struct_inferinfo = intToInferInfo(inferinfo);
+
+   if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER )
+   {
+      /* get duration and demand of inference variable */
+      /**@todo hashmap for variables and durations would speed this up */
+      inferdemand = 0;
+      inferduration = 0;
+
+      for( j = 0; j < nvars; ++j )
+      {
+         var = vars[j];
+         assert(var != NULL);
+         
+         if( var == infervar )
+         {
+            inferdemand = demands[j];
+            inferduration = durations[j];
+            break;
+         }
+      }
+      
+      SCIPdebugMessage("variable <%s> has duration = %d and demand = %d\n", 
+         SCIPvarGetName(infervar), inferduration, inferdemand);
+      
+      /* repropagation for core-times */
+      if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_1_CORETIMES )   
+      {
+         int leftbound;    
+         int rightbound;   
+         
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            SCIPdebugMessage("variable <%s> bound changed from %g to %g\n", 
+               SCIPvarGetName(infervar), SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE), 
+               SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE));
+            
+            rightbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE)) + inferduration;
+            leftbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
+            
+            /* old upper bound of variable itself is responsible */
+            SCIP_CALL( SCIPaddConflictUb( scip, infervar, bdchgidx ) );
+         } 
+         else
+         {    
+            assert(boundtype == SCIP_BOUNDTYPE_LOWER);      
+            leftbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE));
+            rightbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE));
+            
+            /* old lower bound of variable itself is responsible */
+            SCIP_CALL( SCIPaddConflictLb( scip, infervar, bdchgidx ) );
+            
+         }
+         assert(leftbound < rightbound);
+      
+         SCIP_CALL( analyzeConflictCoreTimesCumulative(scip, nvars, vars, durations, demands, capacity, 
+               infervar, leftbound, rightbound, inferduration, inferdemand, 
+               boundtype, bdchgidx, &success) );
+         assert(success);      
+      }
+      else  
+      {
+         /* repropagation for edge-finding or energetic reasoning */
+         int oldbound;
+         int newbound;
+
+         SCIPdebugMessage("repropagate edge-finder or energetic reasoning!\n");
+
+         if( boundtype == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIPdebugMessage("variable <%s> lower bound changed from %g to %g\n", 
+               SCIPvarGetName(infervar), SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE), 
+               SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE));
+
+            oldbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE));
+            newbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE));
+            assert(oldbound < newbound);
+
+            SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
+            
+            /* analyze the conflict */
+            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
+            {
+               /* can search for small clauses if earliest start is in the interval */
+               if( oldbound >= inferInfoGetEst(struct_inferinfo) )
+               {
+                  int inferdiff;
+                  inferdiff = newbound - inferInfoGetEst(struct_inferinfo);
+                  assert(inferdiff > 0);
+                  SCIP_CALL( analyzeShortConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
+                        infervar, struct_inferinfo, inferdemand, inferduration, inferdiff, 
+                        bdchgidx, &success) );
+               } 
+               else 
+               {
+                  SCIP_CALL( analyzeConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
+                        infervar, struct_inferinfo, bdchgidx, &success) );
+               }
+            } 
+            else
+            {
+               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               
+               SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations, demands, capacity,
+                     infervar, struct_inferinfo, bdchgidx, &success) );
+            }
+         }
+         else /* now consider upper bound changes */
+         {
+            SCIPdebugMessage("variable <%s> upper bound changed from %g to %g\n", 
+               SCIPvarGetName(infervar), SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE), 
+               SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE));
+
+            oldbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE));
+            newbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE));
+            assert(oldbound > newbound);
+
+            SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
+            
+            /* analyze the conflict */
+            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
+            {
+               /* can search for small clauses if latest completion time is in the interval */
+               if( oldbound + inferduration<= inferInfoGetLct(struct_inferinfo) )
+               {
+                  int inferdiff;
+                  inferdiff = inferInfoGetLct(struct_inferinfo) - newbound - inferduration;
+                  assert(inferdiff > 0);
+                  SCIP_CALL( analyzeShortConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
+                        infervar, struct_inferinfo, inferdemand, inferduration, inferdiff, 
+                        bdchgidx, &success) );
+               } 
+               else 
+               {
+                  SCIP_CALL( analyzeConflictEdgeFinding(scip, nvars, vars, durations, demands, capacity,
+                        infervar, struct_inferinfo, bdchgidx, &success) );
+               }               
+            } 
+            else /* upper bound conflict analysis for energetic reasoning */
+            {
+               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
+               
+               SCIP_CALL( analyzeConflictEnergeticReasoning(scip, nvars, vars, durations, demands, capacity,
+                     infervar, struct_inferinfo, bdchgidx, &success) );
+            }
+         }
+         assert(success);
+      }
+   }
+   else  
+   {
+      /* repropagation for binary variables set to zero; inferinfo == position in array and excluded timepoint */
+      SCIP_VAR* intvar;
+      SCIP_VAR** binvars;
+
+      int pos;
+      int nbinvars;
+
+      assert(SCIPvarGetType(infervar) == SCIP_VARTYPE_BINARY);
+      assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_2_CORETIMEHOLES); 
+
+      intvar = NULL;
+      inferdemand = 0;
+
+      pos = inferInfoGetEst(struct_inferinfo);
+      assert(pos >= 0);
+ 
+      /* get demand and integer variable of given inference variable */
+      for( j = 0; j < nvars; ++j )
+      {
+         var = vars[j];
+         assert(var != NULL);
+         
+         SCIP_CALL( SCIPgetBinvarsLinking(scip, SCIPgetConsLinking(scip, var), &binvars, &nbinvars) );
+         
+         if( binvars[pos] == infervar )
+         {
+            intvar = var;
+            inferdemand = demands[j];
+            break;
+         }
+      }      
+      assert(intvar != NULL);
+      assert(inferdemand > 0);
+
+      SCIP_CALL( analyzeConflictCoreTimesBinvarsCumulative(scip, nvars, vars, durations, demands, capacity,
+            infervar, intvar, inferInfoGetLct(struct_inferinfo), inferdemand, bdchgidx, &success) );      
+   }
+
+   if( success )
+      *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
@@ -4687,7 +4952,9 @@ SCIP_RETCODE performEdgeFindingDetection(
          /* if node can be cutoff, start conflict analysis */
          if( infeasible )
          {
-            SCIP_CALL( initializeConflictAnalysisEdgeFinding(scip, cons, respleaf->var, inferinfo) );
+            SCIP_CALL( initializeConflictAnalysisEdgeFinding(scip, 
+                  consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
+                  cons, respleaf->var, inferinfo) );
             *cutoff = TRUE;
          }
 
@@ -4903,7 +5170,13 @@ SCIP_RETCODE propagateCons(
    /* propagate the job cores until nothing else can be detected */
    if( !(*cutoff) && usecoretimes )
    {
-      SCIP_CALL( propagateCores(scip, cons, cutoff, nchgbds) );
+      SCIP_CONSDATA* consdata;
+      
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      
+      SCIP_CALL( propagateCores(scip, consdata->nvars, consdata->vars, consdata->durations, consdata->demands, 
+            consdata->capacity, cons, nchgbds, cutoff) );
    }
     
     
@@ -6031,17 +6304,7 @@ static
 SCIP_DECL_CONSRESPROP(consRespropCumulative)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
 
-   INFERINFO struct_inferinfo;
-
-   SCIP_Bool success;
-
-   int nvars;
-   int inferdemand;
-   int inferduration;  /* needed for upperbound resolve process */
-   int j;
-   
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
@@ -6049,10 +6312,8 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
    assert(infervar != NULL);
    assert(bdchgidx != NULL);
    
-   struct_inferinfo = intToInferInfo(inferinfo);
-
    SCIPdebugMessage("resolve propagation for variable <%s> and cumulative constraint <%s> with rule %d\n", 
-      SCIPvarGetName(infervar), SCIPconsGetName(cons), inferInfoGetProprule(struct_inferinfo));
+      SCIPvarGetName(infervar), SCIPconsGetName(cons), inferInfoGetProprule(intToInferInfo(inferinfo)));
    
    /* process constraint */
    assert(cons != NULL);
@@ -6060,196 +6321,12 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   nvars = consdata->nvars;
    *result = SCIP_DIDNOTFIND;
    
-   if( SCIPvarGetType(infervar) == SCIP_VARTYPE_INTEGER )
-   {
-      /* get duration and demand of inference variable */
-      /*@todo hashmap for variables and durations would speed this up */
-      inferdemand = 0;
-      inferduration = 0;
-
-      for( j = 0; j < nvars; ++j )
-      {
-         var = consdata->vars[j];
-         assert(var != NULL);
-         
-         if( var == infervar )
-         {
-            inferdemand = consdata->demands[j];
-            inferduration = consdata->durations[j];
-            break;
-         }
-      }
-      
-      SCIPdebugMessage("variable <%s> has duration = %d and demand = %d\n", 
-         SCIPvarGetName(infervar), inferduration, inferdemand);
-      
-      /* repropagation for core-times */
-      if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_1_CORETIMES )   
-      {
-         int leftbound;    
-         int rightbound;   
-         
-         if( boundtype == SCIP_BOUNDTYPE_UPPER )
-         {
-            SCIPdebugMessage("variable <%s> bound changed from %g to %g\n", 
-               SCIPvarGetName(infervar), SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE), 
-               SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE));
-            
-            rightbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE)) + inferduration;
-            leftbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE)) + inferduration;
-            
-            /* old upper bound of variable itself is responsible */
-            SCIP_CALL( SCIPaddConflictUb( scip, infervar, bdchgidx ) );
-         } 
-         else
-         {    
-            assert(boundtype == SCIP_BOUNDTYPE_LOWER);      
-            leftbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE));
-            rightbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE));
-            
-            /* old lower bound of variable itself is responsible */
-            SCIP_CALL( SCIPaddConflictLb( scip, infervar, bdchgidx ) );
-            
-         }
-         assert(leftbound < rightbound);
-      
-         SCIP_CALL( analyzeConflictCoreTimesCumulative(scip, cons, infervar, leftbound, rightbound, inferduration, inferdemand, 
-               boundtype, bdchgidx, &success) );
-         assert(success);      
-      }
-      else  
-      {
-         /* repropagation for edge-finding or energetic reasoning */
-         int oldbound;
-         int newbound;
-
-         SCIPdebugMessage("repropagate edge-finder or energetic reasoning!\n");
-
-         if( boundtype == SCIP_BOUNDTYPE_LOWER )
-         {
-            SCIPdebugMessage("variable <%s> lower bound changed from %g to %g\n", 
-               SCIPvarGetName(infervar), SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE), 
-               SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE));
-
-            oldbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE));
-            newbound = convertBoundToInt(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE));
-            assert(oldbound < newbound);
-
-            SCIP_CALL( SCIPaddConflictLb(scip, infervar, bdchgidx) );
-            
-            /* analyze the conflict */
-            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
-            {
-               /* can search for small clauses if earliest start is in the interval */
-               if( oldbound >= inferInfoGetEst(struct_inferinfo) )
-               {
-                  int inferdiff;
-                  inferdiff = newbound - inferInfoGetEst(struct_inferinfo);
-                  assert(inferdiff > 0);
-                  SCIP_CALL( analyzeShortConflictEdgeFinding(scip, cons, infervar, struct_inferinfo,
-                        inferdemand, inferduration, inferdiff, bdchgidx, &success) );
-               } 
-               else 
-               {
-                  SCIP_CALL( analyzeConflictEdgeFinding(scip, cons, infervar, struct_inferinfo,
-                        bdchgidx, &success) );
-               }
-            } 
-            else
-            {
-               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
-               
-               SCIP_CALL( analyzeConflictEnergeticReasoning(scip, cons, infervar, struct_inferinfo,
-                     bdchgidx, &success) );
-            }
-         }
-         else /* now consider upper bound changes */
-         {
-            SCIPdebugMessage("variable <%s> upper bound changed from %g to %g\n", 
-               SCIPvarGetName(infervar), SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE), 
-               SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE));
-
-            oldbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE));
-            newbound = convertBoundToInt(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE));
-            assert(oldbound > newbound);
-
-            SCIP_CALL( SCIPaddConflictUb(scip, infervar, bdchgidx) );
-            
-            /* analyze the conflict */
-            if( inferInfoGetProprule(struct_inferinfo) == PROPRULE_3_EDGEFINDING )
-            {
-               /* can search for small clauses if latest completion time is in the interval */
-               if( oldbound + inferduration<= inferInfoGetLct(struct_inferinfo) )
-               {
-                  int inferdiff;
-                  inferdiff = inferInfoGetLct(struct_inferinfo) - newbound - inferduration;
-                  assert(inferdiff > 0);
-                  SCIP_CALL( analyzeShortConflictEdgeFinding(scip, cons, infervar, struct_inferinfo,
-                        inferdemand, inferduration, inferdiff, bdchgidx, &success) );
-               } 
-               else 
-               {
-                  SCIP_CALL( analyzeConflictEdgeFinding(scip, cons, infervar, struct_inferinfo,
-                        bdchgidx, &success) );
-               }               
-            } 
-            else /* upper bound conflict analysis for energetic reasoning */
-            {
-               assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_4_ENERGETICREASONING);
-               
-               SCIP_CALL( analyzeConflictEnergeticReasoning(scip, cons, infervar, struct_inferinfo,
-                     bdchgidx, &success) );
-            }
-         }
-         assert(success);
-      }
-   }
-   else  
-   {
-      /* repropagation for binary variables set to zero; inferinfo == position in array and excluded timepoint */
-      SCIP_VAR* intvar;
-      SCIP_VAR** binvars;
-
-      int pos;
-      int nbinvars;
-
-      assert(SCIPvarGetType(infervar) == SCIP_VARTYPE_BINARY);
-      assert(inferInfoGetProprule(struct_inferinfo) == PROPRULE_2_CORETIMEHOLES); 
-
-      intvar = NULL;
-      inferdemand = 0;
-
-      pos = inferInfoGetEst(struct_inferinfo);
-      assert(pos >= 0);
- 
-      /* get demand and integer variable of given inference variable */
-      for( j = 0; j < nvars; ++j )
-      {
-         var = consdata->vars[j];
-         assert(var != NULL);
-         
-         SCIP_CALL( SCIPgetBinvarsLinking(scip, SCIPgetConsLinking(scip, var), &binvars, &nbinvars) );
-         
-         if( binvars[pos] == infervar )
-         {
-            intvar = var;
-            inferdemand = consdata->demands[j];
-            break;
-         }
-      }      
-      assert(intvar != NULL);
-      assert(inferdemand > 0);
-
-      SCIP_CALL( analyzeConflictCoreTimesBinvarsCumulative(scip, cons, infervar, intvar, 
-            inferInfoGetLct(struct_inferinfo), inferdemand, bdchgidx, &success) );      
-   }
-
-   if( success )
-      *result = SCIP_SUCCESS;
-
+   SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars, 
+         consdata->durations, consdata->demands, consdata->capacity, 
+         infervar, inferinfo, boundtype, bdchgidx, result) );
+   
    return SCIP_OKAY;
 }
 
@@ -6578,6 +6655,71 @@ int* SCIPgetDemandsCumulative(
    assert(consdata != NULL);
 
    return consdata->demands;
+}
+
+/** check for the given starting time variables with their demands and durations if the cumulative conditions for the
+ *  given solution is satisfied 
+ */
+SCIP_RETCODE SCIPcheckCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   SCIP_Bool*            violated,           /**< pointer to store if the cumulative condition is violated */
+   SCIP_CONS*            cons,               /**< constraint which is checked */
+   SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
+   )
+{
+   assert(scip != NULL);
+   assert(violated != NULL);
+
+   SCIP_CALL( checkCumulativeCondition(scip, sol, nvars, vars, durations, demands, capacity, 
+         violated, cons, printreason) );
+   
+   return SCIP_OKAY;
+}
+
+/** propagate the given cumulative condition */
+SCIP_RETCODE SCIPpropCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity,           /**< available cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint which gets propagated */
+   int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
+   SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
+   )
+{
+   SCIP_CALL( propagateCores(scip, nvars, vars, durations, demands, capacity, 
+         cons, nchgbds, cutoff) );
+ 
+   return SCIP_OKAY;
+}
+
+/** resolve propagation w.r.t. the cumulative condition */
+SCIP_RETCODE SCIPrespropCumulativeCondition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
+   int                   inferinfo,          /**< the user information */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{
+   SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity, 
+         infervar, inferinfo, boundtype, bdchgidx, result) );
+   
+   return SCIP_OKAY;
 }
 
 /** create a new cumulative profile for the given capacity */
