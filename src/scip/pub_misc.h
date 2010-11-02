@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.75 2010/09/21 14:20:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.76 2010/11/02 00:49:53 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -2991,6 +2991,26 @@ int SCIPsnprintf(
    ...                      /**< further parameters           */
    );
 
+/** extrat the next token as value */
+extern
+SCIP_Bool SCIPstrGetValue(
+   const char*           str,                /**< string to search */
+   int                   pos,                /**< position in string to start */
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   int*                  endpos              /**< pointer to store the final position */
+   );
+
+/** copies the string between an start and end character */
+extern
+void SCIPstrCopySection(
+   const char*           str,                /**< string to search */
+   int                   pos,                /**< position in string to start */
+   char                  startchar,          /**< character which defines the beginning */
+   char                  endchar,            /**< character which defines the ending */
+   char*                 token,              /**< string to store the copy */
+   int                   size,               /**< size of the token char array */
+   int*                  endpos              /**< pointer to store the final position */
+   );
 
 
 /*

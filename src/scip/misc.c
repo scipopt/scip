@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.123 2010/09/21 20:09:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.124 2010/11/02 00:49:53 bzfheinz Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -22,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <ctype.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -2353,7 +2354,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
          for( i = 0; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
-
+      
       /* free old memory storage, and set the new array parameters */
       BMSfreeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
       ptrarray->vals = newvals;
@@ -4069,7 +4070,150 @@ int SCIPsnprintf(
    return n;
 }
 
+enum ExpType
+{
+   EXP_NONE, EXP_UNSIGNED, EXP_SIGNED
+};
+typedef enum ExpType EXPTYPE;
 
+/** returns whether the current character is member of a value string */
+static
+SCIP_Bool isValueChar(
+   char                  c,                  /**< input character */
+   char                  nextc,              /**< next input character */
+   SCIP_Bool             firstchar,          /**< is the given character the first char of the token? */
+   SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
+   EXPTYPE*              exptype             /**< pointer to update the exponent type */
+   )
+{
+   assert(hasdot != NULL);
+   assert(exptype != NULL);
+
+   if( isdigit(c) )
+      return TRUE;
+   else if( (*exptype == EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
+   {
+      *hasdot = TRUE;
+      return TRUE;
+   }
+   else if( !firstchar && (*exptype == EXP_NONE) && (c == 'e' || c == 'E') )
+   {
+      if( nextc == '+' || nextc == '-' )
+      {
+         *exptype = EXP_SIGNED;
+         return TRUE;
+      }
+      else if( isdigit(nextc) )
+      {
+         *exptype = EXP_UNSIGNED;
+         return TRUE;
+      }
+   }
+   else if( (*exptype == EXP_SIGNED) && (c == '+' || c == '-') )
+   {
+      *exptype = EXP_UNSIGNED;
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** extrat the next token as value */
+extern
+SCIP_Bool SCIPstrGetValue(
+   const char*           str,                /**< string to search */
+   int                   pos,                /**< position in string to start */
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   int*                  endpos              /**< pointer to store the final position */
+   )
+{
+   char token[SCIP_MAXSTRLEN];
+   SCIP_Bool hasdot;
+   EXPTYPE exptype;
+   
+   exptype = EXP_NONE;
+   hasdot = FALSE;
+   
+   /* truncate white space in front */
+   while( isspace(str[pos]) )
+      pos++;
+   
+   if( isValueChar(str[pos], str[pos+1], TRUE, &hasdot, &exptype) )
+   {
+      double val;
+      char* endptr;
+      int tokenlen;
+
+      tokenlen = 0;
+  
+      do
+      {
+         assert(tokenlen < SCIP_MAXSTRLEN);
+         token[tokenlen] = str[pos];
+         tokenlen++;
+         pos++;
+      }
+      while( isValueChar(str[pos], str[pos+1], FALSE, &hasdot, &exptype) );
+   
+      token[tokenlen] = '\0';
+      
+      val = strtod(token, &endptr);
+      
+      if( endptr != token && *endptr == '\0' )
+      {
+         *value = val;
+         return TRUE;
+      }
+   }
+   
+   return FALSE;
+}
+
+/** copies the string between an start and end character */
+void SCIPstrCopySection(
+   const char*           str,                /**< string to search */
+   int                   pos,                /**< position in string to start */
+   char                  startchar,          /**< character which defines the beginning */
+   char                  endchar,            /**< character which defines the ending */
+   char*                 token,              /**< string to store the copy */
+   int                   size,               /**< size of the token char array */
+   int*                  endpos              /**< pointer to store the final position */
+   )
+{
+   int len;
+   int nchars;
+  
+   assert(size > 0);
+   
+   len = strlen(str);
+   nchars = 0;
+
+   /* find starting character */
+   while( pos < len && str[pos] != startchar )
+      pos++;
+   
+   /* skip start character */
+   pos++;
+
+   /* copy string */
+   while( pos < len && nchars < size-1 && str[pos] != endchar )
+   {
+      assert(nchars < SCIP_MAXSTRLEN);
+      token[nchars] = str[pos];
+      nchars++;
+      pos++;
+   }
+   token[nchars] = '\0';
+   
+   /* find the position after the end character */
+   while( pos < len && str[pos] != endchar )
+      pos++;
+
+   /* skip end character */
+   pos++;
+
+   *endpos = pos;
+}
 
 /*
  * File methods
