@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.13 2010/10/15 16:39:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.14 2010/11/02 17:41:28 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 
 /**@file   solve.c
@@ -2228,6 +2228,7 @@ SCIP_RETCODE enforceConstraints(
          *solvelpagain = TRUE;
          resolved = TRUE;
          lp->solved = FALSE; /* to force resolving the LP (needed in exact mode) */
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED; /* to be consistent with lp->solved (needed in exact mode) */ 
          SCIPconshdlrForceEnforcement(set->conshdlrs_enfo[h]); /* to force second call of enforcement (needed in exact mode) */
          SCIPtreeSetFocusNodeLP(tree, TRUE); /* the node's LP must be solved */
          break;

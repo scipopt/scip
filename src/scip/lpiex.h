@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.6 2010/03/30 20:33:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.7 2010/11/02 17:41:26 bzfwolte Exp $"
 
 /**@file   lpiex.h
  * @brief  interface methods for specific LP solvers
@@ -709,12 +709,19 @@ SCIP_RETCODE SCIPlpiexWriteState(
    const char*           fname               /**< file name */
    );
 
-/** checks whether LPi state (i.e. basis information) is dual feasbile and returns corresponing dual objective value */
+/** checks whether LPi state (i.e. basis information) is dual feasbile and returns corresponding dual objective value.
+ *  if wanted it will first directly test the corresponding approximate dual and primal solution 
+ *  (corrected via dual variables for bounds and primal variables for slacks if possible) for optimality
+ *  before performing the dual feasibility test on the more expensive exact basic solution. 
+ */
 extern
 SCIP_RETCODE SCIPlpiexStateDualFeasible(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE*        lpistate,           /**< LPi state information (like basis information) */
+   SCIP_Bool             useprestep,         /**< should approximate primal and dual solution first */
+   SCIP_Real*            primalsol,          /**< approximate primal solution; or NULL to compute by exact LP solver */
+   SCIP_Real*            dualsol,            /**< approximate dual solution; or NULL to compute by exact LP solver */
    SCIP_Bool*            result,             /**< pointer to store whether given LPi state is dual feasible */
    mpq_t*                dualobjval          /**< pointer to store dual objective value in case of dual feasibility */
    );

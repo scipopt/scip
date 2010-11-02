@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.8 2010/10/15 16:39:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.9 2010/11/02 17:41:26 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_OBJSEN           objsen,             /**< objective sense */
+   SCIP_OBJSENSE         objsen,             /**< objective sense */
    int                   nvars,              /**< number of variables */
    int                   ninfbounds,         /**< number of variables with infinite bound in safe dual bounding method */
    int                   nlargebounds,       /**< number of variables with large bound in safe dual bounding method */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.12 2010/10/15 16:39:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.13 2010/11/02 17:41:27 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -16273,7 +16273,7 @@ void printDualboundingStatistics(
       SCIP_Longint nerrordbdiff;
 
       SCIPgetNDualboundDiff(scip, &nzerodbdiff, &nsmalldbdiff, &nmediumdbdiff, &nlargedbdiff);
-      nerrordbdiff = scip->stat->nprovedfeaslp + SCIPgetNProvedfeaslp(scip) 
+      nerrordbdiff = scip->stat->nprovedfeaslp + SCIPgetNProvedfeaslp(scip) + SCIPgetNExactunsollp(scip) 
          - (scip->stat->nfailprovedfeaslp + SCIPgetNFailProvedfeaslp(scip))
          - (nzerodbdiff + nsmalldbdiff + nmediumdbdiff + nlargedbdiff);
       assert(nerrordbdiff == 0);

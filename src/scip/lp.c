@@ -12,11 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.10 2010/10/15 16:39:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.11 2010/11/02 17:41:26 bzfwolte Exp $"
 //#define PROVEDBOUNDOUT /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUTSUB /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUTSUB2 /*only for debugging ?????????*/
 //#define UNBOUNDEDDUALSOL_OUT /*???????????????????????????*/
+//#define UNBOUNDEDDUALSOL_OUT2 /*???????????????????????????*/
 #define NEWVERSION /*????????????????????*/
 
 /**@file   lp.c
@@ -12994,7 +12995,12 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
     *  - dual farkas proof is not correct (due to numerics, result of LP solver might not be a proof)
     */
    if( SCIPsetIsInfinity(set, lp->cutoffbound) || !dualfeasible )
+   {
+#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+         printf("stop0\n");
+#endif
       success = FALSE;
+   }
    else
    {
       SCIP_Real dualfarkasproof;
@@ -13069,6 +13075,9 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
 
       if( dualfarkasproof <= 0.0 )
       {
+#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+         printf("stop-1\n");
+#endif
          success = FALSE;
          stat->nabortprovedinfeaslp++;
       }
@@ -13116,7 +13125,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
          assert(col->nunlinked == 0);
          aggrvalue = 0.0;
          
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          printf(" col <%s> [%f,%f]: check whether given dual sol is feasible\n", SCIPvarGetName(col->var), col->lb,
             col->ub);
 #endif
@@ -13130,13 +13139,13 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             assert(col->linkpos[r] >= 0);
             
             aggrvalue += dualsol[col->rows[r]->index] * col->vals[r];
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf("    row <%s> [%f,%f]:\t val*dualsol= \t%.14f \t * \t%.14f = %.14f ---> \t aggrval=%.14f\n", 
                col->rows[r]->name, col->rows[r]->lhs, col->rows[r]->rhs, 
                col->vals[r], dualsol[col->rows[r]->index], dualsol[col->rows[r]->index] * col->vals[r], aggrvalue);    
 #endif
          }
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          printf("-->: u^Ta (%.14f) ?=? c (%.14f) - r (%.14f) = %.14f\n", aggrvalue, col->obj, redcost[c], 
             col->obj - redcost[c] );
 #endif
@@ -13156,7 +13165,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
          assert(col != NULL);
          assert(col->nunlinked == 0);
          
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          printf(" col <%s>: compute dualfarkasextension\n", SCIPvarGetName(col->var));
 #endif
          /* compute r_c as dual value for bound constraint in dual ray, i.e., u^Ta.c + r_c == 0 */
@@ -13167,7 +13176,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             assert(col->linkpos[r] >= 0);
             
             aggrvalue += dualfarkas[col->rows[r]->index] * col->vals[r];
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf("    row <%s>:\t val*dualfarkas= \t%.14f \t * \t%.14f = %.14f ---> \t aggrval=%.14f\n", col->rows[r]->name,
                col->vals[r], dualfarkas[col->rows[r]->index], dualfarkas[col->rows[r]->index] * col->vals[r], aggrvalue);    
 #endif
@@ -13182,7 +13191,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             || ( dualfarkasextension[c] < 0.0 && SCIPsetIsInfinity(set, col->ub) ) )
             dualfarkasextension[c] = 0.0;
         
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          printf("-->: u^Ta \t = %.14f --> \t dualfarkasextension = %.14f\n", aggrvalue, dualfarkasextension[c]);
 #endif
       }
@@ -13196,7 +13205,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
       {
          assert(lpirows[r] != NULL);
 
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          SCIProwPrint(lpirows[r], NULL);
          printf(" row <%s>:\t dualsol=%.20f,\t dualfarkas=%f,\t lhs=%f,\t rhs=%f --->", 
             lpirows[r]->name, dualsol[r], dualfarkas[r], lpirows[r]->lhs - lpirows[r]->constant,
@@ -13211,12 +13220,18 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
              * (in exact arithmetic, this should never be the case, i.e., here, it is caused by numerics)
              */
             if( !SCIPsetIsEQ(set, lpirows[r]->lhs, lpirows[r]->rhs) && dualsol[r] < 0.0 )
+            {
+#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+               printf("stop1\n");
+#endif
+               stat->nabortprovedinfeaslp++;
                success = FALSE;
+            }
             else
             {
                rayobjval += (dualfarkas[r] * (lpirows[r]->lhs - lpirows[r]->constant));
                solobjval += (dualsol[r] * (lpirows[r]->lhs - lpirows[r]->constant));
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
                printf("lhs");
 #endif
             }
@@ -13229,12 +13244,18 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
              * (in exact arithmetic, this should never be the case, i.e., here, it is caused by numerics)
              */
             if( !SCIPsetIsEQ(set, lpirows[r]->lhs, lpirows[r]->rhs) && dualsol[r] > 0.0 )
+            {
+#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+               printf("stop2\n");
+#endif
+               stat->nabortprovedinfeaslp++;
                success = FALSE;
+            }
             else
             {
                rayobjval += (dualfarkas[r] * (lpirows[r]->rhs - lpirows[r]->constant));
                solobjval += (dualsol[r] * (lpirows[r]->rhs - lpirows[r]->constant));
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
                printf("rhs");
 #endif
             }
@@ -13244,7 +13265,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             assert(dualfarkas[r] == 0.0);
             assert(!SCIPsetIsInfinity(set, -1.0 * (lpirows[r]->lhs - lpirows[r]->constant)));
             solobjval += (dualsol[r] * (lpirows[r]->lhs - lpirows[r]->constant));
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf("lhs (2. case)");
 #endif
          }
@@ -13253,11 +13274,11 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             assert(dualfarkas[r] == 0.0);
             assert(!SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant));
             solobjval += (dualsol[r] * (lpirows[r]->rhs - lpirows[r]->constant));
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf("rhs (2. case)");
 #endif
          }
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          else
             printf("ignore");
          printf("---> solobjval=%f,\t rayobjval=%f\n", solobjval, rayobjval);
@@ -13269,7 +13290,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
          assert(lpicols[c] != NULL);
          assert(lpicols[c]->var != NULL);
 
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          printf(" col <%s>:\t redcost=%.20f,\t dualfarkasextension=%.20f,\t lb=%f,\t ub=%f ---> ", 
             SCIPvarGetName(lpicols[c]->var), redcost[c], dualfarkasextension[c], lpicols[c]->lb, lpicols[c]->ub);
 #endif
@@ -13281,12 +13302,18 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
              * (in exact arithmetic, this should never be the case, i.e., here, it is caused by numerics)
              */
             if( !SCIPsetIsEQ(set, lpicols[c]->lb, lpicols[c]->ub) && redcost[c] < 0.0)
+            {
+#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+               printf("stop3\n");
+#endif
+               stat->nabortprovedinfeaslp++;
                success = FALSE;
+            }
             else
             {
                rayobjval += (dualfarkasextension[c] * lpicols[c]->lb);
                solobjval += (redcost[c] * lpicols[c]->lb);
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
                printf("lb");
 #endif
             }
@@ -13299,12 +13326,18 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
              * (in exact arithmetic, this should never be the case, i.e., here, it is caused by numerics)
              */
             if( !SCIPsetIsEQ(set, lpicols[c]->lb, lpicols[c]->ub) && redcost[c] > 0.0 )
+            {
+#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+               printf("stop4\n");
+#endif
+               stat->nabortprovedinfeaslp++;
                success = FALSE;
+            }
             else
             {
                rayobjval += (dualfarkasextension[c] * lpicols[c]->ub);
                solobjval += (redcost[c] * lpicols[c]->ub);
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
                printf("ub");
 #endif
             }
@@ -13314,7 +13347,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             assert(dualfarkasextension[c] == 0.0);
             assert(!SCIPsetIsInfinity(set, -lpicols[c]->lb));
             solobjval += (redcost[c] * lpicols[c]->lb);
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf("lb");
 #endif
          }
@@ -13323,11 +13356,11 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             assert(dualfarkasextension[c] == 0.0);
             assert(!SCIPsetIsInfinity(set, lpicols[c]->ub));
             solobjval += (redcost[c] * lpicols[c]->ub);
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf("ub");
 #endif
          }
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
          else
             printf("ignore");
          printf("---> solobjval=%f,\t rayobjval=%f\n", solobjval, rayobjval);
@@ -13336,8 +13369,14 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
       
       /* for some reason, the dual farkas vector is not extendable to an unbounded dual ray */
       if( SCIPsetIsFeasZero(set, rayobjval) )
+      {
+#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+         printf("stop5\n");
+#endif
+         stat->nabortprovedinfeaslp++;
          success = FALSE;
-
+      }
+      
       if( success )
       {
          assert(SCIPsetIsFeasPositive(set, rayobjval));
@@ -13345,7 +13384,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
          /* scale the ray, such that the resulting point has objective value that exceeds the cutoff bound */
          unboundedsolobjval = MIN(SCIPsetInfinity(set), lp->cutoffbound + MAX(ABS(lp->cutoffbound), 1.0));
          if( solobjval < unboundedsolobjval )
-            rayscale = MIN((unboundedsolobjval - solobjval)/rayobjval, 1.0); /* avoid close to zero scalars */
+            rayscale = MAX((unboundedsolobjval - solobjval)/rayobjval, 1.0); /* avoid close to zero scalars */
          else
             rayscale = 0.0;
          
@@ -13355,7 +13394,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             lpirows[r]->dualsol = dualsol[r] + (rayscale * dualfarkas[r]);
             lpirows[r]->activity = SCIP_INVALID;
             lpirows[r]->validactivitylp = -1;
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf(" row <%s>: basesol=%f, dualray=%f, unbdsol=%f\n", 
                lpirows[r]->name, dualsol[r], dualfarkas[r], lpirows[r]->dualsol);
 #endif
@@ -13365,7 +13404,7 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
             lpicols[c]->primsol = SCIP_INVALID;
             lpicols[c]->redcost = redcost[c] + (rayscale * dualfarkasextension[c]);
             lpicols[c]->validredcostlp = lpcount;
-#ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
+#ifdef UNBOUNDEDDUALSOL_OUT2 /* only for debugging ????????????????????????*/
             printf(" col <%s>: basesol=%f, dualray=%f, unbdsol=%f\n", 
                SCIPvarGetName(lpicols[c]->var), redcost[c], dualfarkasextension[c], lpicols[c]->redcost);
 #endif
@@ -13379,7 +13418,9 @@ SCIP_RETCODE SCIPlpGetUnboundedDualSol(
       }
 #ifdef UNBOUNDEDDUALSOL_OUT /* only for debugging ????????????????????????*/
       else
+      {
          printf("had to stop dualsol construction)\n");
+      }
 #endif
 
 #if 0 /* this is only for debugging, as we can not ensure that this always holds ????????? */
@@ -14492,6 +14533,8 @@ SCIP_RETCODE provedBound(
       mpq_t tmpconst;
       mpq_t tmpy;
       mpq_t tmpprod;
+      mpq_t tmpneginfty;
+      mpq_t tmpposinfty;
 
 #ifdef PROVEDBOUNDOUT /*only for debugging ?????????*/
       char s[SCIP_MAXSTRLEN];
@@ -14504,10 +14547,15 @@ SCIP_RETCODE provedBound(
       mpq_init(tmpconst);
       mpq_init(tmpy);
       mpq_init(tmpprod);
+      mpq_init(tmpneginfty);
+      mpq_init(tmpposinfty);
       
+      mpq_set_d(tmpneginfty, -SCIPsetInfinity(set));
+      mpq_set_d(tmpposinfty, SCIPsetInfinity(set));
+
       mpq_set_d(tmpscalprod, 0.0);
       /* check result of interval arithmetic */ 
-      for( j = 0; j < lp->nrows; ++j )
+      for( j = 0; j < lp->nrows && mpq_cmp(tmpscalprod, tmpposinfty) < 0 && mpq_cmp(tmpscalprod, tmpneginfty) > 0; ++j )
       {
          row = lp->rows[j];
          mpq_set_d(tmpy, y[j]);
@@ -14531,7 +14579,17 @@ SCIP_RETCODE provedBound(
          mpq_sub(tmprhs, tmprhs, tmpconst);
          mpq_mul(tmpprod, tmprhs, tmpy);
          mpq_add(tmpscalprod, tmpscalprod, tmpprod);
+#ifdef PROVEDBOUNDOUT /*only for debugging ?????????*/
+         printf("   j=%d: + (b_j=%g * y_j=%g == %g) == %g\n", j, mpq_get_d(tmprhs), mpq_get_d(tmpy), 
+            mpq_get_d(tmpprod), mpq_get_d(tmpscalprod));
+#endif
       }
+      /* ensure exact result to be in (-inf,inf) */
+      if( mpq_cmp(tmpscalprod, tmpposinfty) > 0 )
+         mpq_set(tmpscalprod, tmpposinfty);
+      if( mpq_cmp(tmpscalprod, tmpneginfty) < 0 )
+         mpq_set(tmpscalprod, tmpneginfty);
+
       mpq_set_d(tmpinf, ytb.inf);
       mpq_set_d(tmpsup, ytb.sup);
       
@@ -14549,6 +14607,8 @@ SCIP_RETCODE provedBound(
       mpq_clear(tmpconst);
       mpq_clear(tmpy);
       mpq_clear(tmpprod);
+      mpq_clear(tmpneginfty);
+      mpq_clear(tmpposinfty);
    }
 #endif
 
@@ -14672,6 +14732,8 @@ SCIP_RETCODE provedBound(
       mpq_t tmpprod;
       mpq_t tmpx;
       mpq_t tmpminprod;
+      mpq_t tmpneginfty;
+      mpq_t tmpposinfty;
 
 #ifdef PROVEDBOUNDOUT /*only for debugging ?????????*/
       char s[SCIP_MAXSTRLEN];
@@ -14686,12 +14748,16 @@ SCIP_RETCODE provedBound(
       mpq_init(tmpprod);
       mpq_init(tmpx);
       mpq_init(tmpminprod);
+      mpq_init(tmpneginfty);
+      mpq_init(tmpposinfty);
       
+      mpq_set_d(tmpneginfty, -SCIPsetInfinity(set));
+      mpq_set_d(tmpposinfty, SCIPsetInfinity(set));
       mpq_set_d(tmpnegone, -1.0);
       mpq_set_d(tmpminprod, 0.0);
 
       /* check result of interval arithmetic */ 
-      for( j = 0; j < lp->ncols; ++j )
+      for( j = 0; j < lp->ncols && mpq_cmp(tmpminprod, tmpposinfty) < 0 && mpq_cmp(tmpminprod, tmpneginfty) > 0; ++j )
       {
 
          col = lp->cols[j];
@@ -14701,14 +14767,23 @@ SCIP_RETCODE provedBound(
             mpq_set_d(tmpscalprod, 0.0);
          else
             mpq_set_d(tmpscalprod, col->obj);
-         for( i = 0; i < col->nlprows; ++i )
+         for( i = 0; i < col->nlprows && mpq_cmp(tmpscalprod, tmpposinfty) < 0 && mpq_cmp(tmpscalprod, tmpneginfty) > 0; ++i )
          {
             mpq_set_d(tmpa, col->vals[i]);
             mpq_mul(tmpa, tmpa, tmpnegone);
             mpq_set_d(tmpy, y[col->rows[i]->lppos]);
             mpq_mul(tmpprod, tmpa, tmpy);
             mpq_add(tmpscalprod, tmpscalprod, tmpprod);
-         }      
+#ifdef PROVEDBOUNDOUT /*only for debugging ?????????*/
+            printf("   i=%d: c_i=%g - (a_i=%g * y_i=%g == %g) == %g\n", i, usefarkas ? 0.0 : col->obj, 
+               mpq_get_d(tmpa), mpq_get_d(tmpy), mpq_get_d(tmpprod), mpq_get_d(tmpscalprod));
+#endif
+         }   
+         /* ensure exact result to be in (-inf,inf) */
+         if( mpq_cmp(tmpscalprod, tmpposinfty) > 0 )
+            mpq_set(tmpscalprod, tmpposinfty);
+         if( mpq_cmp(tmpscalprod, tmpneginfty) < 0 )
+            mpq_set(tmpscalprod, tmpneginfty);
          
          mpq_set_d(tmpinf, atyinter[j].inf);
          mpq_set_d(tmpsup, atyinter[j].sup);
@@ -14727,7 +14802,17 @@ SCIP_RETCODE provedBound(
             mpq_set_d(tmpx, SCIPcolGetUb(col));
          mpq_mul(tmpprod, tmpscalprod, tmpx);
          mpq_add(tmpminprod, tmpminprod, tmpprod);
+#ifdef PROVEDBOUNDOUT /*only for debugging ?????????*/
+         printf("   j=%d: + (x_j=%g * scalprod_j=%g == %g) == %g\n", j, mpq_get_d(tmpx), mpq_get_d(tmpscalprod), 
+            mpq_get_d(tmpprod), mpq_get_d(tmpminprod));
+#endif
       }
+      /* for second test: ensure exact result to be in (-inf,inf) */
+      if( mpq_cmp(tmpminprod, tmpposinfty) > 0 )
+         mpq_set(tmpminprod, tmpposinfty);
+      if( mpq_cmp(tmpminprod, tmpneginfty) < 0 )
+         mpq_set(tmpminprod, tmpneginfty);
+
       /* second test: check whether exact value of min{(c^T - y^TA)x} is in interval */
       mpq_set_d(tmpinf, minprod.inf);
       mpq_set_d(tmpsup, minprod.sup);
@@ -14747,6 +14832,8 @@ SCIP_RETCODE provedBound(
       mpq_clear(tmpprod);
       mpq_clear(tmpx);
       mpq_clear(tmpminprod);
+      mpq_clear(tmpneginfty);
+      mpq_clear(tmpposinfty);
    }
 #endif
 
