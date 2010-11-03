@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.445 2010/11/02 01:11:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.446 2010/11/03 00:27:06 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -3238,6 +3238,8 @@ SCIP_RETCODE SCIPaddVarBranchFactor(
 
 /** sets the branch priority of the variable; variables with higher branch priority are always preferred to variables
  *  with lower priority in selection of branching variable
+ *
+ * @note the default branching priority is 0
  */
 extern
 SCIP_RETCODE SCIPchgVarBranchPriority(
