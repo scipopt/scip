@@ -13,6 +13,7 @@
 =opt= rgn                      82.1999974
 =opt= stein27                          18
 =opt= vpm2                          13.75
+=opt= cross                             3
 =opt= mcf64-4-1                        10
 =opt= mcf128-4-1                       14
 =opt= sparse2                        26.0
