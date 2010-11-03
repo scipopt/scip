@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.110 2010/10/05 15:49:55 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.111 2010/11/03 12:23:11 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -851,7 +851,7 @@ SCIP_RETCODE forbidCover(
    assert(nvars >= 1);
    assert(cover != NULL);
    assert(coversize >= 1);
-   assert(coversize < nvars);
+   assert(coversize <= nvars);
    assert(diversification >= 1);
    assert(success != NULL);
    assert(infeas != NULL);
