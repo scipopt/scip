@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.19 2010/11/02 00:40:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.20 2010/11/03 00:28:19 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -6836,7 +6836,7 @@ void SCIPprofileInsertCore(
 #ifdef PROFILE_DEBUG
       SCIPdebugMessage("before inserting: \n");
       SCIPprofilePrintOut(profile);
-      SCIPdebugMessage("insert core from var <%s>: [%d,%d] [%d]\n", SCIPvarGetName(var), begin, end, demand);
+      SCIPdebugMessage("insert core from var <%s>[%d,%d]: [%d,%d] [%d]\n", SCIPvarGetName(var), lb, ub, begin, end, demand);
 #endif
 
       SCIPprofileUpdate(profile, begin, end, demand, infeasible);
