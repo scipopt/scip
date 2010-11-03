@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.37 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.38 2010/11/03 01:12:46 bzfberth Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -44,6 +44,7 @@
 					 *   apply only if conflicts and incumbent solution will be copied too
 					 */
 #define DEFAULT_APPLYINFERVALS     TRUE /**< should the inference values be used as initialization in the original SCIP? */
+#define DEFAULT_REDUCEDINFER      FALSE /**< should the inference values only be used when rapid learning found other reductions? */
 #define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
 #define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status ba copied to the original SCIP?                      */
 
@@ -52,6 +53,11 @@
 
 #define DEFAULT_MINNODES            500 /**< minimum number of nodes considered in rapid learning run */
 #define DEFAULT_MAXNODES           5000 /**< maximum number of nodes considered in rapid learning run */
+
+#define DEFAULT_CONTVARS          FALSE /**< should rapid learning be applied when there are continuous variables? */
+#define DEFAULT_CONTVARSQUOT        0.3 /**< maximal portion of continuous variables to apply rapid learning       */
+#define DEFAULT_LPITERQUOT          0.2 /**< maximal fraction of LP iterations compared to node LP iterations      */
+
 
 /*
  * Data structures
@@ -63,12 +69,16 @@ struct SCIP_SepaData
    SCIP_Bool             applyconflicts;     /**< should the found conflicts be applied in the original SCIP?                 */
    SCIP_Bool             applybdchgs;        /**< should the found global bound deductions be applied in the original SCIP?   */
    SCIP_Bool             applyinfervals;     /**< should the inference values be used as initialization in the original SCIP? */
+   SCIP_Bool             reducedinfer;       /**< should the inference values only be used when rapid learning found other reductions? */
    SCIP_Bool             applyprimalsol;     /**< should the incumbent solution be copied to the original SCIP?               */
    SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP?                      */
    int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called   */
    int                   maxnconss;          /**< maximum problem size (constraints) for which rapid learning will be called */
    int                   minnodes;           /**< minimum number of nodes considered in rapid learning run */
    int                   maxnodes;           /**< maximum number of nodes considered in rapid learning run */
+   SCIP_Bool             contvars;           /**< should rapid learning be applied when there are continuous variables? */
+   SCIP_Real             contvarsquot;       /**< maximal portion of continuous variables to apply rapid learning       */
+   SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations      */
 };
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
@@ -225,8 +235,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( ndiscvars == 0 )
       return SCIP_OKAY;
 
-   /* only run for binary programs */
-   if( ndiscvars != SCIPgetNVars(scip) )
+   /* get separator's data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* only run for integer programs */
+   if( !sepadata->contvars && ndiscvars != SCIPgetNVars(scip) )
+      return SCIP_OKAY;
+
+   /* only run if there are few enough continuous variables */
+   if( sepadata->contvars && SCIPgetNContVars(scip) > sepadata->contvarsquot * SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
    /* do not run if pricers are present */
@@ -240,10 +258,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* call separator at most once per node */
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
       return SCIP_OKAY;
-
-   /* get separator's data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
 
    /* do not call rapid learning, if the probelm is too big */
    if( SCIPgetNVars(scip) > sepadata->maxnvars || SCIPgetNConss(scip) > sepadata->maxnconss )
@@ -559,7 +573,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    n2startinfers = 0;
 
    /* install start values for inference branching */
-   if( sepadata->applyinfervals )
+   if( sepadata->applyinfervals && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
    {
       for( i = 0; i < nvars; ++i )
       {
@@ -581,20 +595,20 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);            
         
          /* memorize statistics */
-         if( downinfer+downconflen+downvsids > 0.0 || downinfer+downconflen+downvsids != 0 )
+         if( downinfer+downconflen+downvsids > 0.0 || upinfer+upconflen+upvsids != 0 )
             n1startinfers++;
          
-         if( downinfer+downconflen+downvsids > 0.0 && downinfer+downconflen+downvsids != 0 )
+         if( downinfer+downconflen+downvsids > 0.0 && upinfer+upconflen+upvsids != 0 )
             n2startinfers++;
          
          SCIP_CALL( SCIPinitVarBranchStats(scip, vars[i], 0.0, 0.0, downvsids, upvsids, downconflen, upconflen, downinfer, upinfer, 0.0, 0.0) );
       }   
    }
    
-   SCIPdebugMessage("Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n", nconflicts, nbdchgs, soladded ? "found" : "no", 
+   SCIPdebugPrintf("XXX Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n", nconflicts, nbdchgs, soladded ? "found" : "no", 
       dualboundchg ? "found" : "no");
 
-   SCIPdebugMessage("Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", 
+   SCIPdebugPrintf("YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n", 
       100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
 
    /* change result pointer */
@@ -653,6 +667,10 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyinfervals",
          "should the inference values be used as initialization in the original SCIP?",
          &sepadata->applyinfervals, TRUE, DEFAULT_APPLYINFERVALS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/reducedinfer",
+         "should the inference values only be used when "SEPA_NAME" found other reductions?",
+         &sepadata->reducedinfer, TRUE, DEFAULT_REDUCEDINFER, NULL, NULL) );
   
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyprimalsol",
          "should the incumbent solution be copied to the original SCIP?",
@@ -661,6 +679,18 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applysolved",
          "should a solved status be copied to the original SCIP?",
          &sepadata->applysolved, TRUE, DEFAULT_APPLYSOLVED, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/contvars",
+         "should rapid learning be applied when there are continuous variables?",
+         &sepadata->contvars, TRUE, DEFAULT_CONTVARS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/contvarsquot",
+         "maximal portion of continuous variables to apply rapid learning",
+         &sepadata->contvarsquot, TRUE, DEFAULT_CONTVARSQUOT, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/lpiterquot",
+         "maximal fraction of LP iterations compared to node LP iterations",
+         &sepadata->lpiterquot, TRUE, DEFAULT_LPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
  
    SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxnvars",
          "maximum problem size (variables) for which rapid learning will be called",
