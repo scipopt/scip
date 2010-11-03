@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.137 2010/10/02 16:36:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.138 2010/11/03 12:50:05 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5298,7 +5298,7 @@ SCIP_RETCODE replaceByLinearConstraints(
          SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
          SCIPconsIsStickingAtNode(conss[c])) );
 
-      SCIPdebugMessage("replace quadratic constraint <%s> by linear constraint after all linear vars have been fixed\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMessage("replace quadratic constraint <%s> by linear constraint after all quadratic vars have been fixed\n", SCIPconsGetName(conss[c]) );
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
       SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
