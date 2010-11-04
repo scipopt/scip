@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.28 2010/09/28 10:13:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpioracle.c,v 1.28.2.1 2010/11/04 07:37:44 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface
@@ -2116,7 +2116,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
       lincoefs = &oracle->conslincoefs[considx];
       linlen   = &oracle->conslinlens[considx];
    }
-   
+
    if( *linlen == 0 )
    { /* first time we have linear coefficients in this constraint (or objective) */
       assert(*linidxs == NULL);
@@ -2146,7 +2146,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
          {
             if( !addednew )
             { /* first coefficient that is added new, realloc memory */
-               int newsize = *linlen + (nentries-i); /* new size for arrays (upper bound) */
+               int newsize = *linlen + nentries; /* new size for arrays (upper bound) */
                SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, linidxs,  *linlen, newsize) );
                SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, lincoefs, *linlen, newsize) );
             }
@@ -2159,14 +2159,14 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
             oracle->vardegrees[varidxs[i]] = MAX(1, oracle->vardegrees[varidxs[i]]);  /*lint !e613*/
          }
       }
-      
+
       if( addednew )
       {
          /* shrink to actual needed size */
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, linidxs , *linlen + (nentries-i), len) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, lincoefs, *linlen + (nentries-i), len) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, linidxs , *linlen + nentries, len) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, lincoefs, *linlen + nentries, len) );
          *linlen = len;
-         
+
          SCIPsortIntReal(*linidxs, *lincoefs, len);
       }
    }
@@ -2250,7 +2250,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
          if( SCIPquadelemSortedFind(*myquadelems, quadelems[i].idx1, quadelems[i].idx2, *myquadlen, &pos) )  /*lint !e613*/
          {
             /* we can assume that index pairs are not repeating, since we squeezed them when creating the array at first time and changing coefficients should not create duplicate entries */
-            assert(!SCIPquadelemSortedFind(&(*myquadelems)[pos+1], quadelems[i].idx1, quadelems[i].idx2, *myquadlen-pos, NULL));  /*lint !e613*/
+            assert(!SCIPquadelemSortedFind(&(*myquadelems)[pos+1], quadelems[i].idx1, quadelems[i].idx2, *myquadlen-pos-1, NULL));  /*lint !e613*/
             
             (*myquadelems)[pos].coef = quadelems[i].coef;  /*lint !e613*/
          }
@@ -2258,7 +2258,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
          {
             if( !addednew )
             { /* first coefficient that is added new, realloc memory */
-               int newsize = *myquadlen + (nquadelems - i); /* new size for arrays (upper bound) */
+               int newsize = *myquadlen + nquadelems; /* new size for arrays (upper bound) */
                SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, myquadelems, *myquadlen, newsize) );
             }
             /* append new entry */
@@ -2274,7 +2274,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
       if( addednew )
       {
          /* shrink to actual needed size */
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, myquadelems, *myquadlen + (nquadelems-i), len) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(oracle->blkmem, myquadelems, *myquadlen + nquadelems, len) );
          *myquadlen = len;
       }
    }
