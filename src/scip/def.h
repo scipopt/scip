@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.184 2010/10/01 21:00:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.185 2010/11/05 15:38:20 bzfpfets Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -112,6 +112,7 @@ extern "C" {
 #define EPSN(x,eps)       ((x) < -(eps))
 #define EPSFLOOR(x,eps)   (floor((x)+(eps)))
 #define EPSCEIL(x,eps)    (ceil((x)-(eps)))
+#define EPSROUND(x,eps)   (ceil((x)-0.5+(eps)))
 #define EPSFRAC(x,eps)    ((x)-EPSFLOOR(x,eps))
 #define EPSISINT(x,eps)   (EPSFRAC(x,eps) <= (eps))
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.697 2010/11/03 00:27:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.698 2010/11/05 15:38:20 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -20355,6 +20355,7 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisFracIntegral
 #undef SCIPfloor
 #undef SCIPceil
+#undef SCIPround
 #undef SCIPfrac
 #undef SCIPisSumEQ
 #undef SCIPisSumLT
@@ -20376,6 +20377,7 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisFeasFracIntegral
 #undef SCIPfeasFloor
 #undef SCIPfeasCeil
+#undef SCIPfeasRound
 #undef SCIPfeasFrac
 #undef SCIPisLbBetter
 #undef SCIPisUbBetter
@@ -20626,6 +20628,18 @@ SCIP_Real SCIPceil(
    assert(scip->set != NULL);
 
    return SCIPsetCeil(scip->set, val);
+}
+
+/** rounds value - feasibility tolerance up to the next integer in epsilon tolerance */
+SCIP_Real SCIPround(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetRound(scip->set, val);
 }
 
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
@@ -20947,6 +20961,18 @@ SCIP_Real SCIPfeasCeil(
    assert(scip->set != NULL);
 
    return SCIPsetFeasCeil(scip->set, val);
+}
+
+/** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
+SCIP_Real SCIPfeasRound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetFeasRound(scip->set, val);
 }
 
 /** returns fractional part of value, i.e. x - floor(x) */

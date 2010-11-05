@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.446 2010/11/03 00:27:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.447 2010/11/05 15:38:20 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -7377,6 +7377,13 @@ SCIP_Real SCIPceil(
    SCIP_Real             val                 /**< value to process */
    );
 
+/** rounds value - feasibility tolerance up to the next integer in epsilon tolerance */
+extern
+SCIP_Real SCIPround(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
 extern
 SCIP_Real SCIPfrac(
@@ -7534,6 +7541,13 @@ SCIP_Real SCIPfeasCeil(
    SCIP_Real             val                 /**< value to process */
    );
 
+/** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
+extern
+SCIP_Real SCIPfeasRound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** returns fractional part of value, i.e. x - floor(x) */
 extern
 SCIP_Real SCIPfeasFrac(
@@ -7658,6 +7672,7 @@ SCIP_Bool SCIPisSumRelGE(
 #define SCIPisFracIntegral(scip, val)             SCIPsetIsFracIntegral((scip)->set, val)
 #define SCIPfloor(scip, val)                      SCIPsetFloor((scip)->set, val)
 #define SCIPceil(scip, val)                       SCIPsetCeil((scip)->set, val)
+#define SCIPround(scip, val)                      SCIPsetRound((scip)->set, val)
 #define SCIPfrac(scip, val)                       SCIPsetFrac((scip)->set, val)
                                                                                 
 #define SCIPisSumEQ(scip, val1, val2)             SCIPsetIsSumEQ((scip)->set, val1, val2)    
@@ -7681,6 +7696,7 @@ SCIP_Bool SCIPisSumRelGE(
 #define SCIPisFeasFracIntegral(scip, val)         SCIPsetIsFeasFracIntegral((scip)->set, val)
 #define SCIPfeasFloor(scip, val)                  SCIPsetFeasFloor((scip)->set, val)
 #define SCIPfeasCeil(scip, val)                   SCIPsetFeasCeil((scip)->set, val)
+#define SCIPfeasRound(scip, val)                  SCIPsetFeasRound((scip)->set, val)
 #define SCIPfeasFrac(scip, val)                   SCIPsetFeasFrac((scip)->set, val)
 
                                                                                 

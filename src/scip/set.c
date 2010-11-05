@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.261 2010/10/29 11:07:00 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.262 2010/11/05 15:38:20 bzfpfets Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -3624,6 +3624,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsFracIntegral
 #undef SCIPsetFloor
 #undef SCIPsetCeil
+#undef SCIPsetRound
 #undef SCIPsetFrac
 #undef SCIPsetIsSumEQ
 #undef SCIPsetIsSumLT
@@ -3635,6 +3636,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsSumNegative
 #undef SCIPsetSumFloor
 #undef SCIPsetSumCeil
+#undef SCIPsetSumRound
 #undef SCIPsetSumFrac
 #undef SCIPsetIsFeasEQ
 #undef SCIPsetIsFeasLT
@@ -3648,6 +3650,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsFeasFracIntegral
 #undef SCIPsetFeasFloor
 #undef SCIPsetFeasCeil
+#undef SCIPsetFeasRound
 #undef SCIPsetFeasFrac
 #undef SCIPsetIsLbBetter
 #undef SCIPsetIsUbBetter
@@ -3911,6 +3914,17 @@ SCIP_Real SCIPsetCeil(
    return EPSCEIL(val, set->num_epsilon);
 }
 
+/** rounds value to the nearest integer in epsilon tolerance */
+SCIP_Real SCIPsetRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(set != NULL);
+
+   return EPSROUND(val, set->num_epsilon);
+}
+
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
 SCIP_Real SCIPsetFrac(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4035,6 +4049,17 @@ SCIP_Real SCIPsetSumCeil(
    assert(set != NULL);
 
    return EPSCEIL(val, set->num_sumepsilon);
+}
+
+/** rounds value to the nearest integer in sumepsilon tolerance */
+SCIP_Real SCIPsetSumRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(set != NULL);
+
+   return EPSROUND(val, set->num_sumepsilon);
 }
 
 /** returns fractional part of value, i.e. x - floor(x) in sumepsilon tolerance */
@@ -4205,6 +4230,17 @@ SCIP_Real SCIPsetFeasCeil(
    assert(set != NULL);
 
    return EPSCEIL(val, set->num_feastol);
+}
+
+/** rounds value to the nearest integer in feasibility tolerance */
+SCIP_Real SCIPsetFeasRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(set != NULL);
+
+   return EPSROUND(val, set->num_feastol);
 }
 
 /** returns fractional part of value, i.e. x - floor(x) in feasibility tolerance */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.135 2010/10/29 11:07:00 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.136 2010/11/05 15:38:20 bzfpfets Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -1042,6 +1042,13 @@ SCIP_Real SCIPsetCeil(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
+/** rounds value to the nearest integer in epsilon tolerance */
+extern
+SCIP_Real SCIPsetRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
 extern
 SCIP_Real SCIPsetFrac(
@@ -1120,6 +1127,13 @@ SCIP_Real SCIPsetSumFloor(
 /** rounds value - sumepsilon tolerance up to the next integer */
 extern
 SCIP_Real SCIPsetSumCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** rounds value to the nearest integer in sumepsilon tolerance */
+extern
+SCIP_Real SCIPsetSumRound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
    );
@@ -1216,6 +1230,13 @@ SCIP_Real SCIPsetFeasFloor(
 /** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
 extern
 SCIP_Real SCIPsetFeasCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value to the nearest integer in feasibility tolerance */
+extern
+SCIP_Real SCIPsetFeasRound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
@@ -1362,6 +1383,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->num_epsilon) )
 #define SCIPsetFloor(set, val)             ( EPSFLOOR(val, (set)->num_epsilon) )
 #define SCIPsetCeil(set, val)              ( EPSCEIL(val, (set)->num_epsilon) )
+#define SCIPsetRound(set, val)             ( EPSROUND(val, (set)->num_epsilon) )
 #define SCIPsetFrac(set, val)              ( EPSFRAC(val, (set)->num_epsilon) )
 
 #define SCIPsetIsSumEQ(set, val1, val2)    ( EPSEQ(val1, val2, (set)->num_sumepsilon) )
@@ -1374,6 +1396,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumNegative(set, val)     ( EPSN(val, (set)->num_sumepsilon) )
 #define SCIPsetSumFloor(set, val)          ( EPSFLOOR(val, (set)->num_sumepsilon) )
 #define SCIPsetSumCeil(set, val)           ( EPSCEIL(val, (set)->num_sumepsilon) )
+#define SCIPsetSumRound(set, val)          ( EPSROUND(val, (set)->num_sumepsilon) )
 #define SCIPsetSumFrac(set, val)           ( EPSFRAC(val, (set)->num_sumepsilon) )
 
 #define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_feastol) )
@@ -1388,6 +1411,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsFeasFracIntegral(set, val) ( !EPSP(val, (set)->num_feastol) )
 #define SCIPsetFeasFloor(set, val)         ( EPSFLOOR(val, (set)->num_feastol) )
 #define SCIPsetFeasCeil(set, val)          ( EPSCEIL(val, (set)->num_feastol) )
+#define SCIPsetFeasRound(set, val)         ( EPSROUND(val, (set)->num_feastol) )
 #define SCIPsetFeasFrac(set, val)          ( EPSFRAC(val, (set)->num_feastol) )
 
 #define SCIPsetIsLbBetter(set, newlb, oldlb, oldub) ( EPSGT(newlb, oldlb, \
