@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.76 2010/11/02 00:49:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.77 2010/11/05 16:55:44 bzfpfets Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -2991,7 +2991,7 @@ int SCIPsnprintf(
    ...                      /**< further parameters           */
    );
 
-/** extrat the next token as value */
+/** extract the next token as value */
 extern
 SCIP_Bool SCIPstrGetValue(
    const char*           str,                /**< string to search */
