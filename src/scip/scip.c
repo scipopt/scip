@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.13 2010/11/02 17:41:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.14 2010/11/05 19:26:43 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -764,7 +764,7 @@ SCIP_Bool SCIPuseFPRelaxation(
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
- *  e'x'act neumaier and shcherbina); only relevant for solving the problem provably correct 
+ *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct 
  */
 char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */
@@ -12134,7 +12134,7 @@ SCIP_RETCODE SCIPendDive(
       char lowerboundtype;
 
       if( scip->set->misc_exactsolve )
-         if( scip->set->misc_usefprelax && scip->set->misc_dbmethod == 'n' )
+         if( scip->set->misc_usefprelax && ( scip->set->misc_dbmethod == 'n' || scip->set->misc_dbmethod == 'a' ) )
             lowerboundtype = 's';
          else 
             lowerboundtype = 'i';

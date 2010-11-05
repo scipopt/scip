@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.14 2010/11/02 17:41:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.15 2010/11/05 19:26:43 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 
 /**@file   solve.c
@@ -1524,6 +1524,11 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->flushed);
       assert(lp->solved);
 
+      if( set->misc_exactsolve && set->misc_usefprelax && ( set->misc_dbmethod == 'n' || set->misc_dbmethod == 'a' ) )
+      {
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, 's', set, stat, lp) );
+      }      
+
       /* solve the LP with pricing in new variables */
       while( mustprice && !(*lperror) )
       {
@@ -1551,7 +1556,7 @@ SCIP_RETCODE priceAndCutLoop(
             char lowerboundtype;
             
             if( set->misc_exactsolve )
-               if( set->misc_usefprelax && set->misc_dbmethod == 'n' )
+               if( set->misc_usefprelax && ( set->misc_dbmethod == 'n'  || set->misc_dbmethod == 'a' ) )
                   lowerboundtype = 's';
                else 
                   lowerboundtype = 'i';
@@ -1809,10 +1814,20 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       if( set->misc_exactsolve )
-         if( set->misc_usefprelax && set->misc_dbmethod == 'n' )
-            lowerboundtype = 's';
+      {
+         if( set->misc_usefprelax && ( set->misc_dbmethod == 'n' || set->misc_dbmethod == 'a' ) )
+         {
+            /* @todo: as soon as we actually add cutting planes, we might want to compute a proved bound here,
+             * i.e., set lowerboundtype = s. 
+             * currently we disabled it in order to avoid a second call of proved bound, the first one is done 
+             * before separation in order to know whether Neumaier Shcherbina worked for the selection of the 
+             * dual bounding method
+             */
+            lowerboundtype = 'i'; 
+         }
          else 
             lowerboundtype = 'i';
+      }
       else
          lowerboundtype = 'u';
       SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, lowerboundtype, set, stat, lp) );

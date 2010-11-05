@@ -12,13 +12,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.11 2010/11/02 17:41:26 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.12 2010/11/05 19:26:43 bzfwolte Exp $"
+//#define SCIP_DEBUG /*??????????????????*/
 //#define PROVEDBOUNDOUT /*only for debugging ?????????*/
+//#define PROVEDBOUNDOUT2 /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUTSUB /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUTSUB2 /*only for debugging ?????????*/
 //#define UNBOUNDEDDUALSOL_OUT /*???????????????????????????*/
 //#define UNBOUNDEDDUALSOL_OUT2 /*???????????????????????????*/
 #define NEWVERSION /*????????????????????*/
+//#define DBAUTO_OUT /*?????????????????*/
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5263,6 +5266,7 @@ SCIP_RETCODE lpFlushDelCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->hasprovedbound = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -5424,6 +5428,7 @@ SCIP_RETCODE lpFlushAddCols(
    /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
+   lp->hasprovedbound = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -5487,6 +5492,7 @@ SCIP_RETCODE lpFlushDelRows(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
+      lp->hasprovedbound = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -5636,6 +5642,7 @@ SCIP_RETCODE lpFlushAddRows(
    /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
+   lp->hasprovedbound = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    
@@ -5747,6 +5754,7 @@ SCIP_RETCODE lpFlushChgCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
+      lp->hasprovedbound = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -5760,6 +5768,7 @@ SCIP_RETCODE lpFlushChgCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->hasprovedbound = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -5855,6 +5864,7 @@ SCIP_RETCODE lpFlushChgRows(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->hasprovedbound = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -6234,6 +6244,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
    (*lp)->solisbasic = FALSE;
+   (*lp)->hasprovedbound = FALSE;
    (*lp)->rootlpisrelax = TRUE;
    (*lp)->isrelax = TRUE;
    (*lp)->probing = FALSE;
@@ -6413,6 +6424,7 @@ SCIP_RETCODE SCIPlpReset(
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
    lp->solisbasic = FALSE;
+   lp->hasprovedbound = FALSE;
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
    return SCIP_OKAY;
@@ -11442,7 +11454,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
          }
-         if( set->misc_exactsolve && set->misc_dbmethod == 'p' )
+         if( set->misc_exactsolve && (set->misc_dbmethod == 'p' || set->misc_dbmethod == 'a') )
          {
             SCIP_CALL( SCIPlpGetUnboundedDualSol(lp, set, stat) );
          }
@@ -13702,6 +13714,7 @@ SCIP_RETCODE lpDelColset(
       /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->hasprovedbound = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -13787,6 +13800,7 @@ SCIP_RETCODE lpDelRowset(
       /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
+      lp->hasprovedbound = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -14428,6 +14442,7 @@ SCIP_RETCODE SCIPlpEndProbing(
 }
 
 #ifdef NEWVERSION /*????????????????????*/
+#define FEWLBOUNDSRATIO 0.2 /**< maximal percentage of variables with large bounds that is regarded to be small */
 /** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
  *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0
  *  Calculating this value in interval arithmetics gives a proved lower LP bound for the following reason (assuming,
@@ -14470,6 +14485,56 @@ SCIP_RETCODE provedBound(
    assert(bound != NULL);
    assert(SCIPlpiInfinity(lp->lpi) <= SCIPsetInfinity(set));
 
+   if( set->misc_reducesafedb == 's' )
+   {
+#ifdef DBAUTO_OUT /*?????????????????*/
+      printf("reduce (%d:%d) (%f >= %f?: %d) \t (%d:%d) --> %d \n", 
+         usefarkas, !usefarkas, 
+         SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip), SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip)),
+         SCIPgetNLPBranchCands(set->scip), (SCIPgetNLPBranchCands(set->scip) > 0),
+         !usefarkas && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip)) && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNLPBranchCands(set->scip) > 0));
+#endif
+      /* decide whether safe dual bound is not really necessary:
+       * - LP is claimed to be feasible
+       * - unsafe dual bound would not cut off the node
+       * or
+       * - LP is claimed to be integral
+       */
+      if( !usefarkas 
+         && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), SCIPgetCutoffbound(set->scip)) 
+         && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNLPBranchCands(set->scip) > 0) )
+      {
+         *bound = -SCIPsetInfinity(set);
+         lp->hasprovedbound = TRUE;
+
+         return SCIP_OKAY;
+      }
+   }
+   else if( set->misc_reducesafedb == 'w' )
+   {
+      SCIP_CONS** conss;
+      SCIP_Real lboundratio;
+
+      /* get exactlp constraints */
+      conss = SCIPgetConss(set->scip);
+      assert(conss != NULL);
+      assert(SCIPgetNConss(set->scip) == 1);
+
+      /* decide whether safe dual bound via neumaier shcherbina is prommising:
+       * - infeasible LPs 
+       * or
+       * - only a few variables with large or infinite bounds exist
+       */
+      lboundratio = (SCIP_Real) (SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0])) / (SCIP_Real) SCIPgetNVars(set->scip);
+      if( !usefarkas && lboundratio > FEWLBOUNDSRATIO )
+      {
+         *bound = -SCIPsetInfinity(set);
+         lp->hasprovedbound = FALSE;
+         
+         return SCIP_OKAY;
+      }
+   }
+
    /* start timing */
    if ( usefarkas )
       SCIPclockStart(stat->provedinfeaslptime, set);
@@ -14485,6 +14550,14 @@ SCIP_RETCODE provedBound(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &atyinter, lp->ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cinter, lp->ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &xinter, lp->ncols) );
+
+   SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
+#ifdef PROVEDBOUNDOUT2 /*only for debugging ?????????*/
+   printf("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
+#endif
+
+   /* reset proved bound status */
+   lp->hasprovedbound = FALSE;
 
    /* calculate y^Tb */
    SCIPintervalSet(&ytb, 0.0);
@@ -14852,13 +14925,19 @@ SCIP_RETCODE provedBound(
 
    *bound = SCIPintervalGetInf(minprod);
 
-   /* stop timing and update number of calls and fails */
+   /* stop timing and update number of calls and fails, and proved bound status */
    if ( usefarkas )
    {
       SCIPclockStop(stat->provedinfeaslptime, set);
       stat->nprovedinfeaslp++;
       if( *bound <= 0.0 )
+      {
          stat->nfailprovedinfeaslp++;
+         assert(!lp->hasprovedbound);
+      }
+      else
+         lp->hasprovedbound = TRUE;
+
    }
    else
    {
@@ -14873,9 +14952,13 @@ SCIP_RETCODE provedBound(
          assert(SCIPgetNConss(set->scip) == 1);
 
          SCIP_CALL( SCIPcomputeDualboundQuality(set->scip, conss[0], *bound) );
+         lp->hasprovedbound = TRUE;
       }
       else
+      {
          stat->nfailprovedfeaslp++;
+         assert(!lp->hasprovedbound);
+      }
    }
 
    return SCIP_OKAY;
@@ -15156,6 +15239,10 @@ SCIP_RETCODE SCIPlpGetProvedLowerbound(
    SCIP_CALL( provedBound(lp, set, stat, FALSE, bound) );
 
    SCIPdebugMessage("proved lower bound of LP: %.15g\n", *bound);
+
+#ifdef PROVEDBOUNDOUT2 /*only for debugging ?????????*/
+   printf("proved lower bound of LP: %.15g\n", *bound);
+#endif
 
    return SCIP_OKAY;
 }

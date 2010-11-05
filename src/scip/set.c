@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.10 2010/10/15 16:39:17 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.11 2010/11/05 19:26:43 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -189,7 +189,9 @@
 #define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely valid dual bounds at the nodes
                                                  *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
                                                  *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
-                                                 *   e'x'act neumaier and shcherbina) */
+                                                 *   e'x'act neumaier and shcherbina, 'a'utomatic) */
+#define SCIP_DEFAULT_MISC_REDUCESAFEDB      'n' /**< strategy for reducing safe dual bounding calls
+                                                 *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
 #define SCIP_DEFAULT_MISC_IGNOREPSSOL     FALSE /**< should pseudo solutions be ignored for dual bounds? */
 
 
@@ -845,18 +847,26 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "misc/dbmethod",
-         "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina, e'x'act neumaier and shcherbina)",
-         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeix",
+         "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina, e'x'act neumaier and shcherbina, 'a'utomatic)",
+         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
+         "misc/reducesafedb",
+         "strategy for reducing safe dual bounding calls ('n'o reduction, 'w'eak reduction, 's'trong reduction)",
+         &(*set)->misc_reducesafedb, FALSE, SCIP_DEFAULT_MISC_REDUCESAFEDB, "nws",
+         NULL, NULL) );
+
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/ignorepssol",
          "should pseudo solutions be ignored for dual bounds?",
          &(*set)->misc_ignorepssol, FALSE, SCIP_DEFAULT_MISC_IGNOREPSSOL,
          NULL, NULL) );
+
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    (*set)->misc_usefprelax = SCIP_DEFAULT_MISC_USEFPRELAX;
    (*set)->misc_dbmethod = SCIP_DEFAULT_MISC_DBMETHOD;
+   (*set)->misc_reducesafedb = SCIP_DEFAULT_MISC_REDUCESAFEDB;
    (*set)->misc_ignorepssol = SCIP_DEFAULT_MISC_IGNOREPSSOL;
 #endif
 

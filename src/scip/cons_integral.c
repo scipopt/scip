@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.6 2010/05/06 01:19:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.7 2010/11/05 19:26:42 bzfwolte Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -28,6 +28,9 @@
 #include <gmp.h>
 
 #include "scip/cons_integral.h"
+#ifdef EXACTSOLVE
+#include "scip/cons_exactlp.h"
+#endif
 
 
 #define CONSHDLR_NAME          "integral"
@@ -115,7 +118,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    /* in exactip mode with pure rational approach, the branching is based on the exact LP solution 
     * (computed in enfolp method of exactlp constraint handler) 
     */
-   if( SCIPisExactSolve(scip) && SCIPdualBoundMethod(scip) == 'e' )
+   if( SCIPisExactSolve(scip) && SCIPselectDualBoundMethod(scip, FALSE) == 'e' )
    {
       *result = SCIP_FEASIBLE;
       return SCIP_OKAY;

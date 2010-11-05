@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.30 2010/11/02 17:41:25 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.31 2010/11/05 19:26:42 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -23,6 +23,7 @@
 //#define DETAILED_DEBUG /* only for debugging ???????????????? */
 //#define DETAILED_DEBUG2 /* only for debugging ???????????????? */
 //#define PS_OUT/* only for debugging ???????????????? */
+//#define DBAUTO_OUT /*?????????????????*/
 
 //#define READER_OUT /* only for debugging ???????????????? */
 //#define PRESOL_OUT /* only for debugging ?????????? */
@@ -84,6 +85,7 @@
                                          *   point, 'A'rbitrary interior point in dual form, 't'wo stage optimized interior point */
 #define DEFAULT_PSUSEINTPOINT      TRUE /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
 #define DEFAULT_PSINFEASVERSION    TRUE /**< should infeasibility version of project and shift be used? */
+#define DEFAULT_INTERLEAVEDBFREQ     -1 /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
 #define DEFAULT_COMPUTEDBDIFF     FALSE /**< should the quality of the safe dual bounds be computed (involves solving LPs exactly)? */
 #define DEFAULT_SMALLDBDIFF        1e-9 /**< maximum value of small relativ difference of safe dual bound */
 #define DEFAULT_MEDIUMDBDIFF       1e-3 /**< maximum value of medium relativ difference of safe dual bound */
@@ -96,6 +98,9 @@
 #define OBJSCALE_MAXFINALSCALE   1000.0 /**< maximal final value to apply as scaling */
 #define PSBIGM                      100
 #define PSWARMSTARTAUXPROB         TRUE
+#define SPARSEMAXNNONZ            10000 /**< maximal number of nonzero coefficients in matrix to be considered sparse */
+#define FEWLBOUNDSRATIO             0.2 /**< maximal percentage of variables with large bounds that is regarded to be small */
+#define SMALLPROBDIM             100000 /**< dimension of problem that is regarded to be small */   
 
 /*
  * Data structures
@@ -139,6 +144,7 @@ struct SCIP_ConshdlrData
    SCIP_INTERVAL*        intervalval;        /**< stores interval representation of matrix values interval*/
    SCIP_Bool             intervalvalcon;     /**< was the interval representation of the matrix data constructed? */
    SCIP_Bool             psinfeasversion;    /**< should infeasibility version of project and shift be used? */
+   int                   interleavedbfreq;   /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
    SCIP_Longint          nprovedfeaslp;      /**< number of times, safe dual bound computation for feasible LPs was called */
    SCIP_Longint          nprovedinfeaslp;    /**< number of times, safe verification for infeasible LPs was called */
    SCIP_Longint          nfailprovedfeaslp;  /**< number of times, safe dual bound computation for feasible LPs failed */
@@ -5550,7 +5556,6 @@ SCIP_RETCODE getPSdualbound(
 
 
 #ifndef NDEBUG
-
    SCIPdebugMessage("Verifying feasibility of dual solution... \n");
 
    /* calculate violation of equality constraints */
@@ -6132,7 +6137,7 @@ SCIP_RETCODE provedBoundRational(
    return SCIP_OKAY;
 }
 
-
+ 
 /*
  * local methods for presolving
  */
@@ -7339,6 +7344,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    SCIP_CONSDATA* consdata;
    SCIP_Bool safedualboundcomputed;
    SCIP_Real safedualbound;
+   char dualboundmethod;
    int ncolsex;
    int nrowsex;
 #ifdef DETAILED_DEBUG /*????????? */
@@ -7358,19 +7364,29 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 
    *result = SCIP_DIDNOTRUN; 
 
+   SCIPdebugMessage("separating exactlp constraint <%s> on LP solution (LP solstat=%d)\n", SCIPconsGetName(conss[0]),
+      SCIPgetLPSolstat(scip));
+
+   /* @todo: as soon as we actually add cutting planes here, we might want to compute a proved bound 
+    * after the separation loop in solve.c. currently we disabled it inorder to avoid a second call 
+    * of proved bound, the first one is done before separation in order to know whether Neumaier Shcherbina 
+    * worked for the selection of the dual bounding method
+    */
+
+   /* select dual bounding method to apply */
+   dualboundmethod = SCIPselectDualBoundMethod(scip, FALSE);
+
    /* in case the FP problem is a relaxation of the original problem and we use Neumaier and Shcherbinas 
     * dual bounding method, we have already calculated a proved lower bound via postprocessing the LP solution 
     * of the FP problem 
     */
-   if( SCIPuseFPRelaxation(scip) && SCIPdualBoundMethod(scip) == 'n' )
+   if( SCIPuseFPRelaxation(scip) && (dualboundmethod == 'n' || dualboundmethod == 'a') )
       return SCIP_OKAY;
 
    /* dual bound will be calculated in enfops method, as we can not branch here */
-   if( SCIPdualBoundMethod(scip) == 'e' )
+   if( dualboundmethod == 'e' )
       return SCIP_OKAY;
    
-   SCIPdebugMessage("separating exactlp constraint <%s> on LP solution (LP solstat=%d)\n", SCIPconsGetName(conss[0]),
-      SCIPgetLPSolstat(scip));
    *result = SCIP_DIDNOTFIND;
 
    /* update lower bound of current node wrt the pseudo objective value */
@@ -7407,7 +7423,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    safedualboundcomputed = FALSE;
    safedualbound = -SCIPinfinity(scip);
 
-   switch( SCIPdualBoundMethod(scip) )
+   switch( dualboundmethod )
    {
    case 'v':
       {
@@ -7528,7 +7544,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          break;
       }
    case 'r':
-      SCIPerrorMessage("Dual bounding method <%c> has not been implemented yet\n", SCIPdualBoundMethod(scip));
+      SCIPerrorMessage("Dual bounding method <%c> has not been implemented yet\n", dualboundmethod);
       return SCIP_ERROR;
       //break;
 
@@ -7668,7 +7684,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
       }
 
    default:
-      SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", SCIPdualBoundMethod(scip));
+      SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", dualboundmethod);
       return SCIP_PARAMETERWRONGVAL;
    }
  
@@ -7707,6 +7723,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool lperror; 
+   char dualboundmethod;
    char algo;
 
 
@@ -7729,8 +7746,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
 
    *result = SCIP_INFEASIBLE;
 
+   /* select dual bounding method to apply */
+   dualboundmethod = SCIPselectDualBoundMethod(scip, FALSE);
+
    /* start timing for dual bounding method 'e' (is performed here, as we cannot branch in sepalp) */
-   if( SCIPdualBoundMethod(scip) == 'e' )
+   if( dualboundmethod == 'e' )
       SCIPstartClock(scip, conshdlrdata->provedfeaslptime);
    else
       SCIPstartClock(scip, conshdlrdata->exactfeaslptime);
@@ -7768,7 +7788,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    /* stop timing and update number of calls for dual bounding method 'e' 
     * (is performed here, as we cannot branch in sepalp) 
     */
-   if( SCIPdualBoundMethod(scip) == 'e' )
+   if( dualboundmethod == 'e' )
    {
       SCIPstopClock(scip, conshdlrdata->provedfeaslptime);
       conshdlrdata->nprovedfeaslp++;
@@ -7792,7 +7812,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    {
       SCIPerrorMessage("exact LP solver returns error: case not handled yet\n");
 
-      if( SCIPdualBoundMethod(scip) == 'e' )
+      if( dualboundmethod == 'e' )
          conshdlrdata->nfailprovedfeaslp++;
       else
          conshdlrdata->nwrongexactfeaslp++;
@@ -7804,7 +7824,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    SCIP_CALL( evaluateLPEX(scip, conss[0], conshdlrdata, consdata, result) );
 
    /* update number of wrong integral LP claims */
-   if( *result == SCIP_BRANCHED && SCIPdualBoundMethod(scip) != 'e' )
+   if( *result == SCIP_BRANCHED && dualboundmethod != 'e' )
       conshdlrdata->nwrongexactfeaslp++;
 
    return SCIP_OKAY;
@@ -7818,6 +7838,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool lperror; 
+   char dualboundmethod;
    char algo;
 
    SCIPdebugMessage("enforcing exactlp constraint <%s> on pseudo solution (LP solstat=%d)\n", SCIPconsGetName(conss[0]), 
@@ -7844,11 +7865,14 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_TIMELIMIT )
       return SCIP_OKAY;
 
+   /* select dual bounding method to apply */
+   dualboundmethod = SCIPselectDualBoundMethod(scip, TRUE);
+
    /* try to prove infeasibility */
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && 
-      (!SCIPuseFPRelaxation(scip) || SCIPdualBoundMethod(scip) != 'n') )
+      (!SCIPuseFPRelaxation(scip) || dualboundmethod != 'n') )
    {
-      switch( SCIPdualBoundMethod(scip) )
+      switch( dualboundmethod )
       {
       case 'p':
          {
@@ -7995,7 +8019,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
       case 'e':
          break;
       default:
-         SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", SCIPdualBoundMethod(scip));
+         SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", dualboundmethod);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -8006,7 +8030,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
       /* start timing */
       if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
-         if( SCIPdualBoundMethod(scip) == 'e' )
+         if( dualboundmethod == 'e' )
             SCIPstartClock(scip, conshdlrdata->provedinfeaslptime);
          else            
             SCIPstartClock(scip, conshdlrdata->exactinfeaslptime);
@@ -8050,7 +8074,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
       /* stop timing and update number of calls */
       if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
-         if( SCIPdualBoundMethod(scip) == 'e' )
+         if( dualboundmethod == 'e' )
          {
             SCIPstopClock(scip, conshdlrdata->provedinfeaslptime);
             conshdlrdata->nprovedinfeaslp++;
@@ -8092,7 +8116,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
       /* update number of wrong infeasible LP claims */
       if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && ( *result == SCIP_BRANCHED || *result ==  SCIP_SOLVELP) )
       {
-         if( SCIPdualBoundMethod(scip) == 'e' )
+         if( dualboundmethod == 'e' )
             conshdlrdata->nfailprovedinfeaslp++;
          else
             conshdlrdata->nwrongexactinfeaslp++;
@@ -8763,6 +8787,11 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
          "should infeasibility version of project and shift be used?",
          &conshdlrdata->psinfeasversion, TRUE, DEFAULT_PSINFEASVERSION, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/exactlp/interleavedbfreq",
+         "frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node)",
+         &conshdlrdata->interleavedbfreq, TRUE, DEFAULT_INTERLEAVEDBFREQ, -1, INT_MAX, NULL, NULL) );
+ 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/exactlp/computedbdiff",
          "should the quality of the safe dual bounds be computed (involves solving LPs exactly)?",
@@ -9383,6 +9412,163 @@ void SCIPvarGetWorstGlobalBoundExactlp(
       mpq_set(bound, consdata->ub[SCIPvarGetProbindex(var)]);
    else
       mpq_set(bound, consdata->lb[SCIPvarGetProbindex(var)]);
+}
+
+/** returns safe dual bounding method to be applied; if user want's the solver to decide the most promising one is 
+ *  selected, otherwise the one the user wanted is returned 
+ *  note, for the automatic mode, this method asumes that Neumaier and Shcherbina was already tested, 
+ *  i.e., that we know whether it suceeded.
+ */
+char SCIPselectDualBoundMethod(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             infeaslp            /**< will dual bound method be applied to safely verify infeasible LP? */
+   )
+{
+   SCIP_CONS** conss;
+   char dualboundmethod;
+   SCIP_Bool skip;
+   SCIP_Bool projectshift;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   /* find the exactlp constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("exactlp constraint handler not found\n");
+      SCIPABORT();
+      return 0.0;
+   }
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* get exactlp constraints */
+   conss = SCIPgetConss(scip);
+   assert(conss != NULL);
+   assert(SCIPgetNConss(scip) == 1);
+
+   /* get exactlp constraint data */
+   consdata = SCIPconsGetData(conss[0]);
+   assert(consdata != NULL);
+
+   skip = FALSE;
+   projectshift = TRUE;
+
+   if( infeaslp )
+   {
+      /* user did choose a dual bounding method */
+      if( SCIPdualBoundMethod(scip) != 'a' )
+         dualboundmethod = SCIPdualBoundMethod(scip);
+      else
+      {
+         /* enfops which calls this methods for infeaslp is never called if Neumair Shcherbina proved infeasibility */
+         assert(!scip->lp->hasprovedbound); 
+         
+         /* decide whether to apply project and shift or exact LP */
+
+         /* we already know whether project and shift works */
+         if( conshdlrdata->psdatacon )
+         {
+            if( conshdlrdata->psdatafail )
+               projectshift = FALSE;
+            else
+               projectshift = TRUE;
+         }
+         /* we don't know whether it will work and thus predict it
+          * criterium: small number of nonzeros in the constraint matrix 
+          */
+         else
+         {
+            assert(SCIPgetNNonzExactlp(conss[0]) >= 0);
+            if( SCIPgetNNonzExactlp(conss[0]) <= SPARSEMAXNNONZ ) 
+               projectshift = TRUE;
+            else
+               projectshift = FALSE;
+         }  
+
+         if( projectshift )
+            dualboundmethod = 'p';
+         else
+            dualboundmethod = 'e';
+      }
+   }
+   else
+   {
+      /* decide whether we want to interleave with exact LP call/basis verification
+       * - given freq
+       * or
+       * - Neumair Shcherbina bound only nearly able to cutoff node 
+       */
+      if( (conshdlrdata->interleavedbfreq > 0 && !SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) && SCIPgetDepth(scip) > 0 && SCIPgetDepth(scip) % (conshdlrdata->interleavedbfreq) == 0)
+         || (conshdlrdata->interleavedbfreq == 0 && SCIPisGE(scip, SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip))
+            && SCIPgetLocalLowerbound(scip) < SCIPgetCutoffbound(scip)) )
+      {
+         dualboundmethod = 'e';
+      }
+      else
+      {
+         /* user did choose a dual bounding method */
+         if( SCIPdualBoundMethod(scip) != 'a' )
+            dualboundmethod = SCIPdualBoundMethod(scip);
+         /* do not recompute the dual bound if Neumair Shcherbina did succeed */
+         else if( scip->lp->hasprovedbound )
+         {
+            dualboundmethod = 'n';
+         }
+         else 
+         {
+            /* decide whether it is worse to compute a dual bound:
+             * - never skip
+             */
+            skip = FALSE;
+            if( skip )
+               dualboundmethod = 'n';
+            else
+            {
+               /* decide whether to apply project and shift or basis verification:
+                * - we already know whether project and shift works
+                * or
+                * - small number of nonzeros in the constraint matrix 
+                */
+               if( conshdlrdata->psdatacon )
+               {
+                  if( conshdlrdata->psdatafail )
+                     projectshift = FALSE;
+                  else
+                     projectshift = TRUE;
+               }
+               else
+               {
+                  assert(SCIPgetNNonzExactlp(conss[0]) >= 0);
+                  if( SCIPgetNNonzExactlp(conss[0]) <= SPARSEMAXNNONZ ) 
+                     projectshift = TRUE;
+                  else
+                     projectshift = FALSE;
+               }  
+
+               if( projectshift )
+                  dualboundmethod = 'p';
+               else
+                  dualboundmethod = 'v';
+            }
+         }
+      }
+   }
+   SCIPdebugMessage("selected dual bounding method for %s LP: %c\n", 
+      infeaslp ? "infeasible" : "feasible", dualboundmethod);
+#ifdef DBAUTO_OUT /*?????????????????*/
+   printf("selected dual bounding method for %s LP: %c (skip:%d, boundcrit:%d [%d/%d=%.2f], dimcrit:%d)\n", 
+      infeaslp ? "infeasible" : "feasible", dualboundmethod, skip, 
+      (SCIP_Real)(SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip) <= FEWLBOUNDSRATIO, 
+      SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]), SCIPgetNVars(scip),
+      (SCIP_Real)(SCIPgetNInfinitBounds(conss[0]) + SCIPgetNLargeBounds(conss[0]))/(SCIP_Real)SCIPgetNVars(scip),
+      SCIPgetNVars(scip) * SCIPgetNConssExactlp(conss[0]) <= SMALLPROBDIM);
+#endif
+
+   return dualboundmethod;
 }
 
 /*

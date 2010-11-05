@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.48.2.2 2010/03/22 16:05:39 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.48.2.3 2010/11/05 19:26:43 bzfwolte Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -251,6 +251,7 @@ struct SCIP_Lp
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             hasprovedbound;     /**< was finite safe dual bound computed for current LP? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP solution a relaxation of the problem and its value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is current LP solution a relaxation of the current problem and its value a valid local lower bound? */
    SCIP_Bool             probing;            /**< are we currently in probing mode? */

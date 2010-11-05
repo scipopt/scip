@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.9 2010/11/02 17:41:26 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.10 2010/11/05 19:26:42 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -299,6 +299,17 @@ void SCIPvarGetWorstGlobalBoundExactlp(
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< problem variable */
    mpq_t                 bound               /**< pointer to store worst bound */
+   );
+
+/** returns safe dual bounding method to be applied; if user want's the solver to decide the most promising one is 
+ *  selected, otherwise the one the user wanted is returned.
+ *  note, for the automatic mode, this method asumes that Neumaier and Shcherbina was already tested, 
+ *  i.e., that we know whether it suceeded.
+ */
+extern
+char SCIPselectDualBoundMethod(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             infeaslp            /**< will dual bound method be applied to safely verify infeasible LP? */
    );
 
 /*
