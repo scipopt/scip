@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.45 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.46 2010/11/05 16:54:15 bzfpfets Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
  * @brief  constraint handler for bound disjunction constraints
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -25,6 +26,7 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <ctype.h>
 
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_linear.h"
@@ -1791,7 +1793,142 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseBounddisjunction NULL
+static
+SCIP_DECL_CONSPARSE(consParseBounddisjunction)
+{  /*lint --e{715}*/
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
+   SCIP_VAR** vars;
+   const char* s;
+   char* t;
+   int varssize;
+   int nvars;
+   int pos;
+
+   assert( success != NULL );
+   *success = TRUE;
+
+   SCIPdebugMessage("parse <%s> as bounddisjunction constraint\n", str);
+
+   /* skip white space */
+   s = str;
+   while ( *s != '\0' && isspace(*s) )
+      ++s;
+
+   /* check for string "bounddisjunction" */
+   if ( strncmp(s, "bounddisjunction(", 16) != 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error during parsing: expected \"bounddisjunction(\" in <%s>.\n", s);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* skip "bounddisjunction(" */
+   s += 17;
+
+   varssize = 100;
+   nvars = 0;
+
+   /* allocate buffer array for variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, varssize) );
+
+   /* parse string until ")" */
+   while ( *s != '\0' && *s != ')' )
+   {
+      SCIP_VAR* var;
+
+      /* parse variable name */ 
+      pos = 0;
+      SCIP_CALL( SCIPparseVarName(scip, s, pos, &var, &pos) );
+
+      if ( var == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
+         *success = FALSE;
+         goto TERMINATE;
+      }
+
+      /* skip white space */
+      s = &s[pos];
+      while ( *s != '\0' && isspace(*s) && *s != '>' && *s != '<' )
+         ++s;
+
+      /* parse bound type */
+      switch ( *s )
+      {
+      case '<':
+         boundtypes[nvars] = SCIP_BOUNDTYPE_UPPER;
+         break;
+      case '>':
+         boundtypes[nvars] = SCIP_BOUNDTYPE_LOWER;
+         break;
+      default:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
+         *success = FALSE;
+         goto TERMINATE;
+      }
+
+      ++s;
+      if ( *s != '=' )
+      {
+         SCIPdebugMessage("expected '=': %s\n", s);
+         *success = FALSE;
+         goto TERMINATE;
+      }
+
+      /* skip '=' */
+      ++s;
+
+      /* skip white space */
+      while ( *s != '\0' && isspace(*s) )
+         ++s;
+
+      /* parse bound value */
+      bounds[nvars] = strtod(s, &t);
+      if ( t == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+         *success = FALSE;
+         goto TERMINATE;
+      }
+
+      /* skip white space */
+      s = t;
+      while ( (*s != '\0' && isspace(*s)) || *s == ',' )
+         ++s;
+
+      /* set variable */
+      vars[nvars++] = var;
+      
+      /* check if the size of the variable array was big enough */
+      if ( nvars > varssize )
+      {
+         /* reallocate memory */
+         varssize *= 2;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &boundtypes, varssize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &bounds, varssize) );
+      }
+   }
+   /* ignore if the string ended without ")" */
+
+   /* add bounddisjunction */
+   if ( *success && nvars > 0 )
+   {
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name, nvars, vars, boundtypes, bounds, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+ TERMINATE:
+   /* free variable buffer */
+   SCIPfreeBufferArray(scip, &bounds);
+   SCIPfreeBufferArray(scip, &boundtypes);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 
 /*
