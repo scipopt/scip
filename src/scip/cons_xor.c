@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.85 2010/11/02 01:11:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.86 2010/11/05 16:55:13 bzfpfets Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -2331,9 +2331,9 @@ SCIP_DECL_CONSPARSE(consParseXor)
    int varssize;
    int nvars;
    int pos;
-   
-   SCIPdebugMessage("pasre <%s> as xor constraint\n", str);
-   
+
+   SCIPdebugMessage("parse <%s> as xor constraint\n", str);
+
    varssize = 100;
    nvars = 0;
    pos = 0;
@@ -2341,27 +2341,27 @@ SCIP_DECL_CONSPARSE(consParseXor)
    /* allocate buffer array for variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
-   /* pasre string */
+   /* parse string */
    SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
-   
+
    if( *success )
    {
       SCIP_Real rhs;
 
-      /* check if the size of the variable array was great enough */
+      /* check if the size of the variable array was big enough */
       if( varssize < requiredsize )
       {
          /* reallocate memory */
          varssize = requiredsize;
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-         
+
          /* parse string again with the correct size of the variable array */
          SCIP_CALL( SCIPparseVarsList(scip, str, pos, vars, &nvars, varssize, &requiredsize, &pos, success) );
       }
-      
+
       assert(*success);
       assert(varssize >= requiredsize);
-      
+
       SCIPdebugMessage("successfully parsed %d variables\n", nvars);
 
       /* search for the equal symbol */
@@ -2369,7 +2369,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
          pos++;
 
       pos++;
-      
+
       if( SCIPstrGetValue(str, pos, &rhs, &pos) )
       {
          /* create or constraint */
@@ -2384,7 +2384,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
 
    /* free variable buffer */
    SCIPfreeBufferArray(scip, &vars);
-     
+
    return SCIP_OKAY;
 }
 
