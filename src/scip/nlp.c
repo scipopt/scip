@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.33 2010/10/26 22:36:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.34 2010/11/05 12:10:17 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -731,10 +731,9 @@ int nlrowSearchQuadElem(
    assert(idx2 >= 0);
    assert(idx2 <  nlrow->nquadvars);
 
-   pos = -1;
-
    nlrowSortQuadElem(nlrow);
-   (void) SCIPquadelemSortedFind(nlrow->quadelems, idx1, idx2, nlrow->nquadelems, &pos);
+   if( !SCIPquadelemSortedFind(nlrow->quadelems, idx1, idx2, nlrow->nquadelems, &pos) )
+      pos = -1;
 
    return pos;
 }

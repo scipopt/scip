@@ -37,6 +37,8 @@ fixed bugs:
 - fixed bug in heur_shiftandpropagate where some variables were initialized too late
 - fixed bug in cons.c which didn't allow the changing of the separation and enforcement flag of a constraint in the problem stage
 - fixed bug in lp.c where in case of objlimit reached and fastmip not all variables where priced because of an incorrect dual solution
+- fixed bugs in SCIPnlpiOracleChgLinearCoefs and SCIPnlpiOracleChgQuadCoefs for the case where new coefficients where added
+- fixed bug in nlp.c: nlrowSearchQuadElem was using SCIPquadelemSortedFind incorrectly
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
