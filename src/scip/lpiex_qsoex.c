@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.13 2010/11/02 17:41:26 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.14 2010/11/05 21:51:06 bzfwolte Exp $"
 //#define SCIP_DEBUG /*?????????????????*/
 //#define SCIP_DEBUG2 /*?????????????????*/
 //#define USEOBJLIM /*??????????????*/ 
@@ -2691,9 +2691,9 @@ SCIP_RETCODE SCIPlpiexStateDualFeasible(
    B =  mpq_QSget_basis(lpi->prob);
    
 #ifdef SCIP_DEBUG2
-   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (char*) result, dualobjval, 0);
+   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 0);
 #else
-   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (char*) result, dualobjval, 1);
+   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 1);
 #endif
    
    if( B )

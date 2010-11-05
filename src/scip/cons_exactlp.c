@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.31 2010/11/05 19:26:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.32 2010/11/05 21:51:05 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -7505,7 +7505,8 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
             printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and only check basis   - END   >>>>>>>>>>>>>>>>\n\n");
 #endif
 
-            SCIPdebugMessage("DB method <v>: LP basis %s dual feasible\n", dualfeasible ? "is" : "is not");
+            SCIPdebugMessage("DB method <v>: LP basis %s dual feasible (%.50f)\n", dualfeasible ? "is" : "is not", 
+               mpqGetRealRelax(scip, dualobjval, GMP_RNDD));
       
             if( dualfeasible )
             {
