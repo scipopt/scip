@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.37 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.38 2010/11/06 12:01:25 bzfwinkm Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -58,7 +58,7 @@ struct SCIP_BranchruleData
 
 /** checks if a given branching candidate is better than a previous one and updates the best branching candidate accordingly */
 static
-void updateBestCandidate(
+SCIP_RETCODE updateBestCandidate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< branching rule data */
    SCIP_VAR**            bestvar,            /**< best branching candidate */
@@ -94,22 +94,26 @@ void updateBestCandidate(
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
       /* for a multiaggregated variable, we call updateBestCandidate function recursively with all variables in the multiaggregation */
+      SCIP_VAR** multvars;
+      int nmultvars;
       int i;
-      
+
       cand = SCIPvarGetProbvar(cand);
-      
-      for( i = 0; i < SCIPvarGetMultaggrNVars(cand); ++i )
+      multvars = SCIPvarGetMultaggrVars(cand);
+      nmultvars = SCIPvarGetMultaggrNVars(cand);
+
+      for( i = 0; i < nmultvars; ++i )
       {
          /* skip fixed variables */
-         if( SCIPrelDiff(SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i]), SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i])) <= 2.0*SCIPepsilon(scip) )
+         if( SCIPrelDiff(SCIPvarGetUbLocal(multvars[i]), SCIPvarGetLbLocal(multvars[i])) <= 2.0*SCIPepsilon(scip) )
             continue;
          
-         updateBestCandidate(scip, branchruledata, bestvar, bestbrpoint, bestscore,
-            SCIPvarGetMultaggrVars(cand)[i], candscoremin, candscoremax, candscoresum, SCIP_INVALID);
+         SCIP_CALL( updateBestCandidate(scip, branchruledata, bestvar, bestbrpoint, bestscore,
+               multvars[i], candscoremin, candscoremax, candscoresum, SCIP_INVALID) );
       }
       assert(*bestvar != NULL); /* if all variables were fixed, something is strange */
       
-      return;
+      return SCIP_OKAY;
    }
    
    /* select branching point for this variable */
@@ -153,8 +157,8 @@ void updateBestCandidate(
 
    default :
       SCIPerrorMessage("branching strategy %c unknown\n", branchruledata->strategy);
-      exit(1);
-      return;  /*lint !e527*/
+      SCIPABORT();
+      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    if( SCIPisInfinity(scip, deltaminus) || SCIPisInfinity(scip, deltaplus) )
@@ -210,6 +214,8 @@ void updateBestCandidate(
          (*bestbrpoint) = candbrpoint;
       }
    }
+
+   return SCIP_OKAY;
 }
 
 /** selects the branching variable from given candidate array */
@@ -292,7 +298,7 @@ SCIP_RETCODE selectBranchVar(
       assert(candssorted[i] == cand);
       
       /* check if new candidate is better than previous candidate (if any) */
-      updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, cand, scoremin, scoremax, scoresum, candsol);
+      SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, cand, scoremin, scoremax, scoresum, candsol) );
       assert(*brvar != NULL);
    }
    

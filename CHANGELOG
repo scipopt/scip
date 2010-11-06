@@ -40,6 +40,7 @@ fixed bugs:
 - fixed bug in lp.c where in case of objlimit reached and fastmip not all variables where priced because of an incorrect dual solution
 - fixed bugs in SCIPnlpiOracleChgLinearCoefs and SCIPnlpiOracleChgQuadCoefs for the case where new coefficients where added
 - fixed bug in nlp.c: nlrowSearchQuadElem was using SCIPquadelemSortedFind incorrectly
+- fixed bugs in cons_bounddisjunction where the branching during the constraint enforcement was done incorrectly
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
