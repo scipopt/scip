@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.698 2010/11/05 15:38:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.699 2010/11/08 20:33:47 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1072,7 +1072,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       localvarmap = varmap;
       
       /* try to retrieve copied variable from hashmap */
-      *targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(localvarmap, sourcevar);
+      *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, sourcevar);
       if( *targetvar != NULL )
          return SCIP_OKAY;
    }
@@ -1153,7 +1153,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       aggrcoefs = SCIPvarGetMultaggrScalars(sourcevar);
       constant = SCIPvarGetMultaggrConstant(sourcevar);
    
-      SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetaggrvars, naggrvars) );
+      SCIP_CALL( SCIPallocBufferArray(targetscip, &targetaggrvars, naggrvars) );
             
       /* get copies of the active variables of the multiaggregation */
       for( i = 0; i < naggrvars; ++i )
@@ -1174,7 +1174,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       SCIP_CALL( SCIPaddCons(targetscip, cons) );
       SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );               
 
-      SCIPfreeBufferArray(sourcescip, &targetaggrvars);
+      SCIPfreeBufferArray(targetscip, &targetaggrvars);
             
       break;
    }
@@ -1426,7 +1426,7 @@ SCIP_RETCODE SCIPgetConsCopy(
       localconsmap = consmap;
 
       /* try to retrieve copied constraint from hash map */
-      *targetcons = (SCIP_CONS*) (size_t) SCIPhashmapGetImage(localconsmap, sourcecons);
+      *targetcons = (SCIP_CONS*) SCIPhashmapGetImage(localconsmap, sourcecons);
       if( *targetcons != NULL )
          return SCIP_OKAY;
    }
