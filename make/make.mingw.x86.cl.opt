@@ -1,4 +1,4 @@
-#--- $Id: make.mingw.x86.cl.opt,v 1.1 2010/09/29 17:35:06 bzfviger Exp $
+#--- $Id: make.mingw.x86.cl.opt,v 1.2 2010/11/11 20:14:40 bzfviger Exp $
 CC		=	cl -nologo
 CC_o	=	-Fo
 CXX		=	cl -nologo
@@ -13,8 +13,8 @@ LINKCXX_l	=	lib
 LINKCXX_o	=	-out:
 FLAGS	+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNDEBUG -DNO_STRERROR_R -DROUNDING_MS -D_CRT_SECURE_NO_WARNINGS -wd4274
 OFLAGS	+=	
-CFLAGS	+=	-Ox
-CXXFLAGS	+=	-Ox -EHsc -GR
+CFLAGS	+=	-Ox -Oi -fp:precise
+CXXFLAGS	+=	-Ox -Oi -fp:precise -EHsc -GR
 LDFLAGS		=	
 ZLIB_FLAGS	=	
 ZLIB_LDFLAGS	=	
