@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.307 2010/11/01 11:07:59 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.308 2010/11/11 19:28:11 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9163,8 +9163,8 @@ SCIP_DECL_SORTPTRCOMP(SCIPvarCompActiveAndNegated)
  *  variable index; returns 0 if both indices are equal, which means both variables are equal
  */
 int SCIPvarCompare(
-   SCIP_VAR*const        var1,               /**< first problem variable */
-   SCIP_VAR*const        var2                /**< second problem variable */
+   SCIP_VAR*             var1,               /**< first problem variable */
+   SCIP_VAR*             var2                /**< second problem variable */
    )
 {
    assert(var1 != NULL);
