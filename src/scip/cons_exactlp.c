@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.33 2010/11/12 04:35:25 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.34 2010/11/12 11:22:27 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -25,6 +24,7 @@
 //#define DETAILED_DEBUG2 /* only for debugging ???????????????? */
 //#define PS_OUT/* only for debugging ???????????????? */
 //#define DBAUTO_OUT /*?????????????????*/
+//#define USETIMELIM_OUT /*??????????????*/ 
 
 //#define READER_OUT /* only for debugging ???????????????? */
 //#define PRESOL_OUT /* only for debugging ?????????? */
@@ -32,6 +32,7 @@
 //#define USEOBJLIM /*??????????????*/ 
 
 #define STORE_INTERA /* build the interval version of constraint matrix for provedBoundInterval() */
+//#define USETIMELIM /*??????????????*/ 
 
 
 /**@file   cons_exactlp.c
@@ -2268,7 +2269,7 @@ SCIP_RETCODE addRelaxation(
       SCIP_CALL( createRelaxation(scip, cons) );
    }
    assert( consdata->rows != NULL );
-
+   
    nrows = consdataGetNRows(consdata);
 
    for( r = 0; r < nrows; ++r )
@@ -2474,6 +2475,7 @@ SCIP_RETCODE solveLPEX(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
+   SCIP_Bool             usetimelimit,       /**< should timelimit be set for exact LP solver? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
@@ -2513,6 +2515,30 @@ SCIP_RETCODE solveLPEX(
          SCIPdebugMessage("---> set uobjlim!\n");
       }
       mpq_clear(uobjlim);
+   }
+#endif
+
+#ifdef USETIMELIM /*??????????????*/ 
+   {
+      if( usetimelimit )
+      {
+         mpq_t lptimelimit;
+         SCIP_Real timelimit;
+      
+         mpq_init(lptimelimit);
+      
+         SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+         mpq_set_d(lptimelimit, timelimit - SCIPgetSolvingTime(scip));
+         if( mpq_sgn(lptimelimit) > 0 )
+         {
+#ifdef USETIMELIM_OUT /*??????????????*/ 
+            printf("set timelimit to %f\n", mpq_get_d(lptimelimit));
+#endif
+            SCIP_CALL( SCIPlpiexSetRealpar(conshdlrdata->lpiex, SCIP_LPPAR_LPTILIM, lptimelimit) ); 
+         }
+         mpq_clear(lptimelimit);
+      }
    }
 #endif
 
@@ -2902,8 +2928,18 @@ SCIP_RETCODE evaluateLPEX(
    }
    else if( SCIPlpiexIsTimelimExc(conshdlrdata->lpiex) )
    {
+#ifdef USETIMELIM /*??????????????*/
+      SCIPdebugMessage("   exact LP exceeds time limit\n"); 
+
+#ifdef USETIMELIM_OUT /*??????????????*/ 
+      printf("   exact LP exceeds time limit\n"); 
+#endif
+
+      *result = SCIP_INFEASIBLE;
+#else
       SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
       return SCIP_ERROR;
+#endif
    }
    else
    {
@@ -3075,7 +3111,7 @@ SCIP_RETCODE constructPSData(
    /* build includedcons vector based on psdualcolselection, this determines the matrix D */
    for( i = 0; i < nextendedconss; i++ )
       conshdlrdata->includedcons[i] = 0;
-   if( conshdlrdata->psdualcolselection == 'n' )
+   if( conshdlrdata->psdualcolselection == 'n' || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       /* determine which dual variables to included in the problem
        * (ones with finite dual objective coef. in [lhs',-rhs',lb',-ub'])
@@ -3109,7 +3145,7 @@ SCIP_RETCODE constructPSData(
       SCIP_CALL( loadLPState(scip, conshdlrdata) );
        
       /* solve exact LP */
-      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
+      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, FALSE, &lperror) );
       if( lperror )
       {
          SCIPerrorMessage("Error solving root node LP in Project and Shift method.\n");
@@ -5153,13 +5189,7 @@ SCIP_RETCODE constructPSData(
    return SCIP_OKAY;
 }
 
-
-
-
-
-/* This function will lookup and store the activity of the constraints at the root node 
- * the activity is stored in conshdlrdata->rootactivity
-*/
+/** updates root node LP activities of the constraints */
 static
 SCIP_RETCODE copyRootActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5167,24 +5197,41 @@ SCIP_RETCODE copyRootActivity(
    SCIP_CONSDATA*        consdata            /**< exactlp constraint data */
    )
 {
-   int i;
-   int nconss;
-   int nvars;
-   int nrows;
-   int nextendedconss;
-   
    SCIP_COL** cols;
    SCIP_ROW** rows;
+   int nrows;
+   int ncols;
+   int nconss;
+   int nvars;
+   int nextendedconss;
+   int i;
 
+   assert(SCIPgetDepth(scip) >= 0);
+
+   /* check if the LP has been solved to optimality */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only update LP activities at the root node; keep updating after adding cutting planes */
+   if( SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+   
    nconss = consdata->nconss;
    nvars = consdata->nvars;
    nextendedconss = 2*nconss + 2*nvars;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->rootactivity, nextendedconss) );
+   /* allocate memory */
+   if( !(conshdlrdata->rootactivitycon) )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->rootactivity, nextendedconss) );
+      conshdlrdata->rootactivitycon = TRUE;
+   }
 
+   /* reset LP activities */
    for( i = 0; i < nextendedconss; i++ )
       conshdlrdata->rootactivity[i] = 0;
 
+   /* update constraint activities */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    assert(nrows == nconss);
    for( i = 0; i < nconss; i++ )
@@ -5194,7 +5241,10 @@ SCIP_RETCODE copyRootActivity(
       if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetRhs(rows[i])) )
          conshdlrdata->rootactivity[nconss + i] = 1;
    }   
-   cols = SCIPgetLPCols(scip);
+
+   /* update bound activities */
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+   assert(ncols == nvars);
    for( i = 0; i < nvars; i++ )
    {
       if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetLb(cols[i])) )
@@ -5202,10 +5252,9 @@ SCIP_RETCODE copyRootActivity(
       if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetUb(cols[i])) )
          conshdlrdata->rootactivity[2*nconss + nvars + i] = 1;
    }
-   conshdlrdata->rootactivitycon = TRUE;
+
    return SCIP_OKAY;
 }
-
 
 
 /* This function will check the condition required for the project and shift method to work
@@ -7450,13 +7499,12 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    SCIPdebugMessage("separating exactlp constraint <%s> on LP solution (LP solstat=%d)\n", SCIPconsGetName(conss[0]),
       SCIPgetLPSolstat(scip));
 
-   /* Record which constraints are active in the root node solution */
-   if( !conshdlrdata->rootactivitycon )
+   /* update root node LP activities of the constraints for project and shift method */
+   if( SCIPdualBoundMethod(scip) == 'p' || SCIPdualBoundMethod(scip) == 'a' )
    {
-      SCIPdebugMessage("Recording the root LP activity for later use by Project and Shift \n");
+      SCIPdebugMessage("recording the root LP activity for later use by Project and Shift \n");
       copyRootActivity( scip, conshdlrdata, consdata );
    }
-
 
    /* @todo: as soon as we actually add cutting planes here, we might want to compute a proved bound 
     * after the separation loop in solve.c. currently we disabled it inorder to avoid a second call 
@@ -7467,6 +7515,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    /* select dual bounding method to apply */
    dualboundmethod = SCIPselectDualBoundMethod(scip, FALSE);
 
+  
    /* in case the FP problem is a relaxation of the original problem and we use Neumaier and Shcherbinas 
     * dual bounding method, we have already calculated a proved lower bound via postprocessing the LP solution 
     * of the FP problem 
@@ -7556,7 +7605,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 
                printf("\n<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and solve LPEX exactly - START >>>>>>>>>>>>>>>>\n");
                SCIP_CALL( loadLPState(scip, conshdlrdata) );
-               SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
+               SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, FALSE, &lperror) );
                printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and solve LPEX exactly - END   >>>>>>>>>>>>>>>>\n\n");
             }
 #endif
@@ -7865,11 +7914,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    switch( algo )
    {
    case 'd':
-      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
+      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, TRUE, &lperror) );
       break;
 
    case 'p':
-      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_PRIMALSIMPLEX, &lperror) );
+      SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_PRIMALSIMPLEX, TRUE, &lperror) );
       break;
 
    default:
@@ -8151,11 +8200,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
       switch( algo )
       {
       case 'd':
-         SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
+         SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, TRUE, &lperror) );
          break;
 
       case 'p':
-         SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_PRIMALSIMPLEX, &lperror) );
+         SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_PRIMALSIMPLEX, TRUE, &lperror) );
          break;
 
       default:
@@ -10220,7 +10269,7 @@ SCIP_RETCODE SCIPcomputeDualboundQuality(
    SCIP_CALL( loadLPState(scip, conshdlrdata) );
    
    /* solve exact LP */
-   SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
+   SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, FALSE, &lperror) );
 
    if( !lperror )
    {

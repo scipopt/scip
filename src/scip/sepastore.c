@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.3 2010/03/22 16:05:38 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.4 2010/11/12 11:22:28 bzfwolte Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -236,7 +236,8 @@ SCIP_RETCODE sepastoreAddCut(
    /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
     * again, because now a non redundant cut enters the store
     */
-   if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
+   if( !set->misc_exactsolve 
+      && sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts = 0;

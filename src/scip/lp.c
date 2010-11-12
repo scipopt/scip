@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.12 2010/11/05 19:26:43 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.13 2010/11/12 11:22:27 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????????*/
 //#define PROVEDBOUNDOUT /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUT2 /*only for debugging ?????????*/
@@ -22,6 +22,7 @@
 //#define UNBOUNDEDDUALSOL_OUT2 /*???????????????????????????*/
 #define NEWVERSION /*????????????????????*/
 //#define DBAUTO_OUT /*?????????????????*/
+#define FAIRINEXACT /*?????????????????*/
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1847,6 +1848,12 @@ SCIP_RETCODE lpSetUobjlim(
    /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
    if( set->misc_exactsolve )  
       return SCIP_OKAY;
+
+#ifdef EXACTSOLVE
+#ifdef FAIRINEXACT /*?????????????????*/
+      return SCIP_OKAY;
+#endif
+#endif
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
    if ( SCIPsetIsInfinity(set, uobjlim) )
@@ -4484,7 +4491,7 @@ SCIP_Real SCIProwGetLPActivity(
       SCIProwRecalcLPActivity(row, stat);
    assert(row->validactivitylp == stat->lpcount);
    assert(row->activity < SCIP_INVALID);
-
+   
    return row->activity;
 }
 
@@ -14520,7 +14527,7 @@ SCIP_RETCODE provedBound(
       assert(conss != NULL);
       assert(SCIPgetNConss(set->scip) == 1);
 
-      /* decide whether safe dual bound via neumaier shcherbina is prommising:
+      /* decide whether safe dual bound via neumaier shcherbina is promising:
        * - infeasible LPs 
        * or
        * - only a few variables with large or infinite bounds exist
