@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.689.2.2 2010/10/25 00:48:42 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.689.2.3 2010/11/12 01:39:42 bzfgleix Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5226,6 +5226,7 @@ int SCIPgetNConss(
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nconss;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -5251,6 +5252,7 @@ SCIP_CONS** SCIPgetConss(
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->conss;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
