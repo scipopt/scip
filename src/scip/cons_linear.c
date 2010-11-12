@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.392 2010/11/02 01:11:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.393 2010/11/12 20:19:50 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -6816,6 +6816,7 @@ SCIP_RETCODE aggregateConstraints(
    SCIP_Real scalarsum;
    SCIP_Real bestscalarsum;
    SCIP_Bool betterscalarsum;
+   SCIP_Bool commonvarlindependent;  /* indicates whether coefficient vector of common variables in linearly dependent */
    int varweight;
    int nvars;
    int bestvarweight;
@@ -6865,6 +6866,7 @@ SCIP_RETCODE aggregateConstraints(
    bestnvars = consdata0->nvars;
    bestv = -1;
    bestscalarsum = 0.0;
+   commonvarlindependent = TRUE;
    for( v = 0; v < nvarscommon; ++v )
    {
       assert(consdata0->vars[commonidx0[v]] == consdata1->vars[commonidx1[v]]);
@@ -6897,10 +6899,18 @@ SCIP_RETCODE aggregateConstraints(
             bestscalarsum = scalarsum;
          }
       }
+      
+      /* update commonvarlindependent flag, if still TRUE:
+       * v's common coefficient in cons1 / v's common coefficient in cons0 should be constant, i.e., equal 0's common coefficient in cons1 / 0's common coefficient in cons0
+       */
+      if( commonvarlindependent && v > 0 )
+         commonvarlindependent = SCIPisEQ(scip,
+            consdata1->vals[commonidx1[v]] * consdata0->vals[commonidx0[0]],
+            consdata1->vals[commonidx1[0]] * consdata0->vals[commonidx0[v]]);
    }
 
    /* if better aggregation was found, create new constraint and delete old one */
-   if( bestv != -1 )
+   if( bestv != -1 || commonvarlindependent )
    {
       SCIP_CONS* newcons;
       SCIP_CONSDATA* newconsdata;
@@ -6910,21 +6920,60 @@ SCIP_RETCODE aggregateConstraints(
       SCIP_Real newrhs;
       int newnvars;
 
-      /* choose multipliers such that the multiplier for the (in)equality cons0 is positive */
-      if( consdata1->vals[commonidx1[bestv]] > 0.0 )
+      if( bestv != -1 )
       {
-         a = consdata1->vals[commonidx1[bestv]];
-         b = -consdata0->vals[commonidx0[bestv]];
+         /* choose multipliers such that the multiplier for the (in)equality cons0 is positive */
+         if( consdata1->vals[commonidx1[bestv]] > 0.0 )
+         {
+            a = consdata1->vals[commonidx1[bestv]];
+            b = -consdata0->vals[commonidx0[bestv]];
+         }
+         else
+         {
+            a = -consdata1->vals[commonidx1[bestv]];
+            b = consdata0->vals[commonidx0[bestv]];
+         }
+         assert(SCIPisIntegral(scip, a));
+         assert(SCIPisPositive(scip, a));
+         assert(SCIPisIntegral(scip, b));
+         assert(!SCIPisZero(scip, b));
       }
       else
       {
-         a = -consdata1->vals[commonidx1[bestv]];
-         b = consdata0->vals[commonidx0[bestv]];
+         assert(commonvarlindependent);
+         if( consdata1->vals[commonidx1[0]] > 0.0 )
+         {
+            a =  consdata1->vals[commonidx1[0]];
+            b = -consdata0->vals[commonidx0[0]];
+         }
+         else
+         {
+            a = -consdata1->vals[commonidx1[0]];
+            b =  consdata0->vals[commonidx0[0]];
+         }
+         assert(SCIPisPositive(scip, a));
+         assert(!SCIPisZero(scip, b));
+
+         /* if a/b is integral, then we can easily choose integer multipliers */
+         if( SCIPisIntegral(scip, a/b) )
+         {
+            if( a/b > 0 )
+            {
+               a /= b;
+               b = 1.0;
+            }
+            else
+            {
+               a /= -b;
+               b = -1.0;
+            }
+         }
+
+         /* setup best* variables that were not setup above because we are in the commonvarlindependent case */
+         bestvarweight = diffidx0minus1weight + diffidx1minus0weight;
+         bestnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
+         bestscalarsum = REALABS(a) + REALABS(b);
       }
-      assert(SCIPisIntegral(scip, a));
-      assert(SCIPisPositive(scip, a));
-      assert(SCIPisIntegral(scip, b));
-      assert(!SCIPisZero(scip, b));
 
       SCIPdebugMessage("aggregate linear constraints <%s> := %.15g*<%s> + %.15g*<%s>  ->  nvars: %d -> %d, weight: %d -> %d\n",
          SCIPconsGetName(cons0), a, SCIPconsGetName(cons0), b, SCIPconsGetName(cons1),
@@ -6936,21 +6985,38 @@ SCIP_RETCODE aggregateConstraints(
       SCIP_CALL( SCIPallocBufferArray(scip, &newvars, bestnvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &newvals, bestnvars) );
 
-      /* calculate the common coefficients */
+      /* calculate the common coefficients, if we have not recognized linear dependency */
       newnvars = 0;
-      for( i = 0; i < nvarscommon; ++i )
+      if( !commonvarlindependent )
       {
-         assert(0 <= commonidx0[i] && commonidx0[i] < consdata0->nvars);
-         assert(0 <= commonidx1[i] && commonidx1[i] < consdata1->nvars);
-
-         aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
-         if( !SCIPisZero(scip, aggrcoef) )
+         for( i = 0; i < nvarscommon; ++i )
          {
-            assert(newnvars < bestnvars);
-            newvars[newnvars] = consdata0->vars[commonidx0[i]];
-            newvals[newnvars] = aggrcoef;
-            newnvars++;
+            assert(0 <= commonidx0[i] && commonidx0[i] < consdata0->nvars);
+            assert(0 <= commonidx1[i] && commonidx1[i] < consdata1->nvars);
+
+            aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
+            if( !SCIPisZero(scip, aggrcoef) )
+            {
+               assert(newnvars < bestnvars);
+               newvars[newnvars] = consdata0->vars[commonidx0[i]];
+               newvals[newnvars] = aggrcoef;
+               newnvars++;
+            }
          }
+      }
+      else
+      {
+         /* if we recognized linear dependency of the common coefficients, then the aggregation coefficient should be 0.0 for every common variable */
+#ifndef NDEBUG
+         for( i = 0; i < nvarscommon; ++i )
+         {
+            assert(0 <= commonidx0[i] && commonidx0[i] < consdata0->nvars);
+            assert(0 <= commonidx1[i] && commonidx1[i] < consdata1->nvars);
+
+            aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
+            assert(SCIPisZero(scip, aggrcoef));
+         }
+#endif
       }
 
       /* calculate the coefficients appearing in cons0 but not in cons1 */
@@ -7670,7 +7736,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          int consinddel;
          
 
-         /* the coefficients in both rows are either equal or negated: create a new constraint with same coeffients and
+         /* the coefficients in both rows are either equal or negated: create a new constraint with same coefficients and
           * best left and right hand sides; delete the old constraints afterwards
           */
          SCIPdebugMessage("aggregate linear constraints <%s> and <%s> with %s coefficients into single ranged row\n",
@@ -7908,7 +7974,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          assert(consdata0->nvars == nvarscommon + nvars0minus1);
          assert(consdata1->nvars == nvarscommon + nvars1minus0);
-
+         
          aggregated = FALSE;
          if( cons1isequality && !consdata0->upgraded && commonidxweight > diffidx1minus0weight )
          {
