@@ -33,7 +33,7 @@
  *
  * \OTHERDOCUTEXT
  *
- * @version  2.0.0.1
+ * @version  2.0.0.2
  *
  * <b>SCIP Authors:</b>
  * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
