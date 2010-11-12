@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.5 2010/09/28 13:40:08 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.6 2010/11/12 23:27:12 bzfheinz Exp $"
 
 /**@file   pricer_binpacking.c
  * @brief  binpacking variable pricer
@@ -660,6 +660,7 @@ SCIP_RETCODE SCIPincludePricerBinpacking(
 
    pricerdata->conss = NULL;
    pricerdata->weights = NULL;
+   pricerdata->ids = NULL;
    pricerdata->nitems = 0;
    pricerdata->capacity = 0;
    

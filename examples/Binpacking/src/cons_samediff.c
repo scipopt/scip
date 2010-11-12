@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_samediff.c,v 1.3 2010/09/27 21:09:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_samediff.c,v 1.4 2010/11/12 23:27:12 bzfheinz Exp $"
 
 /**@file   cons_samediff.c
  * @brief  constraint handler stores the local branching decision data 
@@ -70,6 +70,7 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   int                   dummy;              /**< a dummy struct member to avoid compiling problem with an empty struct */
 };
 
 

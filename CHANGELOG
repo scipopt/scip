@@ -41,6 +41,7 @@ fixed bugs:
 - fixed bugs in SCIPnlpiOracleChgLinearCoefs and SCIPnlpiOracleChgQuadCoefs for the case where new coefficients where added
 - fixed bug in nlp.c: nlrowSearchQuadElem was using SCIPquadelemSortedFind incorrectly
 - fixed bugs in cons_bounddisjunction where the branching during the constraint enforcement was done incorrectly
+- fixed bugs in binpacking example w.r.t. empty struct and not initializing an array
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
