@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.32 2010/11/05 21:51:05 bzfwolte Exp $"
+
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.33 2010/11/12 04:35:25 bzfsteff Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -143,6 +144,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             psuseintpoint;      /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
    SCIP_INTERVAL*        intervalval;        /**< stores interval representation of matrix values interval*/
    SCIP_Bool             intervalvalcon;     /**< was the interval representation of the matrix data constructed? */
+   SCIP_Bool*            rootactivity;       /**< which primal constraints are active at the optimal root node LP solution */
+   SCIP_Bool             rootactivitycon;    /**< has the rootactivity been stored? */
    SCIP_Bool             psinfeasversion;    /**< should infeasibility version of project and shift be used? */
    int                   interleavedbfreq;   /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
    SCIP_Longint          nprovedfeaslp;      /**< number of times, safe dual bound computation for feasible LPs was called */
@@ -815,6 +818,8 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->interiorpt = NULL;
    (*conshdlrdata)->includedcons = NULL;
    (*conshdlrdata)->psbasis = NULL;
+   (*conshdlrdata)->rootactivity = NULL;
+   (*conshdlrdata)->rootactivitycon = FALSE;
 
    /* get event handler for updating bounds of variables in the exact LP */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -876,6 +881,12 @@ SCIP_RETCODE conshdlrdataFree(
    {
       SCIPfreeMemoryArray(scip, &(*conshdlrdata)->intervalval);
    }
+
+   if( (*conshdlrdata)->rootactivitycon != FALSE )
+   {
+      SCIPfreeMemoryArray(scip, &(*conshdlrdata)->rootactivity);
+   }   
+   
 
    if( (*conshdlrdata)->rectfactor != NULL)
       RECTLUfreeFactorization((*conshdlrdata)->rectfactor);
@@ -2942,6 +2953,7 @@ SCIP_RETCODE constructPSData(
    int nnonz;
    int npsbasis;
    int indx;
+   int nrows;
    mpq_t mpqtemp;
    mpq_t alpha;
    mpq_t beta;
@@ -2994,7 +3006,6 @@ SCIP_RETCODE constructPSData(
 
    SCIP_COL** cols;
    SCIP_ROW** rows;
-
    
    //   assert(!conshdlrdata->psdatafail);
    assert(consdata->nconss > 0);
@@ -3004,6 +3015,8 @@ SCIP_RETCODE constructPSData(
       return SCIP_OKAY;
    /* now mark that this function has been called */
    conshdlrdata->psdatacon = TRUE; 
+
+   SCIPdebugMessage("Calling constructPSdata(). \n");
 
    /* process the bound changes */
    processBoundchgs(scip, conshdlrdata, consdata);
@@ -3076,9 +3089,9 @@ SCIP_RETCODE constructPSData(
       }
       for( i = 0; i < nvars; i++ )
       {
-         if( !isNegInfinity(conshdlrdata, consdata->lbloc[i]) )
+         if( !isNegInfinity(conshdlrdata, consdata->lb[i]) )
             conshdlrdata->includedcons[2*nconss + i] = 1;
-         if( !isPosInfinity(conshdlrdata, consdata->ubloc[i]) )
+         if( !isPosInfinity(conshdlrdata, consdata->ub[i]) )
             conshdlrdata->includedcons[2*nconss + nvars + i] = 1;
       }
    }
@@ -3127,9 +3140,9 @@ SCIP_RETCODE constructPSData(
       }   
       for( i = 0; i < nvars; i++ )
       {
-         if( mpq_equal(rootprimal[i], consdata->lbloc[i]) )
+         if( mpq_equal(rootprimal[i], consdata->lb[i]) )
             conshdlrdata->includedcons[2*nconss + i] = 1;
-         if( mpq_equal(rootprimal[i], consdata->ubloc[i]) )
+         if( mpq_equal(rootprimal[i], consdata->ub[i]) )
             conshdlrdata->includedcons[2*nconss + nvars + i] = 1;
       }
       /* free locally used memory */
@@ -3146,21 +3159,37 @@ SCIP_RETCODE constructPSData(
        * (in this case we choose dual variables whose primal constraints
        *  are active at the solution of the exact LP at the root node)
        */
-      rows = SCIPgetLPRows(scip);
-      for( i = 0; i < nconss; i++ )
+      
+      /* if the active columns have already been determiend, assign them */
+      if( conshdlrdata->rootactivitycon )
       {
-         if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetLhs(rows[i])) )
-            conshdlrdata->includedcons[i] = 1;
-         if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetRhs(rows[i])) )
-            conshdlrdata->includedcons[nconss + i] = 1;
-      }   
-      cols = SCIPgetLPCols(scip);
-      for( i = 0; i < nvars; i++ )
+         for( i = 0; i < nextendedconss; i++ )
+         {
+            if( conshdlrdata->rootactivity[i] )
+               conshdlrdata->includedcons[i] = 1;
+            else
+               conshdlrdata->includedcons[i] = 0;
+         }
+      }
+      else
       {
-         if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetLb(cols[i])) )
-            conshdlrdata->includedcons[2*nconss + i] = 1;
-         if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetUb(cols[i])) )
-            conshdlrdata->includedcons[2*nconss + nvars + i] = 1;
+         SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+         assert(nrows == nconss);
+         for( i = 0; i < nconss; i++ )
+         {
+            if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetLhs(rows[i])) )
+               conshdlrdata->includedcons[i] = 1;
+            if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetRhs(rows[i])) )
+               conshdlrdata->includedcons[nconss + i] = 1;
+         }   
+         cols = SCIPgetLPCols(scip);
+         for( i = 0; i < nvars; i++ )
+         {
+            if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetLb(cols[i])) )
+               conshdlrdata->includedcons[2*nconss + i] = 1;
+            if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetUb(cols[i])) )
+               conshdlrdata->includedcons[2*nconss + nvars + i] = 1;
+         }
       }
    }
    else if( conshdlrdata->psdualcolselection == 'b' )
@@ -3320,9 +3349,9 @@ SCIP_RETCODE constructPSData(
       }
       for( i = 0; i < nvars; i++ )
       {
-         if( !isNegInfinity(conshdlrdata, consdata->lbloc[i]) )
+         if( !isNegInfinity(conshdlrdata, consdata->lb[i]) )
             dvarincidence[2*nconss + i] = 1;
-         if( !isPosInfinity(conshdlrdata, consdata->ubloc[i]) )
+         if( !isPosInfinity(conshdlrdata, consdata->ub[i]) )
             dvarincidence[2*nconss + nvars + i] = 1;
       }
    }
@@ -4225,7 +4254,7 @@ SCIP_RETCODE constructPSData(
       {
          if( dvarincidence[2*nconss + i] )
          {
-            mpq_set(psobj[pos], consdata->lbloc[i]);
+            mpq_set(psobj[pos], consdata->lb[i]);
             pos++;
          }
       }
@@ -4233,7 +4262,7 @@ SCIP_RETCODE constructPSData(
       {  
          if( dvarincidence[2*nconss + nvars + i])
          {
-            mpq_neg(psobj[pos], consdata->ubloc[i]);
+            mpq_neg(psobj[pos], consdata->ub[i]);
             pos++;
          }
       }
@@ -4439,7 +4468,7 @@ SCIP_RETCODE constructPSData(
          {
             if( dvarincidence[2*nconss + i] )
             {
-               mpq_set(psobj[pos], consdata->lbloc[i]);
+               mpq_set(psobj[pos], consdata->lb[i]);
                pos++;
             }
          }
@@ -4447,7 +4476,7 @@ SCIP_RETCODE constructPSData(
          {  
             if( dvarincidence[2*nconss + nvars + i])
             {
-               mpq_neg(psobj[pos], consdata->ubloc[i]);
+               mpq_neg(psobj[pos], consdata->ub[i]);
                pos++;
             }
          }
@@ -4942,7 +4971,7 @@ SCIP_RETCODE constructPSData(
       {
          if( dvarincidence[2*nconss + i] )
          {
-            mpq_set(psobj[pos], consdata->lbloc[i]);
+            mpq_set(psobj[pos], consdata->lb[i]);
             pos++;
          }
       }
@@ -4950,7 +4979,7 @@ SCIP_RETCODE constructPSData(
       {  
          if( dvarincidence[2*nconss + nvars + i])
          {
-            mpq_neg(psobj[pos], consdata->ubloc[i]);
+            mpq_neg(psobj[pos], consdata->ub[i]);
             pos++;
          }
       }
@@ -5123,6 +5152,60 @@ SCIP_RETCODE constructPSData(
 
    return SCIP_OKAY;
 }
+
+
+
+
+
+/* This function will lookup and store the activity of the constraints at the root node 
+ * the activity is stored in conshdlrdata->rootactivity
+*/
+static
+SCIP_RETCODE copyRootActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< exactlp constraint data */
+   )
+{
+   int i;
+   int nconss;
+   int nvars;
+   int nrows;
+   int nextendedconss;
+   
+   SCIP_COL** cols;
+   SCIP_ROW** rows;
+
+   nconss = consdata->nconss;
+   nvars = consdata->nvars;
+   nextendedconss = 2*nconss + 2*nvars;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->rootactivity, nextendedconss) );
+
+   for( i = 0; i < nextendedconss; i++ )
+      conshdlrdata->rootactivity[i] = 0;
+
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   assert(nrows == nconss);
+   for( i = 0; i < nconss; i++ )
+   {
+      if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetLhs(rows[i])) )
+         conshdlrdata->rootactivity[i] = 1;
+      if( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, rows[i]), SCIProwGetRhs(rows[i])) )
+         conshdlrdata->rootactivity[nconss + i] = 1;
+   }   
+   cols = SCIPgetLPCols(scip);
+   for( i = 0; i < nvars; i++ )
+   {
+      if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetLb(cols[i])) )
+         conshdlrdata->rootactivity[2*nconss + i] = 1;
+      if( SCIPisFeasEQ(scip, SCIPcolGetPrimsol(cols[i]), SCIPcolGetUb(cols[i])) )
+         conshdlrdata->rootactivity[2*nconss + nvars + i] = 1;
+   }
+   conshdlrdata->rootactivitycon = TRUE;
+   return SCIP_OKAY;
+}
+
 
 
 /* This function will check the condition required for the project and shift method to work
@@ -7366,6 +7449,14 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 
    SCIPdebugMessage("separating exactlp constraint <%s> on LP solution (LP solstat=%d)\n", SCIPconsGetName(conss[0]),
       SCIPgetLPSolstat(scip));
+
+   /* Record which constraints are active in the root node solution */
+   if( !conshdlrdata->rootactivitycon )
+   {
+      SCIPdebugMessage("Recording the root LP activity for later use by Project and Shift \n");
+      copyRootActivity( scip, conshdlrdata, consdata );
+   }
+
 
    /* @todo: as soon as we actually add cutting planes here, we might want to compute a proved bound 
     * after the separation loop in solve.c. currently we disabled it inorder to avoid a second call 
