@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.391 2010/11/12 16:37:18 bzfwinkm Exp $
+# $Id: Makefile,v 1.392 2010/11/12 16:47:38 bzfwinkm Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -53,6 +53,9 @@ SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
 LINKER  	=	C
 SOFTLINKS	=
+
+#will this be compiled for parascip, necessary for dbg-builds to make it threadsafe
+PARASCIP	=	false
 
 MAKESOFTLINKS	=	true
 READLINE	=	true
@@ -163,6 +166,13 @@ DFLAGS		+=	$(USRDFLAGS)
 #FLAGS		+=	-DBMS_NOSAFEMEM
 #FLAGS		+=	-DBMS_NOBLOCKMEM
 
+#-----------------------------------------------------------------------------
+# PARASCIP
+#-----------------------------------------------------------------------------
+
+ifeq ($(PARASCIP),false)
+FLAGS		+=	-DNPARASCIP
+endif
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface

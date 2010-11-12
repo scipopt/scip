@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.23 2010/09/24 11:33:51 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.24 2010/11/12 16:47:38 bzfwinkm Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -69,8 +69,7 @@
  * allocated memory elements in an allocation list. This can be used as a simple leak
  * detection.
  *************************************************************************************/
-
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
 
 typedef struct Memlist MEMLIST;         /**< memory list for debugging purposes */
 
@@ -250,7 +249,9 @@ void BMSdisplayMemory_call(
    void
    )
 {
+#ifdef NPARASCIP
    printInfo("optimized version of memory shell linked - no memory diagnostics available\n");
+#endif
 }
 
 /** displays a warning message on the screen, if allocated memory exists */
@@ -258,7 +259,9 @@ void BMScheckEmptyMemory_call(
    void
    )
 {
+#ifdef NPARASCIP
    printInfo("optimized version of memory shell linked - no memory leakage check available\n");
+#endif
 }
 
 /** returns total number of allocated bytes */
@@ -291,7 +294,7 @@ void* BMSallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %lld bytes\n", (long long) size);
    }
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, size, filename, line);
 #endif
@@ -309,7 +312,7 @@ void* BMSreallocMemory_call(
 {
    void* newptr;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
    if( ptr != NULL )
       removeMemlistEntry(ptr, filename, line);
 #endif
@@ -322,7 +325,7 @@ void* BMSreallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for reallocation of %lld bytes\n", (long long) size);
    }
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(newptr, size, filename, line);
 #endif
@@ -388,7 +391,7 @@ void BMSfreeMemory_call(
 {
    if( ptr != NULL )
    {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
       removeMemlistEntry(ptr, filename, line);
 #endif
       free(ptr);

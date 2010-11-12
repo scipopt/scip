@@ -63,7 +63,8 @@ features:
 - new dialog "write vboundgraph" which can be used to write the variable lower or upper bound graph to a file from the interactive shell
 - the xor constraint handler can now parse its constraints
 - the bounddisjunction constraint handler can now parse its constraints
-
+- SCIP-CPX is now threadsafe
+- via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
 
 SCIP version 2.0.0
 ===============
