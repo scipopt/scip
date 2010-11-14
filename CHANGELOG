@@ -14,7 +14,7 @@ interface:
   determines the current position in the the string which gets parsed and the pointer to an int (endpos) returns
   the position where the current parsing stopped
 - prototype for methods SCIPparseVarsLinearsum()
-- new functions SCIPround() and SCIPfeasRound() to round to nearst integer
+- new functions SCIPround() and SCIPfeasRound() to round to nearest integer
 
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
@@ -29,7 +29,7 @@ fixed bugs:
 - fixed bug in SCIPcopyConss: copy all active constraints (including disabled ones)
 - corrected behavior of the copy function in cons_indicator.c: create artificial linear constraint if linear constraint was deleted
 - fixed bug in cons_indicator.c: presolving cannot delete linear constraints; several other minor bugfixes
-- fixed bug w.r.t. looseobjval; the coounting of number of loose variables in the LP data structure was incorrect in case a 
+- fixed bug w.r.t. looseobjval; the counting of number of loose variables in the LP data structure was incorrect in case a 
   variable got aggregated or multi-aggregated 
 - fixed bug in debug.c w.r.t. checking of constraints and continuous variables
 - fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
@@ -52,9 +52,8 @@ parameters:
   the counting process of processed nodes 
 - added parameter <misc/resetstat> which state if the statistics should be reseted if the transformed problem is freed 
   (in case of a benders decomposition this parameter should be set to FALSE) default value is TRUE
-- added parameter <misc/improvingsols> which state if only solution which have a better (or equal) primal bound 
-  as the best know one are checked  is TRUE; this is of interest if the check of a solution is expensive; 
-  default value is FALSE
+- added parameter <misc/improvingsols> which states whether only solutions which have a better (or equal) primal bound 
+  as the best known are checked; this is of interest if the check of a solution is expensive; default value is FALSE
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
