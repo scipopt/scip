@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.124 2010/11/02 00:49:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.125 2010/11/15 11:10:22 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -400,6 +400,40 @@ void* hashtablelistRetrieve(
       return NULL;
 }
 
+
+/** retrieves element with given key from the hash list, or NULL
+ * returns pointer to hash table list entry */
+static
+void* hashtablelistRetrieveNext(
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< on input: hash list to search; on exit: hash list entry corresponding to element after retrieved one, or NULL */
+   SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr,            /**< user pointer */
+   unsigned int          keyval,             /**< hash value of key */
+   void*                 key                 /**< key to retrieve */
+   )
+{
+   SCIP_HASHTABLELIST* h;
+
+   assert(hashtablelist != NULL);
+   
+   /* find hash list entry */
+   h = hashtablelistFind(*hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
+
+   /* return element */
+   if( h != NULL )
+   {
+      *hashtablelist = h->next;
+      
+      return h->element;
+   }
+   
+   *hashtablelist = NULL;
+   
+   return NULL;
+}
+
 /** removes element from the hash list */
 static
 SCIP_RETCODE hashtablelistRemove(
@@ -554,6 +588,41 @@ void* SCIPhashtableRetrieve(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    return hashtablelistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, 
+      hashtable->hashkeyval, hashtable->userptr, keyval, key);
+}
+
+/** retrieve element with key from hash table, returns NULL if not existing
+ * can be used to retrieve all entries with the same key (one-by-one) */
+void* SCIPhashtableRetrieveNext(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
+   void*                 key                 /**< key to retrieve */
+   )
+{
+   unsigned int keyval;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(hashtablelist != NULL);
+   assert(key != NULL);
+
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
+
+   if( *hashtablelist == NULL )
+   {
+      unsigned int hashval;
+      
+      /* get the hash value of the key */
+      hashval = keyval % hashtable->nlists; /*lint !e573*/
+      
+      *hashtablelist = hashtable->lists[hashval];
+   }
+
+   return hashtablelistRetrieveNext(hashtablelist, hashtable->hashgetkey, hashtable->hashkeyeq, 
       hashtable->hashkeyval, hashtable->userptr, keyval, key);
 }
 

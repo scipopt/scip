@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.77 2010/11/05 16:55:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.78 2010/11/15 11:10:21 bzfviger Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -141,6 +141,15 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
 extern
 void* SCIPhashtableRetrieve(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   void*                 key                 /**< key to retrieve */
+   );
+
+/** retrieve element with key from hash table, returns NULL if not existing
+ * can be used to retrieve all entries with the same key (one-by-one) */
+extern
+void* SCIPhashtableRetrieveNext(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
