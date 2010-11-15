@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.34 2010/11/01 10:34:45 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cgmip.c,v 1.35 2010/11/15 15:57:16 bzfpfets Exp $"
 
 /**@file   sepa_cgmip.c
  * @ingroup SEPARATORS
@@ -872,21 +872,15 @@ SCIP_RETCODE createSubscip(
       assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(col)) );
 
       /* if allowed, try to use stronger local bound */
-      if ( sepadata->allowlocal && SCIPvarGetLbLocal(var) - 0.5 > lb[j] )
-      {
+      if ( sepadata->allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(var), lb[j]) )
 	 lb[j] = SCIPvarGetLbLocal(var);
-	 assert( SCIPisIntegral(scip, lb[j]) );
-      }
 
       ub[j] = SCIPvarGetUbGlobal(var);
       assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(col)) );
 
       /* if allowed, try to use stronger local bound */
-      if ( sepadata->allowlocal && SCIPvarGetUbLocal(var) + 0.5 < ub[j] )
-      {
+      if ( sepadata->allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(var), ub[j]) )
 	 ub[j] = SCIPvarGetUbLocal(var);
-	 assert( SCIPisIntegral(scip, ub[j]) );
-      }
 
       mipdata->colType[j] = colPresent;
       mipdata->isComplemented[j] = FALSE;
