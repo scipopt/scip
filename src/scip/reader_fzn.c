@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.62 2010/10/29 03:17:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.63 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   reader_fzn.c
  * @ingroup FILEREADERS 
@@ -3463,9 +3463,9 @@ void flattenFloat(
    ) 
 {
    if( SCIPisIntegral(scip, val) )
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.1f",val);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.1f", SCIPround(scip, val));
    else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%f",val);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%f", val);
  
 }
 
@@ -3503,7 +3503,7 @@ SCIP_RETCODE printRow(
    {
       if( hasfloats )
       {
-         flattenFloat(scip,vals[v], buffy);
+         flattenFloat(scip, vals[v], buffy);
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s, ", buffy);
       }
       else
@@ -3516,7 +3516,7 @@ SCIP_RETCODE printRow(
    { 
       if( hasfloats )
       {
-         flattenFloat(scip,vals[nvars-1],buffy);
+         flattenFloat(scip, vals[nvars-1], buffy);
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s", buffy);
       }
       else
@@ -3560,7 +3560,7 @@ SCIP_RETCODE printRow(
    
    if( hasfloats )
    {
-      flattenFloat(scip,rhs,buffy);
+      flattenFloat(scip, rhs, buffy);
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s);\n",buffy);
    }
    else
@@ -3631,9 +3631,9 @@ SCIP_RETCODE printLinearCons(
    {
       /* fractional sides trigger a constraint to be of float type */
       if( !SCIPisInfinity(scip, -lhs) )
-         hasfloats = hasfloats || !SCIPisIntegral(scip,lhs-activeconstant);
+         hasfloats = hasfloats || !SCIPisIntegral(scip, lhs-activeconstant);
       if( !SCIPisInfinity(scip, rhs) )
-         hasfloats = hasfloats || !SCIPisIntegral(scip,rhs-activeconstant);
+         hasfloats = hasfloats || !SCIPisIntegral(scip, rhs-activeconstant);
 
       /* any continuous variable or fractional variable coefficient triggers a constraint to be of float type */
       for( v = 0; v < nactivevars && !hasfloats; v++ )
@@ -3644,7 +3644,7 @@ SCIP_RETCODE printLinearCons(
          var = activevars[v];         
             
          hasfloats = hasfloats || (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY &&  SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER);
-         hasfloats = hasfloats || !SCIPisIntegral(scip,activevals[v]);
+         hasfloats = hasfloats || !SCIPisIntegral(scip, activevals[v]);
       }
     
       /* If the constraint has to be written as float type, all discrete variables need to have a float counterpart */
@@ -3802,12 +3802,12 @@ SCIP_RETCODE writeFzn(
          SCIP_Bool fixed;
          fixed = FALSE;
 
-         if( SCIPisEQ(scip,lb,ub) )
+         if( SCIPisEQ(scip, lb, ub) )
             fixed = TRUE;
 
          if( v < ndiscretevars )
          {
-	    assert( SCIPisIntegral(scip,lb) && SCIPisIntegral(scip,ub) );
+	    assert( SCIPisFeasIntegral(scip, lb) && SCIPisFeasIntegral(scip, ub) );
 	    
 	    if( fixed )
                SCIPinfoMessage(scip, file, "var int: %s = %.f;\n", varname, lb);
@@ -3819,15 +3819,15 @@ SCIP_RETCODE writeFzn(
             /* Real valued bounds have to be made type conform */
 	    if( fixed )
             { 
-               flattenFloat(scip,lb,buffy);
+               flattenFloat(scip, lb, buffy);
                SCIPinfoMessage(scip, file, "var float: %s = %s;\n", varname, buffy);
 	    }
             else
             {
                char buffy2[FZN_BUFFERLEN];
   
-               flattenFloat(scip,lb,buffy);
-               flattenFloat(scip,ub,buffy2);
+               flattenFloat(scip, lb, buffy);
+               flattenFloat(scip, ub, buffy2);
                SCIPinfoMessage(scip, file,  "var %s..%s: %s;\n", buffy, buffy2, varname);
             }
          }
@@ -4044,7 +4044,7 @@ SCIP_RETCODE writeFzn(
          {
             intobjvars[nintobjvars] = v;
             SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",
-               SCIPvarGetName(var),nintobjvars,v,obj,objscale,SCIPvarGetObj(var));
+               SCIPvarGetName(var), nintobjvars, v, obj, objscale, SCIPvarGetObj(var));
             nintobjvars++;
          }
          else
@@ -4109,13 +4109,13 @@ SCIP_RETCODE writeFzn(
 	  
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
-            flattenFloat(scip,transformed ? SCIPvarGetLbLocal(var) : SCIPvarGetLbOriginal(var), buffy);
+            flattenFloat(scip, transformed ? SCIPvarGetLbLocal(var) : SCIPvarGetLbOriginal(var), buffy);
             SCIPinfoMessage(scip, file,"constraint float_ge(%s, %s);\n", SCIPvarGetName(var), buffy);
          }
          else
          {
             assert( boundtypes[v] == SCIP_BOUNDTYPE_UPPER );
-            flattenFloat(scip,transformed ? SCIPvarGetUbLocal(var) : SCIPvarGetUbOriginal(var), buffy);
+            flattenFloat(scip, transformed ? SCIPvarGetUbLocal(var) : SCIPvarGetUbOriginal(var), buffy);
             SCIPinfoMessage(scip, file,"constraint float_le(%s, %s);\n",SCIPvarGetName(var), buffy);
          } 
       }
@@ -4141,7 +4141,7 @@ SCIP_RETCODE writeFzn(
          SCIP_Real obj;
          var = vars[intobjvars[v]];
          obj = objscale*SCIPvarGetObj(var);
-         SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",SCIPvarGetName(var),v,intobjvars[v],obj,objscale,SCIPvarGetObj(var));
+         SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n", SCIPvarGetName(var), v, intobjvars[v], obj, objscale, SCIPvarGetObj(var));
 
          assert( SCIPisIntegral(scip, obj) );
          flattenFloat(scip, obj, buffy);

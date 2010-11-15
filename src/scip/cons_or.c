@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.88 2010/11/02 01:11:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.89 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -630,7 +630,7 @@ SCIP_RETCODE applyFixings(
 
       if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
       }
       else
@@ -984,7 +984,7 @@ SCIP_RETCODE propagateCons(
    if( consdata->propagated )
    {
       assert(consdata->nofixedone);
-      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(resvar), 1.0));
+      assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(resvar), 1.0));
       return SCIP_OKAY;
    }
 
@@ -1676,8 +1676,8 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
             SCIPdebugMessage("or constraint <%s> has only one variable not fixed to 0.0\n", SCIPconsGetName(cons));
             
             assert(consdata->vars != NULL);
-            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
-            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
+            assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
+            assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             
             /* aggregate variables: resultant - operand == 0 */
             SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.153 2010/11/02 01:11:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.154 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -421,13 +421,13 @@ SCIP_RETCODE applyFixings(
 
       if( SCIPvarGetLbGlobal(var) > 0.5 )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          *redundant = TRUE;
          return SCIP_OKAY;
       }
       else if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
       }
       else
@@ -756,8 +756,8 @@ SCIP_RETCODE processWatchedVars(
        * - an unmodifiable constraint is feasible and can be disabled after the remaining variable is fixed to one
        */
       assert(0 <= watchedvar1 && watchedvar1 < nvars);
-      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar1]), 0.0));
-      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar1]), 1.0));
+      assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[watchedvar1]), 0.0));
+      assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(vars[watchedvar1]), 1.0));
       if( SCIPconsIsModifiable(cons) )
          *mustcheck = TRUE;
       else
@@ -1936,7 +1936,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                {
                   assert( consdata->vars[v] != NULL);
                   assert( SCIPvarIsBinary(consdata->vars[v]) );
-                  assert( SCIPisZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[v])) );
+                  assert( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[v])) );
                }
 #endif
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
@@ -2088,8 +2088,8 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                SCIPconsGetName(cons));
             
             assert(consdata->vars != NULL);
-            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
-            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
+            assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
+            assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             
             if( SCIPvarGetStatus(consdata->vars[0]) != SCIP_VARSTATUS_MULTAGGR )
             {

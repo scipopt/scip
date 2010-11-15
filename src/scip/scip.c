@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.700 2010/11/12 01:43:38 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.701 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -20632,7 +20632,7 @@ SCIP_Real SCIPceil(
    return SCIPsetCeil(scip->set, val);
 }
 
-/** rounds value - feasibility tolerance up to the next integer in epsilon tolerance */
+/** rounds value to the nearest integer with epsilon tolerance */
 SCIP_Real SCIPround(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */

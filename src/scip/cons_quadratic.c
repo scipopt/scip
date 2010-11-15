@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.138 2010/11/03 12:50:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.139 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4705,7 +4705,9 @@ SCIP_RETCODE generateCut(
             }
             else
             { /* if variable is discrete but fractional, try to be more clever */
-               SCIP_Real f = SCIPfloor(scip, xval);
+               SCIP_Real f;
+               
+               f = SCIPfloor(scip, xval);
                rowcoef += coef*(2*f+1);
                bnd += coef*f*(f+1);
             }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.98 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.99 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -791,7 +791,7 @@ SCIP_RETCODE aggregation(
          SCIP_Real primsol;
          
          primsol = varsolvals[SCIPvarGetProbindex(var)];
-         hasfractional = !SCIPisIntegral(scip, primsol);
+         hasfractional = !SCIPisFeasIntegral(scip, primsol);
       }
    }
    assert(naggrintnonzs + naggrcontnonzs == nstartnonzcols);

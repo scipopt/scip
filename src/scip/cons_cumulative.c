@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.20 2010/11/03 00:28:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.21 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -1366,8 +1366,8 @@ int convertBoundToInt(
    SCIP_Real             bound               /**< double bound to convert */
    )
 {  
-   assert(SCIPisIntegral(scip, bound));
-   assert(SCIPisEQ(scip, bound, (SCIP_Real)(int)(bound + 0.5)));
+   assert(SCIPisFeasIntegral(scip, bound));
+   assert(SCIPisFeasEQ(scip, bound, (SCIP_Real)(int)(bound + 0.5)));
       
    return (int)(bound + 0.5);
 }
@@ -2023,9 +2023,9 @@ SCIP_RETCODE analyzeConflictCoreTimesCumulative(
       
       /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
       assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
+      assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
+      assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
       
       corelb = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE));
       coreub = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) + durations[j];

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.107 2010/10/15 06:45:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.108 2010/11/15 21:11:12 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -702,7 +702,7 @@ SCIP_RETCODE checkLPBoundsClean(
       {
          assert( ind < nCols );
          covered[ind] = TRUE;
-         if ( ! SCIPisZero(scip, lb[ind]) || ! SCIPlpiIsInfinity(lp, ub[ind]) )
+         if ( ! SCIPisFeasZero(scip, lb[ind]) || ! SCIPlpiIsInfinity(lp, ub[ind]) )
          {
             SCIPABORT();
          }
@@ -715,7 +715,7 @@ SCIP_RETCODE checkLPBoundsClean(
       if (! covered[j] )
       {
          /* some columns can be fixed to 0, since they correspond to disabled constraints */
-         if ( ( ! SCIPlpiIsInfinity(lp, -lb[j]) && ! SCIPisZero(scip, lb[j])) || (! SCIPlpiIsInfinity(lp, ub[j]) && ! SCIPisZero(scip, ub[j])) )
+         if ( ( ! SCIPlpiIsInfinity(lp, -lb[j]) && ! SCIPisFeasZero(scip, lb[j])) || (! SCIPlpiIsInfinity(lp, ub[j]) && ! SCIPisFeasZero(scip, ub[j])) )
          {
             SCIPABORT();
          }

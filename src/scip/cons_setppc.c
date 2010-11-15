@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.157 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.158 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -999,7 +999,7 @@ SCIP_RETCODE applyFixings(
 
       if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
          SCIP_CALL( delCoefPos(scip, cons, v) );
       }
       else
@@ -1173,7 +1173,7 @@ SCIP_RETCODE processFixings(
             for( v = 0; v < nvars && consdata->nfixedones == 1; ++v )
             {
                var = vars[v];
-               assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
+               assert(SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), 1.0));
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
                   SCIP_CALL( SCIPinferBinvarCons(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
@@ -1294,8 +1294,8 @@ SCIP_RETCODE processFixings(
          for( v = 0; v < nvars; ++v )
          {
             var = vars[v];
-            assert(SCIPisZero(scip, SCIPvarGetLbLocal(var)));
-            assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
+            assert(SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)));
+            assert(SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
                SCIPdebugMessage(" -> fixing remaining variable <%s> to one in set covering/partitioning constraint <%s>\n",

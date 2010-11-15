@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.18 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.19 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -1140,8 +1140,8 @@ SCIP_RETCODE processBinvarFixings(
          for( v = 0; v < nvars && !(*cutoff); ++v )
          {
             var = vars[v];
-            assert(SCIPisZero(scip, SCIPvarGetLbLocal(var)));
-            assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
+            assert(SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)));
+            assert(SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
                assert(SCIPvarGetLbLocal(var) < 0.5);

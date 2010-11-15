@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.215 2010/10/29 10:42:47 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.216 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -4479,14 +4479,14 @@ SCIP_RETCODE applyFixings(
 
       if( SCIPvarGetLbGlobal(var) > 0.5 )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          consdata->capacity -= consdata->weights[v];
          SCIP_CALL( delCoefPos(scip, cons, v) );
          consdata->cliquesadded = FALSE; /* reduced capacity might lead to larger cliques */
       }
       else if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
          SCIP_CALL( delCoefPos(scip, cons, v) );
       }
       else

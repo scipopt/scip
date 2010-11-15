@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.109 2010/10/20 13:51:38 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.110 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -1226,13 +1226,13 @@ SCIP_RETCODE createIndicatorConstraint(
    assert( binvar != NULL );
 
    /* check that binvalue is 0 or 1 */
-   if (!SCIPisEQ(scip, binvalue, 0.0) && ! SCIPisEQ(scip, binvalue, 1.0))
+   if (!SCIPisFeasEQ(scip, binvalue, 0.0) && ! SCIPisFeasEQ(scip, binvalue, 1.0))
    {
       syntaxError(scip, lpinput, "value for binary variable must be '0' or '1'");
       return SCIP_OKAY;
    }
 
-   if ( SCIPisEQ(scip, binvalue, 0.0) )
+   if ( SCIPisFeasEQ(scip, binvalue, 0.0) )
    {
       SCIP_VAR* negbinvar;
 

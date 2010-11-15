@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.51 2010/09/27 17:20:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.52 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -371,7 +371,7 @@ CUTOFF_CONSTRAINT(addBinaryCons)
       assert( varIsUnfixedLocal(var) );
 
       value = SCIPgetSolVal(scip, sol, var);
-      assert( SCIPisIntegral(scip, value) );
+      assert( SCIPisFeasIntegral(scip, value) );
 
       if (value > 0.5)
       {
@@ -444,7 +444,7 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       {
          ++nbinvars;
          value = SCIPgetSolVal(scip, sol, var);
-         assert( SCIPisIntegral(scip, value) );
+         assert( SCIPisFeasIntegral(scip, value) );
          
          if (value < 0.5)
          {
@@ -459,9 +459,9 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       }
       else
       {
-         assert( SCIPisIntegral(scip, SCIPvarGetLbLocal(var)) );
-         assert( SCIPisIntegral(scip, SCIPvarGetUbLocal(var)) );
-         assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, var)) );
+         assert( SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)) );
+         assert( SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)) );
+         assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, var)) );
             
          lb = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetLbLocal(var));
          ub = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetUbLocal(var));
@@ -660,10 +660,10 @@ SCIP_RETCODE countSparsesol(
             SCIPdebugMessage("variable <%s> Local Bounds are [%g,%g]\n", SCIPvarGetName(var), lb, ub);
             
             assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
-            assert( SCIPisIntegral(scip, lb) );
-            assert( SCIPisIntegral(scip, ub) );
-            assert( SCIPisIntegral(scip, ub - lb) );
-            assert( SCIPisLT(scip, lb, ub) );
+            assert( SCIPisFeasIntegral(scip, lb) );
+            assert( SCIPisFeasIntegral(scip, ub) );
+            assert( SCIPisFeasIntegral(scip, ub - lb) );
+            assert( SCIPisFeasLT(scip, lb, ub) );
             
             /* the number of integers laying in the interval [lb,ub] is
              *  (ub - lb + 1); to make everything integral we add another

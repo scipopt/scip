@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.141 2010/10/04 11:47:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.142 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1351,11 +1351,11 @@ SCIP_RETCODE readBounds(
             if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
                if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
-                  || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisEQ(scip, val, 0.0))
-                     && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisEQ(scip, val, 1.0))) )
+                  || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
+                     && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
                {
-                  assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-                  assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+                  assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+                  assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
                   SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                   SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
                }

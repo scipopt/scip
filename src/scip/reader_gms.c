@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.46 2010/09/27 17:20:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.47 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1455,19 +1455,19 @@ SCIP_RETCODE SCIPwriteGms(
       /* upper bound */
       if( v < nbinvars )
       {
-         if( !SCIPisEQ(scip, ub, 1.0) )
+         if( !SCIPisFeasEQ(scip, ub, 1.0) )
          {
-            SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
+            SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
             nondefbounds = TRUE;
          }
       }
       else if( v < nbinvars + nintvars && !freeints )
       {
          /* freeints == FALSE: integer variables have upper bound 100 by default */
-         if( !SCIPisEQ(scip, ub, 100.0) )
+         if( !SCIPisFeasEQ(scip, ub, 100.0) )
          {
             if( !SCIPisInfinity(scip, ub) )
-               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
+               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfeasFloor(scip, ub));
             else
                SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here */
             nondefbounds = TRUE;

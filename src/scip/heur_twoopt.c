@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.18 2010/09/27 17:20:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.19 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -1604,7 +1604,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
             SCIP_Real solval;
 
             solval = SCIPgetSolVal(scip, worksol, allvars[i]);
-	    assert(SCIPvarGetType(allvars[i]) == SCIP_VARTYPE_CONTINUOUS || SCIPisIntegral(scip, solval));
+	    assert(SCIPvarGetType(allvars[i]) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, solval));
 
             SCIP_CALL( SCIPchgVarLbDive(scip, allvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], solval) );

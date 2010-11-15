@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.44 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.45 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -1680,9 +1680,9 @@ SCIP_RETCODE getRelevantColumns(
             lpdata->subproblemsindexofcol[j] = IRRELEVANT;
             lpdata->rcolsindexofcol[j] = IRRELEVANT;      
          }
-         else if( !SCIPisZero(scip , primsol) )
+         else if( !SCIPisZero(scip, primsol) )
          {
-            if( SCIPisZero(scip , lbslack) )
+            if( SCIPisZero(scip, lbslack) )
             {
                lpdata->ndelvarbounds += tempnvarbnds;
           
@@ -1694,7 +1694,7 @@ SCIP_RETCODE getRelevantColumns(
             }
             else
             {
-               if( SCIPisZero(scip , ubslack) )
+               if( SCIPisZero(scip, ubslack) )
                {
                   lpdata->ndelvarbounds += tempnvarbnds;
             

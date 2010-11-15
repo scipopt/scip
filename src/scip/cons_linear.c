@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.394 2010/11/15 19:14:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.395 2010/11/15 21:11:12 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -3711,7 +3711,7 @@ SCIP_RETCODE applyFixings(
             break;
 
          case SCIP_VARSTATUS_FIXED:
-            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
+            assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
             fixedval = SCIPvarGetLbGlobal(var);
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
@@ -4434,7 +4434,7 @@ SCIP_RETCODE tightenBounds(
    }
 #ifndef NDEBUG
    if( force && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
-      assert(*cutoff || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[0]), SCIPvarGetUbLocal(consdata->vars[0])));
+      assert(*cutoff || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->vars[0]), SCIPvarGetUbLocal(consdata->vars[0])));
 #endif
 
    return SCIP_OKAY;
