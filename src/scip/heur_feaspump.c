@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.71 2010/11/01 16:32:19 bzfgamra Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.72 2010/11/15 14:10:25 bzfwinkm Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -365,7 +365,7 @@ SCIP_RETCODE createNewSol(
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyFeaspump)
-{  /*lint --e{715}*/
+{
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -379,7 +379,7 @@ SCIP_DECL_HEURCOPY(heurCopyFeaspump)
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeFeaspump)
-{   /*lint --e{715}*/
+{
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -399,7 +399,7 @@ SCIP_DECL_HEURFREE(heurFreeFeaspump)
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitFeaspump)
-{  /*lint --e{715}*/
+{
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -424,7 +424,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 SCIP_DECL_HEUREXIT(heurExitFeaspump)
-{  /*lint --e{715}*/
+{
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -492,7 +492,7 @@ SCIP_Longint adjustedMaxNLPIterations(
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecFeaspump)
-{  /*lint --e{715}*/
+{
    SCIP_HEURDATA* heurdata; 
    SCIP_SOL* tmpsol;          /* only used for swapping */
    SCIP_SOL** lastroundedsols;/* solutions of the last pumping rounds (depending on heurdata->cyclelength) */
