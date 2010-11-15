@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.393 2010/11/12 20:19:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.394 2010/11/15 19:14:32 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -84,6 +84,9 @@
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
 #define DEFAULT_PRESOLPAIRWISE       TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
+#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presol comparisons */
+#define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+                                           *   comparison round */
 #define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                            *   (0.0: disable constraint aggregation) */
 #define DEFAULT_MAXCARDBOUNDDIST      0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
@@ -99,9 +102,6 @@
 
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
-#define NMINCOMPARISONS            200000 /**< number for minimal pairwise presol comparisons */
-#define MINGAINPERNMINCOMPARISONS   1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
-                                           *   comparison round */
 
 
 /** constraint data for linear constraints */
@@ -177,6 +177,7 @@ struct SCIP_ConshdlrData
                                               *   (0.0: disable constraint aggregation) */
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cardinality cuts */
+   SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -184,6 +185,7 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
+   int                   nmincomparisons;    /**< number for minimal pairwise presol comparisons */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
@@ -9338,7 +9340,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff,
                   ndelconss, nchgsides) );
          }
-
+         
          if( firstchange < nconss && conshdlrdata->presolpairwise )
          {
             SCIP_CONS** usefulconss;
@@ -9384,14 +9386,14 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,
                      &cutoff, ndelconss, nchgsides, nchgcoefs) );
 
-               if( npaircomparisons > NMINCOMPARISONS )
+               if( npaircomparisons > conshdlrdata->nmincomparisons )
                {
-		  if( ((*ndelconss - oldndelconss) + (*nchgsides - oldnchgsides)/2 + (*nchgcoefs - oldnchgcoefs)/10) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                  if( ((*ndelconss - oldndelconss) + (*nchgsides - oldnchgsides)/2 + (*nchgcoefs - oldnchgcoefs)/10) / (npaircomparisons + 0.0) < conshdlrdata->mingainpernmincomp )
                      break;
-		  oldndelconss = *ndelconss;
+                  oldndelconss = *ndelconss;
                   oldnchgsides = *nchgsides;
                   oldnchgcoefs = *nchgcoefs;
-		  npaircomparisons = 0;
+                  npaircomparisons = 0;
                }
             }
             /* free temporary memory */
@@ -10259,6 +10261,14 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance", 
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/linear/nmincomparisons",
+         "number for minimal pairwise presolve comparisons",
+         &conshdlrdata->nmincomparisons, TRUE, DEFAULT_NMINCOMPARISONS, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/linear/mingainpernmincomparisons",
+         "minimal gain per minimal pairwise presolve comparisons to repeat pairwise comparison round",
+         &conshdlrdata->mingainpernmincomp, TRUE, DEFAULT_MINGAINPERNMINCOMP, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/linear/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",

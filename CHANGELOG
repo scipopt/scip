@@ -54,6 +54,8 @@ parameters:
   (in case of a benders decomposition this parameter should be set to FALSE) default value is TRUE
 - added parameter <misc/improvingsols> which states whether only solutions which have a better (or equal) primal bound 
   as the best known are checked; this is of interest if the check of a solution is expensive; default value is FALSE
+- added parameters <constraints/linear/nmincomparisons> and <constraints/linear/mingainpernmincomparisons> to influence stopping criterium
+  for pairwise comparison of linear constraints
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
