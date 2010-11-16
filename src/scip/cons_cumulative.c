@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.21 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.22 2010/11/16 19:33:59 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -5001,31 +5001,26 @@ SCIP_RETCODE performEdgeFindingDetection(
 static
 SCIP_RETCODE checkOverload(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to be separated */
+   int                   nvars,              /**< number of start time variables (activities) */
+   SCIP_VAR**            vars,               /**< array of start time variables */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   capacity,           /**< cumulative capacity */
+   SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_Bool*            cutoff              /**< pointer to store whether node can be cutoff */
    )
 {
    THETATREENODE** nodes;
    THETATREE* thetatree;
-   SCIP_CONSDATA* consdata;
-
+ 
    int* lcts;
    int* lct_ids;
-   int nvars;
-   int capacity;
 
    int j;
 
    assert(scip != NULL);
    assert(cons != NULL);
    assert(cutoff != NULL);
-   
-   /* get constraint data */
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   capacity = consdata->capacity;
-   nvars = consdata->nvars;
    
    SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lct_ids, nvars) );
@@ -5038,15 +5033,15 @@ SCIP_RETCODE checkOverload(
       SCIP_Real est;
       int energy;
 
-      var = consdata->vars[j];
-      lcts[j] = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + consdata->durations[j];
+      var = vars[j];
+      lcts[j] = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + durations[j];
       lct_ids[j] = j;
 
       est = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + j / (2.0 * nvars);
-      energy = consdata->demands[j] * consdata->durations[j];
+      energy = demands[j] * durations[j];
 
       SCIP_CALL( thetatreeCreateLeaf(scip, &(nodes[j]), var, est, 
-            energy, consdata->capacity * (int)(est + 0.01) + energy ) );
+            energy, capacity * (int)(est + 0.01) + energy ) );
    }
 
    /* sort the latest completion times */
@@ -5146,8 +5141,9 @@ SCIP_RETCODE propagateCons(
    int*                  ndelconss           /**< pointer to store the number of deleted constraints */
    )
 {
+   SCIP_CONSDATA* consdata;
    SCIP_Bool redundant;
-
+     
    assert(ndelconss != NULL);
 
    redundant = FALSE;
@@ -5166,15 +5162,12 @@ SCIP_RETCODE propagateCons(
       return SCIP_OKAY;
    }
 
-   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+ 
    /* propagate the job cores until nothing else can be detected */
    if( !(*cutoff) && usecoretimes )
    {
-      SCIP_CONSDATA* consdata;
-      
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-      
       SCIP_CALL( propagateCores(scip, consdata->nvars, consdata->vars, consdata->durations, consdata->demands, 
             consdata->capacity, cons, nchgbds, cutoff) );
    }
@@ -5190,7 +5183,8 @@ SCIP_RETCODE propagateCons(
    if( !(*cutoff) && useedgefinding )
    {
       /* check for overload, which may result in a cutoff */
-      SCIP_CALL( checkOverload(scip, cons, cutoff) );
+      SCIP_CALL( checkOverload(scip, consdata->nvars, consdata->vars, consdata->durations, consdata->demands, 
+            consdata->capacity, cons, cutoff) );
 
       if( !(*cutoff) )
       {
@@ -6695,9 +6689,14 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
    )
 {
-   SCIP_CALL( propagateCores(scip, nvars, vars, durations, demands, capacity, 
-         cons, nchgbds, cutoff) );
+   SCIP_CALL( propagateCores(scip, nvars, vars, durations, demands, capacity, cons, nchgbds, cutoff) );
  
+   if( *cutoff )
+      return SCIP_OKAY;
+
+   /* check for overload, which may result in a cutoff */
+   SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, cons, cutoff) );
+
    return SCIP_OKAY;
 }
 
