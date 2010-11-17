@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.53 2010/09/08 14:14:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.54 2010/11/17 13:42:23 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1596,8 +1596,10 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of multiplication!, parenthesis are important! */
-         resultant->inf = -(operand1.inf * operand1.inf);
+         /* need upwards since we negate result of multiplication!, order of operations is important! */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->inf =  operand1.inf * operand1.inf;
+         resultant->inf = -resultant->inf;
       }
 
       if( operand1.sup >=  infinity )
@@ -1611,8 +1613,10 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of multiplication!, parenthesis are important! */
-         resultant->sup = -(operand1.sup * operand1.sup);
+         /* need downwards since we negate result of multiplication!, order of operations is important! */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->sup =  operand1.sup * operand1.sup;
+         resultant->sup = -resultant->sup;
       }
       assert(resultant->inf <= resultant->sup);
    }
@@ -1667,7 +1671,8 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of pow! */
+         /* need upwards since we negate result of pow! */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
          resultant->inf = -pow(-operand1.inf, operand2);
       }
 
@@ -1682,7 +1687,8 @@ void SCIPintervalSignPowerScalar(
       }
       else
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of pow! */
+         /* need downwards since we negate result of pow! */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
          resultant->sup = -pow(-operand1.sup, operand2);
       }
    }
@@ -2174,7 +2180,9 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
          else
          {
             z = b + sqrt(delta);
-            resultant->inf = -((-rhs)/z);
+            resultant->inf = -rhs;
+            resultant->inf /= z;
+            resultant->inf = -resultant->inf;
             if( sqrcoeff < 0.0 )
                resultant->sup = z / (-sqrcoeff);
          }
