@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.101 2010/09/20 16:11:19 bzfschwa Exp $
+# $Id: check.awk,v 1.102 2010/11/17 13:56:57 bzfhende Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -333,13 +333,15 @@ BEGIN {
       timetobest = $11;
    }
 }
-/^  Dual Bound       :/ { 
+/^Dual Bound         :/ { 
    if( $4 != "-" ) 
       db = $4;
 }
 /^  Root Dual Bound  :/ {
    if( $5 != "-" )
       rootdb = $5;
+   else
+       rootdb = db;  # SCIP most likely finished during root node, perhaps due to a solution limit. the rootdb is NOT printed then, but needed later
 }
 #
 # iterations
