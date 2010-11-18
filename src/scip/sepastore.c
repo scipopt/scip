@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.66 2010/09/03 14:50:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.67 2010/11/18 17:48:44 bzfviger Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -231,6 +231,16 @@ SCIP_RETCODE sepastoreAddCut(
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
+
+   /* in the root node, every local cut is a global cut, and global cuts are nicer in many ways...*/
+   if( root && SCIProwIsLocal(cut) )
+   {
+      SCIPdebugMessage("change local flag of cut <%s> to FALSE due to addition in root node\n", SCIProwGetName(cut));
+
+      SCIP_CALL( SCIProwChgLocal(cut, FALSE) );
+
+      assert(!SCIProwIsLocal(cut));
+   }
 
    /* check cut for redundancy
     * in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling

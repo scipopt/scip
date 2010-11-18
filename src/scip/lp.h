@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.144 2010/10/07 10:09:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.145 2010/11/18 17:48:44 bzfviger Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -466,6 +466,13 @@ SCIP_RETCODE SCIProwChgRhs(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             rhs                 /**< new right hand side */
+   );
+
+/** changes the local flag of LP row */
+extern
+SCIP_RETCODE SCIProwChgLocal(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_Bool             local               /**< new value for local flag */
    );
 
 /** tries to find a value, such that all row coefficients, if scaled with this value become integral */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.362 2010/10/29 15:17:51 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.363 2010/11/18 17:48:44 bzfviger Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and data structures
@@ -4744,6 +4744,19 @@ SCIP_RETCODE SCIProwChgRhs(
       /* issue row side changed event */
       SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_RIGHT, oldrhs, rhs) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** changes the local flag of LP row */
+SCIP_RETCODE SCIProwChgLocal(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_Bool             local               /**< new value for local flag */
+   )
+{
+   assert(row != NULL);
+
+   row->local = local;
 
    return SCIP_OKAY;
 }
