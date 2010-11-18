@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objcloneable.h,v 1.7 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objcloneable.h,v 1.8 2010/11/18 10:27:53 bzfpfets Exp $"
 
 /**@file   objcloneable.h
  * @author Michael Winkler
@@ -28,20 +28,19 @@
 
 namespace scip
 {
-   /** all except constraint handlers and variable pricer C++ wrapper object plugins should extend this class */
-   struct ObjCloneable 
+   /** all C++ wrapper object plugins should extend this class, except constraint handlers and variable pricers */
+   struct ObjCloneable
    {
       virtual ~ObjCloneable() {}
 
-      /** clone method which will be used to copy objective plugins which are not a constraint handlers or a variable
-       *  pricer plugin */
+      /** clone method, used to copy plugins which are not a constraint handlers or a variable pricer plugins */
       virtual ObjCloneable* clone(
-         SCIP*                 scip                /**< SCIP data structure */
+         SCIP*           scip                /**< SCIP data structure */
          ) const
       {
          return 0;
       }
-      
+
       /** returns whether the objective plugin is copyable */
       virtual SCIP_Bool iscloneable(
          void
