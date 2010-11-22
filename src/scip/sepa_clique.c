@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.50 2010/09/27 17:20:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.51 2010/11/22 11:22:55 bzfwolte Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -393,7 +393,11 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             y = ximplvars[i];
             yi = SCIPvarGetProbindex(y);
             yindex = SCIPvarGetIndex(y);
-            assert(0 <= yi && yi < nvars);
+            assert(yi < nvars);
+
+            /* consider only implications with active implvar y */
+            if( yi < 0 )
+               continue;
 
             assert(xindex < yindex); /* the implied variables are sorted by increasing variable index */
             assert(yindex < SCIPvarGetIndex(ximplvars[i+1]));
@@ -453,12 +457,12 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                   /* we found z with xindex < yindex < zindex and x + y + z <= 1 */
                   z = ximplvars[xk];
                   zi = SCIPvarGetProbindex(z);
-                  assert(0 <= zi && zi < nvars);
-
+                  assert(zi < nvars);
+                  
                   /* consider only implications with active implvar z */
                   if( zi < 0 )
                      continue;
-
+                  
                   assert(SCIPvarGetIndex(z) == zindex);
                   assert(xindex < yindex && yindex < zindex);
 
@@ -670,7 +674,11 @@ SCIP_RETCODE tcliquegraphAddImplics(
 
          probidx = SCIPvarGetProbindex(implvars[j]);
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-         assert(0 <= probidx && probidx < SCIPgetNVars(scip));
+         assert(probidx < SCIPgetNVars(scip));
+                  
+         /* consider only implications with active implvar */
+         if( probidx < 0 )
+            continue;
 
          graphidx = cliquegraphidx[implvalue][probidx];
          if( graphidx >= 0 )
@@ -774,6 +782,9 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       {
          SCIP_VAR* var;
 
+         if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
+            continue;
+
          var = (vals[u] ? vars[u] : SCIPvarGetNegatedVar(vars[u]));
          assert(var != NULL); /* var must exist even if negated, since it is stored in the tcliquegraph */
          for( v = 0; v < tcliquegraph->nnodes && var != tcliquegraph->vars[v]; ++v )
@@ -790,6 +801,9 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          int colofs;
          unsigned int colmask;
 
+         if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
+            continue;
+
          nu = varids[u];
          rowstart = nu*tablewidth;
          colofs = nu/nbits;
@@ -798,6 +812,9 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          {
             int nv;
             unsigned int mask;
+
+            if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
+               continue;
 
             nv = varids[v];
             mask = 1 << (nv % nbits);
