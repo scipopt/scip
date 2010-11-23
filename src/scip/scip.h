@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.447 2010/11/05 15:38:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.448 2010/11/23 19:47:57 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5843,7 +5843,8 @@ SCIP_RETCODE SCIPbranchVar(
    );
 
 /** branches on a variable x using a given value x'; 
- *  for continuous variables, x' must not be one of the bounds. Two child nodes (x <= x', x >= x') are created;
+ *  for continuous variables with relative domain width larger epsilon, x' must not be one of the bounds;
+ *  two child nodes (x <= x', x >= x') are created;
  *  for integer variables, if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')),
  *  if x' is integral, three child nodes are created

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.26 2010/09/29 20:24:56 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.27 2010/11/23 19:47:58 bzfviger Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -76,7 +76,7 @@ void getRandomVariable(
    /* handle case where cands[idx] is fixed by selecting next idx with unfixed var
     * this may happen if we are inside a multiaggregation */
    firstidx = idx;
-   while( SCIPrelDiff(SCIPvarGetUbLocal(cands[idx]), SCIPvarGetLbLocal(cands[idx])) <= 2.0*SCIPepsilon(scip) )
+   while( SCIPisEQ(scip, SCIPvarGetLbLocal(cands[idx]), SCIPvarGetUbLocal(cands[idx])) )
    {
       ++idx;
       if( idx == ncands )
@@ -223,6 +223,9 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
    SCIP_VAR* bestcand;
    SCIP_Real bestcandsol;
    SCIP_Real brpoint;
+   SCIP_NODE* downchild;
+   SCIP_NODE* eqchild;
+   SCIP_NODE* upchild;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -260,10 +263,19 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
    SCIPdebugMessage(" -> %d candidates, selected variable <%s> with solution value %g, branching point=%g\n",
       nprioexterncands, SCIPvarGetName(bestcand), bestcandsol, brpoint);
 
-   SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, NULL, NULL, NULL) );
-   
-   *result = SCIP_BRANCHED;
+   SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, &downchild, &eqchild, &upchild) );
 
+   if( downchild != NULL || eqchild != NULL || upchild != NULL )
+   {
+      *result = SCIP_BRANCHED;
+   }
+   else
+   {
+      /* if there are no children, then variable should have been fixed by SCIPbranchVarVal */
+      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(bestcand), SCIPvarGetUbLocal(bestcand)));
+      *result = SCIP_REDUCEDDOM;
+   }
+   
    return SCIP_OKAY;
 }
 

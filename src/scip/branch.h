@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.59 2010/09/30 08:30:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.60 2010/11/23 19:47:58 bzfviger Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -128,7 +128,8 @@ int SCIPbranchcandGetNPrioExternConts(
    );
 
 /** insert variable, its score and its solution value into the external branching candidate storage
- * the relative difference of the current lower and upper bounds of the variable must be at least 2*epsilon */
+ * the absolute difference of the current lower and upper bounds of the variable must be at least epsilon
+ */
 extern
 SCIP_RETCODE SCIPbranchcandAddExternCand(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

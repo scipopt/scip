@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.139 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.140 2010/11/23 19:47:58 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5096,9 +5096,9 @@ SCIP_RETCODE registerVariableInfeasibilities(
          {
             xlb = SCIPvarGetLbLocal(consdata->quadvarterms[j].var);
             xub = SCIPvarGetUbLocal(consdata->quadvarterms[j].var);
-            if( SCIPrelDiff(xub, xlb) <= 2.0 * SCIPepsilon(scip) )
+            if( SCIPisEQ(scip, xlb, xub) )
             {
-               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), xlb, xub, SCIPrelDiff(xub, xlb));
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), xlb, xub, xub-xlb);
                continue;
             }
             
@@ -5168,23 +5168,23 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( gap < 0.0 ) 
             gap = 0.0;
          
-         if( SCIPrelDiff(xub, xlb) > 2.0 * SCIPepsilon(scip) )
+         if( !SCIPisEQ(scip, xlb, xub) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
             ++*nnotify;
          }
          else
          {
-            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->bilinterms[j].var1), xlb, xub, SCIPrelDiff(xub, xlb));
+            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->bilinterms[j].var1), xlb, xub, xub-xlb);
          }
-         if( SCIPrelDiff(yub, ylb) > 2.0 * SCIPepsilon(scip) )
+         if( !SCIPisEQ(scip, ylb, yub) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
             ++*nnotify;
          }
          else
          {
-            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->bilinterms[j].var2), ylb, yub, SCIPrelDiff(yub, ylb));
+            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->bilinterms[j].var2), ylb, yub, yub-ylb);
          }
       }
    }
@@ -5225,7 +5225,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* do not propose fixed variables */
-         if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) <= 2.0 * SCIPepsilon(scip) )
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
             continue;
          val = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[i].var);
          if( ABS(val) > brvarval )
@@ -5278,7 +5278,7 @@ SCIP_RETCODE replaceByLinearConstraints(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* variables should be fixed if constraint is violated */
-         assert(SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) <= 2.0 * SCIPepsilon(scip));
+         assert(SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)));
 
          val1 = (SCIPvarGetUbLocal(consdata->quadvarterms[i].var) + SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) / 2.0;
          constant += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val1) * val1;
@@ -7091,7 +7091,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       SCIPdebugMessage("con %s violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
       
       for( i = 0; i < consdata->nquadvars; ++i )
-         if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) > 2.0*SCIPepsilon(scip) )
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->quadvarterms[i].var, consdata->lhsviol + consdata->rhsviol, SCIP_INVALID) );
          }

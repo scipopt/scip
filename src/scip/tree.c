@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.248 2010/10/25 04:33:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.249 2010/11/23 19:47:58 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4559,6 +4559,9 @@ SCIP_Real SCIPtreeCalcChildEstimate(
 /** branches on a variable x
  *  if x is a continuous variable, then two child nodes will be created
  *  (x <= x', x >= x')
+ *  but if the bounds of x are such that their relative difference is smaller than epsilon,
+ *  the variable is fixed to val (if not SCIP_INVALID) or a well choosen alternative in the current node,
+ *  i.e., no children are created
  *  if x is not a continuous variable, then:
  *  if solution value x' is fractional, two child nodes will be created
  *  (x <= floor(x'), x >= ceil(x')),
@@ -4677,8 +4680,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || 
-      (SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val) && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) ) );
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
+      SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
+      (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );  /* see comment in SCIPbranchVarVal */
 
    downub = SCIP_INVALID;
    fixval = SCIP_INVALID;
@@ -4686,10 +4690,52 @@ SCIP_RETCODE SCIPtreeBranchVar(
    
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
-      downub = val;
-      uplb = val;
-      SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
-         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+      if( SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      {
+         SCIPdebugMessage("fixing continuous variable <%s> with value %g and bounds [%.15g, %.15g], priority %d (current lower bound: %g)\n",
+            SCIPvarGetName(var), val, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         /* if val is at least epsilon away from both bounds, then we change both bounds to this value
+          * otherwise, we fix the variable to its worst bound
+          */
+         if( SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, val, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, val, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else if( SCIPvarGetObj(var) >= 0.0 )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, SCIPvarGetUbLocal(var), SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, SCIPvarGetLbLocal(var), SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+      }
+      else if( SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.0 * SCIPsetEpsilon(set) )
+      {
+         /* if the only way to branch is such that in both sides the relative domain width becomes smaller epsilon,
+          * then fix the variable in both branches right away
+          */
+         SCIPdebugMessage("continuous branch on variable <%s> with bounds [%.15g, %.15g], priority %d (current lower bound: %g), node %p\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode), (void*)tree->focusnode);
+         downub = SCIPvarGetLbLocal(var);
+         uplb = SCIPvarGetUbLocal(var);
+      }
+      else
+      {
+         /* in the general case, there is enough space for two branches
+          * a sophisticated user should have also choosen the branching value such that it is not very close to the bounds
+          * so here we only ensure that it is at least epsilon away from both bounds
+          */
+         SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
+            SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         downub = MIN(val, SCIPvarGetUbLocal(var) - SCIPsetEpsilon(set));
+         uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set));
+      }
    }
    else if( SCIPsetIsFeasIntegral(set, val) )
    {
@@ -4702,7 +4748,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* if there was no explicit value given for branching, the variable has a finite domain and the current LP/pseudo
        * solution is one of the bounds, we branch in the center of the domain */
       if( !validval && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) 
-	 && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
+         && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
       {
          SCIP_Real center;
 

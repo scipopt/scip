@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.40 2010/09/29 20:24:55 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.41 2010/11/23 19:47:58 bzfviger Exp $"
 
 /**@file   branch_mostinf.c
  * @ingroup BRANCHINGRULES
@@ -74,7 +74,7 @@ void updateBestCandidate(
       for( i = 0; i < SCIPvarGetMultaggrNVars(cand); ++i )
       {
          /* skip fixed variables */
-         if( SCIPrelDiff(SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i]), SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i])) <= 2.0*SCIPepsilon(scip) )
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i]), SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i])) )
             continue;
          
          updateBestCandidate(scip, bestvar, bestscore, bestobj, bestsol,
@@ -212,6 +212,9 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
    SCIP_Real bestsol;
    SCIP_Real brpoint;
    int i;
+   SCIP_NODE* downchild;
+   SCIP_NODE* eqchild;
+   SCIP_NODE* upchild;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -248,9 +251,18 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
       SCIPvarGetBranchFactor(bestcand), bestscore, brpoint);
 
    /* perform the branching */
-   SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, &downchild, &eqchild, &upchild) );
 
-   *result = SCIP_BRANCHED;
+   if( downchild != NULL || eqchild != NULL || upchild != NULL )
+   {
+      *result = SCIP_BRANCHED;
+   }
+   else
+   {
+      /* if there are no children, then variable should have been fixed by SCIPbranchVarVal */
+      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(bestcand), SCIPvarGetUbLocal(bestcand)));
+      *result = SCIP_REDUCEDDOM;
+   }
 
    return SCIP_OKAY;
 }

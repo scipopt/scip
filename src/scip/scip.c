@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.701 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.702 2010/11/23 19:47:57 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -16211,7 +16211,8 @@ SCIP_RETCODE SCIPbranchVar(
 }
 
 /** branches on a variable x using a given value x'; 
- *  for continuous variables, x' must not be one of the bounds. Two child nodes (x <= x', x >= x') are created;
+ *  for continuous variables with relative domain width larger epsilon, x' must not be one of the bounds;
+ *  two child nodes (x <= x', x >= x') are created;
  *  for integer variables, if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')),
  *  if x' is integral, three child nodes are created
@@ -16228,7 +16229,15 @@ SCIP_RETCODE SCIPbranchVarVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVarVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || (SCIPisLT(scip, SCIPvarGetLbLocal(var), val) && SCIPisLT(scip, val, SCIPvarGetUbLocal(var)) ) );
+   /* for a continuous variable, their will either be variable fixing or a branching
+    * fixing is done if RelEQ(lb,ub)
+    * in the other case, the given branching value should be such that it does not sits on one of the bounds
+    * we assert this by requiring that it is at least eps/2 away from each bound
+    * the /2 is there, because ub-lb may be in (eps, 2eps], in which case there is no way to choose a branching value that is at least eps away from both bounds
+    */
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
+      SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
+      (SCIPisLT(scip, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPisLT(scip, 2.1*val, 2.1*SCIPvarGetUbLocal(var)) ) );
 
    if( SCIPsetIsEQ(scip->set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {

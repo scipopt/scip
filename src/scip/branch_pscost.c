@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.38 2010/11/06 12:01:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.39 2010/11/23 19:47:58 bzfviger Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -105,7 +105,7 @@ SCIP_RETCODE updateBestCandidate(
       for( i = 0; i < nmultvars; ++i )
       {
          /* skip fixed variables */
-         if( SCIPrelDiff(SCIPvarGetUbLocal(multvars[i]), SCIPvarGetLbLocal(multvars[i])) <= 2.0*SCIPepsilon(scip) )
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(multvars[i]), SCIPvarGetUbLocal(multvars[i])) )
             continue;
          
          SCIP_CALL( updateBestCandidate(scip, branchruledata, bestvar, bestbrpoint, bestscore,
@@ -118,8 +118,8 @@ SCIP_RETCODE updateBestCandidate(
    
    /* select branching point for this variable */
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || SCIPisRelGT(scip, candbrpoint, SCIPvarGetLbLocal(cand)));
-   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || SCIPisRelLT(scip, candbrpoint, SCIPvarGetUbLocal(cand)));
+   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || candbrpoint >= SCIPvarGetLbLocal(cand));
+   assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || candbrpoint <= SCIPvarGetUbLocal(cand));
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
 
    switch( branchruledata->strategy )
@@ -170,6 +170,7 @@ SCIP_RETCODE updateBestCandidate(
       pscostdown  = SCIPgetVarPseudocostVal(scip, cand, -deltaminus);
       pscostup    = SCIPgetVarPseudocostVal(scip, cand,  deltaplus);
       branchscore = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
+      assert(!SCIPisNegative(scip, branchscore));
    }
    SCIPdebugMessage("branching score variable <%s> = %g; score = %g; type=%d bestbrscore=%g\n", 
       SCIPvarGetName(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum), 
@@ -424,6 +425,9 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    int nprioexterncands;
    SCIP_VAR* brvar;
    SCIP_Real brpoint;
+   SCIP_NODE* downchild;
+   SCIP_NODE* eqchild;
+   SCIP_NODE* upchild;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -451,9 +455,18 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    SCIPdebugMessage("branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
       SCIPvarGetName(brvar), SCIPvarGetLbLocal(brvar), SCIPadjustedVarUb(scip, brvar, brpoint), SCIPadjustedVarLb(scip, brvar, brpoint), SCIPvarGetUbLocal(brvar));
 
-   SCIP_CALL( SCIPbranchVarVal(scip, brvar, brpoint, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPbranchVarVal(scip, brvar, brpoint, &downchild, &eqchild, &upchild) );
 
-   *result = SCIP_BRANCHED;
+   if( downchild != NULL || eqchild != NULL || upchild != NULL )
+   {
+      *result = SCIP_BRANCHED;
+   }
+   else
+   {
+      /* if there are no children, then variable should have been fixed by SCIPbranchVarVal */
+      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(brvar), SCIPvarGetUbLocal(brvar)));
+      *result = SCIP_REDUCEDDOM;
+   }
 
    return SCIP_OKAY;
 }
