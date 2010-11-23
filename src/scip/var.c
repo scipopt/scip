@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.309 2010/11/23 17:25:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.310 2010/11/23 18:28:52 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5974,7 +5974,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible, we use a relative comparison here to avoid numerical difficulties if numbers are large */
-   assert(SCIPsetIsRelLE(set, newbound, var->glbdom.ub));
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
 
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -6027,7 +6027,18 @@ SCIP_RETCODE varProcessChgLbLocal(
                || SCIPsetIsFeasEQ(set, parentvar->locdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
+            {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+               /* if parent's new lower bound exceeds its upper bound, then this could be due to numerical difficulties, e.g., if numbers are large
+                * thus, at least a relative comparision of the new lower bound and the current upper bound should proof consistency
+                * as a result, the parent's lower bound is set to it's upper bound, and not above
+                */
+               if( parentnewbound > parentvar->locdom.ub )
+               {
+                  assert(SCIPsetIsRelLE(set, parentnewbound, parentvar->locdom.ub));
+                  parentnewbound = parentvar->locdom.ub;
+               }
+            }
             else
                parentnewbound = newbound;
             SCIP_CALL( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, parentnewbound) );
@@ -6042,7 +6053,18 @@ SCIP_RETCODE varProcessChgLbLocal(
                || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
+            {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+               /* if parent's new upper bound is below its lower bound, then this could be due to numerical difficulties, e.g., if numbers are large
+                * thus, at least a relative comparision of the new upper bound and the current lower bound should proof consistency
+                * as a result, the parent's upper bound is set to it's lower bound, and not below
+                */
+               if( parentnewbound < parentvar->locdom.lb )
+               {
+                  assert(SCIPsetIsRelGE(set, parentnewbound, parentvar->locdom.lb));
+                  parentnewbound = parentvar->locdom.lb;
+               }
+            }
             else
                parentnewbound = -newbound;
             SCIP_CALL( varProcessChgUbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, parentnewbound) );
@@ -6089,7 +6111,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible, we use a relative comparison here to avoid numerical difficulties if numbers are large */
-   assert(SCIPsetIsRelGE(set, newbound, var->glbdom.lb));
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
 
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -6142,7 +6164,18 @@ SCIP_RETCODE varProcessChgUbLocal(
                || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
+            {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+               /* if parent's new upper bound is below its lower bound, then this could be due to numerical difficulties, e.g., if numbers are large
+                * thus, at least a relative comparision of the new upper bound and the current lower bound should proof consistency
+                * as a result, the parent's upper bound is set to it's lower bound, and not below
+                */
+               if( parentnewbound < parentvar->locdom.lb )
+               {
+                  assert(SCIPsetIsRelGE(set, parentnewbound, parentvar->locdom.lb));
+                  parentnewbound = parentvar->locdom.lb;
+               }
+            }
             else
                parentnewbound = newbound;
             SCIP_CALL( varProcessChgUbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, parentnewbound) );
@@ -6157,7 +6190,18 @@ SCIP_RETCODE varProcessChgUbLocal(
                || SCIPsetIsFeasEQ(set, parentvar->locdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
+            {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+               /* if parent's new lower bound exceeds its upper bound, then this could be due to numerical difficulties, e.g., if numbers are large
+                * thus, at least a relative comparision of the new lower bound and the current upper bound should proof consistency
+                * as a result, the parent's lower bound is set to it's upper bound, and not above
+                */
+               if( parentnewbound > parentvar->locdom.ub )
+               {
+                  assert(SCIPsetIsRelLE(set, parentnewbound, parentvar->locdom.ub));
+                  parentnewbound = parentvar->locdom.ub;
+               }
+            }
             else
                parentnewbound = -newbound;
             SCIP_CALL( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, parentnewbound) );
