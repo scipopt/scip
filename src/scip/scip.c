@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.689.2.3 2010/11/12 01:39:42 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.689.2.4 2010/11/23 20:39:14 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -15444,6 +15444,7 @@ SCIP_RETCODE solveProbingLP(
    )
 {
    assert(lperror != NULL);
+   assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
 
    if( !SCIPtreeProbing(scip->tree) )
    {
