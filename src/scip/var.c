@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.308 2010/11/11 19:28:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.309 2010/11/23 17:25:20 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5973,8 +5973,8 @@ SCIP_RETCODE varProcessChgLbLocal(
    
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
-   /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   /* check that the bound is feasible, we use a relative comparison here to avoid numerical difficulties if numbers are large */
+   assert(SCIPsetIsRelLE(set, newbound, var->glbdom.ub));
 
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -6088,8 +6088,8 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
-   /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   /* check that the bound is feasible, we use a relative comparison here to avoid numerical difficulties if numbers are large */
+   assert(SCIPsetIsRelGE(set, newbound, var->glbdom.lb));
 
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
