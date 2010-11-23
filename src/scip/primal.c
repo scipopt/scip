@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.95 2010/10/07 21:03:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.96 2010/11/23 20:57:50 bzfheinz Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -625,7 +625,7 @@ SCIP_Bool solOfInterest(
 
    obj = SCIPsolGetObj(sol, set, prob);
    
-   /* search the position to insert solution in storage */
+   /* check if we are willing to check worse solution */
    if( set->misc_improvingsols && obj > primal->upperbound )
       return FALSE;
    

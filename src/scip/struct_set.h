@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.105 2010/10/07 21:03:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.106 2010/11/23 20:57:50 bzfheinz Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -256,7 +256,7 @@ struct SCIP_Set
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
                                               *   therefore can be used to collect statistics over all runs) */
-   SCIP_Bool             misc_improvingsols; /**< should only solutions be check which improve or equal the primal bound */
+   SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

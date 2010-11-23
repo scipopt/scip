@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.262 2010/11/05 15:38:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.263 2010/11/23 20:57:50 bzfheinz Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -202,7 +202,7 @@
                                                  *   freed (in case of bender decomposition this parameter should be set
                                                  *   to FALSE and therefore can be used to collect statistics over all
                                                  *   runs) */
-#define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be check which improve or equal the primal bound */
+#define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -1144,7 +1144,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/improvingsols",
-         "should only solutions be check which improve or equal the primal bound",
+         "should only solutions be checked which improve the primal bound",
          &(*set)->misc_improvingsols, FALSE, SCIP_DEFAULT_MISC_IMPROVINGSOLS,
          NULL, NULL) );
    
