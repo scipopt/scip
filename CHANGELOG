@@ -15,6 +15,8 @@ interface:
   the position where the current parsing stopped
 - prototype for methods SCIPparseVarsLinearsum()
 - new functions SCIPround() and SCIPfeasRound() to round to nearest integer
+- new functions SCIPgetVarMultaggrXb{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
+  from the bounds of the aggregation variables
 
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
@@ -43,7 +45,8 @@ fixed bugs:
 - fixed bugs in cons_bounddisjunction where the branching during the constraint enforcement was done incorrectly
 - fixed bugs in binpacking example w.r.t. empty struct and not initializing an array
 - fixed bugs in sepa_clique.c concerning incorrect way to ignore implicit binary variables in cliques and non-active variables in implications 
-- fixed assertions w.r.t. to probing during the propagation round of a branch-and-bound node
+- fixed assertions w.r.t. probing during the propagation round of a branch-and-bound node
+- fixed bug in cons_bounddisjunction where branching on multiaggregated variables was tried while all aggregation variables are fixed 
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint

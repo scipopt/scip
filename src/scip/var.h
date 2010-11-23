@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.137 2010/09/10 18:15:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.138 2010/11/23 21:35:44 bzfviger Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -739,6 +739,54 @@ SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newbound            /**< new bound for variable */
+   );
+
+/** for a multiaggregated variable, computes the local lower bound computed by adding the local bounds from all aggregation variables
+ * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
+ */
+extern
+SCIP_RETCODE SCIPvarGetMultaggrLbLocal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            lb                  /**< buffer to store computed lower bound */
+   );
+
+/** for a multiaggregated variable, computes the local upper bound computed by adding the local bounds from all aggregation variables
+ * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
+ */
+extern
+SCIP_RETCODE SCIPvarGetMultaggrUbLocal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ub                  /**< buffer to store computed upper bound */
+   );
+
+/** for a multiaggregated variable, computes the global lower bound computed by adding the global bounds from all aggregation variables
+ * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
+ */
+extern
+SCIP_RETCODE SCIPvarGetMultaggrLbGlobal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            lb                  /**< buffer to store computed lower bound */
+   );
+
+/** for a multiaggregated variable, computes the global upper bound computed by adding the global bounds from all aggregation variables
+ * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
+ */
+extern
+SCIP_RETCODE SCIPvarGetMultaggrUbGlobal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ub                  /**< buffer to store computed upper bound */
    );
 
 /** adds a hole to the original domain of the variable*/

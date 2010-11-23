@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.105 2010/11/23 19:47:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.106 2010/11/23 21:35:44 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -462,6 +462,7 @@ int SCIPbranchcandGetNPrioExternConts(
  */
 SCIP_RETCODE SCIPbranchcandAddExternCand(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to insert */
    SCIP_Real             score,              /**< score of external candidate, e.g. infeasibility */
@@ -477,6 +478,15 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /* the variable should not be fixed yet */
    assert(branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(branchcand->nexterncands <= branchcand->externcandssize);
+#ifndef NDEBUG
+   {
+      SCIP_Real varlb;
+      SCIP_Real varub;
+      SCIP_CALL( SCIPvarGetMultaggrLbLocal(var, blkmem, set, &varlb) );
+      SCIP_CALL( SCIPvarGetMultaggrUbLocal(var, blkmem, set, &varub) );
+      assert(!SCIPsetIsEQ(set, varlb, varub)); /* also if it is a multiaggregated variable, then it should not be fixed yet */
+   }
+#endif
 
    vartype = SCIPvarGetType(var);
    branchpriority = SCIPvarGetBranchPriority(var);

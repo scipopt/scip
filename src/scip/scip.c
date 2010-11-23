@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.703 2010/11/23 20:44:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.704 2010/11/23 21:35:44 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9897,6 +9897,74 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    return SCIP_OKAY;
 }
 
+/** for a multiaggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
+ * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
+ */
+SCIP_RETCODE SCIPgetVarMultaggrLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            lb                  /**< pointer to store computed lower bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetVarMultaggrLbGlobal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPvarGetMultaggrLbGlobal(var, scip->mem->probmem, scip->set, lb) );
+
+   return SCIP_OKAY;
+}
+
+/** for a multiaggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
+ * this global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
+ */
+SCIP_RETCODE SCIPgetVarMultaggrUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            ub                  /**< pointer to store computed upper bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetVarMultaggrUbGlobal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPvarGetMultaggrUbGlobal(var, scip->mem->probmem, scip->set, ub) );
+
+   return SCIP_OKAY;
+}
+
+/** for a multiaggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+ * this local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
+ */
+SCIP_RETCODE SCIPgetVarMultaggrLbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            lb                  /**< pointer to store computed lower bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetVarMultaggrLbLocal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPvarGetMultaggrLbLocal(var, scip->mem->probmem, scip->set, lb) );
+
+   return SCIP_OKAY;
+}
+
+/** for a multiaggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+ * this local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
+ */
+SCIP_RETCODE SCIPgetVarMultaggrUbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            ub                  /**< pointer to store computed upper bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetVarMultaggrUbLocal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPvarGetMultaggrUbLocal(var, scip->mem->probmem, scip->set, ub) );
+
+   return SCIP_OKAY;
+}
+
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal
  *  solution or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is
  *  available
@@ -15990,7 +16058,7 @@ SCIP_RETCODE SCIPaddExternBranchCand(
 
    SCIP_CALL( checkStage(scip, "SCIPaddExternBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbranchcandAddExternCand(scip->branchcand, scip->set, var, score, solval) );
+   SCIP_CALL( SCIPbranchcandAddExternCand(scip->branchcand, scip->mem->probmem, scip->set, var, score, solval) );
    
    return SCIP_OKAY;
 }

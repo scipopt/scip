@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.60 2010/11/23 19:47:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.61 2010/11/23 21:35:44 bzfviger Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -133,6 +133,7 @@ int SCIPbranchcandGetNPrioExternConts(
 extern
 SCIP_RETCODE SCIPbranchcandAddExternCand(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to insert */
    SCIP_Real             score,              /**< score of external candidate, e.g. infeasibility */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.47 2010/11/06 12:01:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.48 2010/11/23 21:35:44 bzfviger Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -432,6 +432,7 @@ SCIP_RETCODE applyGlobalBounds(
 {
    SCIP_CONSDATA* consdata;
    int v;
+   SCIP_Real bnd;
 
    assert(eventhdlr != NULL);
    assert(redundant != NULL);
@@ -450,32 +451,42 @@ SCIP_RETCODE applyGlobalBounds(
 
       if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
       {
-         if( SCIPisFeasGE(scip, SCIPvarGetLbGlobal(var), consdata->bounds[v]) )
+         SCIP_CALL( SCIPgetVarMultaggrLbGlobal(scip, var, &bnd) );
+         if( SCIPisFeasGE(scip, bnd, consdata->bounds[v]) )
          {
             *redundant = TRUE;
             return SCIP_OKAY;
          }
-         else if( SCIPisFeasLT(scip, SCIPvarGetUbGlobal(var), consdata->bounds[v]) )
-         {
-            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-         }
          else
-            ++v;
+         {
+            SCIP_CALL( SCIPgetVarMultaggrUbGlobal(scip, var, &bnd) );
+            if( SCIPisFeasLT(scip, bnd, consdata->bounds[v]) )
+            {
+               SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+            }
+            else
+               ++v;
+         }
       }
       else
       {
          assert(consdata->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
-         if( SCIPisFeasLE(scip, SCIPvarGetUbGlobal(var), consdata->bounds[v]) )
+         SCIP_CALL( SCIPgetVarMultaggrUbGlobal(scip, var, &bnd) );
+         if( SCIPisFeasLE(scip, bnd, consdata->bounds[v]) )
          {
             *redundant = TRUE;
             return SCIP_OKAY;
          }
-         else if( SCIPisFeasGT(scip, SCIPvarGetLbGlobal(var), consdata->bounds[v]) )
-         {
-            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-         }
          else
-            ++v;
+         {
+            SCIP_CALL( SCIPgetVarMultaggrLbGlobal(scip, var, &bnd) );
+            if( SCIPisFeasGT(scip, bnd, consdata->bounds[v]) )
+            {
+               SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+            }
+            else
+               ++v;
+         }
       }
    }
 
@@ -518,36 +529,60 @@ SCIP_RETCODE analyzeConflict(
 
 /** returns whether literal at the given position is satisfied in the local bounds */
 static
-SCIP_Bool isLiteralSatisfied(
+SCIP_RETCODE isLiteralSatisfied(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
-   int                   pos                 /**< position of the literal */
+   int                   pos,                /**< position of the literal */
+   SCIP_Bool*            satisfied           /**< pointer to store whether literal is satisfied */
    )
 {
+   SCIP_Real bnd;
+
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
+   assert(satisfied != NULL);
 
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
-      return SCIPisFeasGE(scip, SCIPvarGetLbLocal(consdata->vars[pos]), consdata->bounds[pos]);
+   {
+      SCIP_CALL( SCIPgetVarMultaggrLbLocal(scip, consdata->vars[pos], &bnd) );
+      *satisfied = SCIPisFeasGE(scip, bnd, consdata->bounds[pos]);
+   }
    else
-      return SCIPisFeasLE(scip, SCIPvarGetUbLocal(consdata->vars[pos]), consdata->bounds[pos]);
+   {
+      SCIP_CALL( SCIPgetVarMultaggrUbLocal(scip, consdata->vars[pos], &bnd) );
+      *satisfied = SCIPisFeasLE(scip, bnd, consdata->bounds[pos]);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns whether literal at the given position is violated in the local bounds */
 static
-SCIP_Bool isLiteralViolated(
+SCIP_RETCODE isLiteralViolated(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
-   int                   pos                 /**< position of the literal */
+   int                   pos,                /**< position of the literal */
+   SCIP_Bool*            violated            /**< pointer to store whether literal is violated */
    )
 {
+   SCIP_Real bnd;
+
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
+   assert(violated != NULL);
 
    if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
-      return SCIPisFeasLT(scip, SCIPvarGetUbLocal(consdata->vars[pos]), consdata->bounds[pos]);
+   {
+      SCIP_CALL( SCIPgetVarMultaggrUbLocal(scip, consdata->vars[pos], &bnd) );
+      *violated = SCIPisFeasLT(scip, bnd, consdata->bounds[pos]);
+   }
    else
-      return SCIPisFeasGT(scip, SCIPvarGetLbLocal(consdata->vars[pos]), consdata->bounds[pos]);
+   {
+      SCIP_CALL( SCIPgetVarMultaggrLbLocal(scip, consdata->vars[pos], &bnd) );
+      *violated = SCIPisFeasGT(scip, bnd, consdata->bounds[pos]);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** disables or deletes the given constraint, depending on the current depth */
@@ -590,6 +625,8 @@ SCIP_RETCODE processWatchedVars(
    int nvars;
    int watchedvar1;
    int watchedvar2;
+   SCIP_Bool satisfied;
+   SCIP_Bool violated;
 
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
@@ -615,19 +652,27 @@ SCIP_RETCODE processWatchedVars(
    assert(nvars == 0 || bounds != NULL);
 
    /* check watched variables if they are satisfying the literal */
-   if( consdata->watchedvar1 >= 0 && isLiteralSatisfied(scip, consdata, consdata->watchedvar1) )
+   if( consdata->watchedvar1 >= 0 )
    {
-      /* the literal is satisfied, making the constraint redundant */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar1 satisfied)\n", SCIPconsGetName(cons));
-      SCIP_CALL( disableCons(scip, cons) );
-      return SCIP_OKAY;
+      SCIP_CALL( isLiteralSatisfied(scip, consdata, consdata->watchedvar1, &satisfied) );
+      if( satisfied )
+      {
+         /* the literal is satisfied, making the constraint redundant */
+         SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar1 satisfied)\n", SCIPconsGetName(cons));
+         SCIP_CALL( disableCons(scip, cons) );
+         return SCIP_OKAY;
+      }
    }
-   if( consdata->watchedvar2 >= 0 && isLiteralSatisfied(scip, consdata, consdata->watchedvar2) )
+   if( consdata->watchedvar2 >= 0 )
    {
-      /* the literal is satisfied, making the constraint redundant */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar2 satisfied)\n", SCIPconsGetName(cons));
-      SCIP_CALL( disableCons(scip, cons) );
-      return SCIP_OKAY;
+      SCIP_CALL( isLiteralSatisfied(scip, consdata, consdata->watchedvar2, &satisfied) );
+      if( satisfied )
+      {
+         /* the literal is satisfied, making the constraint redundant */
+         SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar2 satisfied)\n", SCIPconsGetName(cons));
+         SCIP_CALL( disableCons(scip, cons) );
+         return SCIP_OKAY;
+      }
    }
 
    /* check if watched variables are still undecided */
@@ -635,22 +680,30 @@ SCIP_RETCODE processWatchedVars(
    watchedvar2 = -1;
    nbranchings1 = SCIP_LONGINT_MAX;
    nbranchings2 = SCIP_LONGINT_MAX;
-   if( consdata->watchedvar1 >= 0 && !isLiteralViolated(scip, consdata, consdata->watchedvar1) )
+   if( consdata->watchedvar1 >= 0 )
    {
-      watchedvar1 = consdata->watchedvar1;
-      nbranchings1 = -1; /* prefer keeping the watched variable */
-   }
-   if( consdata->watchedvar2 >= 0 && !isLiteralViolated(scip, consdata, consdata->watchedvar2) )
-   {
-      if( watchedvar1 == -1 )
+      SCIP_CALL( isLiteralViolated(scip, consdata, consdata->watchedvar1, &violated) );
+      if( !violated )
       {
-         watchedvar1 = consdata->watchedvar2;
+         watchedvar1 = consdata->watchedvar1;
          nbranchings1 = -1; /* prefer keeping the watched variable */
       }
-      else
+   }
+   if( consdata->watchedvar2 >= 0 )
+   {
+      SCIP_CALL( isLiteralViolated(scip, consdata, consdata->watchedvar2, &violated) );
+      if( !violated )
       {
-         watchedvar2 = consdata->watchedvar2;
-         nbranchings2 = -1; /* prefer keeping the watched variable */
+         if( watchedvar1 == -1 )
+         {
+            watchedvar1 = consdata->watchedvar2;
+            nbranchings1 = -1; /* prefer keeping the watched variable */
+         }
+         else
+         {
+            watchedvar2 = consdata->watchedvar2;
+            nbranchings2 = -1; /* prefer keeping the watched variable */
+         }
       }
    }
    assert(watchedvar1 >= 0 || watchedvar2 == -1);
@@ -670,11 +723,13 @@ SCIP_RETCODE processWatchedVars(
             continue;
 
          /* check, if the literal is violated */
-         if( isLiteralViolated(scip, consdata, v) )
+         SCIP_CALL( isLiteralViolated(scip, consdata, v, &violated) );
+         if( violated )
             continue;
 
          /* check, if the literal is satisfied */
-         if( isLiteralSatisfied(scip, consdata, v) )
+         SCIP_CALL( isLiteralSatisfied(scip, consdata, v, &satisfied) );
+         if( satisfied )
          {
             assert(v != consdata->watchedvar1);
             assert(v != consdata->watchedvar2);
@@ -748,8 +803,12 @@ SCIP_RETCODE processWatchedVars(
        * - an unmodifiable constraint is feasible and can be disabled after the remaining literal is satisfied
        */
       assert(0 <= watchedvar1 && watchedvar1 < nvars);
-      assert(!isLiteralViolated(scip, consdata, watchedvar1));
-      assert(!isLiteralSatisfied(scip, consdata, watchedvar1));
+#ifndef NDEBUG
+      SCIP_CALL( isLiteralViolated(scip, consdata, watchedvar1, &violated) );
+      assert(!violated);
+      SCIP_CALL( isLiteralSatisfied(scip, consdata, watchedvar1, &satisfied) );
+      assert(!satisfied);
+#endif
       if( SCIPconsIsModifiable(cons)
          || SCIPvarGetStatus(SCIPvarGetProbvar(vars[watchedvar1])) == SCIP_VARSTATUS_MULTAGGR )
          *mustcheck = TRUE;
@@ -890,10 +949,10 @@ SCIP_RETCODE registerBranchingCandidates(
    {
       /* constraint should be violated, so all bounds in the constraint have to be violated */
       assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) &&
-         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) );
+              !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) );
 
-      varlb = SCIPvarGetLbLocal(vars[v]);
-      varub = SCIPvarGetUbLocal(vars[v]);
+      SCIP_CALL( SCIPgetVarMultaggrLbLocal(scip, vars[v], &varlb) );
+      SCIP_CALL( SCIPgetVarMultaggrUbLocal(scip, vars[v], &varub) );
       /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
        * thus there is no use for branching */
       if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, varub, bounds[v]) )
@@ -1012,8 +1071,8 @@ SCIP_RETCODE createNAryBranch(
       assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) &&
          !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) );
 
-      varlb = SCIPvarGetLbLocal(vars[v]);
-      varub = SCIPvarGetUbLocal(vars[v]);
+      SCIP_CALL( SCIPgetVarMultaggrLbLocal(scip, vars[v], &varlb) );
+      SCIP_CALL( SCIPgetVarMultaggrUbLocal(scip, vars[v], &varub) );
       /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
        * thus there is no use in creating an extra child for it */
       if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLT(scip, varub, bounds[v]) )
@@ -1512,8 +1571,16 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
                SCIPconsGetName(cons));
             
             assert(consdata->vars != NULL);
-            assert(!isLiteralSatisfied(scip, consdata, 0));
-            assert(!isLiteralViolated(scip, consdata, 0));
+#ifndef NDEBUG
+            {
+               SCIP_Bool satisfied;
+               SCIP_Bool violated;
+               SCIP_CALL( isLiteralSatisfied(scip, consdata, 0, &satisfied) );
+               assert(!satisfied);
+               SCIP_CALL( isLiteralViolated(scip, consdata, 0, &violated) );
+               assert(!violated);
+            }
+#endif
 
             if( SCIPvarIsActive(SCIPvarGetProbvar(consdata->vars[0])) )
             {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.448 2010/11/23 19:47:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.449 2010/11/23 21:35:44 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -3078,6 +3078,50 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** for a multiaggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
+ * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
+ */
+extern
+SCIP_RETCODE SCIPgetVarMultaggrLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            lb                  /**< pointer to store computed lower bound */
+   );
+
+/** for a multiaggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
+ * this global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
+ */
+extern
+SCIP_RETCODE SCIPgetVarMultaggrUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            ub                  /**< pointer to store computed upper bound */
+   );
+
+/** for a multiaggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+ * this local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
+ */
+extern
+SCIP_RETCODE SCIPgetVarMultaggrLbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            lb                  /**< pointer to store computed lower bound */
+   );
+
+/** for a multiaggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+ * this local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
+ */
+extern
+SCIP_RETCODE SCIPgetVarMultaggrUbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Real*            ub                  /**< pointer to store computed upper bound */
    );
 
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution

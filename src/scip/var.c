@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.311 2010/11/23 19:34:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.312 2010/11/23 21:35:44 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6655,6 +6655,256 @@ SCIP_RETCODE SCIPvarChgUbDive(
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** for a multiaggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+ * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
+ */
+SCIP_RETCODE SCIPvarGetMultaggrLbLocal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            lb                  /**< buffer to store computed lower bound */
+   )
+{
+   SCIP_Real bnd;
+   int i;
+
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(lb  != NULL);
+
+   if( var->varstatus != SCIP_VARSTATUS_MULTAGGR )
+   {
+      *lb = SCIPvarGetLbLocal(var);
+      return SCIP_OKAY;
+   }
+
+   *lb = var->data.multaggr.constant;
+   for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
+   {
+      if( !SCIPvarIsActive(var->data.multaggr.vars[i]) )
+      {
+         SCIPdebugMessage("aggregation graph for multi-aggregated variable <%s> was not flatten, doing this now\n", SCIPvarGetName(var));
+         SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
+         SCIP_CALL( SCIPvarGetMultaggrLbLocal(var, blkmem, set, lb) );
+         return SCIP_OKAY;
+      }
+
+      if( var->data.multaggr.scalars[i] > 0.0 )
+      {
+         bnd = SCIPvarGetLbLocal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+         {
+            *lb = bnd;
+            return SCIP_OKAY;
+         }
+
+         *lb += var->data.multaggr.scalars[i] * bnd;
+      }
+      else
+      {
+         bnd = SCIPvarGetUbLocal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+         {
+            *lb = -bnd;
+            return SCIP_OKAY;
+         }
+
+         *lb += var->data.multaggr.scalars[i] * bnd;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** for a multiaggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+ * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
+ */
+SCIP_RETCODE SCIPvarGetMultaggrUbLocal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ub                  /**< buffer to store computed upper bound */
+   )
+{
+   SCIP_Real bnd;
+   int i;
+
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(ub  != NULL);
+
+   if( var->varstatus != SCIP_VARSTATUS_MULTAGGR )
+   {
+      *ub = SCIPvarGetUbLocal(var);
+      return SCIP_OKAY;
+   }
+
+   *ub = var->data.multaggr.constant;
+   for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
+   {
+      if( !SCIPvarIsActive(var->data.multaggr.vars[i]) )
+      {
+         SCIPdebugMessage("aggregation graph for multi-aggregated variable <%s> was not flatten, doing this now\n", SCIPvarGetName(var));
+         SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
+         SCIP_CALL( SCIPvarGetMultaggrUbLocal(var, blkmem, set, ub) );
+         return SCIP_OKAY;
+      }
+
+      if( var->data.multaggr.scalars[i] > 0.0 )
+      {
+         bnd = SCIPvarGetUbLocal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+         {
+            *ub = bnd;
+            return SCIP_OKAY;
+         }
+
+         *ub += var->data.multaggr.scalars[i] * bnd;
+      }
+      else
+      {
+         bnd = SCIPvarGetLbLocal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+         {
+            *ub = -bnd;
+            return SCIP_OKAY;
+         }
+
+         *ub += var->data.multaggr.scalars[i] * bnd;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** for a multiaggregated variable, computes the global lower bound computed by adding the global bounds from all aggregation variables
+ * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
+ */
+SCIP_RETCODE SCIPvarGetMultaggrLbGlobal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            lb                  /**< buffer to store computed lower bound */
+   )
+{
+   SCIP_Real bnd;
+   int i;
+
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(lb  != NULL);
+
+   if( var->varstatus != SCIP_VARSTATUS_MULTAGGR )
+   {
+      *lb = SCIPvarGetLbGlobal(var);
+      return SCIP_OKAY;
+   }
+
+   *lb = var->data.multaggr.constant;
+   for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
+   {
+      if( !SCIPvarIsActive(var->data.multaggr.vars[i]) )
+      {
+         SCIPdebugMessage("aggregation graph for multi-aggregated variable <%s> was not flatten, doing this now\n", SCIPvarGetName(var));
+         SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
+         SCIP_CALL( SCIPvarGetMultaggrLbGlobal(var, blkmem, set, lb) );
+         return SCIP_OKAY;
+      }
+
+      if( var->data.multaggr.scalars[i] > 0.0 )
+      {
+         bnd = SCIPvarGetLbGlobal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+         {
+            *lb = bnd;
+            return SCIP_OKAY;
+         }
+
+         *lb += var->data.multaggr.scalars[i] * bnd;
+      }
+      else
+      {
+         bnd = SCIPvarGetUbGlobal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+         {
+            *lb = -bnd;
+            return SCIP_OKAY;
+         }
+
+         *lb += var->data.multaggr.scalars[i] * bnd;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** for a multiaggregated variable, computes the global upper bound computed by adding the global bounds from all aggregation variables
+ * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
+ */
+SCIP_RETCODE SCIPvarGetMultaggrUbGlobal(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ub                  /**< buffer to store computed upper bound */
+   )
+{
+   SCIP_Real bnd;
+   int i;
+
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(ub  != NULL);
+
+   if( var->varstatus != SCIP_VARSTATUS_MULTAGGR )
+   {
+      *ub = SCIPvarGetUbGlobal(var);
+      return SCIP_OKAY;
+   }
+
+   *ub = var->data.multaggr.constant;
+   for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
+   {
+      if( !SCIPvarIsActive(var->data.multaggr.vars[i]) )
+      {
+         SCIPdebugMessage("aggregation graph for multi-aggregated variable <%s> was not flatten, doing this now\n", SCIPvarGetName(var));
+         SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
+         SCIP_CALL( SCIPvarGetMultaggrUbGlobal(var, blkmem, set, ub) );
+         return SCIP_OKAY;
+      }
+
+      if( var->data.multaggr.scalars[i] > 0.0 )
+      {
+         bnd = SCIPvarGetUbGlobal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+            return bnd;
+
+         *ub += var->data.multaggr.scalars[i] * bnd;
+      }
+      else
+      {
+         bnd = SCIPvarGetLbGlobal(var->data.multaggr.vars[i]);
+
+         if( SCIPsetIsInfinity(set, bnd) || SCIPsetIsInfinity(set, -bnd) )
+            return -bnd;
+
+         *ub += var->data.multaggr.scalars[i] * bnd;
+      }
    }
 
    return SCIP_OKAY;
