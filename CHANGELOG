@@ -43,6 +43,7 @@ fixed bugs:
 - fixed bugs in cons_bounddisjunction where the branching during the constraint enforcement was done incorrectly
 - fixed bugs in binpacking example w.r.t. empty struct and not initializing an array
 - fixed bugs in sepa_clique.c concerning incorrect way to ignore implicit binary variables in cliques and non-active variables in implications 
+- fixed assertions w.r.t. to probing during the propagation round of a branch-and-bound node
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.363 2010/11/18 17:48:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.364 2010/11/23 20:44:48 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and data structures
@@ -7531,8 +7531,6 @@ void SCIPlpSetSizeMark(
 {
    assert(lp != NULL);
    assert(!lp->diving);
-   assert(lp->nrows >= nrows);
-   assert(lp->ncols >= ncols);
 
    lp->firstnewrow = nrows;
    lp->firstnewcol = ncols;

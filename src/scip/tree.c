@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.249 2010/11/23 19:47:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.250 2010/11/23 20:44:48 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2310,8 +2310,8 @@ void treeUpdatePathLPSize(
          assert(i >= 1);
          assert(SCIPnodeGetType(tree->path[i-1]) == SCIP_NODETYPE_FOCUSNODE
             || (ncols == node->data.probingnode->ninitialcols && nrows == node->data.probingnode->ninitialrows));
-         assert(ncols <= node->data.probingnode->ncols);
-         assert(nrows <= node->data.probingnode->nrows);
+         assert(ncols <= node->data.probingnode->ncols || !tree->focuslpconstructed);
+         assert(nrows <= node->data.probingnode->nrows || !tree->focuslpconstructed);
          if( i < tree->pathlen-1 )
          {
             ncols = node->data.probingnode->ncols;
@@ -2937,8 +2937,8 @@ void treeCheckPath(
          assert(d >= 1);
          assert(SCIPnodeGetType(tree->path[d-1]) == SCIP_NODETYPE_FOCUSNODE
             || (ncols == node->data.probingnode->ninitialcols && nrows == node->data.probingnode->ninitialrows));
-         assert(ncols <= node->data.probingnode->ncols);
-         assert(nrows <= node->data.probingnode->nrows);
+         assert(ncols <= node->data.probingnode->ncols || !tree->focuslpconstructed);
+         assert(nrows <= node->data.probingnode->nrows || !tree->focuslpconstructed);
          if( d < tree->pathlen-1 )
          {
             ncols = node->data.probingnode->ncols;
@@ -5119,8 +5119,8 @@ SCIP_RETCODE treeBacktrackProbing(
       assert(SCIPnodeGetType(tree->path[newpathlen]) == SCIP_NODETYPE_PROBINGNODE);
       ncols = tree->path[newpathlen]->data.probingnode->ninitialcols;
       nrows = tree->path[newpathlen]->data.probingnode->ninitialrows;
-      assert(ncols >= tree->pathnlpcols[newpathlen-1]);
-      assert(nrows >= tree->pathnlprows[newpathlen-1]);
+      assert(ncols >= tree->pathnlpcols[newpathlen-1] || !tree->focuslpconstructed);
+      assert(nrows >= tree->pathnlprows[newpathlen-1] || !tree->focuslpconstructed);
 
       while( tree->pathlen > newpathlen )
       {
@@ -5153,6 +5153,8 @@ SCIP_RETCODE treeBacktrackProbing(
       tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
 
       /* reset the LP's marked size to the initial size of the LP at the node stored in the path */
+      assert(lp->nrows >= tree->pathnlprows[tree->pathlen-1] || !tree->focuslpconstructed);
+      assert(lp->ncols >= tree->pathnlpcols[tree->pathlen-1] || !tree->focuslpconstructed);
       SCIPlpSetSizeMark(lp, tree->pathnlprows[tree->pathlen-1], tree->pathnlpcols[tree->pathlen-1]);
 
       /* if the highest cutoff or repropagation depth is inside the deleted part of the probing path,
@@ -5166,7 +5168,7 @@ SCIP_RETCODE treeBacktrackProbing(
 
    SCIPdebugMessage("probing backtracked to depth %d (%d cols, %d rows)\n", 
       tree->pathlen-1, SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
-
+   
    return SCIP_OKAY;
 }
 
