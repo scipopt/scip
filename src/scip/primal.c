@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.96 2010/11/23 20:57:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.97 2010/11/24 08:43:43 bzfheinz Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -626,14 +626,14 @@ SCIP_Bool solOfInterest(
    obj = SCIPsolGetObj(sol, set, prob);
    
    /* check if we are willing to check worse solution */
-   if( set->misc_improvingsols && obj > primal->upperbound )
-      return FALSE;
-   
-   /* find insert position for the solution */
-   (*insertpos) = primalSearchSolPos(primal, set, prob, sol);
-   
-   if( (*insertpos) < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, *insertpos) )
-      return TRUE;
+   if( set->misc_improvingsols && obj < primal->upperbound )
+   {
+      /* find insert position for the solution */
+      (*insertpos) = primalSearchSolPos(primal, set, prob, sol);
+      
+      if( (*insertpos) < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, *insertpos) )
+         return TRUE;
+   }
    
    return FALSE;
 }
