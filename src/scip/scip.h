@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.449 2010/11/23 21:35:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.450 2010/11/24 14:20:37 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -105,6 +105,7 @@
 #include "scip/set.h"
 #include "scip/tree.h"
 #include "scip/misc.h"
+#include "scip/var.h"
 #endif
 
 #ifdef __cplusplus
@@ -3080,15 +3081,16 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
+#ifndef NDEBUG
+
 /** for a multiaggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbGlobal
  */
 extern
-SCIP_RETCODE SCIPgetVarMultaggrLbGlobal(
+SCIP_Real SCIPcomputeVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to compute the bound for */
-   SCIP_Real*            lb                  /**< pointer to store computed lower bound */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
 /** for a multiaggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
@@ -3096,10 +3098,9 @@ SCIP_RETCODE SCIPgetVarMultaggrLbGlobal(
  * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbGlobal
  */
 extern
-SCIP_RETCODE SCIPgetVarMultaggrUbGlobal(
+SCIP_Real SCIPcomputeVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to compute the bound for */
-   SCIP_Real*            ub                  /**< pointer to store computed upper bound */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
 /** for a multiaggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
@@ -3107,10 +3108,9 @@ SCIP_RETCODE SCIPgetVarMultaggrUbGlobal(
  * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetLbLocal
  */
 extern
-SCIP_RETCODE SCIPgetVarMultaggrLbLocal(
+SCIP_Real SCIPcomputeVarLbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to compute the bound for */
-   SCIP_Real*            lb                  /**< pointer to store computed lower bound */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
 /** for a multiaggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
@@ -3118,11 +3118,19 @@ SCIP_RETCODE SCIPgetVarMultaggrLbLocal(
  * calling this function for a non-multiaggregated variable results in a call to SCIPvarGetUbLocal
  */
 extern
-SCIP_RETCODE SCIPgetVarMultaggrUbLocal(
+SCIP_Real SCIPcomputeVarUbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to compute the bound for */
-   SCIP_Real*            ub                  /**< pointer to store computed upper bound */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
+
+#else
+
+#define SCIPcomputeVarLbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbGlobal(var, (scip)->set) : SCIPvarGetLbGlobal(var))
+#define SCIPcomputeVarUbGlobal(scip, var)  (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbGlobal(var, (scip)->set) : SCIPvarGetUbGlobal(var))
+#define SCIPcomputeVarLbLocal(scip, var)   (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrLbLocal(var, (scip)->set)  : SCIPvarGetLbLocal(var))
+#define SCIPcomputeVarUbLocal(scip, var)   (SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR ? SCIPvarGetMultaggrUbLocal(var, (scip)->set)  : SCIPvarGetUbLocal(var))
+
+#endif
 
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
  *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available

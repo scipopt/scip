@@ -15,7 +15,7 @@ interface:
   the position where the current parsing stopped
 - prototype for methods SCIPparseVarsLinearsum()
 - new functions SCIPround() and SCIPfeasRound() to round to nearest integer
-- new functions SCIPgetVarMultaggrXb{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
+- new functions SCIPcomputeVarCurrent{L,U}b{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
   from the bounds of the aggregation variables
 
 performance improvements:
