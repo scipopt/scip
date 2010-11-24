@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.49 2010/11/24 14:20:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.50 2010/11/24 15:11:53 bzfviger Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1649,8 +1649,10 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
       {
          assert(consdata->vars[v] != infervar || consdata->boundtypes[v] != consdata->boundtypes[inferinfo]);
 
-         /* the reason literal must have been violated */
-         assert((boundtypes[v] == SCIP_BOUNDTYPE_LOWER
+         /* the reason literal must have been violated
+          * we do not check for multiaggregated variables, since SCIPvarGetXbAtIndex is not implemented for multiaggr. variables */
+         assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR
+            || (boundtypes[v] == SCIP_BOUNDTYPE_LOWER
                && SCIPisFeasLT(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE), bounds[v]))
             || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER
                && SCIPisFeasGT(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE), bounds[v])));
