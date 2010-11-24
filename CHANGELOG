@@ -47,6 +47,7 @@ fixed bugs:
 - fixed bugs in sepa_clique.c concerning incorrect way to ignore implicit binary variables in cliques and non-active variables in implications 
 - fixed assertions w.r.t. probing during the propagation round of a branch-and-bound node
 - fixed bug in cons_bounddisjunction where branching on multiaggregated variables was tried while all aggregation variables are fixed 
+- fixed bugs in lpi_none.c w.r.t. debug and opt mode 
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint

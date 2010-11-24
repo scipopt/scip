@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_none.c,v 1.15 2010/08/31 15:50:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.16 2010/11/24 08:50:59 bzfheinz Exp $"
 
 /**@file   lpi_none.c
  * @ingroup LPIS
@@ -1052,8 +1052,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {  /*lint --e{715}*/
-   errorMessage();
-   return SCIP_PLUGINNOTFOUND;
+   return SCIP_OKAY;
 }
 
 /** checks, whether the given LP state contains simplex basis information */
@@ -1106,8 +1105,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    )
 {  /*lint --e{715}*/
    assert(ival != NULL);
-   errorMessage();
-   return SCIP_PLUGINNOTFOUND;
+   return SCIP_PARAMETERUNKNOWN;
 }
 
 /** sets integer parameter of LP */
