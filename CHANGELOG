@@ -29,6 +29,7 @@ fixed bugs:
 - fixed bugs in binpacking example w.r.t. empty struct and not initializing an array
 - fixed bugs in sepa_clique.c concerning incorrect way to ignore implicit binary variables in cliques and non-active variables in implications 
 - fixed assertion w.r.t. to probing during the propagation round of a branch-and-bound node
+- fixed bugs in lpi_none.c w.r.t. debug and opt mode 
 
 SCIP version 2.0.0
 ===============
