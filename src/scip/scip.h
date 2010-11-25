@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.450 2010/11/24 14:20:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.451 2010/11/25 11:27:30 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -3948,6 +3948,14 @@ SCIP_RETCODE SCIPsetConsLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             local               /**< new value */
+   );
+
+/** sets the modifiable flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsModifiable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             modifiable          /**< new value */
    );
 
 /** sets the dynamic flag of the given constraint */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.705 2010/11/24 14:20:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.706 2010/11/25 11:27:30 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12255,6 +12255,20 @@ SCIP_RETCODE SCIPsetConsLocal(
    SCIP_CALL( checkStage(scip, "SCIPsetConsLocal", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPconsSetLocal(cons, local);
+
+   return SCIP_OKAY;
+}
+
+/** sets the modifiable flag of the given constraint */
+SCIP_RETCODE SCIPsetConsModifiable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             modifiable          /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsModifiable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPconsSetModifiable(cons, modifiable);
 
    return SCIP_OKAY;
 }
