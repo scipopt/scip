@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.23 2010/09/30 20:09:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.24 2010/11/25 10:59:10 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -227,7 +227,7 @@ void printMatrix(
       for (j = 0; j < consdata->nblocks; ++j)
       {
 	 if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
-            printf("%1.0f",SCIPvarGetUbLocal(consdata->vars[i][j]));
+            printf("%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
 	 else
             printf(" ");
       }
@@ -774,6 +774,16 @@ SCIP_RETCODE propagateCons(
    /* propagate */
    lastoneprevrow = 0;
    lastones[0] = 0;
+
+   if ( ! ispart )
+   {
+      /* packing case: if entry (0,0) is fixed to zero */
+      if ( SCIPvarGetUbLocal(vars[0][0]) < 0.5 )
+      {
+         lastoneprevrow = -1;
+         lastones[0] = -1;
+      }
+   }
    nsteps = 0;
 
    for (i = 1; i < nspcons; ++i)
@@ -792,14 +802,26 @@ SCIP_RETCODE propagateCons(
       firstnonzeroinrow = -1;
       for (j = 0; j <= lastcolumn; ++j)
       {
-	 /* if variable is not fixed to zero */
-	 if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
-	 {
-	    firstnonzeroinrow = j;
-	    break;
-	 }
+         if ( ispart )
+         {
+            /* partitioning case: if variable is not fixed to zero */
+            if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+            {
+               firstnonzeroinrow = j;
+               break;
+            }
+         }
+         else
+         {
+            /* packing case: if variable is fixed to one */
+            if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
+            {
+               firstnonzeroinrow = j;
+               break;
+            }
+         }
       }
-      /* if all variables are fixed to zero - should not happen in the partitioning case */
+      /* if all variables are fixed to zero in the partitioning case - should not happen */
       if ( firstnonzeroinrow == -1 && ispart )
       {
 	 SCIPdebugMessage(" -> Infeasible node: all variables in row %d are fixed to 0.\n", i);
@@ -812,7 +834,8 @@ SCIP_RETCODE propagateCons(
 
       /* compute rightmost possible position for a 1 */
       lastoneinrow = -1;
-      assert( 0 <= lastoneprevrow && lastoneprevrow <= lastcolumn );
+      assert( !ispart || 0 <= lastoneprevrow );
+      assert( lastoneprevrow <= lastcolumn );
 
       /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to zero */
       infrontier = FALSE;
@@ -821,20 +844,30 @@ SCIP_RETCODE propagateCons(
       else
       {
 	 lastoneinrow = lastoneprevrow + 1;
-	 frontiersteps[nsteps] = i;
-         nsteps++;
+	 frontiersteps[nsteps++] = i;
 	 infrontier = TRUE;
       }
 
       /* store lastoneinrow */
-      assert( 0 <= lastoneinrow && lastoneinrow <= lastcolumn );
+      assert( !ispart || 0 <= lastoneinrow );
+      assert( lastoneinrow <= lastcolumn );
       lastones[i] = lastoneinrow;
 
-      /* check whether we are infeasible (only for partitioning case) */
-      if ( firstnonzeroinrow > lastoneinrow && ispart )
+      /* check whether we are infeasible */
+      if ( firstnonzeroinrow > lastoneinrow )
       {
-	 SCIPdebugMessage(" -> Infeasible node: row %d, rightmost nonzero at %d, rightmost 1 at %d\n",
-            i, firstnonzeroinrow, lastoneinrow);
+#ifdef SCIP_DEBUG
+         if ( ispart )
+         {
+            SCIPdebugMessage(" -> Infeasible node: row %d, leftmost nonzero at %d, rightmost 1 at %d\n",
+               i, firstnonzeroinrow, lastoneinrow);
+         }
+         else
+         {
+            SCIPdebugMessage(" -> Infeasible node: row %d, 1 at %d, rightmost position for 1 at %d\n",
+               i, firstnonzeroinrow, lastoneinrow);
+         }
+#endif
 	 *infeasible = TRUE;
          goto TERMINATE;
       }
@@ -842,7 +875,7 @@ SCIP_RETCODE propagateCons(
       /* fix entries beyond the last possible position for a one in the row to zero (see Lemma 1 in the paper) */
       for (j = lastoneinrow+1; j <= lastcolumn; ++j)
       {
-	 /* if the entry is not yet fixed to zero */
+	 /* if the entry is not yet fixed to 0 */
 	 if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
 	 {
             SCIP_Bool tightened;
@@ -881,10 +914,11 @@ SCIP_RETCODE propagateCons(
 
       s = frontiersteps[j];
       lastoneinrow = lastones[s];
+      /* note for packing case: if we are in a frontier step then lastoneinrow >= 0 */
       assert( 0 <= lastoneinrow && lastoneinrow < nblocks );
-         
-      /* if entry is not fixed to 1 */
-      if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 )
+
+      /* if entry is not fixed*/
+      if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 && SCIPvarGetUbLocal(vars[s][lastoneinrow]) > 0.5 )
       {
          int betaprev;
          betaprev = lastoneinrow - 1;
@@ -2187,21 +2221,29 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    /* run some checks */
 #ifndef NDEBUG
    {
+      SCIP_Real obj;
       int i;
       int j;
       for (i = 0; i < nspcons; ++i)
       {
-	 SCIP_Real obj;
 	 for (j = 0; j < nblocks; ++j)
 	 {
+            SCIP_VAR* var = vars[i][j];
+
 	    /* all variables need to be binary */
-	    assert( SCIPvarGetType(vars[i][j]) == SCIP_VARTYPE_BINARY );
+	    assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+
+            /* check whether all variables in a row have the same objective */
 	    if ( j == 0 )
-	       obj = SCIPvarGetObj(vars[i][j]);
+	       obj = SCIPvarGetObj(var);
 	    else
 	    {
-	       /* all variables in a row should have the same objective */
-	       assert( SCIPisEQ(scip, obj, SCIPvarGetObj(vars[i][j])) );    /*lint !e644*/
+               /* fixed variables have obj = 0; for variables fixed to 0, we assume that there is no
+                  problem (but we cannot always check it, e.g., when in the original problem
+                  variables were fixed and this problem was copied.) */
+               SCIP_Bool fixedZero;
+               fixedZero = ( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisZero(scip, SCIPvarGetUbGlobal(var)) );
+	       assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
 	    }
 	 }
       }
