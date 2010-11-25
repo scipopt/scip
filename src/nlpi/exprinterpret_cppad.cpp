@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.26 2010/10/25 04:27:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.27 2010/11/25 17:59:05 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -1015,7 +1015,7 @@ SCIP_RETCODE SCIPexprintGrad(
       gradient[i] = jac[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("GradDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
+   SCIPdebugMessage("Grad for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t %g", gradient[i]); printf("\n");
 #endif
@@ -1056,7 +1056,7 @@ SCIP_RETCODE SCIPexprintGradInt(
       gradient[i] = jac[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("IntGradDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
+   SCIPdebugMessage("GradInt for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(data->int_x[i]), SCIPintervalGetSup(data->int_x[i])); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(gradient[i]), SCIPintervalGetSup(gradient[i])); printf("\n");
 #endif
