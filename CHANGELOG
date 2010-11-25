@@ -48,6 +48,7 @@ fixed bugs:
 - fixed assertions w.r.t. probing during the propagation round of a branch-and-bound node
 - fixed bug in cons_bounddisjunction where branching on multiaggregated variables was tried while all aggregation variables are fixed 
 - fixed bugs in lpi_none.c w.r.t. debug and opt mode 
+- fixed bugs in cons_orbitope.c: orbitopal fixing for the packing case had two bugs; also fixed one wrong assert
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
