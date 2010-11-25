@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.66 2010/10/01 16:27:00 bzfheinz Exp $
+# $Id: check.sh,v 1.67 2010/11/25 08:06:10 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -138,11 +138,11 @@ do
             echo @01 $i ===========
             echo @01 $i ===========                >> $ERRFILE
             echo > $TMPFILE
-            if test $SETNAME != "default"
+            if test "$SETNAME" != "default"
             then
                 echo set load $SETTINGS            >>  $TMPFILE
             fi
-            if test $FEASTOL != "default"
+            if test "$FEASTOL" != "default"
             then
                 echo set numerics feastol $FEASTOL >> $TMPFILE
             fi
