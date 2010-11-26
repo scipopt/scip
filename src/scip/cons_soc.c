@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.60 2010/10/02 16:43:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.61 2010/11/26 17:04:42 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3139,7 +3139,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE, &sepasuccess) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, &sepasuccess) );
    if( sepasuccess )
       *result = SCIP_SEPARATED;
 

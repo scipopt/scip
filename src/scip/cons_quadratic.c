@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.140 2010/11/23 19:47:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.141 2010/11/26 17:04:42 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -127,7 +127,8 @@ struct SCIP_ConshdlrData
 {
    int                   replacebinaryprodlength;   /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    int                   empathy4and;               /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
-   SCIP_Real             mincutefficacy;            /**< minimal efficacy of a cut in order to add it to relaxation */
+   SCIP_Real             mincutefficacysepa;        /**< minimal efficacy of a cut in order to add it to relaxation during separation */
+   SCIP_Real             mincutefficacyenfo;        /**< minimal efficacy of a cut in order to add it to relaxation during enforcement (ignored for convex constraints) */
    SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
@@ -4849,10 +4850,11 @@ SCIP_RETCODE generateCut(
    /* add linear part */
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
 
-   SCIPdebugMessage(" -> found cut rhs=%g, min=%f, max=%f range=%g\n",
-       ABS(bnd),
+   SCIPdebugMessage("found cut <%s>, rhs=%g, min=%f, max=%f range=%g nnz=%d\n",
+       SCIProwGetName(*row), ABS(bnd),
        SCIPgetRowMinCoef(scip, *row), SCIPgetRowMaxCoef(scip, *row),
-       SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
+       SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row),
+       SCIProwGetNNonz(*row));
 
    if( SCIPisInfinity(scip, ABS(bnd)) )
    { /* seems to be a numerically bad cut */
@@ -4884,7 +4886,8 @@ SCIP_RETCODE separatePoint(
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_RESULT*          result,             /**< result of separation */
-   SCIP_Bool             addweakcuts         /**< should also weak (only slightly violated) cuts be added in a nonconvex constraint ? */
+   SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
+   SCIP_Bool             convexalways        /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -4938,17 +4941,17 @@ SCIP_RETCODE separatePoint(
 
          efficacy = SCIPgetCutEfficacy(scip, sol, row);
 
-         if( efficacy > conshdlrdata->mincutefficacy ||  /* ''strong'' cut */
-             (SCIPisFeasPositive(scip, efficacy) &&       /* ''weak'' cut, use only if */ 
-                (addweakcuts ||   /* flag is set, or */
-                   (violbound == SCIP_BOUNDTYPE_UPPER && consdata->isconvex ) || /* convex  constraint, or */
-                   (violbound == SCIP_BOUNDTYPE_LOWER && consdata->isconcave)    /* concave constraint */
-                 )) )
+         if( efficacy > minefficacy ||
+            (convexalways &&
+             ((violbound == SCIP_BOUNDTYPE_UPPER && consdata->isconvex ) || (violbound == SCIP_BOUNDTYPE_LOWER && consdata->isconcave)) &&
+             efficacy > SCIPfeastol(scip)
+            )
+           )
          { /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            SCIPdebugMessage("add cut with efficacy %g\n", efficacy);
+            SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
          }
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -6927,7 +6930,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result, TRUE) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result, conshdlrdata->mincutefficacysepa, FALSE) );
    if( *result == SCIP_SEPARATED )
       return SCIP_OKAY;
 
@@ -6964,7 +6967,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, result, TRUE) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, result, conshdlrdata->mincutefficacysepa, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -7002,7 +7005,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
        return SCIP_OKAY;
    }
    
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, &separateresult, FALSE) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, &separateresult, MAX(SCIPfeastol(scip), conshdlrdata->mincutefficacyenfo), TRUE) );
    if( separateresult == SCIP_SEPARATED )
    {
       *result = SCIP_SEPARATED;
@@ -8149,9 +8152,13 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
          &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",
-         "minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacy, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
+         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
+         &conshdlrdata->mincutefficacysepa, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacyenfo",
+         "minimal efficacy for a cut to be added to the LP during enforcement (ignored for convex constraints)",
+         &conshdlrdata->mincutefficacyenfo, FALSE, SCIPfeastol(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling", 
          "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",

@@ -64,6 +64,7 @@ parameters:
   as the best known are checked; this is of interest if the check of a solution is expensive; default value is FALSE
 - added parameters <constraints/linear/nmincomparisons> and <constraints/linear/mingainpernmincomparisons> to influence stopping criterium
   for pairwise comparison of linear constraints
+- replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
