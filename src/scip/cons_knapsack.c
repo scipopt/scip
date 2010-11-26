@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.216 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.217 2010/11/26 20:43:58 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -3829,7 +3829,8 @@ SCIP_RETCODE mergeMultiples(
 }
 
 /** in case the knapsack constraint is independent of every else, solve the knapsack problem (exactly) and apply the
- *  fixings (dual reductions) */
+ *  fixings (dual reductions) 
+ */
 static
 SCIP_RETCODE dualPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3858,7 +3859,8 @@ SCIP_RETCODE dualPresolving(
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
     * use the locks to decide for a dual reduction using this constraint; for example after a restart the cuts which are
-    * added to the problems have the check flag set to FALSE */
+    * added to the problems have the check flag set to FALSE 
+    */
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
    
@@ -3875,8 +3877,9 @@ SCIP_RETCODE dualPresolving(
 
    applicable = TRUE;
 
-   /* check if we can apply the dual reduction; this can be done if the knapsack has the only looks on this constraint;
-    * collect object values which are the profits of the knapsack problem */
+   /* check if we can apply the dual reduction; this can be done if the knapsack has the only locks on this constraint;
+    * collect object values which are the profits of the knapsack problem 
+    */
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
