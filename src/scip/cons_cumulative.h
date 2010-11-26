@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.h,v 1.3 2010/11/02 00:40:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.h,v 1.4 2010/11/26 20:44:50 bzfheinz Exp $"
 
 /**@file   cons_cumulative.h
  * @brief  constraint handler for cumulative constraints
@@ -148,6 +148,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    int                   capacity,           /**< available cumulative capacity */
    SCIP_CONS*            cons,               /**< constraint which gets propagated */
    int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
+   SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
    SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
    );
 
