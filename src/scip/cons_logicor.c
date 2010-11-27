@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.154 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.155 2010/11/27 19:28:56 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -62,6 +62,7 @@
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
+#define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
 
 
 /* @todo make this a parameter setting */
@@ -79,7 +80,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSHDLR*        conshdlrlinear;     /**< pointer to linear constraint handler or NULL if not included */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
-
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
 };
 
 /** logic or constraint data */
@@ -388,6 +389,214 @@ SCIP_RETCODE delCoefPos(
    consdata->changed = TRUE;
 
    SCIP_CALL( SCIPenableConsPropagation(scip, cons) );
+
+   return SCIP_OKAY;
+}
+/** in case a part (more than one variable) in the logic or constraint is independent of every else, we can perform dual
+ *  reductions;
+ *  - fix the variable with the smallest object coefficient to one if the constraint is not modifiable and all
+ *    variable are independant
+ *  - fix all independant variables with negative object coefficient to one
+ *  - fix all remaining independant variables to zero 
+ *
+ * Note: the following dual reduction for logic or constraints is already performed by the presolver "dualfix"
+ *       - if a variable in a set covering constraint is only locked by that constraint and has negative or zero
+ *         objective coefficient than it can be fixed to one
+ */
+static
+SCIP_RETCODE dualPresolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< setppc constraint */
+   int*                  nfixedvars,         /**< pointer to count number of fixings */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints  */
+   SCIP_RESULT*          result              /**< pointer to store the result SCIP_SUCCESS, if presolving was performed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_VAR* activevar;
+   SCIP_Real bestobjval;
+   SCIP_Real objval;
+   SCIP_Real fixval;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
+   SCIP_Bool negated;
+   int nfixables;
+   int nvars;
+   int idx;
+   int v;
+   
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
+   assert(result != NULL);
+
+   /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
+    * use the locks to decide for a dual reduction using this constraint; for example after a restart the cuts which are
+    * added to the problems have the check flag set to FALSE 
+    */
+   if( !SCIPconsIsChecked(cons) )
+      return SCIP_OKAY;
+   
+   assert(SCIPconsIsActive(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+   
+   /* we don't want to consider small constraints (note that the constraints can be modifiable, so we can't delete this
+    * constraint) 
+    */
+   if( nvars < 2 )
+      return SCIP_OKAY;
+
+   vars = consdata->vars;
+   idx = -1;
+   bestobjval = SCIP_INVALID;
+   
+   nfixables = 0;
+
+   /* check if we can apply the dual reduction; therefore count the number of variables where the logic or has the only
+    * locks on 
+    */
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+
+      /* the variable should not be (globally) fixed */
+      assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
+      
+      /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
+       * variables
+       */
+      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 ) 
+         continue;
+      
+      ++nfixables;
+      negated = FALSE;
+      
+      /* get the active variable */
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      assert(SCIPvarIsActive(var));
+
+      if( negated )
+         objval = -SCIPvarGetObj(var);
+      else
+         objval = SCIPvarGetObj(var);
+      
+      /* check if the current variable has a smaller objective coefficient */
+      if( SCIPisLT(scip, objval, bestobjval) )
+      {
+         idx = v;
+         bestobjval = objval;
+      }
+   }
+
+   if( nfixables < 2 )
+      return SCIP_OKAY;
+
+   assert(idx >= 0 && idx < nvars);
+   assert(bestobjval < SCIPinfinity(scip));
+   
+   *result = SCIP_SUCCESS;
+
+   /* fix all redundant variables to their best bound */
+   
+   /* first part of all variables */
+   for( v = 0; v < idx; ++v ) 
+   {
+      var = vars[v];
+      assert(var != NULL);
+         
+      /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
+       * variables
+       */
+      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 ) 
+         continue;
+
+      activevar = var;
+      negated = FALSE;
+
+      /* get the active variable */
+      SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+      assert(SCIPvarIsActive(activevar));
+         
+      if( negated )
+         objval = -SCIPvarGetObj(activevar);
+      else
+         objval = SCIPvarGetObj(activevar);
+
+      if( objval > 0.0 )
+         fixval = 0.0;
+      else
+         fixval = 1.0;
+            
+      SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) ); 
+      assert(!infeasible); 
+      assert(fixed);
+   
+      SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
+      ++(*nfixedvars);
+   }
+
+   /* second part of all variables */
+   for( v = idx + 1; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+
+      /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
+       * variables
+       */
+      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+         continue;
+      
+      activevar = var;
+      negated = FALSE;
+
+      /* get the active variable */
+      SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+      assert(SCIPvarIsActive(activevar));
+      
+      if( negated )
+         objval = -SCIPvarGetObj(activevar);
+      else
+         objval = SCIPvarGetObj(activevar);
+      
+      if( objval > 0.0 )
+         fixval = 0.0;
+      else
+         fixval = 1.0;
+
+      SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
+      assert(!infeasible);
+      assert(fixed);
+      
+      SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
+      ++(*nfixedvars);
+   }
+   
+   /* if all variable have our appreciated number of locks and the constraint is not modifiable, or if the bestobjval is
+    * less than or equal to zero, we can fix the variable with the smallest objective coefficient to one and the
+    * constraint gets redundant
+    */
+   if( (nfixables == nvars && !SCIPconsIsModifiable(cons)) || bestobjval <= 0.0 )
+   {
+      SCIP_CALL( SCIPfixVar(scip, vars[idx], 1.0, &infeasible, &fixed) );
+      assert(!infeasible);
+      assert(fixed);
+      
+      SCIPdebugMessage(" -> fixed <%s> == 1.0\n", SCIPvarGetName(vars[idx]));
+      ++(*nfixedvars);
+
+      /* remnove constraint since i*/
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
+   }
 
    return SCIP_OKAY;
 }
@@ -2011,7 +2220,6 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    int oldndelconss;
    int oldnupgdconss;
 
-   
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
@@ -2152,7 +2360,17 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             consdata->impladded = TRUE;
          }
       }
-
+      
+      /* perform for dual redundantions */
+      if( conshdlrdata->dualpresolving )
+      {
+         SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
+         
+         /* if dual reduction deleted the constraint we take the next */
+         if( !SCIPconsIsActive(cons) )
+            continue;
+      }
+      
       /* remember the first changed constraint to begin the next redundancy round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
@@ -2617,6 +2835,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          "constraints/logicor/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance", 
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/logicor/dualpresolving",
+         "should dual presolving steps be preformed?",
+         &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
 
    return SCIP_OKAY;
 }
