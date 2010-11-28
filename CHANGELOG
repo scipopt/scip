@@ -76,6 +76,7 @@ features:
 - the bounddisjunction constraint handler can now parse its constraints
 - SCIP-CPX is now threadsafe
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
+- new dual presolving methods in cons_setppc and cons_logicor
 
 SCIP version 2.0.0
 ===============
