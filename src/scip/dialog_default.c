@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.123 2010/11/01 04:04:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.124 2010/11/29 13:52:41 bzfviger Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -2138,6 +2138,68 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    return SCIP_OKAY;
 }
 
+
+/** dialog execution method for the write nlp command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteNlp)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   /* node relaxations only exist in solving & solved stage */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+   {
+      SCIPdialogMessage(scip, NULL, "There is no node NLP relaxation before solving starts\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
+   if( SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
+   {
+      SCIPdialogMessage(scip, NULL, "There is no node NLP relaxation after problem was solved\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
+   if( !SCIPisNLPConstructed(scip) )
+   {
+      SCIPdialogMessage(scip, NULL, "There has been no node NLP relaxation constructed\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      SCIP_RETCODE retcode;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+      retcode =  SCIPwriteNLP(scip, filename);
+
+      if( retcode == SCIP_FILECREATEERROR )
+      {
+         SCIPdialogMessage(scip, NULL, "error not creating file  <%s>\n", filename);
+      }
+      else
+      {
+         SCIP_CALL( retcode );
+         
+         SCIPdialogMessage(scip, NULL, "written node NLP relaxation to file <%s>\n", filename);
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the write problem command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
@@ -2783,6 +2845,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecWriteMip, NULL, NULL,
             "mip", "write current node MIP relaxation in LP format to file", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write nlp */
+   if( !SCIPdialogHasEntry(submenu, "nlp") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteNlp, NULL, NULL,
+            "nlp", "write current node NLP relaxation to file", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

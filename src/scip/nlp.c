@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.34 2010/11/05 12:10:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.35 2010/11/29 13:52:41 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -5215,7 +5215,7 @@ SCIP_RETCODE SCIPnlpWrite(
       if( file == NULL )
       {
          SCIPerrorMessage("could not open file <%s> for writing\n", fname);
-         return SCIP_ERROR;
+         return SCIP_FILECREATEERROR;
       }
    }
    else
