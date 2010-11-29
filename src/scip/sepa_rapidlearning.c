@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.38 2010/11/03 01:12:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.39 2010/11/29 16:50:34 bzfwinkm Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -496,11 +496,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( sepadata->applyconflicts && !disabledualreductions && SCIPgetNConflictConssApplied(subscip) > 0 )
    {
       SCIP_HASHMAP* consmap;
+      int hashtablesize;
       
-      assert((int) (5 * SCIPgetNConflictConssApplied(subscip)) > SCIPgetNConflictConssApplied(subscip));
+      assert(SCIPgetNConflictConssApplied(subscip) < INT_MAX);
+      hashtablesize = MIN(5*SCIPgetNConflictConssApplied(subscip), INT_MAX);
+      hashtablesize = MAX(hashtablesize, SCIPgetNConflictConssApplied(subscip));
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPcalcHashtableSize( (int) (5 * SCIPgetNConflictConssApplied(subscip)))) );
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPcalcHashtableSize(hashtablesize)) );
 
       /* loop over all constraint handlers that might contain conflict constraints */
       for( i = 0; i < nconshdlrs; ++i)
