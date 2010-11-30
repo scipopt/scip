@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.108 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.109 2010/11/30 13:08:53 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2828,7 +2828,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
 
    SCIPdebugMessage("Deleting indicator constraint <%s>.\n", SCIPconsGetName(cons) );
 
-   /* drop events on transfromed variables */
+   /* drop events on transformed variables */
    if ( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
