@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.39 2010/11/30 17:50:56 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.40 2010/11/30 17:53:13 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -80,7 +80,7 @@ if test $SETNAME != "default"
 then
     if test ! -e $SETTINGS
     then
-        echo skipping test since the settings file <$SETTINGS> does not exist
+        echo skipping test since the settings file $SETTINGS does not exist
         exit
     fi
 fi
@@ -88,7 +88,7 @@ fi
 # check if binary exists 
 if test ! -e $BINNAME
 then
-    echo skipping test since the binary <$BINNAME> does not exist
+    echo skipping test since the binary $BINNAME does not exist
     exit
 fi
 
