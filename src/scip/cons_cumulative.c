@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.23 2010/11/26 20:44:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.24 2010/11/30 14:50:28 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -4888,6 +4888,7 @@ SCIP_RETCODE performEdgeFindingDetection(
          SCIP_CALL( tltreeReportOmegaSet(scip, tltree, &omegaset, &nelements) );
          
          assert(nelements > 0);
+         assert(nelements < nvars);
          
          /* compute new earliest starting time */
          if( forward )
@@ -5164,6 +5165,9 @@ SCIP_RETCODE propagateCumulativeCondition(
       /* perform edge-finding for lower bounds */
       SCIP_CALL( performEdgeFindingDetection(scip, TRUE, nvars, vars, durations, demands, capacity, cons,
             nchgbds, initialized, cutoff) );
+
+      if( *cutoff )
+         return SCIP_OKAY;
 
       /* perform edge-finding for upper bounds */
       SCIP_CALL( performEdgeFindingDetection(scip, FALSE, nvars, vars, durations, demands, capacity, cons,
