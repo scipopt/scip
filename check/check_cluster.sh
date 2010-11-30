@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.40 2010/11/30 17:53:13 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.41 2010/11/30 17:55:06 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -86,7 +86,7 @@ then
 fi
 
 # check if binary exists 
-if test ! -e $BINNAME
+if test ! -e $SCIPPATH/../$BINNAME
 then
     echo skipping test since the binary $BINNAME does not exist
     exit
