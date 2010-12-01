@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.251 2010/12/01 13:53:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.252 2010/12/01 22:14:24 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4535,25 +4535,33 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    )
 {
-   SCIP_Real estimate;
-   SCIP_Real varsol;
-   SCIP_Real pscdown;
-   SCIP_Real pscup;
-
    assert(tree != NULL);
+   assert(var != NULL);
 
-   /* calculate estimate based on pseudo costs:
-    *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
-    *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
-    */
-   estimate = SCIPnodeGetEstimate(tree->focusnode);
-   varsol = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
-   pscdown = SCIPvarGetPseudocost(var, stat, SCIPsetFeasFloor(set, varsol) - varsol);
-   pscup = SCIPvarGetPseudocost(var, stat, SCIPsetFeasCeil(set, varsol) - varsol);
-   estimate -= MIN(pscdown, pscup);
-   estimate += SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      return SCIPnodeGetLowerbound(tree->focusnode);
+   }
+   else
+   {
+      SCIP_Real estimate;
+      SCIP_Real varsol;
+      SCIP_Real pscdown;
+      SCIP_Real pscup;
 
-   return estimate;
+      /* calculate estimate based on pseudo costs:
+       *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
+       *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
+       */
+      estimate = SCIPnodeGetEstimate(tree->focusnode);
+      varsol = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
+      pscdown = SCIPvarGetPseudocost(var, stat, SCIPsetFeasFloor(set, varsol) - varsol);
+      pscup = SCIPvarGetPseudocost(var, stat, SCIPsetFeasCeil(set, varsol) - varsol);
+      estimate -= MIN(pscdown, pscup);
+      estimate += SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+
+      return estimate;
+   }
 }
 
 /** branches on a variable x
