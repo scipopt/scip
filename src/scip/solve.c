@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.318 2010/10/21 09:35:26 bzfgleix Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.319 2010/12/01 13:53:28 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -640,7 +640,7 @@ SCIP_RETCODE updateEstimate(
       pscup = SCIPvarGetPseudocost(lpcands[i], stat, 1.0-lpcandsfrac[i]);
       estimate += MIN(pscdown, pscup);
    }
-   SCIPnodeSetEstimate(focusnode, stat, estimate);
+   SCIPnodeSetEstimate(focusnode, set, estimate);
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.110 2010/11/23 19:47:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.111 2010/12/01 13:53:28 bzfheinz Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -270,7 +270,7 @@ void SCIPchildChgNodeselPrio(
 extern
 void SCIPnodeSetEstimate(
    SCIP_NODE*            node,               /**< node to update lower bound for */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newestimate         /**< new estimated bound for the node */
    );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.250 2010/11/23 20:44:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.251 2010/12/01 13:53:28 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -948,7 +948,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_CALL( nodeAssignParent(*node, blkmem, set, tree, tree->focusnode, nodeselprio) );
 
    /* update the estimate of the child */
-   SCIPnodeSetEstimate(*node, stat, estimate);
+   SCIPnodeSetEstimate(*node, set, estimate);
 
    /* output node creation to VBC file */
    SCIP_CALL( SCIPvbcNewChild(stat->vbc, stat, *node) );
@@ -2089,14 +2089,14 @@ void SCIPchildChgNodeselPrio(
 /** sets the node's estimated bound to the new value */
 void SCIPnodeSetEstimate(
    SCIP_NODE*            node,               /**< node to update lower bound for */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newestimate         /**< new estimated bound for the node */
    )
 {
    assert(node != NULL);
-   assert(stat != NULL);
-   /* should there be an assert(newestimate >= node->lowerbound); here ????????? */
-
+   assert(set != NULL);
+   assert(SCIPsetIsGE(set, newestimate, node->lowerbound));
+         
    node->estimate = newestimate;
 }
 
