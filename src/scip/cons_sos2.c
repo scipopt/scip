@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.44 2010/11/02 01:11:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.45 2010/12/02 18:55:41 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS
@@ -730,7 +730,7 @@ SCIP_RETCODE enforceSOS2(
       SCIP_CONS* cons;
       SCIP_Bool cutoff;
       SCIP_Real weight1;
-      SCIP_Real weight2;
+      SCIP_Real weight2;      
       SCIP_Real w;
       int lastNonzero;
       int nGen;
@@ -828,6 +828,8 @@ SCIP_RETCODE enforceSOS2(
    nVars = consdata->nVars;
    Vars = consdata->Vars;
 
+   assert( 0 < maxInd && maxInd < nVars-1 );
+
    /* branch on variable ind: either all variables before ind or all variables after ind are zero */
    SCIPdebugMessage("Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(Vars[maxInd]),
       SCIPconsGetName(branchCons), maxNonzeros);
@@ -840,6 +842,8 @@ SCIP_RETCODE enforceSOS2(
       nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], 0.0);
       objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
    }
+   /* take the average of the individual estimates */
+   objest = objest/((SCIP_Real) maxInd);
 
    /* create node 1 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -858,8 +862,10 @@ SCIP_RETCODE enforceSOS2(
       nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], 0.0);
       objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
    }
+   /* take the average of the individual estimates */
+   objest = objest/((SCIP_Real) (nVars-maxInd-1));
 
-   /* create node 1 */
+   /* create node 2 */
    SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
    for (j = maxInd+1; j < nVars; ++j)
    {
