@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.155 2010/11/27 19:28:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.156 2010/12/02 18:32:06 bzfpfets Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2356,6 +2356,20 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             {
                *result = SCIP_CUTOFF;
                goto TERMINATE;
+            }
+            /* adding the above implication could lead to fixings, which render the constraint redundant */
+            if ( nimplbdchgs > 0 )
+            {
+               /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
+               SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant) );
+               if ( redundant )
+               {
+                  SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  (*ndelconss)++;
+                  *result = SCIP_SUCCESS;
+                  continue;
+               }
             }
             consdata->impladded = TRUE;
          }
