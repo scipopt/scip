@@ -10,10 +10,10 @@
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de       *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cbc.sh,v 1.9 2010/09/06 10:17:47 bzfwanie Exp $
+# $Id: check_cluster_cbc.sh,v 1.10 2010/12/02 16:08:05 bzfgamra Exp $
 #
 # Call with "make testclustercbc"
 #
@@ -31,7 +31,7 @@
 # more information, see "http://www.zib.de/cluster-user/view/Main/Hardware"
 #
 # To get the result files call "./evalcheck_cluster.sh
-# results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
+# results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
 # This leads to result files 
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
@@ -45,9 +45,9 @@ PPN=4
 QUEUE=gbe
 
 TSTNAME=$1
-BINID=$2
+BINNAME=$2
 SETNAME=$3
-BINNAME="check/$BINID"
+BINID=$BINNAME.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
@@ -97,13 +97,13 @@ fi
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
 #       available 
-HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + \`expr $TIMELIMIT / 10\``
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 
-EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
+EVALFILE=$SCIPPATH/results/check.$QUEUE.$TSTNAME.$BINID.$SETNAME.eval
 echo > $EVALFILE
 
 for i in `cat $TSTNAME.test` DONE
@@ -113,18 +113,38 @@ do
       break
   fi
 
+  echo adding instance $COUNT to queue
+
+  # the cluster queue has an upper bound of 2000 jobs; if this limit is
+  # reached the submitted jobs are dumped; to avoid that we check the total
+  # load of the cluster and wait until it is save (total load not more than
+  # 1900 jobs) to submit the next job.
+  ./waitcluster.sh 1500 $QUEUE 200
+
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
   SHORTFILENAME=`basename $SHORTFILENAME .lp`
   SHORTFILENAME=`basename $SHORTFILENAME .opb`
 
-  FILENAME=$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
+  FILENAME=$USER.$QUEUE.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
   BASENAME=$SCIPPATH/results/$FILENAME
 
   TMPFILE=$BASENAME.tmp
   SETFILE=$BASENAME.set
   
   echo $BASENAME >> $EVALFILE
+
+  COUNT=`expr $COUNT + 1`
+
+  # in case we want to continue we check if the job was already performed 
+  if test "$CONTINUE" != "false"
+      then
+      if test -e results/$FILENAME.out
+	  then 
+	  echo skipping file $i due to existing output file $FILENAME.out
+	  continue
+      fi
+  fi
 
   echo > $TMPFILE
   if test $FEASTOL != "default"
@@ -138,15 +158,15 @@ do
       echo ratioGap $MIPGAP               >> $TMPFILE
   fi
   echo maxNodes $NODELIMIT                >> $TMPFILE
-  echo import /workbig/$i                 >> $TMPFILE
+  echo import $SCIPPATH/$i                >> $TMPFILE
   echo ratioGap                           >> $TMPFILE
   echo allowableGap                       >> $TMPFILE
   echo seconds                            >> $TMPFILE
   echo stat                               >> $TMPFILE
   echo solve                              >> $TMPFILE
-  echo quit                                >> $TMPFILE
-  
-  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SCIPPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+  echo quit                               >> $TMPFILE
  
-  COUNT=`expr $COUNT + 1`
+ 
+  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CBC$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+ 
 done
