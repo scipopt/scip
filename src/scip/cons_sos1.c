@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.43 2010/11/02 01:11:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.44 2010/12/02 18:55:51 bzfpfets Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS
@@ -791,6 +791,8 @@ SCIP_RETCODE enforceSOS1(
          nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], 0.0);
          objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
       }
+      /* take the average of the individual estimates */
+      objest = objest/((SCIP_Real) ind + 1.0);
 
       /* create node 1 */
       SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
@@ -808,6 +810,8 @@ SCIP_RETCODE enforceSOS1(
          nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], 0.0);
          objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
       }
+      /* take the average of the individual estimates */
+      objest = objest/((SCIP_Real) (nVars - ind - 1));
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
