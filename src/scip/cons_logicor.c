@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.156 2010/12/02 18:32:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.157 2010/12/02 22:16:28 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2316,6 +2316,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                SCIP_CALL( SCIPdelCons(scip, cons) );
                (*ndelconss)++;
                *result = SCIP_SUCCESS;
+               continue;
             }
             else if( conshdlrdata->conshdlrlinear != NULL )
             {
@@ -2340,7 +2341,8 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                SCIP_CALL( SCIPdelCons(scip, cons) );       
 
                (*nupgdconss)++;
-               *result = SCIP_SUCCESS;        
+               *result = SCIP_SUCCESS;
+               continue;
             }
          }
          else if( consdata->nvars == 2 && !consdata->impladded )
@@ -2357,12 +2359,14 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                *result = SCIP_CUTOFF;
                goto TERMINATE;
             }
+
             /* adding the above implication could lead to fixings, which render the constraint redundant */
             if ( nimplbdchgs > 0 )
             {
                /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
                SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant) );
-               if ( redundant )
+               
+               if( redundant )
                {
                   SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
                   SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -2388,11 +2392,10 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       /* remember the first changed constraint to begin the next redundancy round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
-
    }
    
    /* preprocess pairs of logic or constraints */
-
+   
    assert(*result != SCIP_CUTOFF);
 
    if ( oldnfixedvars == *nfixedvars && oldnchgbds == *nchgbds && oldndelconss == *ndelconss && oldnupgdconss == *nupgdconss)
