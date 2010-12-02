@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cplex.sh,v 1.2 2010/09/06 10:17:47 bzfwanie Exp $
+# $Id: check_cluster_cplex.sh,v 1.3 2010/12/02 16:12:22 bzfgamra Exp $
 #
 # Call with "make testcluster"
 #
@@ -41,8 +41,8 @@
 #  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
 #  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
 #  - PPN=1 means we need one core, therefore time measuring is not possible
-PPN=4
-QUEUE=gbe
+PPN=8
+QUEUE=ib
 
 TSTNAME=$1
 BINNAME=$2
@@ -117,11 +117,13 @@ do
       break
   fi
 
+  echo adding instance $COUNT to queue
+
   # the cluster queue has an upper bound of 2000 jobs; if this limit is
   # reached the submitted jobs are dumped; to avoid that we check the total
   # load of the cluster and wait until it is save (total load not more than
   # 1900 jobs) to submit the next job.
-  ./waitcluster.sh 1900
+  ./waitcluster.sh 1500 $QUEUE 200
 
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
@@ -132,9 +134,21 @@ do
   BASENAME=$SCIPPATH/results/$FILENAME
 
   TMPFILE=$BASENAME.tmp
-  SETFILE=$BASENAME.set
+  SETFILE=$BASENAME.prm
   
   echo $BASENAME >> $EVALFILE
+
+  COUNT=`expr $COUNT + 1`
+
+  # in case we want to continue we check if the job was already performed 
+  if test "$CONTINUE" != "false"
+      then
+      if test -e results/$FILENAME.out
+	  then 
+	  echo skipping file $i due to existing output file $FILENAME.out
+	  continue
+      fi
+  fi
   
   echo > $TMPFILE
   echo ""                              > $TMPFILE
@@ -161,8 +175,7 @@ do
   echo optimize                           >> $TMPFILE
   echo quit                               >> $TMPFILE
 
-  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
 
-  COUNT=`expr $COUNT + 1`
 done
 
