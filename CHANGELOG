@@ -52,6 +52,7 @@ fixed bugs:
 - fixed bugs in cons_orbitope.c: orbitopal fixing for the packing case had two bugs; also fixed one wrong assert
 - fixed assertion in tree.c w.r.t. node estimation
 - fixed computation of node's objective value estimate when branching on continuous variables (see SCIPtreeCalcChildEstimate, SCIPtreeBranchVar)
+- fixed bug in presolving of cons_logicor.c: adding variable implications can lead to further reductions; added call to applyFixings()
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
