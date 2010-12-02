@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.252 2010/12/01 22:14:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.253 2010/12/02 12:05:13 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4535,17 +4535,23 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    )
 {
+   SCIP_Real estimate;
+   SCIP_Real varsol;
+
    assert(tree != NULL);
    assert(var != NULL);
 
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
-      return SCIPnodeGetLowerbound(tree->focusnode);
+      estimate = SCIPnodeGetEstimate(tree->focusnode);
+      varsol   = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
+
+      estimate += SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+      
+      return estimate;
    }
    else
    {
-      SCIP_Real estimate;
-      SCIP_Real varsol;
       SCIP_Real pscdown;
       SCIP_Real pscup;
 
@@ -4604,6 +4610,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_Real downub;
    SCIP_Real fixval;
    SCIP_Real uplb;
+   SCIP_Real lpval;
 
    SCIP_Bool validval;
    
@@ -4621,7 +4628,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
    /* store whether a valid value was given for branching */
    validval = (val != SCIP_INVALID);  /*lint !e777 */
-
+   
    /* get the corresponding active problem variable
     * if branching value is given, then transform it to the value of the active variable */
    if( validval )
@@ -4666,10 +4673,13 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
+   /* get value of variable in current LP or pseudo solution */
+   lpval = SCIPvarGetSol(var, tree->focusnodehaslp);
+
    /* if there was no explicit value given for branching, branch on current LP or pseudo solution value */
    if( !validval )
    {
-      val = SCIPvarGetSol(var, tree->focusnodehaslp);
+      val = lpval;
 
       /* avoid branching on infinite values in pseudo solution */
       if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
@@ -4749,7 +4759,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    {
       SCIP_Real lb;
       SCIP_Real ub;
-       
+
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
 
@@ -4812,7 +4822,12 @@ SCIP_RETCODE SCIPtreeBranchVar(
    {
       /* create child node x <= downub */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, downub);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
+      /* if LP solution is cutoff in child, compute a new estimate
+       * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
+      if( SCIPsetIsGT(set, lpval, downub) )
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
+      else
+         estimate = SCIPnodeGetEstimate(tree->focusnode);
       SCIPdebugMessage(" -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), downub, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
@@ -4848,7 +4863,10 @@ SCIP_RETCODE SCIPtreeBranchVar(
    {
       /* create child node with x >= uplb */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, uplb);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
+      if( SCIPsetIsLT(set, lpval, uplb) )
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
+      else
+         estimate = SCIPnodeGetEstimate(tree->focusnode);
       SCIPdebugMessage(" -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), uplb, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
