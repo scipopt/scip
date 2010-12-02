@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.109 2010/11/30 13:08:53 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.110 2010/12/02 17:57:31 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -1747,12 +1747,12 @@ SCIP_RETCODE checkAltLPInfeasible(
 
 /** Tries to extend a given set of variables to a cover.
  *
- *  At each step we include a variable which covers a new IIS. Ties are * broken according to the
- *  number of IISs a variable is contained in.  * The corresponding IIS inequalities are added to
- *  the LP if this not * already happend.
+ *  At each step we include a variable which covers a new IIS. Ties are
+ *  broken according to the number of IISs a variable is contained in.
+ *  The corresponding IIS inequalities are added to the LP if this not already happend.
  *
- *  @pre It is assumed that all parameters for the alternative LP are * set and that the variables
- *  corresponding to @a S are * fixed. Furthermore @c xVal_ should contain the current LP solution.
+ *  @pre It is assumed that all parameters for the alternative LP are set and that the variables
+ *  corresponding to @a S are fixed. Furthermore @c xVal_ should contain the current LP solution.
  */
 static
 SCIP_RETCODE extendToCover(
@@ -1860,7 +1860,7 @@ SCIP_RETCODE extendToCover(
       assert( ! S[candidate] );
 
       /* update new set S */
-      SCIPdebugMessage("   size: %4d  add %4d with value %f  (IIS size: %d)\n", *size, candidate, candObj, sizeIIS);
+      SCIPdebugMessage("   size: %4d  add %4d with objective value %f and alt-LP solution value %g  (IIS size: %d)\n", *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colIndex], sizeIIS);
       S[candidate] = TRUE;
       ++(*size);
       *value += candObj;
