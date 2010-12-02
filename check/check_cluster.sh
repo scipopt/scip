@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.41 2010/11/30 17:55:06 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.42 2010/12/02 16:21:38 bzfgamra Exp $
 #
 # Call with "make testcluster"
 #
@@ -130,7 +130,7 @@ do
   # reached the submitted jobs are dumped; to avoid that we check the total
   # load of the cluster and wait until it is save (total load not more than
   # 1900 jobs) to submit the next job.
-  ./waitcluster.sh 1500 $QUEUE 10
+  ./waitcluster.sh 1500 $QUEUE 200
 
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
