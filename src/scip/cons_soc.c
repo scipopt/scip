@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.61 2010/11/26 17:04:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.62 2010/12/03 20:13:23 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -584,9 +584,15 @@ SCIP_RETCODE evalLhs(
    
    for( i = 0; i < consdata->nvars; ++i )
    {
-      assert(!SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->vars[i]))));  /*lint !e666*/
+      val = SCIPgetSolVal(scip, sol, consdata->vars[i]);
       
-      val = consdata->coefs[i] * (SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i]);
+      if( SCIPisInfinity(scip, val) || SCIPisInfinity(scip, -val) )
+      {
+         consdata->lhsval = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
+
+      val = consdata->coefs[i] * (val + consdata->offsets[i]);
       consdata->lhsval += val * val;      
    }
    consdata->lhsval = sqrt(consdata->lhsval);
@@ -637,6 +643,7 @@ SCIP_RETCODE computeViolation(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real rhsval;
    
    assert(scip != NULL);
    assert(cons != NULL);
@@ -646,6 +653,32 @@ SCIP_RETCODE computeViolation(
    
    SCIP_CALL( evalLhs(scip, cons, sol) );
    
+   if( SCIPisInfinity(scip, consdata->lhsval) )
+   {
+      /* infinity <= infinity is feasible
+       * infinity <= finite value is not feasible and has violation infinity
+       */
+      if( (consdata->rhscoeff > 0.0 && SCIPisInfinity(scip,  SCIPgetSolVal(scip, sol, consdata->rhsvar))) ||
+          (consdata->rhscoeff < 0.0 && SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, consdata->rhsvar)))
+        )
+         consdata->violation = 0.0;
+      else
+         consdata->violation = SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+
+   rhsval = SCIPgetSolVal(scip, sol, consdata->rhsvar);
+   if( SCIPisInfinity(scip,  rhsval) )
+   {
+      consdata->violation = consdata->rhscoeff > 0.0 ? 0.0 : SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+   if( SCIPisInfinity(scip, -rhsval) )
+   {
+      consdata->violation = consdata->rhscoeff < 0.0 ? 0.0 : SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+
    consdata->violation = consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
    if( consdata->violation <= 0.0 )
    { /* constraint is not violated for sure */
@@ -728,6 +761,7 @@ SCIP_RETCODE generateCutSol(
    assert(consdata != NULL);
    
    assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
+   assert(!SCIPisInfinity(scip, consdata->lhsval));
    
    SCIP_CALL( SCIPallocBufferArray(scip, &rowcoeff, consdata->nvars) );
    
@@ -876,6 +910,7 @@ SCIP_RETCODE generateCutProjectedPoint(
    assert(consdata != NULL);
 
    assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
+   assert(!SCIPisInfinity(scip, consdata->lhsval));
 
    if( !SCIPisZero(scip, consdata->constant) )
    {  /* have not thought about this case yet */
@@ -955,7 +990,8 @@ SCIP_RETCODE generateSparseCut(
    assert(consdata != NULL);
    
    assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
-   
+   assert(!SCIPisInfinity(scip, consdata->lhsval));
+
    if( consdata->nvars <= 3 )
    {
       SCIP_CALL( generateCutSol(scip, cons, sol, row) );
@@ -1064,7 +1100,7 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->violation) )
+      if( SCIPisFeasPositive(scip, consdata->violation) && !SCIPisInfinity(scip, consdata->violation) )
       {
          /* generate cut */
          if( conshdlrdata->sparsify )
@@ -1159,7 +1195,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
       assert(consdata != NULL);
 
       SCIP_CALL( evalLhs(scip, conss[c], sol) );
-      if( !SCIPisPositive(scip, consdata->lhsval) )
+      if( !SCIPisPositive(scip, consdata->lhsval) || SCIPisInfinity(scip, consdata->lhsval) )
       {
          SCIPdebugMessage("skip adding linearization for <%s> since lhs is %g\n", SCIPconsGetName(conss[c]), consdata->lhsval);
          continue;
@@ -2416,17 +2452,20 @@ SCIP_RETCODE polishSolution(
    assert(!SCIPisZero(scip, consdata->rhscoeff));
 
    /* assert that absolute constraint violation is positive */
-   assert(SCIPisPositive(scip, consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset)));
+   assert(SCIPisInfinity(scip, consdata->lhsval) || SCIPisPositive(scip, consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset)));
    
    /* compute minimal rhs variable value so that constraint is satisfied */
-   rhsval = consdata->lhsval / consdata->rhscoeff - consdata->rhsoffset;
+   if( !SCIPisInfinity(scip, consdata->lhsval) )
+      rhsval = consdata->lhsval / consdata->rhscoeff - consdata->rhsoffset;
+   else
+      rhsval = consdata->rhscoeff > 0.0 ? SCIPinfinity(scip) : -SCIPinfinity(scip);
    
    if( consdata->rhscoeff > 0.0 )
    {
       assert(SCIPvarMayRoundUp(consdata->rhsvar));
       
       /* round rhsval up, if variable is integral */
-      if( SCIPvarIsIntegral(consdata->rhsvar) )
+      if( SCIPvarIsIntegral(consdata->rhsvar) && !SCIPisInfinity(scip, rhsval) )
          rhsval = SCIPceil(scip, rhsval);
       
       /* if new value is above upper bound, we are lost */
@@ -3280,7 +3319,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
          SCIP_Real unscaledviol;
 
          unscaledviol  = consdata->lhsval;
-         unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
+         if( !SCIPisInfinity(scip, unscaledviol) )
+            unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
 
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
          SCIPinfoMessage(scip, NULL, "\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
