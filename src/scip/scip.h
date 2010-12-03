@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.451 2010/11/25 11:27:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.452 2010/12/03 11:35:49 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2483,6 +2483,15 @@ SCIP_RETCODE SCIPgetNegatedVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get negated variable for */
    SCIP_VAR**            negvar              /**< pointer to store the negated variable */
+   );
+
+/** gets negated variables x' = lb + ub - x of variables x; negated variables are created, if not yet existing */
+extern
+SCIP_RETCODE SCIPgetNegatedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables to get negated variables for */
+   SCIP_VAR**            vars,               /**< array of variables to get negated variables for */
+   SCIP_VAR**            negvars             /**< array to store the negated variables */
    );
 
 /** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or 

@@ -18,6 +18,7 @@ interface:
 - new functions SCIPcomputeVarCurrent{L,U}b{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
   from the bounds of the aggregation variables
 - new method SCIPsetConsModifiable()
+- new method SCIPgetNegatedVars() which returns for a ǵiven array of variables all negated variables, if the negated variables are not existing yet, they will be created
 
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);

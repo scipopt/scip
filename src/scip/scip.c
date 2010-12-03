@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.706 2010/11/25 11:27:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.707 2010/12/03 11:35:49 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7658,6 +7658,26 @@ SCIP_RETCODE SCIPgetNegatedVar(
    SCIP_CALL( checkStage(scip, "SCIPgetNegatedVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPvarNegate(var, scip->mem->probmem, scip->set, scip->stat, negvar) );
+
+   return SCIP_OKAY;
+}
+
+/** gets negated variables x' = lb + ub - x of variables x; negated variables are created, if not yet existing */
+SCIP_RETCODE SCIPgetNegatedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables to get negated variables for */
+   SCIP_VAR**            vars,               /**< array of variables to get negated variables for */
+   SCIP_VAR**            negvars             /**< array to store the negated variables */
+   )
+{
+   int v;
+
+   SCIP_CALL( checkStage(scip, "SCIPgetNegatedVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_CALL( SCIPvarNegate(vars[v], scip->mem->probmem, scip->set, scip->stat, &(negvars[v])) );
+   }
 
    return SCIP_OKAY;
 }
