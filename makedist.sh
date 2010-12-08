@@ -49,7 +49,7 @@ $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
-$NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h $NAME/src/nlpi/*.hpp \
+$NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
