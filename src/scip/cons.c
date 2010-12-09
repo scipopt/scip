@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.215.2.1 2010/10/29 11:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.215.2.2 2010/12/09 08:42:01 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3207,43 +3207,43 @@ SCIP_RETCODE SCIPconshdlrPresolve(
       && (!conshdlr->needscons || conshdlr->nactiveconss > 0)
       && (conshdlr->maxprerounds == -1 || nrounds < conshdlr->maxprerounds || conshdlr->presolwasdelayed) )
    {
-      int nnewfixedvars;
-      int nnewaggrvars;
-      int nnewchgvartypes;
-      int nnewchgbds;
-      int nnewholes;
-      int nnewdelconss;
-      int nnewupgdconss;
-      int nnewchgcoefs;
-      int nnewchgsides;
-
       SCIPdebugMessage("presolving %d constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
-
-      /* calculate the number of changes since last call */
-      nnewfixedvars = *nfixedvars - conshdlr->lastnfixedvars;
-      nnewaggrvars = *naggrvars - conshdlr->lastnaggrvars;
-      nnewchgvartypes = *nchgvartypes - conshdlr->lastnchgvartypes;
-      nnewchgbds = *nchgbds - conshdlr->lastnchgbds;
-      nnewholes = *naddholes - conshdlr->lastnaddholes;
-      nnewdelconss = *ndelconss - conshdlr->lastndelconss;
-      nnewupgdconss = *nupgdconss - conshdlr->lastnupgdconss;
-      nnewchgcoefs = *nchgcoefs - conshdlr->lastnchgcoefs;
-      nnewchgsides = *nchgsides - conshdlr->lastnchgsides;
-      
-      /* remember the old number of changes */
-      conshdlr->lastnfixedvars = *nfixedvars;
-      conshdlr->lastnaggrvars = *naggrvars;
-      conshdlr->lastnchgvartypes = *nchgvartypes;
-      conshdlr->lastnchgbds = *nchgbds;
-      conshdlr->lastnaddholes = *naddholes;
-      conshdlr->lastndelconss = *ndelconss;
-      conshdlr->lastnupgdconss = *nupgdconss;
-      conshdlr->lastnchgcoefs = *nchgcoefs;
-      conshdlr->lastnchgsides = *nchgsides;
 
       /* check, if presolving method should be delayed */
       if( !conshdlr->delaypresol || execdelayed )
       {
+         int nnewfixedvars;
+         int nnewaggrvars;
+         int nnewchgvartypes;
+         int nnewchgbds;
+         int nnewholes;
+         int nnewdelconss;
+         int nnewupgdconss;
+         int nnewchgcoefs;
+         int nnewchgsides;
+         
+         /* calculate the number of changes since last call */
+         nnewfixedvars = *nfixedvars - conshdlr->lastnfixedvars;
+         nnewaggrvars = *naggrvars - conshdlr->lastnaggrvars;
+         nnewchgvartypes = *nchgvartypes - conshdlr->lastnchgvartypes;
+         nnewchgbds = *nchgbds - conshdlr->lastnchgbds;
+         nnewholes = *naddholes - conshdlr->lastnaddholes;
+         nnewdelconss = *ndelconss - conshdlr->lastndelconss;
+         nnewupgdconss = *nupgdconss - conshdlr->lastnupgdconss;
+         nnewchgcoefs = *nchgcoefs - conshdlr->lastnchgcoefs;
+         nnewchgsides = *nchgsides - conshdlr->lastnchgsides;
+         
+         /* remember the old number of changes */
+         conshdlr->lastnfixedvars = *nfixedvars;
+         conshdlr->lastnaggrvars = *naggrvars;
+         conshdlr->lastnchgvartypes = *nchgvartypes;
+         conshdlr->lastnchgbds = *nchgbds;
+         conshdlr->lastnaddholes = *naddholes;
+         conshdlr->lastndelconss = *ndelconss;
+         conshdlr->lastnupgdconss = *nupgdconss;
+         conshdlr->lastnchgcoefs = *nchgcoefs;
+         conshdlr->lastnchgsides = *nchgsides;
+      
          /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
           * external method; to avoid this, these changes will be buffered and processed after the method call
