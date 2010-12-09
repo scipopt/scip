@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.159 2010/11/27 19:30:02 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.160 2010/12/09 08:46:31 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -3530,7 +3530,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /*SCIPdebugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));*/
 
       /* remove all variables that are fixed to zero */
-      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *naggrvars > oldnaggrvars || *nfixedvars > oldnfixedvars )
+      if( consdata->nfixedzeros > 0 )
       {
          SCIP_CALL( applyFixings(scip, cons) );
       }

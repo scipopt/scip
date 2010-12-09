@@ -24,6 +24,8 @@ performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
   this fixes timeouts on instances where devex converges very slowly
 - fixing lifting of new knapsack items which are negated items of already included items, this previously could lead to very long presolving
+- fixed performance issue in presolving w.r.t. to computing the number of new fixings, aggregated, and so on before a 
+  constraint handler presolver is called
 
 fixed bugs:
 - fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
