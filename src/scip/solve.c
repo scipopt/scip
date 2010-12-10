@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.319 2010/12/01 13:53:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.320 2010/12/10 20:25:25 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -645,6 +645,45 @@ SCIP_RETCODE updateEstimate(
    return SCIP_OKAY;
 }
 
+/** puts all constraints with initial flag TRUE into the LP */
+static
+SCIP_RETCODE initConssLP(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_Bool             root,               /**< is this the initial root LP? */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   int h;
+
+   assert(set != NULL);
+   assert(lp != NULL);
+   assert(cutoff != NULL);
+   
+   /* inform separation storage, that LP is now filled with initial data */
+   SCIPsepastoreStartInitialLP(sepastore);
+
+   /* add LP relaxations of all initial constraints to LP */
+   SCIPdebugMessage("init LP: initial rows\n");
+   for( h = 0; h < set->nconshdlrs; ++h )
+   {
+      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat) );
+   }
+   SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, eventfilter, root, cutoff) );
+
+   /* inform separation storage, that initial LP setup is now finished */
+   SCIPsepastoreEndInitialLP(sepastore);
+
+  return SCIP_OKAY;
+}
+
 /** constructs the initial LP of the current node */
 static
 SCIP_RETCODE initLP(
@@ -665,7 +704,6 @@ SCIP_RETCODE initLP(
 {
    SCIP_VAR* var;
    int v;
-   int h;
 
    assert(set != NULL);
    assert(prob != NULL);
@@ -704,19 +742,8 @@ SCIP_RETCODE initLP(
       SCIPpricestoreEndInitialLP(pricestore);
    }
 
-   /* inform separation storage, that LP is now filled with initial data */
-   SCIPsepastoreStartInitialLP(sepastore);
-
-   /* add LP relaxations of all initial constraints to LP */
-   SCIPdebugMessage("init LP: initial rows\n");
-   for( h = 0; h < set->nconshdlrs; ++h )
-   {
-      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat) );
-   }
-   SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, eventfilter, root, cutoff) );
-
-   /* inform separation storage, that initial LP setup is now finished */
-   SCIPsepastoreEndInitialLP(sepastore);
+   /* put all initial constraints into the LP */
+   SCIP_CALL( initConssLP(blkmem, set, sepastore, stat, tree, lp, branchcand, eventqueue, eventfilter, root, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -1248,6 +1275,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -1265,6 +1293,7 @@ SCIP_RETCODE SCIPpriceLoop(
 {
    int npricerounds;
    SCIP_Bool mustprice;
+   SCIP_Bool cutoff;
 
    assert(prob != NULL);
    assert(lp != NULL);
@@ -1367,8 +1396,12 @@ SCIP_RETCODE SCIPpriceLoop(
       mustprice = mustprice || !lp->flushed || (prob->ncolvars != *npricedcolvars);
       *mustsepa = *mustsepa || !lp->flushed;
 
-      /* solve LP again after resetting bounds (with dual simplex) */
-      SCIPdebugMessage("pricing: solve LP after resetting bounds\n");
+      /* put all initial constraints into the LP */
+      SCIP_CALL( initConssLP(blkmem, set, sepastore, stat, tree, lp, branchcand, eventqueue, eventfilter, pretendroot, &cutoff) );
+      assert(cutoff == FALSE);
+
+      /* solve LP again after resetting bounds and adding new initial constraints (with dual simplex) */
+      SCIPdebugMessage("pricing: solve LP after resetting bounds and adding new initial constraints\n");
       SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
@@ -1523,7 +1556,7 @@ SCIP_RETCODE priceAndCutLoop(
 
          pricerlowerbound = -SCIPsetInfinity(set);
 
-         SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, primal, tree, lp, pricestore, branchcand, eventqueue,
+         SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, eventqueue,
                eventfilter, root, root, -1, &npricedcolvars, &mustsepa, &pricerlowerbound, lperror, pricingaborted) );
 
          mustprice = FALSE;

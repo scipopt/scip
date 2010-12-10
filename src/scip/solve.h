@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.60 2010/09/03 14:50:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.61 2010/12/10 20:25:25 bzfheinz Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -130,6 +130,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
