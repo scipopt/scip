@@ -60,6 +60,10 @@ fixed bugs:
 - fixed bug in presolving of cons_logicor.c: adding variable implications can lead to further reductions; added call to applyFixings()
 - fixed bugs in cons_sos?.c: take average of objestimate
 
+plugins:
+- added vbound heuristic (heur_vbounds.{c,h})
+- added clique heuristic (heur_clique.{c,h})
+ 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
 - added possible value 'e' for <constraints/soc/nlpform> to enable convex exponential-sqrt form for SOC constraint representation in NLP
