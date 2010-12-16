@@ -28,6 +28,7 @@ performance improvements:
   constraint handler presolver is called
 - in case of adding constraints during pricing with initial flag set to TRUE, we add now these constraints 
   after the pricing round to the LP
+- changed parameter values in clique separator in order to avoid very large branch-and-bound trees
 
 fixed bugs:
 - fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip

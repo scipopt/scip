@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.51 2010/11/22 11:22:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.52 2010/12/16 11:17:07 bzfwolte Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -40,8 +40,8 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
-#define DEFAULT_MAXTREENODES         -1 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
-#define DEFAULT_BACKTRACKFREQ     10000 /**< frequency for premature backtracking up to tree level 1 (0: no backtracking) */
+#define DEFAULT_MAXTREENODES      10000 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
+#define DEFAULT_BACKTRACKFREQ      1000 /**< frequency for premature backtracking up to tree level 1 (0: no backtracking) */
 #define DEFAULT_MAXSEPACUTS          10 /**< maximal number of clique cuts separated per separation round (-1: no limit) */
 #define DEFAULT_MAXZEROEXTENSIONS  1000 /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
 #define DEFAULT_CLIQUETABLEMEM  20000.0 /**< maximal memory size of dense clique table (in kb) */
