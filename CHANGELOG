@@ -60,6 +60,9 @@ fixed bugs:
 - fixed computation of node's objective value estimate when branching on continuous variables (see SCIPtreeCalcChildEstimate, SCIPtreeBranchVar)
 - fixed bug in presolving of cons_logicor.c: adding variable implications can lead to further reductions; added call to applyFixings()
 - fixed bugs in cons_sos?.c: take average of objestimate
+- fixed numerical issue in some heuristics: nearly-integral values that are between the feasibility and the integrality
+  tolerance might not have been rounded correctly
+
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

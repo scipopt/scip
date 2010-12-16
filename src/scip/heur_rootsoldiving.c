@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.51 2010/09/27 17:20:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.52 2010/12/16 18:35:46 bzfberth Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @ingroup PRIMALHEURISTICS
@@ -373,7 +373,8 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
                intvalrounds[i]++;
                if( intvalrounds[i] == 5 && SCIPgetVarLbDive(scip, var) < SCIPgetVarUbDive(scip, var) - 0.5 )
                {
-                  solval = SCIPfeasFloor(scip, solval);
+                  /* use exact integral value, if the variable is only integral within numerical tolerances */
+                  solval = SCIPfloor(scip, solval+0.5);
                   SCIPdebugMessage(" -> fixing <%s> = %g\n", SCIPvarGetName(var), solval);
                   SCIP_CALL( SCIPchgVarLbDive(scip, var, solval) );
                   SCIP_CALL( SCIPchgVarUbDive(scip, var, solval) );

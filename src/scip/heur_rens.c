@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.57 2010/09/27 17:20:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.58 2010/12/16 18:35:46 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -116,9 +116,11 @@ SCIP_RETCODE createSubproblem(
 
       if( SCIPisFeasIntegral(scip, lpsolval) )
       {
-         /* fix variables to current LP solution if it is integral */
-         lb = lpsolval;
-         ub = lpsolval;
+         /* fix variables to current LP solution if it is integral,
+          *  use exact integral value, if the variable is only integral within numerical tolerances
+          */
+         lb = SCIPfloor(scip, lpsolval+0.5);
+         ub = lb;
          fixingcounter++;
       }
       else if( binarybounds )
