@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.107.2.1 2010/10/05 00:19:58 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.107.2.2 2010/12/16 18:24:38 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1479,9 +1479,8 @@ SCIP_RETCODE roundFixingValue(
 
    /* if integral within feasibility tolerance, only shift to nearest integer */
    if( SCIPisFeasIntegral(scip, x) )
-   {
       x = SCIPfeasFrac(scip, x) < 0.5 ? SCIPfeasFloor(scip, x) : SCIPfeasCeil(scip, x);
-   }
+
    /* round in the direction of least locks with fractionality as tie breaker */
    else if( locksrounding )
    {

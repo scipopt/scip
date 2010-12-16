@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.48.2.1 2010/10/15 06:33:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.48.2.2 2010/12/16 18:24:38 bzfberth Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1451,8 +1451,10 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          if( ABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
             fixval = 0.0;
 
-         /* round fractional variables to the nearest integer */
-         fixval = SCIPfloor(scip, fixval + 0.5);
+         /* round fractional variables to the nearest integer,
+          *  use exact integral value, if the variable is only integral within numerical tolerances
+          */
+         fixval = SCIPfloor(scip, fixval+0.5);
 
          /* adjust value to the global bounds of the corresponding SCIP variable */
          fixval = MAX(fixval, SCIPvarGetLbGlobal(var));  /*lint !e666*/
