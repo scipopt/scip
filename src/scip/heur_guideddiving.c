@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.54 2010/09/27 17:20:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.55 2010/12/16 21:25:47 bzfgamra Exp $"
 
 /**@file   heur_guideddiving.c
  * @ingroup PRIMALHEURISTICS
@@ -295,9 +295,11 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* get best solution that should guide the search; if this solution lives in the original variable space,
     * we can not use it since it might violate the global bounds of the current problem
     */
-   bestsol = SCIPgetBestSol(scip);
-   if( SCIPsolGetOrigin(bestsol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
       return SCIP_OKAY;
+
+   /* store a copy of the best solution */
+   SCIP_CALL( SCIPcreateSolCopy(scip, &bestsol, SCIPgetBestSol(scip)) );
 
    *result = SCIP_DIDNOTFIND;
 
@@ -585,6 +587,9 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
    /* end diving */
    SCIP_CALL( SCIPendProbing(scip) );
+
+   /* free copied best solution */
+   SCIP_CALL( SCIPfreeSol(scip, &bestsol) );
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
