@@ -29,6 +29,7 @@ performance improvements:
 - in case of adding constraints during pricing with initial flag set to TRUE, we add now these constraints 
   after the pricing round to the LP
 - changed parameter values in clique separator in order to avoid very large branch-and-bound trees
+- performance improvements in prop_vbounds
 
 fixed bugs:
 - fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
@@ -98,6 +99,7 @@ features:
 - via "PARASCIP=true" as a "Makefile" option it is possible to compile SCIP threadsafe in DEBUG-mode, (in OPT-mode it's not necessary)
 - new dual presolving methods in cons_setppc and cons_logicor
 - added dialog "write nlp" to write current NLP relaxation to a file
+- new data structure SCIP_STAIRMAP
 
 SCIP version 2.0.0
 ===============
