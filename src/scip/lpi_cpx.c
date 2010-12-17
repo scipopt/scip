@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.138.2.1 2010/10/08 17:32:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.138.2.2 2010/12/17 11:38:10 bzfheinz Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -2175,6 +2175,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover            /**< perform crossover */
    )
 {
+   int solntype;
    int retval;
 
    assert(cpxenv != NULL);
@@ -2201,7 +2202,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       return SCIP_LPERROR;
    }
 
-   lpi->solisbasic = crossover;
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+
+   lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
    SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
@@ -2226,6 +2229,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
          return SCIP_LPERROR;
       }
 
+      CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
       lpi->iterations += CPXgetbaritcnt(cpxenv, lpi->cpxlp);
       lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
       lpi->instabilityignored = FALSE;

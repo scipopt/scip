@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.689.2.5 2010/12/10 20:21:02 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.689.2.6 2010/12/17 11:38:10 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -18957,7 +18957,7 @@ void printBranchruleStatistics(
       SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
-         SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
+         SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNExternCalls(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutoffs(scip->set->branchrules[i]),
          SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
