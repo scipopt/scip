@@ -63,6 +63,8 @@ fixed bugs:
 - fixed numerical issue in some heuristics: nearly-integral values that are between the feasibility and the integrality
   tolerance might not have been rounded correctly
 - fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
+- fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
+- fixed bug in statistic w.r.t. number of calls for external branching candidates
 
 
 plugins:
