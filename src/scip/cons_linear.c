@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.398 2010/12/16 18:07:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.399 2010/12/17 12:34:18 bzfhende Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4563,7 +4563,7 @@ SCIP_RETCODE tightenBounds(
       {
          oldnchgbds = *nchgbds;
 
-	 assert( SCIPgetStage(scip) < SCIP_STAGE_SOLVING || consdata->binvarssorted);
+	 assert(!sortvars || SCIPgetStage(scip) < SCIP_STAGE_SOLVING || consdata->binvarssorted);
 
          SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
          
