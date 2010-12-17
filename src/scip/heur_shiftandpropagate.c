@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.18 2010/10/18 19:57:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.19 2010/12/17 12:01:23 bzfheinz Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -1301,7 +1301,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( SCIPgetBestSol(scip) != NULL )
      return SCIP_OKAY;
 
-   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPhasCurrentNodeLP(scip) )
+   if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
    {
       SCIP_Bool nodecutoff;
 

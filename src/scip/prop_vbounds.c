@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.14 2010/11/01 04:04:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.15 2010/12/17 12:01:23 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -56,7 +56,7 @@
 #define PROP_DELAY                FALSE      /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define EVENTHDLR_NAME         "vbounds"
-#define EVENTHDLR_DESC         "bound change event handler for vbounds propagator"
+#define EVENTHDLR_DESC         "bound change event handler for for vbounds propagator"
 
 
 
@@ -71,11 +71,14 @@ struct SCIP_PropData
    SCIP_HASHMAP*         varHashmap;         /**< mapping a variable to its posiotion in the variable array */    
    SCIP_VAR**            lbvars;             /**< topological sorted variables with respect to the variable lower bound */
    SCIP_VAR**            ubvars;             /**< topological sorted variables with respect to the variable upper bound */
+   SCIP_EVENTTYPE*       lbeventtypes;       /**< event types of variables belonging to variable lower bounds */ 
+   SCIP_EVENTTYPE*       ubeventtypes;       /**< event types of variables belonging to variable upper bounds */ 
    int                   nvars;              /**< number of involved variables */
    int                   nlbvars;            /**< number of variables in variable lower bound array */
    int                   nubvars;            /**< number of variables in variable upper bound array */
-   unsigned int          sorted:1;           /**< is the variable array topological sorted */
-   unsigned int          propagated:1;       /**< is the lower and upper bound variable array already propagated? */
+   SCIP_Bool             sorted;             /**< is the variable array topological sorted */
+   SCIP_Bool             lbpropagated;       /**< is the lower bound variable array already propagated? */
+   SCIP_Bool             ubpropagated;       /**< is the upper bound variable array already propagated? */
 };
 
 
@@ -237,7 +240,7 @@ SCIP_RETCODE depthFirstSearch(
       if( !SCIPvarIsActive(vbvar) )
          continue;
       
-      /* insert variable bound variable into the hash table since they are involve in the later propagation */
+      /* insert variable bound variable into the hash table since they are involved in later propagation */
       if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, vbvar) )
       {
          SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(vbvar), *nusedvars);
@@ -278,30 +281,111 @@ SCIP_RETCODE catchEvents(
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
+   SCIP_VAR** vbvars;
+   SCIP_Real* coefs;
+   int nvbvars;
+   int n;
+   SCIP_VAR* var;
+   int idx;
    int v;
 
    assert(propdata != NULL);
 
+   /* setup arrays of eventtypes lbeventtype and ubeventtype */
+   if( propdata->nlbvars > 0 )
+   {
+      /* we watch the LBCHANGED if the variable bound coefficient is positive and 
+       * we watch the UBCHANGED if the variable bound coefficient is negative
+       */
+      
+      assert(propdata->lbeventtypes == NULL);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->lbeventtypes, propdata->nvars) );
+      BMSclearMemoryArray(propdata->lbeventtypes, propdata->nvars);
+      
+      for( v = 0; v < propdata->nlbvars; ++v )
+      {
+         var = propdata->lbvars[v];
+
+         vbvars  = SCIPvarGetVlbVars(var);
+         coefs   = SCIPvarGetVlbCoefs(var);
+         nvbvars = SCIPvarGetNVlbs(var);
+
+         /* loop over all variable lower bounds; a variable lower bound has the form: x >= b*y + d*/
+         for( n = 0; n < nvbvars; ++n )
+         {
+            assert(SCIPhashmapExists(propdata->varHashmap, vbvars[n]));
+            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvars[n]);
+            assert(idx < propdata->nvars);
+            
+            if( coefs[n] > 0.0 )
+            {
+               /* change in lower bound of y may lead to a propagation for x */
+               propdata->lbeventtypes[idx] = propdata->lbeventtypes[idx] | SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED;
+            }
+            else
+            {
+               /* change in upper bound of y may lead to a propagation for x */
+               propdata->lbeventtypes[idx] = propdata->lbeventtypes[idx] | SCIP_EVENTTYPE_UBCHANGED | SCIP_EVENTTYPE_VARFIXED;
+            }
+         }
+      }
+   }
+   
+   if( propdata->nubvars > 0 )
+   {
+      /* we watch the UBCHANGED if the variable bound coefficient is positive and
+       * we watch the LBCHANGED if the variable bound coefficient is negative
+       */
+
+      assert(propdata->ubeventtypes == NULL);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->ubeventtypes, propdata->nvars) );
+      BMSclearMemoryArray(propdata->ubeventtypes, propdata->nvars);
+
+      for( v = 0; v < propdata->nubvars; ++v )
+      {
+         var = propdata->ubvars[v];
+
+         vbvars  = SCIPvarGetVubVars(var);
+         coefs   = SCIPvarGetVubCoefs(var);
+         nvbvars = SCIPvarGetNVubs(var);
+
+         /* loop over all variable upper bounds; a variable upper bound has the form: x <= b*y + d*/
+         for( n = 0; n < nvbvars; ++n )
+         {
+            assert(SCIPhashmapExists(propdata->varHashmap, vbvars[n]));
+            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvars[n]);
+            assert(idx < propdata->nvars);
+            
+            if( coefs[n] > 0.0 )
+            {
+               /* change in upper bound of y may lead to a propagation for x */
+               propdata->ubeventtypes[idx] = propdata->ubeventtypes[idx] | SCIP_EVENTTYPE_UBCHANGED | SCIP_EVENTTYPE_VARFIXED;
+            }
+            else
+            {
+               /* change in lower bound of y may lead to a propagation for x */
+               propdata->ubeventtypes[idx] = propdata->ubeventtypes[idx] | SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED;
+            }
+         }
+      }
+   }
+   
+   /* catch variable events according to computed eventtypes */
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
 
-   /**@todo try to be more precisely be selecting the variables events 
-    *
-    * - in case of the lower bound variables we have to watch the LBCHANGED if the variable bound coefficient is
-    *   positive and UBCHANGED if the variable bound coefficient is negative 
-    * - in case of the upper bound variables we have to watch the UBCHANGED if the variable bound coefficient is
-    *   positive and LBCHANGED if the variable bound coefficient is negative 
-    */
-
-   /* catch for eached involved variable nound change events */
    for( v = 0; v < propdata->nvars; ++v )
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, propdata->vars[v], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, 
-            eventhdlr, (SCIP_EVENTDATA*)propdata, NULL) );
+      if( propdata->lbeventtypes != NULL && propdata->lbeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+         SCIP_CALL( SCIPcatchVarEvent(scip, propdata->vars[v], propdata->lbeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->lbpropagated), NULL) );
+
+      if( propdata->ubeventtypes != NULL && propdata->ubeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+         SCIP_CALL( SCIPcatchVarEvent(scip, propdata->vars[v], propdata->ubeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->ubpropagated), NULL) );
    }
-   
+
    return SCIP_OKAY;
 }
+
 
 /** drops events for variables */
 static
@@ -312,20 +396,23 @@ SCIP_RETCODE dropEvents(
 {
    SCIP_EVENTHDLR* eventhdlr;
    int v;
-
+      
    assert(propdata != NULL);
+   assert((propdata->nlbvars == 0) == (propdata->lbeventtypes == NULL));
+   assert((propdata->nubvars == 0) == (propdata->ubeventtypes == NULL));
 
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
 
-   /* drop events on involved variables */
    for( v = 0; v < propdata->nvars; ++v )
    {
-      assert(SCIPvarIsTransformed(propdata->vars[v]));
-      SCIP_CALL( SCIPdropVarEvent(scip, propdata->vars[v], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, 
-            eventhdlr, (SCIP_EVENTDATA*)propdata, -1) );
+      if( propdata->lbeventtypes != NULL && propdata->lbeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+         SCIP_CALL( SCIPdropVarEvent(scip, propdata->vars[v], propdata->lbeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->lbpropagated), -1) );
+
+      if( propdata->ubeventtypes != NULL && propdata->ubeventtypes[v] != SCIP_EVENTTYPE_DISABLED )
+         SCIP_CALL( SCIPdropVarEvent(scip, propdata->vars[v], propdata->ubeventtypes[v], eventhdlr, (SCIP_EVENTDATA*)(&propdata->ubpropagated), -1) );
    }
-   
+  
    return SCIP_OKAY;
 }
 
@@ -411,14 +498,14 @@ SCIP_RETCODE propagateVbounds(
    assert(propdata != NULL);
    
    (*result) = SCIP_DIDNOTRUN;
-
-   if( propdata->propagated )
-      return SCIP_OKAY;
    
+   if( propdata->lbpropagated && propdata->ubpropagated )
+      return SCIP_OKAY;
+
    nchgbds = 0;
    nvars = propdata->nlbvars;
    
-   if( nvars > 0 )
+   if( nvars > 0 && !propdata->lbpropagated )
    {
       vars = propdata->lbvars;
       assert(vars != NULL);
@@ -463,10 +550,10 @@ SCIP_RETCODE propagateVbounds(
             if( SCIPisPositive(scip, coef) )
             {
                /* if b > 0 => x >= b*lb(y) + d */ 
-               if( SCIPisGT(scip, coef*SCIPvarGetLbLocal(vbvar) + constant, newbound) )
+               if( SCIPisGT(scip, coef * SCIPvarGetLbLocal(vbvar) + constant, newbound) )
                {
                   assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef*SCIPvarGetLbLocal(vbvar) + constant;
+                  newbound = coef * SCIPvarGetLbLocal(vbvar) + constant;
                
                   SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
                      newbound, SCIPvarGetName(vbvar), n);
@@ -480,10 +567,10 @@ SCIP_RETCODE propagateVbounds(
             else
             {
                /* if b < 0 => x >= b*ub(y) + d */ 
-               if( SCIPisGT(scip, coef*SCIPvarGetUbLocal(vbvar) + constant, newbound) )
+               if( SCIPisGT(scip, coef * SCIPvarGetUbLocal(vbvar) + constant, newbound) )
                {
                   assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef*SCIPvarGetUbLocal(vbvar) + constant;
+                  newbound = coef * SCIPvarGetUbLocal(vbvar) + constant;
 
                   SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to upper bound of variable <%s> (n=%d)\n",
                      newbound, SCIPvarGetName(vbvar), n);
@@ -519,7 +606,7 @@ SCIP_RETCODE propagateVbounds(
             
             /* analyze the conflict */
             SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-      
+
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;      
          } 
@@ -532,11 +619,14 @@ SCIP_RETCODE propagateVbounds(
             nchgbds++;
          }
       }
+      
+      /* mark lower bound variable array as propagated */
+      propdata->lbpropagated = TRUE;
    }
    
    nvars = propdata->nubvars;
 
-   if( nvars > 0 )
+   if( nvars > 0 && !propdata->ubpropagated)
    {
       vars = propdata->ubvars;
       assert(vars != NULL);
@@ -650,11 +740,11 @@ SCIP_RETCODE propagateVbounds(
             nchgbds++;
          }
       }
+      
+      /* mark upper bound variable array as propagated */
+      propdata->ubpropagated = TRUE;
    }   
 
-   /* mark lower and upper bound variable array as propagated */
-   propdata->propagated = TRUE;
-   
    SCIPdebugMessage("tightened %d variable bounds\n", nchgbds);
 
    if( nchgbds > 0 )
@@ -751,7 +841,8 @@ SCIP_DECL_PROPINITSOL(propInitsolVbounds)
    /* catch variable events */
    SCIP_CALL( catchEvents(scip, propdata) );
 
-   propdata->propagated = FALSE;
+   propdata->lbpropagated = FALSE;
+   propdata->ubpropagated = FALSE;
    propdata->sorted = TRUE;
 
    return SCIP_OKAY;
@@ -780,7 +871,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    /* free hash map */
    SCIPhashmapFree(&propdata->varHashmap);
 
-   /* free varbounds array */
+   /* free array */
+   SCIPfreeMemoryArrayNull(scip, &propdata->lbeventtypes);
+   SCIPfreeMemoryArrayNull(scip, &propdata->ubeventtypes);
    SCIPfreeMemoryArrayNull(scip, &propdata->lbvars);
    SCIPfreeMemoryArrayNull(scip, &propdata->ubvars);
    SCIPfreeMemoryArrayNull(scip, &propdata->vars);
@@ -832,17 +925,15 @@ SCIP_DECL_PROPRESPROP(propRespropVbounds)
 static
 SCIP_DECL_EVENTEXEC(eventExecVbound)
 {  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
+   SCIP_Bool* propagated;
 
-   propdata = (SCIP_PROPDATA*)eventdata;
-   assert(propdata != NULL);
+   propagated = (SCIP_Bool*)eventdata;
+   assert(propagated != NULL);
 
-   propdata->propagated = FALSE;
+   (*propagated) = FALSE;
 
    return SCIP_OKAY;
 }
-
-
 
 /*
  * propagator specific interface methods
@@ -860,10 +951,13 @@ SCIP_RETCODE SCIPincludePropVbounds(
    propdata->vars = NULL;
    propdata->lbvars = NULL;
    propdata->ubvars = NULL;
+   propdata->lbeventtypes = NULL;
+   propdata->ubeventtypes = NULL;
    propdata->nvars = 0;
    propdata->nlbvars = 0;
    propdata->nubvars = 0;
-   propdata->propagated = FALSE;
+   propdata->lbpropagated = FALSE;
+   propdata->ubpropagated = FALSE;
    propdata->sorted = FALSE;
 
    /* include propagator */
@@ -875,9 +969,8 @@ SCIP_RETCODE SCIPincludePropVbounds(
 
    /* include event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecVbound, NULL) );
-
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecVbound, NULL) );
+   
    return SCIP_OKAY;
 }
 
@@ -926,7 +1019,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
    
    hashsize = SCIPcalcHashtableSize(5 * nvars);
 
-   /* create hash table for variables whcih are (still) connected */
+   /* create hash table for variables which are (still) connected */
    SCIP_CALL( SCIPhashtableCreate(&connected, SCIPblkmem(scip), hashsize, SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
    
    /* detect isolated variables; mark all variables which have at least one entering or leaving arc as connected */
@@ -1006,7 +1099,7 @@ SCIP_Bool SCIPisPropagatedVbounds(
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   return propdata->propagated;
+   return propdata->lbpropagated && propdata->ubpropagated;
 }
 
 /** performs propagation of variables lower and upper bounds */

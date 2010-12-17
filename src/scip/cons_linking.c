@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.19 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.20 2010/12/17 12:01:23 bzfheinz Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -2191,7 +2191,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      if( !SCIPconsIsEnabled(cons) )
+      if( !SCIPconsIsEnabled(cons) )//|| consdata->nbinvars <= 1 )
          continue;
       
       /* in case there is only at most one binary variables, the constraints should already be disabled */
@@ -2673,8 +2673,32 @@ SCIP_DECL_CONSLOCK(consLockLinking)
 
 
 /** constraint enabling notification method of constraint handler */
-#define consEnableLinking NULL
+static
+SCIP_DECL_CONSENABLE(consEnableLinking)
+{
+#if 0
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
+   if( consdata->nbinvars <= 1 )
+   {
+      SCIP_CALL( SCIPdisableCons(scip, cons) );
+      assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
+   }
+   else if( conshdlrdata->linearize )
+   {
+      SCIP_CALL( consdataLinearize(scip, cons, consdata) );
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+   } 
+#endif
+   return SCIP_OKAY;
+}
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableLinking NULL
@@ -2904,8 +2928,8 @@ SCIP_RETCODE SCIPcreateConsLinking(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   SCIPdebugMessage("create linking constraint for variable <%s> (SCIP stage %d)\n", 
-      SCIPvarGetName(intvar), SCIPgetStage(scip));
+   SCIPdebugMessage("create linking constraint for variable <%s> with %d binary variable (SCIP stage %d)\n", 
+      SCIPvarGetName(intvar), nbinvars, SCIPgetStage(scip));
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2919,11 +2943,6 @@ SCIP_RETCODE SCIPcreateConsLinking(
    
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-
-   if( SCIPisTransformed(scip) && consdata->nbinvars <= 1 )
-   {
-      SCIP_CALL( SCIPdisableCons(scip, *cons) );
-   }
    
    /* insert linking constraint into the hash map */
    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varmap, getHashmapKey(intvar), *cons) );

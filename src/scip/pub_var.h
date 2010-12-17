@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.83 2010/11/01 04:04:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.84 2010/12/17 12:01:23 bzfheinz Exp $"
 
 /**@file   pub_var.h
  * @ingroup PUBLICMETHODS
@@ -724,6 +724,30 @@ SCIP_Real SCIPvarGetLPSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets the lower bound change info array */
+extern
+SCIP_BDCHGINFO** SCIPvarGetBdchgInfosLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets the number of lower bound change info array */
+extern
+int SCIPvarGetNBdchgInfosLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+ 
+/** gets the upper bound change info array */
+extern
+SCIP_BDCHGINFO** SCIPvarGetBdchgInfosUb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets the number upper bound change info array */
+extern
+int SCIPvarGetNBdchgInfosUb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -804,6 +828,10 @@ SCIP_Real SCIPvarGetLPSol(
 #define SCIPvarGetNCliques(var, fix)    (SCIPcliquelistGetNCliques((var)->cliquelist, fix))
 #define SCIPvarGetCliques(var, fix)     (SCIPcliquelistGetCliques((var)->cliquelist, fix))
 #define SCIPvarGetLPSol(var)            ((var)->varstatus == SCIP_VARSTATUS_COLUMN ? SCIPcolGetPrimsol((var)->data.col) : SCIPvarGetLPSol_rec(var))
+#define SCIPvarGetBdchgInfosLb(var)       (&(var)->lbchginfos)
+#define SCIPvarGetNBdchgInfosLb(var)      ((var)->nlbchginfos)
+#define SCIPvarGetBdchgInfosUb(var)       (&(var)->ubchginfos)
+#define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #endif
 
 /** gets best local bound of variable with respect to the objective function */

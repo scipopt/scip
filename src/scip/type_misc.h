@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.20 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.21 2010/12/17 12:01:22 bzfheinz Exp $"
 
 /**@file   type_misc.h
  * @ingroup TYPEDEFINITIONS
@@ -40,6 +40,7 @@ typedef struct SCIP_RealArray SCIP_REALARRAY;     /**< dynamic array for storing
 typedef struct SCIP_IntArray SCIP_INTARRAY;       /**< dynamic array for storing int values */
 typedef struct SCIP_BoolArray SCIP_BOOLARRAY;     /**< dynamic array for storing SCIP_Bool values */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing pointers */
+typedef struct SCIP_Stairmap SCIP_STAIRMAP;       /**< stair map */
 
 
 

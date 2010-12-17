@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.24 2010/11/30 14:50:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.25 2010/12/17 12:01:23 bzfheinz Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -1576,22 +1576,6 @@ SCIP_RETCODE unlockRounding(
    return SCIP_OKAY;
 }
 
-#ifdef PROFILE_DEBUG
-/** output of the given profile */
-static
-void SCIPprofilePrintOut(
-   CUMULATIVEPROFILE*    profile             /**< profile to output */
-   )
-{
-   int t;
-   	
-   for (t=0; t <profile->ntimepoints; t++)
-   {
-      SCIPdebugMessage("tp[%d]: %d -> fc=%d\n", t, profile->timepoints[t], profile-> freecapacities[t]); 
-   }
-}
-#endif
-
 /** releases LP rows of constraint data and frees rows array */
 static
 SCIP_RETCODE consdataFreeRows(
@@ -2343,7 +2327,7 @@ SCIP_RETCODE updateBounds(
    int*                  demands,            /**< array of demands */
    int                   capacity,           /**< cumulative capacity */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
+   SCIP_STAIRMAP*        profile,            /**< profile to use */
    SCIP_VAR*             var,                /**< the variable the bounds should be updated */
    int                   duration,           /**< the duration of the given variable */
    int                   demand,             /**< the demand of the given variable */
@@ -2367,7 +2351,7 @@ SCIP_RETCODE updateBounds(
    assert(lb <= ub); 
 
    /* try to improve the lower bound */
-   newlb = SCIPprofileGetEarliestFeasibleStart(profile, lb, ub, duration, demand, &infeasible);
+   newlb = SCIPstairmapGetEarliestFeasibleStart(profile, lb, ub, duration, demand, &infeasible);
    assert(newlb <= ub || infeasible);
 
    if( infeasible )
@@ -2398,7 +2382,7 @@ SCIP_RETCODE updateBounds(
    lb = MAX(lb,newlb);
 
    /* get latest start due to cores */
-   newub = SCIPprofileGetLatestFeasibleStart(profile, lb, ub, duration, demand, &infeasible);
+   newub = SCIPstairmapGetLatestFeasibleStart(profile, lb, ub, duration, demand, &infeasible);
    assert(newub <= ub);
    
    /* check whether job fits or not */
@@ -2447,13 +2431,15 @@ SCIP_RETCODE propagateCores(
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
-   CUMULATIVEPROFILE* profile;
+   SCIP_STAIRMAP* profile;
    SCIP_VAR* var;
    SCIP_Bool* cores;
    SCIP_Bool* fixeds;
 
    SCIP_Bool infeasible;
    
+   int left;
+   int right;
    int demand;
    int duration;
    int ncores;
@@ -2474,20 +2460,30 @@ SCIP_RETCODE propagateCores(
    infeasible = FALSE;
    ncores = 0;
 
-   SCIP_CALL( SCIPprofileCreate(scip, &profile, capacity, 4*nvars) );
+   SCIP_CALL( SCIPstairmapCreate(&profile, capacity, 4*nvars) );
    
    /* insert all cores */
    for( j = 0; j < nvars; ++j )
    {
       var = vars[j];
       duration = durations[j];
+      left =  convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      right =  convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
       demand =  demands[j];
       assert(demand > 0);
 
       assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
       assert(SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)));
 
-      SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
+      if( left < right )
+      {
+         SCIPstairmapInsertCore(profile, left, right, demand, &infeasible);
+         cores[j] = TRUE;
+
+         /* check if start time is fixed */
+         if( left + duration == right )
+            fixeds[j] = TRUE;
+      }
 
       if( infeasible )
       {
@@ -2495,8 +2491,8 @@ SCIP_RETCODE propagateCores(
          
          /* initialize the contflic analyze */
          SCIP_CALL( initializeConflictAnalysisCoreTimes(scip, nvars, vars, durations, demands, capacity,
-               var, convertBoundToInt(scip, SCIPvarGetUbLocal(var)), 
-               convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration, duration, demand,  SCIP_BOUNDTYPE_LOWER) );
+               var, left, right, duration, demand,  SCIP_BOUNDTYPE_LOWER) );
+
          *initialized = TRUE;
          *cutoff = TRUE;
          break;
@@ -2522,7 +2518,11 @@ SCIP_RETCODE propagateCores(
          
          if( cores[j] )
          {
-            SCIPprofileDeleteCore(scip, profile, var, duration, demand, NULL);
+            left = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+            right = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
+            
+            assert(left < right);
+            SCIPstairmapDeleteCore(profile, left, right, demand);
          }
          
          /* try to improve bounds */
@@ -2532,18 +2532,29 @@ SCIP_RETCODE propagateCores(
          if( *cutoff )
             break;
          	      
+         /* get updated bounds */
+         left = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+         right = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
+         
          /* after updating we might have a new core */
-         if( cores[j] || SCIPvarGetLbLocal(var) + duration > convertBoundToInt(scip, SCIPvarGetUbLocal(var)) )
+         if( cores[j] || left < right )
          {
-            SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
-            assert(cores[j]);
-            assert(!infeasible);
+            if( left < right )
+            {
+               SCIPstairmapInsertCore(profile, left, right, demand, &infeasible);
+               cores[j] = TRUE;
+               assert(!infeasible);
+               
+               /* check if start time is fixed */
+               if( left + duration == right )
+                  fixeds[j] = TRUE;
+            }
          }
       }
    }
    
    /* free allocated memory */
-   SCIPprofileFree(scip, &profile);
+   SCIPstairmapFree(&profile);
    SCIPfreeBufferArray(scip, &fixeds);
    SCIPfreeBufferArray(scip, &cores);
    
@@ -2554,7 +2565,7 @@ SCIP_RETCODE propagateCores(
 static
 SCIP_RETCODE checkForHoles(
    SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
+   SCIP_STAIRMAP*        profile,            /**< profile to use */
    SCIP_VAR*             var,                /**< the variable whose binary variables should be updated */
    int                   duration,           /**< the duration of the given variable */
    int                   demand,             /**< the demand of the given variable */
@@ -2599,24 +2610,27 @@ SCIP_RETCODE checkForHoles(
    /* check each point in time, whether job can be executed! */
    for( t = lb + 1; t < ub; ++t )
    {
-      if( !SCIPprofileIsFeasibleStart(profile, t, duration, demand, &pos) )
+      if( !SCIPstairmapIsFeasibleStart(profile, t, duration, demand, &pos) )
       {
          INFERINFO inferinfo;
-         
+         int timepoint;
+
          offset = SCIPgetOffsetLinking(scip, SCIPgetConsLinking(scip, var));
          assert(binvars[t-offset] != NULL);
          
-         inferinfo = getInferInfo(PROPRULE_2_CORETIMEHOLES, t-offset, profile->timepoints[pos]);
+         timepoint = SCIPstairmapGetTimepoint(profile, pos);
+         
+         inferinfo = getInferInfo(PROPRULE_2_CORETIMEHOLES, t-offset, timepoint);
          /* apply bound change */
          SCIP_CALL( SCIPinferVarUbCons(scip, binvars[t-offset], 0.0, cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
 
          if( infeasible )
          {
-            SCIPdebugMessage("infeasibility detected during fixing to zero of var <%s> at time %d not scheduable at %d\n", SCIPvarGetName(binvars[t-offset]), t, profile->timepoints[pos]);
+            SCIPdebugMessage("infeasibility detected during fixing to zero of var <%s> at time %d not scheduable at %d\n", SCIPvarGetName(binvars[t-offset]), t, timepoint);
             
             /* initialize conflict analysis */
             SCIP_CALL( initializeConflictAnalysisCoreTimesBinvars(scip, nvars, vars, durations, demands, capacity, 
-                  binvars[t-offset], var, profile->timepoints[pos], demand) );
+                  binvars[t-offset], var, timepoint, demand) );
             *initialized = TRUE;
             *cutoff = TRUE;
             return SCIP_OKAY;
@@ -2646,12 +2660,14 @@ SCIP_RETCODE propagateCoresForHoles(
    )
 {
    SCIP_VAR* var;
-   CUMULATIVEPROFILE* profile;
+   SCIP_STAIRMAP* profile;
    SCIP_Bool* cores;
    SCIP_Bool* fixeds;
 
    SCIP_Bool infeasible;
    
+   int left;
+   int right;
    int demand;
    int duration;
    int ncores;
@@ -2669,24 +2685,32 @@ SCIP_RETCODE propagateCoresForHoles(
    infeasible = FALSE;
    ncores = 0;
 
-   SCIP_CALL( SCIPprofileCreate(scip, &profile, capacity, 4*nvars) );
+   SCIP_CALL( SCIPstairmapCreate(&profile, capacity, 4*nvars) );
    
    /* insert all cores */
    for( j = 0; j < nvars; ++j )
    {
       var = vars[j];
       duration = durations[j];
+      left = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+      right = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
       demand =  demands[j];
       assert(demand > 0);
 
       assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
       assert(SCIPisFeasIntegral(scip, SCIPvarGetUbLocal(var)));
 
-      SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
-      assert(!infeasible);
-      
-      if( cores[j] ) 
+      if( left < right )
+      {
+         SCIPstairmapInsertCore(profile, left, right, demand, &infeasible);
+         cores[j] = TRUE;
+         assert(!infeasible);
          ++ncores;
+
+         /* check if start time is fixed */
+         if( left + duration == right )
+            fixeds[j] = TRUE;
+      }
    }
 
    if( !(*cutoff) && ncores > 0 )
@@ -2705,7 +2729,11 @@ SCIP_RETCODE propagateCoresForHoles(
          
          if( cores[j] )
          {
-            SCIPprofileDeleteCore(scip, profile, var, duration, demand, NULL);
+            left = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+            right = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
+            assert(left < right);
+            
+            SCIPstairmapDeleteCore(profile, left, right, demand);
          }
          
          /* try to improve bounds */
@@ -2714,19 +2742,27 @@ SCIP_RETCODE propagateCoresForHoles(
          
          if( *cutoff )
             break;
-         	      
+         
+         /* get updated bounds */
+         left = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+         right = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
+	      
          /* after updating we might have a new core */
-         if( cores[j] )
+         if( cores[j] || left < right )
          {
-            SCIPprofileInsertCore(scip, profile, var, duration, demand, &cores[j], &fixeds[j], &infeasible);
-            assert(cores[j]);
+            SCIPstairmapInsertCore(profile, left, right, demand, &infeasible);
+            cores[j] = TRUE;
             assert(!infeasible); /* cannot be infeasible; otherwise cutoff in checkForHoles() */
+            
+            /* check if start time is fixed */
+            if( left + duration == right )
+               fixeds[j] = TRUE;
          }
       }
    }
 
    /* free allocated memory */
-   SCIPprofileFree(scip, &profile);
+   SCIPstairmapFree(&profile);
    SCIPfreeBufferArray(scip, &fixeds);
    SCIPfreeBufferArray(scip, &cores);
 	
@@ -6775,489 +6811,3 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    return SCIP_OKAY;
 }
 
-/** create a new cumulative profile for the given capacity */
-SCIP_RETCODE SCIPprofileCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE**   profile,            /**< pointer to store the create profile */
-   int                   capacity,           /**< Capacity for this profile */
-   int                   maxtimepoints       /**< maximium number time points */
-   )
-{
-   assert(scip != NULL);
-   assert(profile != NULL);
-   assert(capacity > 0);
-   assert(maxtimepoints > 0);
-
-   /* Initialize memory */
-   SCIP_CALL( SCIPallocMemory(scip, profile) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*profile)->timepoints, maxtimepoints) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*profile)->freecapacities, maxtimepoints) );
-
-   /* Set up cumulative profile for use */
-   (*profile)->ntimepoints = 2;
-   (*profile)->timepoints[0] = 0;
-   (*profile)->timepoints[1] = INT_MAX;
-   (*profile)->freecapacities[0] = capacity;
-   (*profile)->freecapacities[1] = 0;
-   (*profile)->arraysize = maxtimepoints;
-
-   return SCIP_OKAY;
-}
-
-/** frees given profile */
-void SCIPprofileFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE**   profile             /**< pointer to the profile */
-   )
-{
-   assert(scip != NULL);
-   assert(profile != NULL);
-
-   /* free memory */
-   SCIPfreeMemoryArray(scip, &(*profile)->timepoints);
-   SCIPfreeMemoryArray(scip, &(*profile)->freecapacities);
-   SCIPfreeMemory(scip, profile);
-}
-
-/** resizes the cumulative profile array */
-SCIP_RETCODE SCIPprofileResize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< cumulative profile to resize */
-   int                   newminsize          /**< minimum size to ensure */
-   )
-{
-   assert(scip != NULL);
-   assert(profile != NULL);
-   assert(newminsize >= 0);
-   assert(profile->timepoints != NULL);
-   assert(profile->freecapacities != NULL);
-   
-   if( profile->ntimepoints >= newminsize )
-      return SCIP_OKAY;
-
-   /* Grow arrays of times and free capacity */
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &profile->timepoints, newminsize) );
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &profile->freecapacities, newminsize) );
-   profile->arraysize = newminsize;
-
-   return SCIP_OKAY;
-}
-
-/** from the given job, the core time is computed. If core is non-empty the cumulative profile will be updated otherwise
- *  nothing happens
- */
-void SCIPprofileInsertCore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core,               /**< pointer to store if the corresponds job has a core */       
-   SCIP_Bool*	         fixed,              /**< poiner to store if the job is fixed due to its bounds */ 
-   SCIP_Bool*            infeasible          /**< pointer to store if the job does not fit due to capacity */
-   )
-{
-   int begin;
-   int end; 
-   int lb;
-   int ub;
-	
-   assert(core != NULL);
-   assert(fixed != NULL);
-   assert(infeasible != NULL);
-
-   (*infeasible) = FALSE;
-   (*fixed) = FALSE;
-   (*core) = FALSE;
-   
-   lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-   ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
-	
-   if( ub - lb == 0 )
-      (*fixed) = TRUE;
-
-   begin = ub;
-   end = lb + duration;
-   
-   /* check if a core exists */
-   if( begin < end )
-   {
-      /* job has a nonempty core and will be inserted */
-      (*core) = TRUE;
-
-      /* insert core into the profile */
-#ifdef PROFILE_DEBUG
-      SCIPdebugMessage("before inserting: \n");
-      SCIPprofilePrintOut(profile);
-      SCIPdebugMessage("insert core from var <%s>[%d,%d]: [%d,%d] [%d]\n", SCIPvarGetName(var), lb, ub, begin, end, demand);
-#endif
-
-      SCIPprofileUpdate(profile, begin, end, demand, infeasible);
-
-#ifdef PROFILE_DEBUG
-      {
-         int i;
-         SCIPdebugMessage("after inserting: %u\n", *infeasible);
-         SCIPprofilePrintOut(profile);
-         
-         for( i =0; i < profile->ntimepoints-1; ++i )
-         {
-            assert(profile->timepoints[i] < profile->timepoints[i+1]);
-         }
-      }
-#endif
-   }
-}
-
-/** subtracts the demand from the profile during core time of the job */
-void SCIPprofileDeleteCore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   SCIP_VAR*             var,                /**< integer variable which corresponds to the starting point of the job */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            core                /**< pointer to store if the corresponds job has a core, or NULL */       
-   )
-{
-   int begin;
-   int end; 
-   SCIP_Bool infeasible;
-
-   begin = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
-   end = convertBoundToInt(scip, SCIPvarGetLbLocal(var)) + duration;
-   
-   if( begin >= end )
-   {
-      if(core != NULL)
-         *core = FALSE;
-
-      return;
-   }
-
-   if( core != NULL )
-      *core = TRUE;
-	
-#ifndef NDEBUG
-   {
-      /* check if the begin and end time points of the core correspond to a time point in the profile; this should be
-       * the case since we added the core before to the profile */
-      int pos;
-      assert(SCIPprofileFindLowerBound(profile, begin, &pos));
-      assert(SCIPprofileFindLowerBound(profile, end, &pos));
-   }
-#endif
-
-   /* remove the core of the job from the current profile */
-#ifdef PROFILE_DEBUG
-   SCIPdebugMessage("before deleting:\n");
-   SCIPprofilePrintOut(profile);
-
-   SCIPdebugMessage("delete core from var <%s>: [%d,%d] [%d]\n", 
-      SCIPvarGetName(var), begin, end, demand);
-#endif
-
-   SCIPprofileUpdate(profile, begin, end, -demand, &infeasible);
-
-#ifdef PROFILE_DEBUG
-   SCIPdebugMessage("after deleting: %u\n", infeasible);
-   SCIPprofilePrintOut(profile);
-#endif
-   assert(!infeasible);
-}
-
-
-/** output of the given profile */
-void SCIPprofilePrint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUMULATIVEPROFILE*    profile,            /**< profile to output */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   int t;
-   
-   for( t = 0; t < profile->ntimepoints; ++t )
-   {
-      SCIPinfoMessage(scip, file, "i: %d, tp: %d, fc: %d ;", t, profile->timepoints[t], profile-> freecapacities[t]); 
-   }
-   
-   SCIPinfoMessage(scip, file,"\n");
-}
-
-
-/** return if the given time point exists in the profile and stores the position of the given time point if it exists;
- *  otherwise the position of the next smaller existing time point */
-SCIP_Bool SCIPprofileFindLowerBound(
-   CUMULATIVEPROFILE*    profile,              /**< profile to search in */
-   int                   timepoint,            /**< time point to search for */
-   int*                  pos                   /**< pointer to store the position */
-   )
-{
-   assert(profile != NULL);
-   assert(timepoint >= 0);
-   assert(profile->ntimepoints > 0);
-   assert(profile->timepoints[0] == 0);
-
-   /* find the position of timepoint in the timepoints array via binary search */
-   if( SCIPsortedvecFindInt(profile->timepoints, timepoint, profile->ntimepoints, pos) )
-      return TRUE;
- 
-   assert(*pos > 0);
-   (*pos)--;
-   
-   return FALSE;
-}
-
-/** inserts the given time point into the profile if it this time point does not exists yet; returns its position in the
- *  time point array */
-int SCIPprofileInsertTimepoint(
-   CUMULATIVEPROFILE*    profile,            /**< profile to insert the time point */
-   int                   timepoint           /**< time point to insert */
-   )
-{
-   int pos;
-#ifndef NDEBUG
-   int i;   
-#endif
-
-   assert(profile != NULL);
-   assert(timepoint >= 0);
-   assert(profile->arraysize >= profile->ntimepoints);
-
-   if( timepoint == 0 )
-      return 0;
-      
-   /* get the position of the given time point in the profile array if it exists; otherwise the position of the next
-    * smaller existing time point */
-   if( SCIPprofileFindLowerBound(profile, timepoint, &pos) )
-   {
-      /* if the time point exists return the corresponding position */
-      assert(pos >= 0 && pos < profile->ntimepoints);
-      return pos;
-   }
-
-   assert(pos >= 0 && pos < profile->ntimepoints);
-   assert(timepoint >= profile->timepoints[pos]);
-   assert(pos + 1 < profile->arraysize);
-
-   /* insert new time point into the (sorted) profile */
-   SCIPsortedvecInsertIntInt(profile->timepoints, profile->freecapacities, timepoint, profile->freecapacities[pos], 
-      &profile->ntimepoints);
-
-#ifndef NDEBUG
-   /* check if the time points are sorted */
-   for( i = 1; i < profile->ntimepoints; ++i )
-      assert(profile->timepoints[i-1] < profile->timepoints[i]);
-#endif
-   
-   return pos+1;
-}
-
-/** updates the profile due to inserting and removing a new job */
-void SCIPprofileUpdate(
-   CUMULATIVEPROFILE*    profile,            /**< profile to update */
-   int                   starttime,          /**< time point to start */
-   int                   endtime,            /**< time point to end */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer to store if the update is infeasible */
-   )
-{
-   int startpos;
-   int endpos;
-
-   assert(profile != NULL);
-   assert(infeasible != NULL);
-   assert(profile->arraysize >= profile->ntimepoints);
-   assert(starttime >= 0 && endtime >= starttime);
-   
-   (*infeasible) = FALSE;
-   
-   if( starttime == endtime )
-      return;
-
-   /* get position of the starttime in profile */
-   startpos = SCIPprofileInsertTimepoint(profile, starttime);
-   assert(profile->timepoints[startpos] == starttime);
-
-   /* get position of the endtime in profile */
-   endpos = SCIPprofileInsertTimepoint(profile, endtime);
-   assert(profile->timepoints[endpos] == endtime );
-
-   assert(startpos < endpos);
-   assert(profile->arraysize >= profile->ntimepoints);
-
-   /* remove/add the given demand from the profile */
-   for( ; startpos < endpos; ++startpos )
-   {
-      profile->freecapacities[startpos] -= demand;
-
-      if( profile->freecapacities[startpos] < 0 )
-      {
-         *infeasible = TRUE;
-         break;
-      }      
-   }
-}
-
-/** returns TRUE if the job (given by its  demand and duration) can be inserted at the given time point; otherwise FALSE */
-SCIP_Bool SCIPprofileIsFeasibleStart(
-   CUMULATIVEPROFILE*    profile,            /**< Cumulative profile to use */
-   int                   timepoint,          /**< time point to start */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< the demand of the job */
-   int*                  pos                 /**< pointer to store the earliest position where the job does not fit */
-   )
-{
-   int endtime;
-   int startpos;
-   int endpos;
-   int p;
-
-   assert(profile != NULL);
-   assert(timepoint >= 0);
-   assert(demand >= 0);
-   assert(pos != NULL);
-
-   if( duration == 0 )
-      return TRUE;
-   
-   endtime = timepoint + duration; 
-
-   /* check if the activity fits at timepoint */
-   (void)SCIPprofileFindLowerBound(profile, timepoint, &startpos);
-
-   if( !SCIPprofileFindLowerBound(profile, endtime, &endpos) )
-      endpos++;
-   
-   assert(profile->timepoints[startpos] <= timepoint);
-   assert(profile->timepoints[endpos] >= endtime);
-   
-   for( p = startpos; p < endpos; ++p )
-   {
-      if( profile->freecapacities[p] < demand )
-      {
-         (*pos) = p;
-         return FALSE;
-      }
-   }
-   
-   return TRUE;
-}
-
-/** return the earliest possible starting point within the time interval [lb,ub] for a given job (given by its duration
- *  and demand) */
-int SCIPprofileGetEarliestFeasibleStart(
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job can not be scheduled */
-   )
-{
-   int starttime;
-   int pos;
-	
-   assert(profile != NULL);
-   assert(lb >= 0);
-   assert(duration >= 0);
-   assert(demand >= 0);
-   assert(infeasible != NULL);
-   assert(profile->timepoints[profile->ntimepoints-1] > ub);
-
-   if( lb > ub )
-   {
-      *infeasible = TRUE;
-      return lb;
-   }
-   
-   if( duration == 0 || demand == 0 ) 
-   {
-      *infeasible = FALSE;
-      return lb;
-   }
-
-   starttime = lb;
-
-   (void)SCIPprofileFindLowerBound(profile, starttime, &pos);
-   assert(profile->timepoints[pos] <= starttime);
-   
-   (*infeasible) = TRUE;
-	
-   while( (*infeasible) && starttime <= ub )
-   {
-      if( SCIPprofileIsFeasibleStart(profile, starttime, duration, demand, &pos) )
-      {
-         (*infeasible) = FALSE;
-         return starttime;
-      }
-    
-      /* the job did not fit into the profile since at time point "pos" not enough capacity is available; therefore we
-       * can proceed with the next time point  */
-      assert(profile->freecapacities[pos] < demand);
-      pos++;
-      
-      /* check if we exceed the time point array */
-      if( pos >= profile->ntimepoints )
-         break;
-      
-      starttime = profile->timepoints[pos];
-   }
-   
-   assert(*infeasible || starttime <= ub);
-   return starttime;
-}
-
-/** return the latest possible starting point within the time interval [lb,ub] for a given job (given by its duration
- *  and demand) */
-int SCIPprofileGetLatestFeasibleStart(
-   CUMULATIVEPROFILE*    profile,            /**< profile to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
-   int                   duration,           /**< duration of the job */
-   int                   demand,             /**< demand of the job */
-   SCIP_Bool*            infeasible          /**< pointer store if the job can not be scheduled */
-   )
-{
-   int starttime;
-   int pos;
-	
-   assert(profile != NULL);
-   assert(lb >= 0);
-   assert(lb <= ub);
-   assert(duration >= 0);
-   assert(demand >= 0);
-   assert(infeasible != NULL);
-   assert(profile->timepoints[profile->ntimepoints-1] > ub);
-   
-   if( duration == 0 || demand == 0 ) 
-      return ub;
-
-   starttime = ub;   
-   (void)SCIPprofileFindLowerBound(profile, starttime, &pos);
-   assert(profile->timepoints[pos] <= starttime);
-   
-   (*infeasible) = TRUE;
-	
-   while( (*infeasible) && starttime >= lb )
-   {
-      if( SCIPprofileIsFeasibleStart(profile, starttime, duration, demand, &pos) )
-      {
-         (*infeasible) = FALSE;
-         return starttime;
-      }
-    
-      /* the job did not fit into the profile since at time point "pos" not enough capacity is available; 
-       * therefore we can proceed with the next time point  */
-      assert(profile->freecapacities[pos] < demand);
-      
-      /* check if we exceed the time point array */
-      if( pos < 0  )
-         break;
-      
-      starttime = profile->timepoints[pos] - duration;
-   }
-
-   assert(*infeasible || starttime >= lb);
-  
-   return starttime;
-}

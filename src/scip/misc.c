@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.125 2010/11/15 11:10:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.126 2010/12/17 12:01:23 bzfheinz Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3326,6 +3326,442 @@ void SCIPsortDown(
 
 
 /*
+ * Stair map
+ */
+
+/** creates stair map */
+SCIP_RETCODE SCIPstairmapCreate(
+   SCIP_STAIRMAP**       stairmap,           /**< pointer to store the created stair map */
+   int                   upperbound,         /**< upper bound of the stairmap */
+   int                   ntimepoints         /**< minimum size to ensure */
+   )
+{
+   assert(stairmap != NULL);
+   assert(upperbound > 0);
+   assert(ntimepoints > 0);
+
+   SCIP_ALLOC( BMSallocMemory(stairmap) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*stairmap)->timepoints, ntimepoints) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*stairmap)->freecapacities, ntimepoints) );
+
+   /* setup cumulative stairmap for use */
+   (*stairmap)->ntimepoints = 2;
+   (*stairmap)->timepoints[0] = 0;
+   (*stairmap)->timepoints[1] = INT_MAX;
+   (*stairmap)->freecapacities[0] = upperbound;
+   (*stairmap)->freecapacities[1] = 0;
+   (*stairmap)->arraysize = ntimepoints;
+   
+   return SCIP_OKAY;
+}
+
+/** frees given stair map */
+void SCIPstairmapFree(
+   SCIP_STAIRMAP**       stairmap            /**< pointer to the stair map */
+   )
+{
+   assert(stairmap != NULL);
+   assert(*stairmap != NULL);
+   
+   /* free main hash map data structure */
+   BMSfreeMemoryArray(&(*stairmap)->freecapacities);
+   BMSfreeMemoryArray(&(*stairmap)->timepoints);
+   BMSfreeMemory(stairmap);
+}
+
+/** resizes the stair map arrays */
+SCIP_RETCODE SCIPstairmapResize(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to resize */
+   int                   ntimepoints         /**< minimum size to ensure */
+   )
+{
+   assert(stairmap != NULL);
+   assert(ntimepoints >= 0);
+   assert(stairmap->timepoints != NULL);
+   assert(stairmap->freecapacities != NULL);
+   
+   if( stairmap->ntimepoints >= ntimepoints )
+      return SCIP_OKAY;
+
+   /* grow arrays of times and free capacity */
+   SCIP_ALLOC( BMSreallocMemoryArray(&stairmap->timepoints, ntimepoints) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&stairmap->freecapacities, ntimepoints) );
+   stairmap->arraysize = ntimepoints;
+
+   return SCIP_OKAY;
+}
+
+/** output of the given stair map */
+void SCIPstairmapPrint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int t;
+   
+   for( t = 0; t < stairmap->ntimepoints; ++t )
+   {
+      SCIPmessageFPrintInfo(file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]); 
+   }
+   
+   SCIPmessageFPrintInfo(file,"\n");
+}
+
+/** returns if the given time point exists in the stair map and stores the position of the given time point if it
+ *  exists; otherwise the position of the next smaller existing time point is stored
+ */
+static
+SCIP_Bool stairmapFindLeft(
+   SCIP_STAIRMAP*        stairmap,             /**< stair map to search */
+   int                   timepoint,            /**< time point to search for */
+   int*                  pos                   /**< pointer to store the position */
+   )
+{
+   assert(stairmap != NULL);
+   assert(timepoint >= 0);
+   assert(stairmap->ntimepoints > 0);
+   assert(stairmap->timepoints[0] == 0);
+
+   /* find the position of time point in the time points array via binary search */
+   if( SCIPsortedvecFindInt(stairmap->timepoints, timepoint, stairmap->ntimepoints, pos) )
+      return TRUE;
+ 
+   assert(*pos > 0);
+   (*pos)--;
+   
+   return FALSE;
+}
+
+/** inserts the given time point into the stairmap if it this time point does not exists yet; returns its position in the
+ *  time point array 
+ */
+static
+int stairmapInsertTimepoint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to insert the time point */
+   int                   timepoint           /**< time point to insert */
+   )
+{
+   int pos;
+
+   assert(stairmap != NULL);
+   assert(timepoint >= 0);
+   assert(stairmap->arraysize >= stairmap->ntimepoints);
+
+   if( timepoint == 0 )
+      return 0;
+      
+   /* get the position of the given time point in the stair map array if it exists; otherwise the position of the next
+    * smaller existing time point 
+    */
+   if( stairmapFindLeft(stairmap, timepoint, &pos) )
+   {
+      /* if the time point exists return the corresponding position */
+      assert(pos >= 0 && pos < stairmap->ntimepoints);
+      return pos;
+   }
+
+   assert(pos >= 0 && pos < stairmap->ntimepoints);
+   assert(timepoint >= stairmap->timepoints[pos]);
+   assert(pos + 1 < stairmap->arraysize);
+
+   /* insert new time point into the (sorted) stair map */
+   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos], 
+      &stairmap->ntimepoints);
+   
+#ifndef NDEBUG
+   /* check if the time points are sorted */
+   {
+      int i;   
+      for( i = 1; i < stairmap->ntimepoints; ++i )
+         assert(stairmap->timepoints[i-1] < stairmap->timepoints[i]);
+   }
+#endif
+   
+   return pos+1;
+}
+
+/** updates the stair map due to inserting of a core */
+static
+void stairmapUpdate(
+   SCIP_STAIRMAP*        stairmap,           /**< stairmap to update */
+   int                   left,               /**< left side of core interval */
+   int                   right,              /**< right side of core interval */
+   int                   height,             /**< height of the core */
+   SCIP_Bool*            infeasible          /**< pointer to store if the update is infeasible */
+   )
+{
+   int startpos;
+   int endpos;
+   int i;
+
+   assert(stairmap != NULL);
+   assert(stairmap->arraysize >= stairmap->ntimepoints);
+   assert(left >= 0);
+   assert(left < right);
+   assert(infeasible != NULL);
+   
+   (*infeasible) = FALSE;
+   
+   /* get position of the starttime in stairmap */
+   startpos = stairmapInsertTimepoint(stairmap, left);
+   assert(stairmap->timepoints[startpos] == left);
+
+   /* get position of the endtime in stairmap */
+   endpos = stairmapInsertTimepoint(stairmap, right);
+   assert(stairmap->timepoints[endpos] == right);
+
+   assert(startpos < endpos);
+   assert(stairmap->arraysize >= stairmap->ntimepoints);
+
+   /* remove/add the given height from the stair map */
+   for( i = startpos; i < endpos; ++i )
+   {
+      stairmap->freecapacities[i] -= height;
+
+      if( stairmap->freecapacities[i] < 0 )
+      {
+         *infeasible = TRUE;
+
+         /* remove infeasible core */
+         for( ; i >= startpos; --i )
+            stairmap->freecapacities[i] += height;
+         
+         break;
+      }      
+   }
+}
+
+/** insert a core into stair map; if core is non-empty the stair map will be updated otherwise nothing happens */
+void SCIPstairmapInsertCore(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   left,               /**< left side of the core  */
+   int                   right,              /**< right side of the core */
+   int                   height,             /**< height of the core */
+   SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
+   )
+{
+   assert(stairmap != NULL);
+   assert(left < right);
+   assert(infeasible != NULL);
+   
+   (*infeasible) = FALSE;
+   
+   /* insert core into the stair map */
+   SCIPdebugMessage("insert core [%d,%d] with height %d\n", left, right, height);
+   
+   /* try to insert core into the stair map */
+   stairmapUpdate(stairmap, left, right, height, infeasible);
+}
+
+/** subtracts the height from the stair map during core time */
+void SCIPstairmapDeleteCore(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   left,               /**< left side of the core  */
+   int                   right,              /**< right side of the core */
+   int                   height              /**< height of the core */
+   )
+{
+   SCIP_Bool infeasible;
+   
+   assert(left < right);
+#ifndef NDEBUG
+      {
+         /* check if the begin and end time points of the core correspond to a time point in the stairmap; this should be
+          * the case since we added the core before to the stair map 
+          */
+         int pos;
+         assert(stairmapFindLeft(stairmap, left, &pos));
+         assert(stairmapFindLeft(stairmap, right, &pos));
+      }
+#endif
+      
+      /* remove the core from the current stair map */
+      SCIPdebugMessage("delete core [%d,%d] with height %d\n", left, right, height);
+      
+      stairmapUpdate(stairmap, left, right, -height, &infeasible);
+      assert(!infeasible);
+}
+   
+/** returns the time point at the given position */   
+int SCIPstairmapGetTimepoint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   pos                 /**< position */
+   )
+{
+   assert(stairmap != NULL);
+   assert(pos < stairmap->ntimepoints);
+
+   return stairmap->timepoints[pos];
+}
+
+/** returns TRUE if the core  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
+SCIP_Bool SCIPstairmapIsFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   timepoint,          /**< time point to start */
+   int                   duration,           /**< duration of the core */
+   int                   height,             /**< height of the core */
+   int*                  pos                 /**< pointer to store the earliest position where the core does not fit */
+   )
+{
+   int endtime;
+   int startpos;
+   int endpos;
+   int p;
+
+   assert(stairmap != NULL);
+   assert(timepoint >= 0);
+   assert(height >= 0);
+   assert(pos != NULL);
+
+   if( duration == 0 )
+      return TRUE;
+   
+   endtime = timepoint + duration; 
+
+   /* check if the activity fits at timepoint */
+   (void)stairmapFindLeft(stairmap, timepoint, &startpos);
+
+   if( !stairmapFindLeft(stairmap, endtime, &endpos) )
+      endpos++;
+   
+   assert(stairmap->timepoints[startpos] <= timepoint);
+   assert(stairmap->timepoints[endpos] >= endtime);
+   
+   for( p = startpos; p < endpos; ++p )
+   {
+      if( stairmap->freecapacities[p] < height )
+      {
+         (*pos) = p;
+         return FALSE;
+      }
+   }
+   
+   return TRUE;
+}
+
+/** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
+ *  and duration)
+ */
+int SCIPstairmapGetEarliestFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   lb,                 /**< earliest starting time of the given core */
+   int                   ub,                 /**< latest starting time of the given core */
+   int                   duration,           /**< duration of the core */
+   int                   height,             /**< height of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
+   )
+{
+   int starttime;
+   int pos;
+   
+   assert(stairmap != NULL);
+   assert(lb >= 0);
+   assert(duration >= 0);
+   assert(height >= 0);
+   assert(infeasible != NULL);
+   assert(stairmap->timepoints[stairmap->ntimepoints-1] > ub);
+
+   if( lb > ub )
+   {
+      *infeasible = TRUE;
+      return lb;
+   }
+   
+   if( duration == 0 || height == 0 ) 
+   {
+      *infeasible = FALSE;
+      return lb;
+   }
+
+   starttime = lb;
+
+   (void)stairmapFindLeft(stairmap, starttime, &pos);
+   assert(stairmap->timepoints[pos] <= starttime);
+   
+   (*infeasible) = TRUE;
+	
+   while( (*infeasible) && starttime <= ub )
+   {
+      if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
+      {
+         (*infeasible) = FALSE;
+         return starttime;
+      }
+    
+      /* the core did not fit into the stair map since at time point "pos" not enough capacity is available; therefore we
+       * can proceed with the next time point
+       */
+      assert(stairmap->freecapacities[pos] < height);
+      pos++;
+      
+      /* check if we exceed the time point array */
+      if( pos >= stairmap->ntimepoints )
+         break;
+      
+      starttime = stairmap->timepoints[pos];
+   }
+   
+   assert(*infeasible || starttime <= ub);
+   return starttime;
+}
+
+/** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its height and
+ *  duration)
+ */
+int SCIPstairmapGetLatestFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   lb,                 /**< earliest possible start point */
+   int                   ub,                 /**< latest possible start point */
+   int                   duration,           /**< duration of the core */
+   int                   height,             /**< height of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
+   )
+{
+   int starttime;
+   int pos;
+	
+   assert(stairmap != NULL);
+   assert(lb >= 0);
+   assert(lb <= ub);
+   assert(duration >= 0);
+   assert(height >= 0);
+   assert(infeasible != NULL);
+   assert(stairmap->timepoints[stairmap->ntimepoints-1] > ub);
+   
+   if( duration == 0 || height == 0 ) 
+      return ub;
+
+   starttime = ub;   
+   (void)stairmapFindLeft(stairmap, starttime, &pos);
+   assert(stairmap->timepoints[pos] <= starttime);
+   
+   (*infeasible) = TRUE;
+	
+   while( (*infeasible) && starttime >= lb )
+   {
+      if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
+      {
+         (*infeasible) = FALSE;
+         return starttime;
+      }
+    
+      /* the core did not fit into the stair map since at time point "pos" not enough capacity is available; 
+       * therefore we can proceed with the next time point  */
+      assert(stairmap->freecapacities[pos] < height);
+      
+      /* check if we exceed the time point array */
+      if( pos < 0  )
+         break;
+      
+      starttime = stairmap->timepoints[pos] - duration;
+   }
+
+   assert(*infeasible || starttime >= lb);
+  
+   return starttime;
+}
+
+/*
  * Numerical methods
  */
 
@@ -4188,7 +4624,6 @@ SCIP_Bool isValueChar(
 }
 
 /** extrat the next token as value */
-extern
 SCIP_Bool SCIPstrGetValue(
    const char*           str,                /**< string to search */
    int                   pos,                /**< position in string to start */

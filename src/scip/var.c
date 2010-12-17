@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.313 2010/11/24 14:20:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.314 2010/12/17 12:01:22 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -12878,6 +12878,10 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetNCliques
 #undef SCIPvarGetCliques
 #undef SCIPvarGetLPSol
+#undef SCIPvarGetBdchgInfosLb
+#undef SCIPvarGetNBdchgInfosLb
+#undef SCIPvarGetBdchgInfosUb
+#undef SCIPvarGetNBdchgInfosUb
 #undef SCIPvarGetPseudoSol
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
@@ -13739,6 +13743,38 @@ SCIP_Real SCIPvarGetLPSol(
    else
       return SCIPvarGetLPSol_rec(var);
 }
+
+/** gets the lower bound change info array */
+SCIP_BDCHGINFO** SCIPvarGetBdchgInfosLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return &(var->lbchginfos);
+}
+
+/** gets the number of lower bound change info array */
+int SCIPvarGetNBdchgInfosLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return var->nlbchginfos;
+} 
+
+/** gets the upper bound change info array */
+SCIP_BDCHGINFO** SCIPvarGetBdchgInfosUb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return &(var->ubchginfos);
+} 
+
+/** gets the number upper bound change info array */
+int SCIPvarGetNBdchgInfosUb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return var->nubchginfos;
+} 
 
 /** gets pseudo solution value of variable */
 SCIP_Real SCIPvarGetPseudoSol(

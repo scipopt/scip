@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.22 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.23 2010/12/17 12:01:22 bzfheinz Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -129,6 +129,16 @@ struct SCIP_PtrArray
    int                   minusedidx;         /**< index of first non zero element in vals array */
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
+
+/** stair map */
+struct SCIP_Stairmap
+{
+   int*                  timepoints;         /**< time point array */
+   int*                  freecapacities;     /**< array holding corresponding available capacity */
+   int                   ntimepoints;        /**< current number of entries */
+   int                   arraysize;          /**< current array size */
+};
+
 
 #ifdef __cplusplus
 }

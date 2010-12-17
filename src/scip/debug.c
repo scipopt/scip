@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.45 2010/10/08 12:36:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.46 2010/12/17 12:01:23 bzfheinz Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -624,6 +624,10 @@ SCIP_RETCODE SCIPdebugCheckInference(
    assert(blkmem != NULL);
    assert(node != NULL);
    assert(var != NULL);
+
+   /* in case we are in probing or diving we have to avoid checking the solution */
+   if( SCIPlpDiving(set->scip->lp) || SCIPtreeProbing(set->scip->tree) )
+      return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
