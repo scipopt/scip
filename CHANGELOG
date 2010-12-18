@@ -36,13 +36,17 @@ fixed bugs:
 - fixed assertion w.r.t. to probing during the propagation round of a branch-and-bound node
 - fixed bugs in lpi_none.c w.r.t. debug and opt mode 
 - fixed bugs in cons_orbitope.c: orbitopal fixing for the packing case had two bugs; also fixed one wrong assert
+- fixed computation of node's objective value estimate when branching on continuous variables (see SCIPtreeCalcChildEstimate, SCIPtreeBranchVar)
 - fixed bugs in cons_sos?.c: take average of objestimate
 - fixed numerical issue in some heuristics: nearly-integral values that are between the feasibility and the integrality
   tolerance might not have been rounded correctly
 - fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
 - fixed bug in statistic w.r.t. number of calls for external branching candidates
 - fixed bug in lpi_cpx.c w.r.t. to wrong handling in case the crossover did succeed
+- fixes to branching on continuous variables
 
+parameters:
+- replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
 
 SCIP version 2.0.0
 ===============

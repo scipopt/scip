@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.245.2.1 2010/11/23 20:39:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.245.2.2 2010/12/18 17:31:55 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4536,28 +4536,45 @@ SCIP_Real SCIPtreeCalcChildEstimate(
 {
    SCIP_Real estimate;
    SCIP_Real varsol;
-   SCIP_Real pscdown;
-   SCIP_Real pscup;
 
    assert(tree != NULL);
+   assert(var != NULL);
 
-   /* calculate estimate based on pseudo costs:
-    *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
-    *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
-    */
-   estimate = SCIPnodeGetEstimate(tree->focusnode);
-   varsol = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
-   pscdown = SCIPvarGetPseudocost(var, stat, SCIPsetFeasFloor(set, varsol) - varsol);
-   pscup = SCIPvarGetPseudocost(var, stat, SCIPsetFeasCeil(set, varsol) - varsol);
-   estimate -= MIN(pscdown, pscup);
-   estimate += SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      estimate = SCIPnodeGetEstimate(tree->focusnode);
+      varsol   = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
 
-   return estimate;
+      estimate += SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+      
+      return estimate;
+   }
+   else
+   {
+      SCIP_Real pscdown;
+      SCIP_Real pscup;
+
+      /* calculate estimate based on pseudo costs:
+       *   estimate = lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j})
+       *            = parentestimate - min{f_b * pscdown_b, (1-f_b) * pscup_b} + (targetvalue-oldvalue)*{pscdown_b or pscup_b}
+       */
+      estimate = SCIPnodeGetEstimate(tree->focusnode);
+      varsol = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
+      pscdown = SCIPvarGetPseudocost(var, stat, SCIPsetFeasFloor(set, varsol) - varsol);
+      pscup = SCIPvarGetPseudocost(var, stat, SCIPsetFeasCeil(set, varsol) - varsol);
+      estimate -= MIN(pscdown, pscup);
+      estimate += SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
+
+      return estimate;
+   }
 }
 
 /** branches on a variable x
  *  if x is a continuous variable, then two child nodes will be created
  *  (x <= x', x >= x')
+ *  but if the bounds of x are such that their relative difference is smaller than epsilon,
+ *  the variable is fixed to val (if not SCIP_INVALID) or a well choosen alternative in the current node,
+ *  i.e., no children are created
  *  if x is not a continuous variable, then:
  *  if solution value x' is fractional, two child nodes will be created
  *  (x <= floor(x'), x >= ceil(x')),
@@ -4592,6 +4609,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_Real downub;
    SCIP_Real fixval;
    SCIP_Real uplb;
+   SCIP_Real lpval;
 
    SCIP_Bool validval;
    
@@ -4609,7 +4627,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
    /* store whether a valid value was given for branching */
    validval = (val != SCIP_INVALID);  /*lint !e777 */
-
+   
    /* get the corresponding active problem variable
     * if branching value is given, then transform it to the value of the active variable */
    if( validval )
@@ -4654,10 +4672,13 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
+   /* get value of variable in current LP or pseudo solution */
+   lpval = SCIPvarGetSol(var, tree->focusnodehaslp);
+
    /* if there was no explicit value given for branching, branch on current LP or pseudo solution value */
    if( !validval )
    {
-      val = SCIPvarGetSol(var, tree->focusnodehaslp);
+      val = lpval;
 
       /* avoid branching on infinite values in pseudo solution */
       if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
@@ -4676,8 +4697,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
 
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || 
-      (SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val) && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) ) );
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
+      SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
+      (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );  /* see comment in SCIPbranchVarVal */
 
    downub = SCIP_INVALID;
    fixval = SCIP_INVALID;
@@ -4685,23 +4707,65 @@ SCIP_RETCODE SCIPtreeBranchVar(
    
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
-      downub = val;
-      uplb = val;
-      SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
-         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+      if( SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      {
+         SCIPdebugMessage("fixing continuous variable <%s> with value %g and bounds [%.15g, %.15g], priority %d (current lower bound: %g)\n",
+            SCIPvarGetName(var), val, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         /* if val is at least epsilon away from both bounds, then we change both bounds to this value
+          * otherwise, we fix the variable to its worst bound
+          */
+         if( SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) && SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, val, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            SCIP_CALL( SCIPnodeAddBoundchg(tree->focusnode, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, val, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else if( SCIPvarGetObj(var) >= 0.0 )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, SCIPvarGetUbLocal(var), SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, SCIPvarGetLbLocal(var), SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+      }
+      else if( SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.0 * SCIPsetEpsilon(set) )
+      {
+         /* if the only way to branch is such that in both sides the relative domain width becomes smaller epsilon,
+          * then fix the variable in both branches right away
+          */
+         SCIPdebugMessage("continuous branch on variable <%s> with bounds [%.15g, %.15g], priority %d (current lower bound: %g), node %p\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode), (void*)tree->focusnode);
+         downub = SCIPvarGetLbLocal(var);
+         uplb = SCIPvarGetUbLocal(var);
+      }
+      else
+      {
+         /* in the general case, there is enough space for two branches
+          * a sophisticated user should have also choosen the branching value such that it is not very close to the bounds
+          * so here we only ensure that it is at least epsilon away from both bounds
+          */
+         SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
+            SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         downub = MIN(val, SCIPvarGetUbLocal(var) - SCIPsetEpsilon(set));
+         uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set));
+      }
    }
    else if( SCIPsetIsFeasIntegral(set, val) )
    {
       SCIP_Real lb;
       SCIP_Real ub;
-       
+
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
 
       /* if there was no explicit value given for branching, the variable has a finite domain and the current LP/pseudo
        * solution is one of the bounds, we branch in the center of the domain */
       if( !validval && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) 
-	 && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
+         && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
       {
          SCIP_Real center;
 
@@ -4757,7 +4821,12 @@ SCIP_RETCODE SCIPtreeBranchVar(
    {
       /* create child node x <= downub */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, downub);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
+      /* if LP solution is cutoff in child, compute a new estimate
+       * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
+      if( SCIPsetIsGT(set, lpval, downub) )
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
+      else
+         estimate = SCIPnodeGetEstimate(tree->focusnode);
       SCIPdebugMessage(" -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), downub, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
@@ -4793,7 +4862,10 @@ SCIP_RETCODE SCIPtreeBranchVar(
    {
       /* create child node with x >= uplb */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, uplb);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
+      if( SCIPsetIsLT(set, lpval, uplb) )
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
+      else
+         estimate = SCIPnodeGetEstimate(tree->focusnode);
       SCIPdebugMessage(" -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), uplb, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
@@ -5733,7 +5805,7 @@ void SCIPnodeGetAncestorBranchingPath(
                                                * nodeswitches[i] = i holds */
    int*                  nnodes,              /**< number of nodes in the nodeswitch array */
    int                   nodeswitchsize       /**< available slots in node switch array */                                                                    
- )
+   )
 {
    assert(node != NULL);
    assert(branchvars != NULL);

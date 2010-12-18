@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.137 2010/10/02 16:36:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.136.2.1 2010/12/18 17:31:53 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -127,14 +127,14 @@ struct SCIP_ConshdlrData
 {
    int                   replacebinaryprodlength;   /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    int                   empathy4and;               /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
-   SCIP_Real             mincutefficacy;            /**< minimal efficacy of a cut in order to add it to relaxation */
+   SCIP_Real             mincutefficacysepa;        /**< minimal efficacy of a cut in order to add it to relaxation during separation */
+   SCIP_Real             mincutefficacyenfo;        /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored) */
    SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENS heuristic */
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
-   SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
 
    SCIP_HEUR*            subnlpheur;                /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
@@ -3424,213 +3424,6 @@ SCIP_RETCODE presolveUpgrade(
    return SCIP_OKAY;
 }
 
-/** helper function for presolveDisaggregate */
-static
-SCIP_RETCODE presolveDisaggregateMarkComponent(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   int                   quadvaridx,         /**< index of quadratic variable to mark */
-   SCIP_HASHMAP*         var2component,      /**< variables to components mapping */
-   int                   componentnr         /**< the component number to mark to */ 
-   )
-{
-   SCIP_QUADVARTERM* quadvarterm;
-   SCIP_VAR* othervar;
-   int othervaridx;
-   int i;
-   
-   assert(consdata != NULL);
-   assert(quadvaridx >= 0);
-   assert(quadvaridx < consdata->nquadvars);
-   assert(var2component != NULL);
-   assert(componentnr >= 0);
-   
-   quadvarterm = &consdata->quadvarterms[quadvaridx];
-   
-   if( SCIPhashmapExists(var2component, quadvarterm->var) )
-   {
-      /* if we saw the variable before, then it should have the same component number */
-      assert((int)(size_t)SCIPhashmapGetImage(var2component, quadvarterm->var) == componentnr);
-      return SCIP_OKAY;
-   }
-   
-   /* assign component number to variable */
-   SCIP_CALL( SCIPhashmapInsert(var2component, quadvarterm->var, (void*)(size_t)componentnr) );
-   
-   /* assign same component number to all variables this variable is multiplied with */
-   for( i = 0; i < quadvarterm->nadjbilin; ++i )
-   {
-      othervar = consdata->bilinterms[quadvarterm->adjbilin[i]].var1 == quadvarterm->var ?
-         consdata->bilinterms[quadvarterm->adjbilin[i]].var2 :
-         consdata->bilinterms[quadvarterm->adjbilin[i]].var1;
-      SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, othervar, &othervaridx) );
-      assert(othervaridx >= 0);
-      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, othervaridx, var2component, componentnr) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** for quadratic constraints that consists of a sum of quadratic terms, disaggregates the sum into a set of constraints by introducing auxiliary variables */
-static
-SCIP_RETCODE presolveDisaggregate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
-   SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   SCIP_Bool*            success             /**< buffer to store whether a disaggregation was done */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_HASHMAP* var2component;
-   int ncomponents;
-   int i;
-   int comp;
-   SCIP_CONS** auxconss;
-   SCIP_VAR** auxvars;
-   SCIP_Real* auxcoefs;
-   char name[SCIP_MAXSTRLEN];
-   
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(cons != NULL);
-   assert(success != NULL);
-   
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   
-   *success = FALSE;
-   
-   if( consdata->nquadvars <= 1 )
-      return SCIP_OKAY;
-
-   /* sort quadratic variable terms here, so we can later search in it without reordering the array */
-   SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
-   
-   /* check how many quadratic terms with non-overlapping variables we have
-    * in other words, the number of components in the sparsity graph of the quadratic term matrix */
-   ncomponents = 0;
-   SCIP_CALL( SCIPhashmapCreate(&var2component, SCIPblkmem(scip), SCIPcalcHashtableSize(consdata->nquadvars)) );
-   for( i = 0; i < consdata->nquadvars; ++i )
-   {
-      /* if variable was marked already, skip it */
-      if( SCIPhashmapExists(var2component, (void*)consdata->quadvarterms[i].var) )
-         continue;
-      
-      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, i, var2component, ncomponents) );
-      ++ncomponents;
-   }
-   assert(ncomponents >= 1);
-   
-   /* if there is only one component, we cannot disaggregate
-    * @todo we could still split the constraint into several while keeping the number of variables sharing several constraints as small as possible */
-   if( ncomponents == 1 )
-   {
-      SCIPhashmapFree(&var2component);
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &auxconss, ncomponents) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &auxvars,  ncomponents) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &auxcoefs, ncomponents) );
-   
-   /* create auxiliary variables and empty constraints for each component */
-   for( comp = 0; comp < ncomponents; ++comp )
-   {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp%d", SCIPconsGetName(cons), comp);
-      
-      SCIP_CALL( SCIPcreateVar(scip, &auxvars[comp], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-         SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), TRUE, NULL, NULL, NULL, NULL, NULL) );
-      
-      SCIP_CALL( SCIPcreateConsQuadratic2(scip, &auxconss[comp], name, 0, NULL, NULL, 0, NULL, 0, NULL,
-         SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : 0.0,
-         SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : 0.0,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-         SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-      
-      auxcoefs[comp] = SCIPinfinity(scip);
-   }
-   
-   /* add quadratic variables to each component constraint
-    * delete adjacency information */
-   for( i = 0; i < consdata->nquadvars; ++i )
-   {
-      comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->quadvarterms[i].var);
-      assert(comp >= 0);
-      assert(comp < ncomponents);
-      
-      /* add variable term to corresponding constraint */
-      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, auxconss[comp], consdata->quadvarterms[i].var, consdata->quadvarterms[i].lincoef, consdata->quadvarterms[i].sqrcoef) );
-      
-      /* reduce coefficient of aux variable */
-      if( !SCIPisZero(scip, consdata->quadvarterms[i].lincoef) && ABS(consdata->quadvarterms[i].lincoef) < auxcoefs[comp] )
-         auxcoefs[comp] = ABS(consdata->quadvarterms[i].lincoef);
-      if( !SCIPisZero(scip, consdata->quadvarterms[i].sqrcoef) && ABS(consdata->quadvarterms[i].sqrcoef) < auxcoefs[comp] )
-         auxcoefs[comp] = ABS(consdata->quadvarterms[i].sqrcoef);
-      
-      SCIPfreeBlockMemoryArray(scip, &consdata->quadvarterms[i].adjbilin, consdata->quadvarterms[i].adjbilinsize);
-      consdata->quadvarterms[i].nadjbilin = 0;
-      consdata->quadvarterms[i].adjbilinsize = 0;
-   }
-   
-   /* add bilinear terms to each component constraint */
-   for( i = 0; i < consdata->nbilinterms; ++i )
-   {
-      comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var1);
-      assert(comp == (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var2));
-      assert(!SCIPisZero(scip, consdata->bilinterms[i].coef));
-      
-      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, auxconss[comp], 
-         consdata->bilinterms[i].var1, consdata->bilinterms[i].var2, consdata->bilinterms[i].coef) );
-      
-      if( ABS(consdata->bilinterms[i].coef) < auxcoefs[comp] )
-         auxcoefs[comp] = ABS(consdata->bilinterms[i].coef);
-   }
-
-   /* forget about bilinear terms in cons */
-   SCIPfreeBlockMemoryArray(scip, &consdata->bilinterms, consdata->bilintermssize);
-   consdata->nbilinterms = 0;
-   consdata->bilintermssize = 0;
-   
-   /* remove quadratic variable terms from cons */
-   for( i = consdata->nquadvars - 1; i >= 0; --i )
-   {
-      SCIP_CALL( delQuadVarTermPos(scip, cons, i) );
-   }
-   assert(consdata->nquadvars == 0);
-
-   /* add auxiliary variables to auxiliary constraints
-    * add aux vars and constraints to SCIP 
-    * add aux vars to this constraint */
-   SCIPdebugMessage("add %d constraints for disaggregation of quadratic constraint <%s>\n", ncomponents, SCIPconsGetName(cons));
-   SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, consdata->nlinvars + ncomponents) );
-   for( comp = 0; comp < ncomponents; ++comp )
-   {
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp]) );
-      
-      SCIP_CALL( SCIPaddVar(scip, auxvars[comp]) );
-      
-      SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
-      SCIPdebug( SCIPprintCons(scip, auxconss[comp], NULL) );
-      
-      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], 1.0 / auxcoefs[comp]) );
-      
-      SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
-      SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
-   } 
-   
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
-
-   SCIPfreeBufferArray(scip, &auxconss);
-   SCIPfreeBufferArray(scip, &auxvars);
-   SCIPfreeBufferArray(scip, &auxcoefs);
-   SCIPhashmapFree(&var2component);
-   
-   *success = TRUE;
-   
-   return SCIP_OKAY;
-}
-
 /** checks a quadratic constraint for convexity and/or concavity */
 static
 SCIP_RETCODE checkCurvature(
@@ -3782,6 +3575,7 @@ SCIP_RETCODE checkCurvature(
    {
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
+      consdata->iscurvchecked = TRUE; /* set to TRUE since it does not help to repeat this procedure again and again (that will not bring Ipopt in) */
    }
    
    SCIPhashmapFree(&var2index);
@@ -4705,7 +4499,9 @@ SCIP_RETCODE generateCut(
             }
             else
             { /* if variable is discrete but fractional, try to be more clever */
-               SCIP_Real f = SCIPfloor(scip, xval);
+               SCIP_Real f;
+               
+               f = SCIPfloor(scip, xval);
                rowcoef += coef*(2*f+1);
                bnd += coef*f*(f+1);
             }
@@ -4881,8 +4677,10 @@ SCIP_RETCODE separatePoint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   SCIP_Real             minefficacy,        /**< minimal efficacy of a cut if it should be added to the LP */
+   SCIP_Bool             convexalways,       /**< whether to ignore minefficacy criteria for a convex constraint (and use feastol instead) */
    SCIP_RESULT*          result,             /**< result of separation */
-   SCIP_Bool             addweakcuts         /**< should also weak (only slightly violated) cuts be added in a nonconvex constraint ? */
+   SCIP_Real*            bestefficacy        /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -4902,6 +4700,9 @@ SCIP_RETCODE separatePoint(
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   if( bestefficacy != NULL )
+      *bestefficacy = 0.0;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4936,17 +4737,19 @@ SCIP_RETCODE separatePoint(
 
          efficacy = SCIPgetCutEfficacy(scip, sol, row);
 
-         if( efficacy > conshdlrdata->mincutefficacy ||  /* ''strong'' cut */
-             (SCIPisFeasPositive(scip, efficacy) &&       /* ''weak'' cut, use only if */ 
-                (addweakcuts ||   /* flag is set, or */
-                   (violbound == SCIP_BOUNDTYPE_UPPER && consdata->isconvex ) || /* convex  constraint, or */
-                   (violbound == SCIP_BOUNDTYPE_LOWER && consdata->isconcave)    /* concave constraint */
-                 )) )
+         if( efficacy > minefficacy ||
+            (convexalways &&
+             ((violbound == SCIP_BOUNDTYPE_UPPER && consdata->isconvex ) || (violbound == SCIP_BOUNDTYPE_LOWER && consdata->isconcave)) &&
+             efficacy > SCIPfeastol(scip)
+            )
+           )
          { /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            SCIPdebugMessage("add cut with efficacy %g\n", efficacy);
+            SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
+            if( bestefficacy != NULL && efficacy > *bestefficacy )
+               *bestefficacy = efficacy;
          }
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -5077,7 +4880,6 @@ SCIP_RETCODE registerVariableInfeasibilities(
       assert(conss != NULL);
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
       
       if( !consdata->nquadvars )
          continue;
@@ -5094,9 +4896,9 @@ SCIP_RETCODE registerVariableInfeasibilities(
          {
             xlb = SCIPvarGetLbLocal(consdata->quadvarterms[j].var);
             xub = SCIPvarGetUbLocal(consdata->quadvarterms[j].var);
-            if( SCIPrelDiff(xub, xlb) <= 2.0 * SCIPepsilon(scip) )
+            if( SCIPisEQ(scip, xlb, xub) )
             {
-               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), xlb, xub, SCIPrelDiff(xub, xlb));
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), xlb, xub, xub-xlb);
                continue;
             }
             
@@ -5166,26 +4968,28 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( gap < 0.0 ) 
             gap = 0.0;
          
-         if( SCIPrelDiff(xub, xlb) > 2.0 * SCIPepsilon(scip) )
+         if( !SCIPisEQ(scip, xlb, xub) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
             ++*nnotify;
          }
          else
          {
-            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->bilinterms[j].var1), xlb, xub, SCIPrelDiff(xub, xlb));
+            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->bilinterms[j].var1), xlb, xub, xub-xlb);
          }
-         if( SCIPrelDiff(yub, ylb) > 2.0 * SCIPepsilon(scip) )
+         if( !SCIPisEQ(scip, ylb, yub) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var2, gap, SCIP_INVALID) );
             ++*nnotify;
          }
          else
          {
-            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], reldiff %g\n", SCIPvarGetName(consdata->bilinterms[j].var2), ylb, yub, SCIPrelDiff(yub, ylb));
+            SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->bilinterms[j].var2), ylb, yub, yub-ylb);
          }
       }
    }
+
+   SCIPdebugMessage("registered %d branching candidates\n", *nnotify);
 
    return SCIP_OKAY;
 }
@@ -5223,7 +5027,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* do not propose fixed variables */
-         if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) <= 2.0 * SCIPepsilon(scip) )
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
             continue;
          val = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[i].var);
          if( ABS(val) > brvarval )
@@ -5276,7 +5080,7 @@ SCIP_RETCODE replaceByLinearConstraints(
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          /* variables should be fixed if constraint is violated */
-         assert(SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) <= 2.0 * SCIPepsilon(scip));
+         assert(SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)));
 
          val1 = (SCIPvarGetUbLocal(consdata->quadvarterms[i].var) + SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) / 2.0;
          constant += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val1) * val1;
@@ -5298,7 +5102,7 @@ SCIP_RETCODE replaceByLinearConstraints(
          SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
          SCIPconsIsStickingAtNode(conss[c])) );
 
-      SCIPdebugMessage("replace quadratic constraint <%s> by linear constraint after all linear vars have been fixed\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMessage("replace quadratic constraint <%s> by linear constraint after all quadratic vars have been fixed\n", SCIPconsGetName(conss[c]) );
       SCIPdebug( SCIPprintCons(scip, cons, NULL) );
       SCIP_CALL( SCIPaddConsLocal(scip, cons, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -6473,11 +6277,6 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-  
-   if( nconss != 0 && !SCIPisIpoptAvailableIpopt() )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
-   }
    
 #ifdef USECLOCK   
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock1) );
@@ -6721,6 +6520,11 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
+   if( nconss != 0 && !SCIPisIpoptAvailableIpopt() && !SCIPisInRestart(scip) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
+   }
+
    return SCIP_OKAY;
 }
 
@@ -6925,7 +6729,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result, TRUE) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
    if( *result == SCIP_SEPARATED )
       return SCIP_OKAY;
 
@@ -6962,7 +6766,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, result, TRUE) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6972,10 +6776,14 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA*     consdata;
    SCIP_CONS*         maxviolcon;
+   SCIP_Real          maxviol;
    SCIP_Bool          intervalfeas;
    SCIP_RESULT        separateresult;
    int                nnotify;
+   SCIP_Real          sepaefficacy;
+   SCIP_Real          minefficacy;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -7000,28 +6808,56 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
        return SCIP_OKAY;
    }
    
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, &separateresult, FALSE) );
+   consdata = SCIPconsGetData(maxviolcon);
+   assert(consdata != NULL);
+   maxviol = consdata->lhsviol + consdata->rhsviol;
+   assert(!SCIPisFeasZero(scip, maxviol));
+
+   SCIPdebugMessage("enfolp with max violation %g in %s\n", maxviol, SCIPconsGetName(maxviolcon));
+
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
+    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
+    * thus, in the latter case, we are also happy if the effiacy is at least, say, 75% of the maximal violation
+    * but in any case we need an efficacy that is at least feastol
+    */
+   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfo);
+   minefficacy = MAX(minefficacy, SCIPfeastol(scip));
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_SEPARATED )
    {
+      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
 
-   /* we are not feasible, the whole node is not infeasible, and we cannot find a cut
+   /* we are not feasible, the whole node is not infeasible, and we cannot find a good cut
     * -> collect variables for branching
     */
    
-   SCIPdebugMessage("separation failed; max viol: %g+%g\n", SCIPconsGetData(maxviolcon)->lhsviol, SCIPconsGetData(maxviolcon)->rhsviol);
+   SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
+   /* find branching candidates */
    SCIP_CALL( registerVariableInfeasibilities(scip, conshdlr, conss, nconss, &nnotify) );
-   if( nnotify == 0 && !solinfeasible)
-   { /* fallback: separation probably failed because of numerical difficulties with a convex constraint;
-        if noone declared solution infeasible yet, try to resolve by branching */ 
+
+   if( nnotify == 0 && !solinfeasible && minefficacy > SCIPfeastol(scip) )
+   {
+      /* fallback 1: we also have no branching candidates, so try to find a weak cut */
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
+      if( separateresult == SCIP_SEPARATED )
+      {
+         *result = SCIP_SEPARATED;
+         return SCIP_OKAY;
+      }
+   }
+
+   if( nnotify == 0 && !solinfeasible )
+   { /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
+        if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
       SCIP_VAR* brvar = NULL;
       SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
       if( brvar == NULL )
       {
-         /* fallback2: all quadratic variables seem to be fixed -> replace by linear constraint */
+         /* fallback 3: all quadratic variables seem to be fixed -> replace by linear constraint */
          SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss) );
          *result = SCIP_CONSADDED;
          return SCIP_OKAY;
@@ -7089,7 +6925,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       SCIPdebugMessage("con %s violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
       
       for( i = 0; i < consdata->nquadvars; ++i )
-         if( SCIPrelDiff(SCIPvarGetUbLocal(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) > 2.0*SCIPepsilon(scip) )
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->quadvarterms[i].var, consdata->lhsviol + consdata->rhsviol, SCIP_INVALID) );
          }
@@ -7225,13 +7061,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
             SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
          }
-      }
-      
-      if( !consdata->ispresolved && conshdlrdata->disaggregate )
-      {
-         SCIP_Bool disaggrsuccess;
-         
-         SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], &disaggrsuccess) );
       }
       
       if( consdata->nlinvars == 0 && consdata->nquadvars == 0 )
@@ -8147,9 +7976,13 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
          &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",
-         "minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacy, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
+         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
+         &conshdlrdata->mincutefficacysepa, FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacyenfo",
+         "minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored)",
+         &conshdlrdata->mincutefficacyenfo, FALSE, 2.0*SCIPfeastol(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling", 
          "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",
@@ -8174,10 +8007,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",
-         "whether to disaggregate quadratic parts that decompose into a sum of non-overlapping quadratic terms",
-         &conshdlrdata->disaggregate, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,

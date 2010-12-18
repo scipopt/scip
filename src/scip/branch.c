@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.103 2010/09/30 08:30:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.103.2.1 2010/12/18 17:31:53 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -458,7 +458,7 @@ int SCIPbranchcandGetNPrioExternConts(
 }
 
 /** insert variable, its score and its solution value into the external branching candidate storage
- * the relative difference of the current lower and upper bounds of the variable must be at least 2*epsilon 
+ * the absolute difference of the current lower and upper bounds of the variable must be at least epsilon
  */
 SCIP_RETCODE SCIPbranchcandAddExternCand(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -474,7 +474,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
 
    assert(branchcand != NULL);
    assert(var != NULL);
-   assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) > 2.0*SCIPsetEpsilon(set)); /* there should be enough domain left to create two child nodes with domain width > epsilon */
+   assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /* the variable should not be fixed yet */
    assert(branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(branchcand->nexterncands <= branchcand->externcandssize);
 
@@ -1898,9 +1898,8 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    
-   /* for an (almost) fixed variable, we cannot branch further
-    * we now use RelEQ to avoid numerical difficulities later if bounds are very large */
-   assert(!SCIPsetIsRelEQ(set, lb, ub) || (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsEQ(set, lb, ub)));
+   /* for a fixed variable, we cannot branch further */
+   assert(!SCIPsetIsEQ(set, lb, ub));
    
    if( !SCIPsetIsInfinity(set, REALABS(suggestion)) )
    {
@@ -1970,9 +1969,10 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
       {
          /* if branching point is too close to the bounds, move more into the middle of the interval */
-         if( SCIPrelDiff(ub, lb) < 2.02 * SCIPsetEpsilon(set) )
+         if( SCIPrelDiff(ub, lb) <= 2.02 * SCIPsetEpsilon(set) )
          {
-            /* for very tiny intervals we set it exactly into the middle */
+            /* for very tiny intervals we set it exactly into the middle
+             * very tiny means here an interval where we could not create two branches with reldiff > eps */
             branchpoint = (lb+ub)/2.0;
          }
          else
@@ -2009,9 +2009,10 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             /* if selected branching point is close to 0.0 and bounds are away from 0.0, it often makes sense to branch exactly on 0.0 */
             if( SCIPsetIsFeasZero(set, branchpoint) && SCIPsetIsFeasNegative(set, lb) && SCIPsetIsFeasPositive(set, ub) )
                branchpoint = 0.0;
+
+            assert(SCIPsetIsRelLT(set, lb, branchpoint));
+            assert(SCIPsetIsRelLT(set, branchpoint, ub));
          }
-         assert(SCIPsetIsRelLT(set, lb, branchpoint));
-         assert(SCIPsetIsRelLT(set, branchpoint, ub));
       }
       else if( !SCIPsetIsRelLT(set, lb, branchpoint) )
       {
