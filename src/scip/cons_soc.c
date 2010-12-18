@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.60 2010/10/02 16:43:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.59.2.1 2010/12/18 17:35:16 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -349,92 +349,6 @@ SCIP_RETCODE createNlRow(
 
    switch( conshdlrdata->nlpform )
    {
-      case 'e':
-      {
-         /* construct expression exp(\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} - alpha_{n+1}(x_{n+1} + beta_{n+1})) */
-
-         if( consdata->nvars > 0 )
-         {
-            SCIP_EXPR* expr;
-            SCIP_EXPR* exprterm;
-            SCIP_EXPR* expr2;
-            SCIP_EXPRTREE* exprtree;
-
-            if( consdata->constant != 0.0 )
-            {
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_CONST, consdata->constant) );  /* gamma */
-            }
-            else
-            {
-               exprterm = NULL;
-            }
-
-            for( i = 0; i < consdata->nvars; ++i )
-            {
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, i) );  /* x_i */
-               if( consdata->offsets[i] != 0.0 )
-               {
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->offsets[i]) );  /* beta_i */
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_PLUS, expr, expr2) );  /* x_i + beta_i */
-               }
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_SQUARE, expr) );  /* (x_i + beta_i)^2 */
-               if( consdata->coefs[i] != 1.0 )
-               {
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->coefs[i]) );  /* alpha_i */
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MUL, expr, expr2) );  /* alpha_i * (x_i + beta_i)^2 */
-               }
-               if( exprterm != NULL )
-               {
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_PLUS, exprterm, expr) );
-               }
-               else
-               {
-                  exprterm = expr;
-               }
-            }
-
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_SQRT, exprterm) );  /* sqrt(gamma + sum_i (...)^2) */
-
-            if( consdata->rhsvar != NULL )
-            {
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, consdata->nvars) );  /* x_{n+1} */
-               if( consdata->rhsoffset != 0.0 )
-               {
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->rhsoffset) );  /* beta_{n+1} */
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_PLUS, expr, expr2) );  /* x_{n+1} + beta_{n+1} */
-               }
-               if( consdata->rhscoeff != 1.0 )
-               {
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_CONST, consdata->rhscoeff) );  /* alpha_{n+1} */
-                  SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MUL, expr, expr2) );  /* alpha_{n+1} * (x_{n+1} + beta_{n+1}) */
-               }
-            }
-            else
-            {
-               SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_CONST, consdata->rhscoeff * consdata->rhsoffset) );
-            }
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_MINUS, exprterm, expr) ); /* sqrt(gamma + sum_i (...)^2) - alpha_{n+1} * (x_{n+1} + beta_{n+1}) */
-
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprterm, SCIP_EXPR_EXP, exprterm) ); /* exp(sqrt(gamma + sum_i (...)^2) - alpha_{n+1} * (x_{n+1} + beta_{n+1})) */
-
-            SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, exprterm, consdata->nvars+1, 0, NULL) );
-
-            SCIP_CALL( SCIPexprtreeSetVars(exprtree, consdata->nvars, consdata->vars) );
-            SCIP_CALL( SCIPexprtreeAddVars(exprtree, 1, &consdata->rhsvar) );
-
-            SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
-               0.0,
-               0, NULL, NULL,
-               0, NULL, 0, NULL,
-               exprtree, -SCIPinfinity(scip), 1.0) );
-
-            SCIP_CALL( SCIPexprtreeFree(&exprtree) );
-
-            break;
-         }
-         /* if there are no left-hand-side variables, then we let the 's' case handle it */
-      }
-
       case 's':
       {
          /* construct expression \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} */
@@ -584,9 +498,15 @@ SCIP_RETCODE evalLhs(
    
    for( i = 0; i < consdata->nvars; ++i )
    {
-      assert(!SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->vars[i]))));  /*lint !e666*/
+      val = SCIPgetSolVal(scip, sol, consdata->vars[i]);
       
-      val = consdata->coefs[i] * (SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i]);
+      if( SCIPisInfinity(scip, val) || SCIPisInfinity(scip, -val) )
+      {
+         consdata->lhsval = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
+
+      val = consdata->coefs[i] * (val + consdata->offsets[i]);
       consdata->lhsval += val * val;      
    }
    consdata->lhsval = sqrt(consdata->lhsval);
@@ -637,6 +557,7 @@ SCIP_RETCODE computeViolation(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real rhsval;
    
    assert(scip != NULL);
    assert(cons != NULL);
@@ -646,6 +567,32 @@ SCIP_RETCODE computeViolation(
    
    SCIP_CALL( evalLhs(scip, cons, sol) );
    
+   if( SCIPisInfinity(scip, consdata->lhsval) )
+   {
+      /* infinity <= infinity is feasible
+       * infinity <= finite value is not feasible and has violation infinity
+       */
+      if( (consdata->rhscoeff > 0.0 && SCIPisInfinity(scip,  SCIPgetSolVal(scip, sol, consdata->rhsvar))) ||
+          (consdata->rhscoeff < 0.0 && SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, consdata->rhsvar)))
+        )
+         consdata->violation = 0.0;
+      else
+         consdata->violation = SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+
+   rhsval = SCIPgetSolVal(scip, sol, consdata->rhsvar);
+   if( SCIPisInfinity(scip,  rhsval) )
+   {
+      consdata->violation = consdata->rhscoeff > 0.0 ? 0.0 : SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+   if( SCIPisInfinity(scip, -rhsval) )
+   {
+      consdata->violation = consdata->rhscoeff < 0.0 ? 0.0 : SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+
    consdata->violation = consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
    if( consdata->violation <= 0.0 )
    { /* constraint is not violated for sure */
@@ -728,6 +675,7 @@ SCIP_RETCODE generateCutSol(
    assert(consdata != NULL);
    
    assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
+   assert(!SCIPisInfinity(scip, consdata->lhsval));
    
    SCIP_CALL( SCIPallocBufferArray(scip, &rowcoeff, consdata->nvars) );
    
@@ -876,6 +824,7 @@ SCIP_RETCODE generateCutProjectedPoint(
    assert(consdata != NULL);
 
    assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
+   assert(!SCIPisInfinity(scip, consdata->lhsval));
 
    if( !SCIPisZero(scip, consdata->constant) )
    {  /* have not thought about this case yet */
@@ -955,7 +904,8 @@ SCIP_RETCODE generateSparseCut(
    assert(consdata != NULL);
    
    assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
-   
+   assert(!SCIPisInfinity(scip, consdata->lhsval));
+
    if( consdata->nvars <= 3 )
    {
       SCIP_CALL( generateCutSol(scip, cons, sol, row) );
@@ -1064,7 +1014,7 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( SCIPisFeasPositive(scip, consdata->violation) )
+      if( SCIPisFeasPositive(scip, consdata->violation) && !SCIPisInfinity(scip, consdata->violation) )
       {
          /* generate cut */
          if( conshdlrdata->sparsify )
@@ -1159,7 +1109,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
       assert(consdata != NULL);
 
       SCIP_CALL( evalLhs(scip, conss[c], sol) );
-      if( !SCIPisPositive(scip, consdata->lhsval) )
+      if( !SCIPisPositive(scip, consdata->lhsval) || SCIPisInfinity(scip, consdata->lhsval) )
       {
          SCIPdebugMessage("skip adding linearization for <%s> since lhs is %g\n", SCIPconsGetName(conss[c]), consdata->lhsval);
          continue;
@@ -2416,17 +2366,20 @@ SCIP_RETCODE polishSolution(
    assert(!SCIPisZero(scip, consdata->rhscoeff));
 
    /* assert that absolute constraint violation is positive */
-   assert(SCIPisPositive(scip, consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset)));
+   assert(SCIPisInfinity(scip, consdata->lhsval) || SCIPisPositive(scip, consdata->lhsval - consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset)));
    
    /* compute minimal rhs variable value so that constraint is satisfied */
-   rhsval = consdata->lhsval / consdata->rhscoeff - consdata->rhsoffset;
+   if( !SCIPisInfinity(scip, consdata->lhsval) )
+      rhsval = consdata->lhsval / consdata->rhscoeff - consdata->rhsoffset;
+   else
+      rhsval = consdata->rhscoeff > 0.0 ? SCIPinfinity(scip) : -SCIPinfinity(scip);
    
    if( consdata->rhscoeff > 0.0 )
    {
       assert(SCIPvarMayRoundUp(consdata->rhsvar));
       
       /* round rhsval up, if variable is integral */
-      if( SCIPvarIsIntegral(consdata->rhsvar) )
+      if( SCIPvarIsIntegral(consdata->rhsvar) && !SCIPisInfinity(scip, rhsval) )
          rhsval = SCIPceil(scip, rhsval);
       
       /* if new value is above upper bound, we are lost */
@@ -3139,7 +3092,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE, &sepasuccess) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, &sepasuccess) );
    if( sepasuccess )
       *result = SCIP_SEPARATED;
 
@@ -3280,7 +3233,8 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
          SCIP_Real unscaledviol;
 
          unscaledviol  = consdata->lhsval;
-         unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
+         if( !SCIPisInfinity(scip, unscaledviol) )
+            unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
 
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
          SCIPinfoMessage(scip, NULL, "\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
@@ -3782,8 +3736,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
       defaultnlpform = 's';
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/nlpform",
-      "which formulation to use when adding a SOC constraint to the NLP (q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form)",
-      &conshdlrdata->nlpform,          FALSE, defaultnlpform, "qse", NULL, NULL) );
+      "which formulation to use when adding a SOC constraint to the NLP (q: nonconvex quadratic form, s: convex sqrt form)",
+      &conshdlrdata->nlpform,          FALSE, defaultnlpform, "qs", NULL, NULL) );
 
    return SCIP_OKAY;
 }
