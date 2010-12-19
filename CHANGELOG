@@ -74,7 +74,7 @@ plugins:
  
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
-- added possible value 'e' for <constraints/soc/nlpform> to enable convex exponential-sqrt form for SOC constraint representation in NLP
+- added possible values 'a' and 'e' for <constraints/soc/nlpform> to enable automatic choice and convex exponential-sqrt form for SOC constraint representation in NLP
 - added parameter <constraints/indicator/removeIndicators> to remove indicator constraints if corresponding vub has been added
 - change default value of parameter "nodeselection/restartdfs/selectbestfreq" 100
 - added parameter "nodeselection/restartdfs/countonlyleafs" in node selector restart dfs which can be used to select 
