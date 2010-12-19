@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.62 2010/12/03 20:13:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.63 2010/12/19 12:51:50 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -103,6 +103,7 @@ struct SCIP_ConshdlrData
    SCIP_HEUR*            trysolheur;     /**< a pointer to the trysol heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
    int                   newsoleventfilterpos; /**< filter position of new solution event handler, if catched */
+   SCIP_Bool             haveexprint;    /**< indicates whether an expression interpreter is available */
    
    SCIP_Bool             glineur;        /**< is the Glineur outer approx prefered to Ben-Tal Nemirovski? */
    SCIP_Bool             doscaling;      /**< are constraint violations scaled? */
@@ -331,6 +332,7 @@ SCIP_RETCODE createNlRow(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   char nlpform;
    int i;
 
    assert(scip != NULL);
@@ -347,7 +349,20 @@ SCIP_RETCODE createNlRow(
       SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
-   switch( conshdlrdata->nlpform )
+   nlpform = conshdlrdata->nlpform;
+   if( nlpform == 'a' )
+   {
+      /* if the user let us choose, then we take 's' for "small" SOC constraints, but 'q' for large ones,
+       * since the 's' form leads to nvars^2 elements in Hessian, while the 'q' form yields only n elements
+       * however, if there is no expression interpreter, then the NLPI may have trouble, so we always use 'q' in this case
+       */
+      if( consdata->nvars < 100 && conshdlrdata->haveexprint )
+         nlpform = 's';
+      else
+         nlpform = 'q';
+   }
+
+   switch( nlpform )
    {
       case 'e':
       {
@@ -2802,9 +2817,10 @@ SCIP_DECL_CONSINIT(consInitSOC)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    
-   conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
-   conshdlrdata->rensheur   = SCIPfindHeur(scip, "rens");
-   conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
+   conshdlrdata->subnlpheur  = SCIPfindHeur(scip, "subnlp");
+   conshdlrdata->rensheur    = SCIPfindHeur(scip, "rens");
+   conshdlrdata->trysolheur  = SCIPfindHeur(scip, "trysol");
+   conshdlrdata->haveexprint = (strcmp(SCIPexprintGetName(), "NONE") != 0);
 
    return SCIP_OKAY;
 }
@@ -2822,9 +2838,10 @@ SCIP_DECL_CONSEXIT(consExitSOC)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    
-   conshdlrdata->subnlpheur = NULL;
-   conshdlrdata->rensheur   = NULL;
-   conshdlrdata->trysolheur = NULL;
+   conshdlrdata->subnlpheur  = NULL;
+   conshdlrdata->rensheur    = NULL;
+   conshdlrdata->trysolheur  = NULL;
+   conshdlrdata->haveexprint = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3733,7 +3750,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   char defaultnlpform;
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
@@ -3815,15 +3831,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
       "whether to try to make solutions feasible in check by shifting the variable on the right hand side",
       &conshdlrdata->linfeasshift,     FALSE, TRUE,          NULL, NULL) );
 
-   /* if there is no expression interpreter, the NLPI may have trouble, so we change the default to quadratic form */
-   if( strcmp(SCIPexprintGetName(), "NONE") == 0 )
-      defaultnlpform = 'q';
-   else
-      defaultnlpform = 's';
-
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/nlpform",
-      "which formulation to use when adding a SOC constraint to the NLP (q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form)",
-      &conshdlrdata->nlpform,          FALSE, defaultnlpform, "qse", NULL, NULL) );
+      "which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form)",
+      &conshdlrdata->nlpform,          FALSE, 'a', "aqse", NULL, NULL) );
 
    return SCIP_OKAY;
 }
