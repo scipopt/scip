@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.98 2010/11/24 13:23:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.99 2010/12/20 16:58:14 bzfheinz Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -625,8 +625,11 @@ SCIP_Bool solOfInterest(
 
    obj = SCIPsolGetObj(sol, set, prob);
    
-   /* check if we are willing to check worse solution */
-   if( !set->misc_improvingsols || obj < primal->upperbound )
+   /* check if we are willing to check worse solution; a solution is better if the objective is small then the current
+    * best upper bound; in case of an integral objective value we can strengthen that in the way that the new solution
+    * is better if objective + 1.0 is better then the current upper bound
+    */
+   if( !set->misc_improvingscols || obj + 0.5 < primal->upperbound || (!SCIPprobIsObjIntegral(prob) && obj < primal->upperbound) )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, prob, sol);
