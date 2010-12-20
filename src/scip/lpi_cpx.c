@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.141 2010/12/17 11:59:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.142 2010/12/20 11:42:53 bzfviger Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -1349,6 +1349,23 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, ncols, ind, lpi->larray, (SCIP_Real*)lb) );
    CHECK_ZERO( CPXchgbds(lpi->cpxenv, lpi->cpxlp, ncols, ind, lpi->uarray, (SCIP_Real*)ub) );
+
+#ifndef NDEBUG
+   {
+      int i;
+      for( i = 0; i < ncols; ++i )
+      {
+         SCIP_Real cpxlb;
+         SCIP_Real cpxub;
+
+         CHECK_ZERO( CPXgetlb(lpi->cpxenv, lpi->cpxlp, &cpxlb, ind[i], ind[i]) );
+         CHECK_ZERO( CPXgetub(lpi->cpxenv, lpi->cpxlp, &cpxub, ind[i], ind[i]) );
+
+         assert(cpxlb == lb[i]);
+         assert(cpxub == ub[i]);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
