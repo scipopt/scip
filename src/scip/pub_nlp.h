@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.8 2010/10/25 04:27:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.9 2010/12/20 17:08:59 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -41,6 +41,56 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@name Expressions and Expression tree methods */
+/**@{ */
+   
+/** returns variables of expression tree */
+extern
+SCIP_VAR** SCIPexprtreeGetVars(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+);
+
+/** stores array of variables in expression tree */
+extern
+SCIP_RETCODE SCIPexprtreeSetVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int                   nvars,              /**< number of variables */
+   SCIP_VAR**            vars                /**< variables */
+);
+
+/** adds variables to the expression tree variables array */
+extern
+SCIP_RETCODE SCIPexprtreeAddVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   int                   nvars,              /**< number of variables */
+   SCIP_VAR**            vars                /**< variables */
+);
+
+/** prints an expression tree using variable names from variables array */
+extern
+SCIP_RETCODE SCIPexprtreePrintWithNames(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   FILE*                 file                /**< file for printing, or NULL for stdout */
+);
+
+/** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
+ * Note that this is an O(n) operation!
+ */
+extern
+int SCIPexprtreeFindVar(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_VAR*             var                 /**< variable to search for */
+);
+
+/** removes fixed variables from an expression tree, so that at exit all variables are active */
+extern
+SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Bool*            changed             /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
+);
+
+/**@} */
 
 /**@name Nonlinear row methods */
 /**@{ */

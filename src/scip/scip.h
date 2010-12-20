@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.452 2010/12/03 11:35:49 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.453 2010/12/20 17:08:59 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -71,7 +71,6 @@
 #include "scip/pub_dialog.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
-#include "scip/pub_expraddl.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_implics.h"
@@ -91,6 +90,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/lpi.h"
+#include "nlpi/pub_expr.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -5287,7 +5287,37 @@ SCIP_RETCODE SCIPprintNlRow(
 
 /**@} */
 
+/**@name Expression tree methods */
+/**@{ */
 
+/** evaluates an expression tree for a primal solution or LP solution */
+extern
+SCIP_RETCODE SCIPevalExprtreeSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_SOL*             sol,                /**< a solution, or NULL for current LP solution */
+   SCIP_Real*            val                 /**< buffer to store value */
+);
+
+/** evaluates an expression tree w.r.t. current global bounds */
+extern
+SCIP_RETCODE SCIPevalExprtreeGlobalBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        val                 /**< buffer to store result */
+);
+
+/** evaluates an expression tree w.r.t. current local bounds */
+extern
+SCIP_RETCODE SCIPevalExprtreeLocalBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        val                 /**< buffer to store result */
+);
+
+/**@} */
 
 
 /*
