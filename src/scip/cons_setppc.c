@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.160 2010/12/09 08:46:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.161 2010/12/20 00:11:13 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -1287,7 +1287,7 @@ SCIP_RETCODE mergeMultiples(
    return SCIP_OKAY;
 }
 
-/** deletes all zero-fixed variables */
+/** deletes all zero-fixed variables and replace aggregated variables */
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3529,8 +3529,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
 
       /*SCIPdebugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));*/
 
-      /* remove all variables that are fixed to zero */
-      if( consdata->nfixedzeros > 0 )
+      /* remove all variables that are fixed to zero and replace all aggregated variables */
+      if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || *naggrvars > oldnaggrvars )
       {
          SCIP_CALL( applyFixings(scip, cons) );
       }
