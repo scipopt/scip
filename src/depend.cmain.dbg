@@ -13,8 +13,6 @@ $(BINOBJDIR)/cmain.o: src/cmain.c src/scip/scip.h src/scip/def.h \
  src/nlpi/type_expr.h src/scip/pub_branch.h src/scip/pub_conflict.h \
  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
- src/scip/pub_expraddl.h src/nlpi/pub_expr.h \
- src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_implics.h \
  src/scip/type_implics.h src/scip/pub_lp.h src/scip/type_set.h \
  src/scip/type_stat.h src/scip/type_lpi.h src/scip/pub_nlp.h \
@@ -22,4 +20,6 @@ $(BINOBJDIR)/cmain.o: src/cmain.c src/scip/scip.h src/scip/def.h \
  src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
- src/scip/type_history.h src/scip/lpi.h src/scip/scipshell.h
+ src/scip/type_history.h src/scip/lpi.h src/nlpi/pub_expr.h \
+ src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
+ src/scip/scipshell.h
