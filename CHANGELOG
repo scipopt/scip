@@ -66,7 +66,9 @@ fixed bugs:
 - fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
 - fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
 - fixed bug in statistic w.r.t. number of calls for external branching candidates
-
+- fixed bug in lpi_cpx.c w.r.t. to wrong handling in case the crossover did succeed
+- fixes to branching on continuous variables
+- fixed bug in cons_logicor, implications on none SCIP_VARTYPE_BINARY variable were handled wrong
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

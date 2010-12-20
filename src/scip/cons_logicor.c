@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.157 2010/12/02 22:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.158 2010/12/20 00:27:33 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2349,10 +2349,14 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          {
             SCIP_Bool implinfeasible;
             int nimplbdchgs;
-
-            /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1 */
-            SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
-                  SCIP_BOUNDTYPE_LOWER, 1.0, &implinfeasible, &nimplbdchgs) );
+            SCIP_Bool values[2];
+            
+            values[0] = FALSE;
+            values[1] = FALSE;
+            /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
+             * by the clique inequaltity ~x + ~y <= 1 
+             */
+            SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &implinfeasible, &nimplbdchgs) );
             *nchgbds += nimplbdchgs;
             if( implinfeasible )
             {
