@@ -48,6 +48,8 @@ fixed bugs:
 
 parameters:
 - replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
+- added possible values 'a' and 'e' for <constraints/soc/nlpform> to enable automatic choice and convex exponential-sqrt form for SOC constraint representation in NLP
+
 
 SCIP version 2.0.0
 ===============
