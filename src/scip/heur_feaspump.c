@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.72 2010/11/15 14:10:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.73 2010/12/21 13:51:49 bzfheinz Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -765,7 +765,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             if( SCIPvarGetType(pseudocands[i]) == SCIP_VARTYPE_BINARY )
                pseudocandsfrac[i] -= 10.0; /* binaries always come first */
          }
-         SCIPsortRealPtr(pseudocandsfrac, (void*)pseudocands, npseudocands);
+         SCIPsortRealPtr(pseudocandsfrac, (void**)pseudocands, npseudocands);
          SCIPfreeBufferArray(scip, &pseudocandsfrac);
 
          SCIPdebugMessage("iteratively fix and propagate variables\n");

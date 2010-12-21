@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xmlparse.c,v 1.5 2010/09/26 16:45:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: xmlparse.c,v 1.6 2010/12/21 13:51:49 bzfheinz Exp $"
 
 /**@file   xmldef.h
  * @brief  declarations for XML parsing
@@ -593,18 +593,21 @@ void handle_decl(
    PPOS*                 ppos
    )
 {
+   enum XmlSection {
+      IS_COMMENT,
+      IS_ATTLIST,
+      IS_DOCTYPE,
+      IS_ELEMENT,
+      IS_ENTITY,
+      IS_NOTATION,
+      IS_CDATA
+   };
+   typedef enum XmlSection XMLSECTION;
+   
    static struct
    {
       const char* name;
-      enum {
-         IS_COMMENT,
-         IS_ATTLIST,
-         IS_DOCTYPE,
-         IS_ELEMENT,
-         IS_ENTITY,
-         IS_NOTATION,
-         IS_CDATA
-      } what;
+      XMLSECTION  what;
    } key[] =
    {
       { "--",       IS_COMMENT  },

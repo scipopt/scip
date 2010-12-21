@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.39 2010/11/23 19:47:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.40 2010/12/21 13:51:49 bzfheinz Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -267,7 +267,7 @@ SCIP_RETCODE selectBranchVar(
    for( i = 0; i < ncands; ++i )
       candsorigidx[i] = i;
    
-   SCIPsortPtrInt((void*)candssorted, candsorigidx, SCIPvarComp, ncands);
+   SCIPsortPtrInt((void**)candssorted, candsorigidx, SCIPvarComp, ncands);
 
    bestbranchscore = -1.0;
 

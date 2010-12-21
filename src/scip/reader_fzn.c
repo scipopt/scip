@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.63 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.64 2010/12/21 13:51:49 bzfheinz Exp $"
 
 /**@file   reader_fzn.c
  * @ingroup FILEREADERS 
@@ -689,7 +689,7 @@ SCIP_Bool getNextToken(
    /* check the token stack */
    if( fzninput->npushedtokens > 0 )
    {
-      SCIPswapPointers((void*)&fzninput->token, (void*)&fzninput->pushedtokens[fzninput->npushedtokens-1]);
+      SCIPswapPointers((void**)&fzninput->token, (void**)&fzninput->pushedtokens[fzninput->npushedtokens-1]);
       fzninput->npushedtokens--;
       SCIPdebugMessage("(line %d) read token again: '%s'\n", fzninput->linenumber, fzninput->token);
       return TRUE;
@@ -792,7 +792,7 @@ void pushToken(
    assert(fzninput != NULL);
    assert(fzninput->npushedtokens < FZN_MAX_PUSHEDTOKENS);
 
-   SCIPswapPointers((void*)&fzninput->pushedtokens[fzninput->npushedtokens], (void*)&fzninput->token);
+   SCIPswapPointers((void**)&fzninput->pushedtokens[fzninput->npushedtokens], (void**)&fzninput->token);
    fzninput->npushedtokens++;
 }
 
@@ -2151,9 +2151,9 @@ SCIP_RETCODE parseQuadratic(
 
          /* the left hand side of x*y = z is linear (but not constant) */
          if( vars[0] == NULL )
-            SCIPswapPointers((void*)&vars[0], (void*)&vars[1]);
+            SCIPswapPointers((void**)&vars[0], (void**)&vars[1]);
          else
-            SCIPswapPointers((void*)&vals[0], (void*)&vals[1]);
+            SCIPswapPointers((void**)&vals[0], (void**)&vals[1]);
 
          /* after swapping, the variable and the coefficient should stand in front */
          assert(vars[0] != NULL && vals[0] != SCIP_INVALID ); /*lint !e777*/
@@ -2161,7 +2161,7 @@ SCIP_RETCODE parseQuadratic(
          /* the right hand side might be a variable or a constant */
          if( vars[2] != NULL )
          {
-            SCIPswapPointers((void*)&vars[1], (void*)&vars[2]); 
+            SCIPswapPointers((void**)&vars[1], (void**)&vars[2]); 
             vals[1] = -1.0;
             nvars++;
          }
@@ -2478,7 +2478,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
          else if( equalTokens(ftokens[1], "xor") )
          {
             /* swap resultant to front */
-            SCIPswapPointers((void*)&vars[0], (void*)&vars[2]); 
+            SCIPswapPointers((void**)&vars[0], (void**)&vars[2]); 
 
             SCIP_CALL( SCIPcreateConsXor(scip, &cons, fname, FALSE, 3, vars, 
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
