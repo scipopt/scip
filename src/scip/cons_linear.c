@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.389 2010/09/28 20:07:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.389.2.1 2010/12/21 16:57:53 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -3884,8 +3884,8 @@ SCIP_RETCODE addConflictBounds(
    vars = consdata->vars;
    vals = consdata->vals;
    nvars = consdata->nvars;
-   assert(vars != NULL);
-   assert(vals != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(vals != NULL || nvars == 0);
    assert(-1 <= inferpos && inferpos < nvars);
    assert((infervar == NULL) == (inferpos == -1));
    assert(inferpos == -1 || vars[inferpos] == infervar);
