@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.19 2010/12/17 12:01:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.20 2010/12/21 16:04:12 bzfhende Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -387,7 +387,8 @@ SCIP_RETCODE initMatrix(
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object to be initialized */      
    SCIP_Bool             relaxate,           /**< should continuous variables be relaxated from the problem? */
    int*                  nvarsleftinrow,     /**< numbers of shiftable discrete variables left of all rows */
-   SCIP_Bool*            initialized         /**< was the initialization successfull? */  
+   SCIP_Bool*            initialized,        /**< was the initialization successful? */  
+   SCIP_Bool*            infeasible          /**< is the problem infeasible? */
    )
 {
    SCIP_ROW** lprows;
@@ -403,6 +404,7 @@ SCIP_RETCODE initMatrix(
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(initialized!= NULL);
+   assert(infeasible != NULL);
 
    SCIPdebugMessage("entering Matrix Initialization method of SHIFTANDPROPAGATE heuristic!\n");
 
@@ -450,6 +452,7 @@ SCIP_RETCODE initMatrix(
       matrix->transformstatus[j] = TRANSFORMSTATUS_NONE;
 
    currentpointer = 0;
+   *infeasible = FALSE;
 
    /* initialize the rows vector of the heuristic matrix together with its corresponding
     * lhs, rhs. 
@@ -473,7 +476,7 @@ SCIP_RETCODE initMatrix(
 
       assert(!SCIPisInfinity(scip, constant));
       assert(SCIPisFeasGT(scip, maxval, 0.0) || nrowlpnonz == 0);
-        
+
       matrix->rowmatbegin[i] = currentpointer;
 
       /* modify the lhs and rhs w.r.t to the rows constant and normalize by 1-norm, i.e divide the lhs and rhs by the 
@@ -489,6 +492,14 @@ SCIP_RETCODE initMatrix(
       else 
          matrix->rhs[i] = SCIPinfinity(scip);
 
+      if( nrowlpnonz == 0 && (SCIPisFeasLT(scip, 0.0, matrix->lhs[i]) || SCIPisFeasGT(scip, 0.0, matrix->rhs[i])) )
+      {
+	 *infeasible = TRUE;
+	 SCIPdebugMessage("  Matrix initialization stopped because of row infeasibility! \n");
+	 SCIPdebug( SCIPprintRow(scip, row, NULL) );
+	 break;
+      }
+
       /* row coefficients are normalized and copied to heuristic matrix */
       for( j = 0; j < nrowlpnonz; ++j )
       { 
@@ -503,6 +514,10 @@ SCIP_RETCODE initMatrix(
             ++nvarsleftinrow[i];
       }
    }
+
+   if( *infeasible )
+      return SCIP_OKAY;
+
    assert(currentpointer == matrix->nnonzs);
    
    currentpointer = 0;
@@ -557,7 +572,7 @@ SCIP_RETCODE initMatrix(
    }
    assert(currentpointer == matrix->nnonzs);
 
-   /* each variable is either transformed, if it supposed to be integral, or relaxated */
+   /* each variable is either transformed, if it supposed to be integral, or relaxed */
    for( j = 0; j < (relaxate ? ncols : matrix->ndiscvars); ++j )
    {
       SCIP_VAR* var;
@@ -607,7 +622,7 @@ void freeMatrix(
 
       /* free all fields */
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
-      SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals)) ;
+      SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       
       SCIPfreeBufferArray(scip, &((*matrix)->colmatvals));
@@ -1328,17 +1343,18 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPnewProbingNode(scip) );
    ncutoffs = 0;
    nprobings = 0;
+   infeasible = FALSE;
 
    /* init heuristic matrix and working solution */
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nvarsleftinrow, nlprows) );
    BMSclearMemoryArray(nvarsleftinrow, nlprows);
-   SCIP_CALL( initMatrix(scip, matrix, heurdata->relaxate, nvarsleftinrow, &initialized) );
+   SCIP_CALL( initMatrix(scip, matrix, heurdata->relaxate, nvarsleftinrow, &initialized, &infeasible) );
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    SCIPsolSetHeur(sol, heur);
 
    /* could not initialize matrix */
-   if( !initialized )
+   if( !initialized || infeasible )
    {
       SCIPdebugMessage(" MATRIX not initialized -> Execution of heuristic stopped! \n");
       goto TERMINATE;
