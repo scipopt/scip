@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.36 2010/09/27 17:20:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.37 2010/12/21 10:12:21 bzfberth Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -548,6 +548,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    assert(vars != NULL || nvars == 0);
+   assert(nbinvars <= nvars);
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPallocBufferArray( scip, &subvars, nvars ) ); 
@@ -601,7 +602,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
@@ -639,19 +639,29 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    nsols = SCIPgetNSols(scip);
    nsolsfound = SCIPgetNSolsFound(scip);
    checklength = MIN( nsols , heurdata->solnum );
-   assert( sols != NULL );
-   assert( nsols > 0 );
+   assert(sols != NULL);
+   assert(nsols > 0);
    
    /* create fixing flag array */
    SCIP_CALL( SCIPallocBufferArray( scip, &fixed, nbinvars ) );
-   assert(nbinvars <= nvars);
+
+   /* if new binary variables have been created, e.g., due to column generation, reallocate the delta array */
+   if( heurdata->deltalength < nbinvars )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, nbinvars);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &delta, heurdata->deltalength, newsize) );
+      heurdata->deltalength = newsize;
+   }
 
    /* fixing for binary variables */
    /* hard fixing for some with mipsol(s)=lpsolval=rootlpsolval and preparation for soft fixing for the remaining */
    ufcount = 0;
    for( i = 0; i < nbinvars; i++ )
    {
-      /* soft fixing if the variable somewhen changed her value or the relaxations differ by adding a local branching constraint */
+      /* soft fixing if the variable somewhen changed its value or the relaxations differ by adding a local branching constraint */
       fixed[i] = FALSE; 
 
       /* get the current LP solution for each variable */

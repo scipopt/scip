@@ -71,6 +71,7 @@ fixed bugs:
 - fixed bug in lpi_cpx.c w.r.t. to wrong handling in case the crossover did succeed
 - fixes to branching on continuous variables
 - fixed bug in cons_logicor, implications on none SCIP_VARTYPE_BINARY variable were handled wrong
+- fixed bug in DINS heuristic, information storage for binary variables could lead to bad memory access in column generation applications
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
