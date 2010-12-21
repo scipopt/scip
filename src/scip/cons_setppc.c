@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.161 2010/12/20 00:11:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.162 2010/12/21 13:57:02 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -907,7 +907,7 @@ SCIP_RETCODE dualPresolving(
    if( nvars < 2 )
       return SCIP_OKAY;
 
-   setppctype = consdata->setppctype;
+   setppctype = (SCIP_SETPPCTYPE)consdata->setppctype;
    vars = consdata->vars;
    idx = -1;
    bestobjval = SCIP_INVALID;
