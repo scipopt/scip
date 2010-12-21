@@ -73,6 +73,7 @@ fixed bugs:
 - fixed bug in cons_logicor, implications on none SCIP_VARTYPE_BINARY variable were handled wrong
 - fixed bug in DINS heuristic, information storage for binary variables could lead to bad memory access in column generation applications
 - fixed some bugs w.r.t. to casting pointer arrays
+- fixed bug in cons_linear while trying to add a conflict without any variables
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
