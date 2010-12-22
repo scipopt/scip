@@ -74,6 +74,8 @@ fixed bugs:
 - fixed bug in DINS heuristic, information storage for binary variables could lead to bad memory access in column generation applications
 - fixed some bugs w.r.t. to casting pointer arrays
 - fixed bug in cons_linear while trying to add a conflict without any variables
+- fixed bug in heur_shiftandpropagate.c: Now, the heuristic checks rows for global infeasibility at the beginning. This check is only relevant if presolving is disabled.
+- fixed bug in vars.c which handled arrays with parts of original variables during resolving to active variables (using SCIPvarsGetProbvarBinary) wrong
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

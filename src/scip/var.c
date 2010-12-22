@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.314 2010/12/17 12:01:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.315 2010/12/22 22:27:51 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3391,8 +3391,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    assert( set != NULL );
    assert( nvars != NULL );
-   assert( vars != NULL || *nvars == 0);
-   assert( scalars != NULL );
+   assert( vars != NULL || *nvars == 0 );
+   assert( scalars != NULL || *nvars == 0 );
    assert( constant != NULL );
    assert( requiredsize != NULL );
    assert( *nvars <= varssize );
@@ -9510,8 +9510,9 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
          {
          case SCIP_VARSTATUS_ORIGINAL:
             if( (*var)->data.original.transvar == NULL )
-               return SCIP_OKAY;
-            *var = (*var)->data.original.transvar;
+               resolved = TRUE;
+            else
+               *var = (*var)->data.original.transvar;
             break;
             
          case SCIP_VARSTATUS_LOOSE:
