@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.711 2010/12/20 17:08:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.712 2010/12/22 22:35:26 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7692,6 +7692,8 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    SCIP_Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
    )
 {
+   assert(scip != NULL);
+   assert(var != NULL);
    assert(repvar != NULL);
    assert(negated != NULL);
 
@@ -7708,6 +7710,45 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
       SCIP_CALL( SCIPgetNegatedVar(scip, *repvar, repvar) );
    }
 
+   return SCIP_OKAY;
+}
+
+/** gets binary variables that are equal to the given binary variables, and which are either active, fixed, or 
+ *  multi-aggregated, or the negated variables of active, fixed, or multi-aggregated variables
+ */
+extern
+SCIP_RETCODE SCIPgetBinvarRepresentatives(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables to get negated variables for */
+   SCIP_VAR**            vars,               /**< binary variables to get binary representatives for */
+   SCIP_VAR**            repvars,            /**< array to store the binary representatives */
+   SCIP_Bool*            negated             /**< array to store whether the negation of an active variable was returned */
+   )
+{
+   int v;
+
+   assert(scip != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(repvars != NULL || nvars == 0);
+   assert(negated != NULL || nvars == 0);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetBinvarRepresentatives", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   /* get the active representative of the given variable */
+   BMScopyMemoryArray(repvars, vars, nvars);
+   BMSclearMemoryArray(negated, nvars);
+   SCIP_CALL( SCIPvarsGetProbvarBinary(&repvars, &negated, nvars) );
+
+   /* negate the representatives, if they correspond to the negation of the given variables */
+   for( v = nvars - 1; v >= 0; --v )
+      if( negated[v] )
+      {
+         SCIP_CALL( SCIPgetNegatedVar(scip, repvars[v], &(repvars[v])) );
+      }
+   
    return SCIP_OKAY;
 }
 
@@ -7748,7 +7789,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    assert( scip != NULL );
    assert( nvars != NULL );
    assert( vars != NULL || *nvars == 0 );
-   assert( scalars != NULL );
+   assert( scalars != NULL || *nvars == 0 );
    assert( constant != NULL );
    assert( requiredsize != NULL );
    assert( *nvars <= varssize );

@@ -21,6 +21,8 @@ interface:
 - new method SCIPgetNegatedVars() which returns for a ǵiven array of variables all negated variables, if the negated variables are not existing yet, they will be created
 - methods SCIPexprtreeEvalSol(), SCIPexprtreeEvalIntLocalBounds(), and SCIPexprtreeEvalIntGlobalBounds() have been
   renamed to SCIPevalExprtreeSol(), SCIPevalExprtreeLocalBounds(), and SCIPevalExprtreeGlobalBounds() (now located in scip.h)
+- new method SCIPgetBinvarRepresentatives() which gets binary variables that are equal to some given binary variables, and which are either active, fixed, or 
+  multi-aggregated, or the negated variables of active, fixed, or multi-aggregated variables
 
 performance improvements:
 - SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);

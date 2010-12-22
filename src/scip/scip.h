@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.453 2010/12/20 17:08:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.454 2010/12/22 22:35:26 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2503,6 +2503,18 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    SCIP_VAR*             var,                /**< binary variable to get binary representative for */
    SCIP_VAR**            repvar,             /**< pointer to store the binary representative */
    SCIP_Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
+   );
+
+/** gets binary variables that are equal to the given binary variables, and which are either active, fixed, or 
+ *  multi-aggregated, or the negated variables of active, fixed, or multi-aggregated variables
+ */
+extern
+SCIP_RETCODE SCIPgetBinvarRepresentatives(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of binary variables to get representatives for */
+   SCIP_VAR**            vars,               /**< binary variables to get binary representatives for */
+   SCIP_VAR**            repvars,            /**< array to store the binary representatives */
+   SCIP_Bool*            negated             /**< array to store whether the negation of an active variable was returned */
    );
 
 /** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion later on */
