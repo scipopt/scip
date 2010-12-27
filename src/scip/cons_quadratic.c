@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.143 2010/12/27 11:59:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.144 2010/12/27 15:43:56 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4269,6 +4269,8 @@ SCIP_RETCODE isIntervalFeasible(
 {  /*lint --e{666}*/
    SCIP_CONSDATA* consdata;
    SCIP_Real      intervalinfty;
+   SCIP_Real      linminact;
+   SCIP_Real      linmaxact;
    
    assert(scip != NULL);
    assert(cons != NULL);
@@ -4288,17 +4290,24 @@ SCIP_RETCODE isIntervalFeasible(
    /* update bound on activities of quadratic part, where necessary */
    consdataUpdateQuadActivity(scip, consdata, intervalinfty);
 
-   if( (!SCIPisInfinity(scip, -consdata->lhs) &&
-         SCIPisFeasGT(scip, consdata->lhs, consdataGetLinearMaxActivity(scip, consdata, intervalinfty) + SCIPintervalGetSup(consdata->quadactivitybounds))) ||
-       (!SCIPisInfinity(scip,  consdata->rhs) &&
-         SCIPisFeasLT(scip, consdata->rhs, consdataGetLinearMinActivity(scip, consdata, intervalinfty) + SCIPintervalGetInf(consdata->quadactivitybounds))) )
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      linmaxact = consdataGetLinearMaxActivity(scip, consdata, intervalinfty);
+      *isfeasible = !SCIPisFeasGT(scip, consdata->lhs, linmaxact + SCIPintervalGetSup(consdata->quadactivitybounds));
+   }
+   if( *isfeasible && !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      linminact = consdataGetLinearMinActivity(scip, consdata, intervalinfty);
+      *isfeasible = !SCIPisFeasLT(scip, consdata->rhs, linminact + SCIPintervalGetInf(consdata->quadactivitybounds));
+   }
+
+   if( !*isfeasible )
    {
       SCIPdebugMessage("interval arithmetic found constraint <%s> infeasible: sides = [%g, %g], linear activity = [%g, %g], quadratic activity = [%g, %g]\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, 
          consdataGetLinearMinActivity(scip, consdata, intervalinfty), consdataGetLinearMaxActivity(scip, consdata, intervalinfty),
          SCIPintervalGetInf(consdata->quadactivitybounds), SCIPintervalGetSup(consdata->quadactivitybounds));
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      *isfeasible = FALSE;
    }
    
    return SCIP_OKAY;
@@ -5113,9 +5122,9 @@ SCIP_RETCODE registerVariableInfeasibilities(
                SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), xlb, xub, xub-xlb);
                continue;
             }
-            
+
             xval = SCIPgetSolVal(scip, NULL, consdata->quadvarterms[j].var);
-            
+
             if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
                gap = SCIPinfinity(scip);
             else if( xval < xlb || xval > xub )
@@ -5153,13 +5162,13 @@ SCIP_RETCODE registerVariableInfeasibilities(
             xval = xlb;
          else if( xval > xub )
             xval = xub;
-         
+
          yval = SCIPgetSolVal(scip, NULL, consdata->bilinterms[j].var2);
          if( yval < ylb )
             yval = ylb;
          else if( yval > yub )
             yval = yub;
-         
+
          coef_ = SCIPisFeasPositive(scip, consdata->lhsviol) ? -consdata->bilinterms[j].coef : consdata->bilinterms[j].coef;
          if( coef_ > 0.0 )
          {
@@ -5175,11 +5184,11 @@ SCIP_RETCODE registerVariableInfeasibilities(
             else
                gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
          }
-         
+
          assert(!SCIPisNegative(scip, gap));
-         if( gap < 0.0 ) 
+         if( gap < 0.0 )
             gap = 0.0;
-         
+
          if( !SCIPisEQ(scip, xlb, xub) )
          {
             SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->bilinterms[j].var1, gap, SCIP_INVALID) );
@@ -5206,7 +5215,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
    return SCIP_OKAY;
 }
 
-/** registers a variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
+/** registers a nonlinear variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
 static
 SCIP_RETCODE registerLargeLPValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
