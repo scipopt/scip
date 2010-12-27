@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.712 2010/12/22 22:35:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.713 2010/12/27 20:24:00 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -14985,6 +14985,23 @@ SCIP_RETCODE SCIPprintNlRow(
  *  if val is >= infty1, then give infty2, else give val
  */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
+
+/** transforms array of variables in expression tree */
+SCIP_RETCODE SCIPtransformExprtreeVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+)
+{
+   assert(scip != NULL);
+   assert(tree != NULL);
+
+   if( SCIPexprtreeGetNVars(tree) == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPtransformVars(scip, SCIPexprtreeGetNVars(tree), SCIPexprtreeGetVars(tree), SCIPexprtreeGetVars(tree)) );
+
+   return SCIP_OKAY;
+}
 
 /** evaluates an expression tree for a primal solution or LP solution */
 SCIP_RETCODE SCIPevalExprtreeSol(

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.454 2010/12/22 22:35:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.455 2010/12/27 20:24:00 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5301,6 +5301,13 @@ SCIP_RETCODE SCIPprintNlRow(
 
 /**@name Expression tree methods */
 /**@{ */
+
+/** transforms array of variables in expression tree */
+extern
+SCIP_RETCODE SCIPtransformExprtreeVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+);
 
 /** evaluates an expression tree for a primal solution or LP solution */
 extern
