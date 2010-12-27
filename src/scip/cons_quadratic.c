@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.145 2010/12/27 16:17:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.146 2010/12/27 19:56:39 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -6943,6 +6943,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
+   /* @todo does it makes sense to call this here, or should consprop and consenfo be enough? */
    SCIP_CALL( areIntervalFeasible(scip, conss, nconss, maxviolcon, &intervalfeas) );
    if( !intervalfeas )
    {
@@ -6980,6 +6981,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
+   /* @todo does it makes sense to call this here, or should consprop and consenfo be enough? */
    SCIP_CALL( areIntervalFeasible(scip, conss, nconss, maxviolcon, &intervalfeas) );
    if( !intervalfeas )
    {
@@ -7034,11 +7036,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(!SCIPisFeasZero(scip, maxviol));
 
-   SCIPdebugMessage("enfolp with max violation %g in %s\n", maxviol, SCIPconsGetName(maxviolcon));
+   SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcon));
 
    /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
     * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the effiacy is at least, say, 75% of the maximal violation
+    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
     * but in any case we need an efficacy that is at least feastol
     */
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfo);
@@ -7085,7 +7087,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
       }
       else
       {
-         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable %s with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
+         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
       }
    }
    
@@ -7101,6 +7103,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
    SCIP_CONS*         maxviolcon;
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          intervalfeas;
+   SCIP_VAR*          var;
    int                c, i;
 
    assert(scip != NULL);
@@ -7126,8 +7129,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
        return SCIP_OKAY;
    }
    
+
    /* we are not feasible and we cannot proof that the whole node is infeasible
-    * -> collect variables for branching
+    * -> collect all variables in violated constraints for branching
     */
 
    for( c = 0; c < nconss; ++c )
@@ -7135,21 +7139,27 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       assert(conss != NULL);
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
-      
-      if( consdata->nquadvars == 0 )
-         continue;
-      
+
       if( !SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol) )
          continue;
-      
-      SCIPdebugMessage("con %s violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
-      
-      for( i = 0; i < consdata->nquadvars; ++i )
-         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+
+      for( i = 0; i < consdata->nlinvars; ++i )
+      {
+         var = consdata->linvars[i];
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPaddExternBranchCand(scip, consdata->quadvarterms[i].var, consdata->lhsviol + consdata->rhsviol, SCIP_INVALID) );
+            SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
          }
+      }
+
+      for( i = 0; i < consdata->nquadvars; ++i )
+      {
+         var = consdata->quadvarterms[i].var;
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPaddExternBranchCand(scip, var, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+         }
+      }
    }
 
    return SCIP_OKAY;
