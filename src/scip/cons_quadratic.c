@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.144 2010/12/27 15:43:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.145 2010/12/27 16:17:41 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5215,7 +5215,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
    return SCIP_OKAY;
 }
 
-/** registers a nonlinear variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
+/** registers a quadratic variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
 static
 SCIP_RETCODE registerLargeLPValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6283,7 +6283,7 @@ SCIP_RETCODE propagateBounds(
    return SCIP_OKAY;
 }
 
-/** Given a solution where every quadratic constraints is either feasible or can be made feasible by
+/** Given a solution where every quadratic constraint is either feasible or can be made feasible by
  * moving a linear variable, construct the corresponding feasible solution and pass it to the trysol heuristic.
  * The method assumes that this is always possible and that not all constraints are feasible already.
  */
@@ -6412,7 +6412,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       if( norm > 1.0 )
          viol /= norm;
       /* if still violated, we give up */
-      if( SCIPisFeasPositive(scip, ABS(norm)) )
+      if( SCIPisFeasPositive(scip, REALABS(viol)) )
          break;
 
       /* if objective value is not better than current upper bound, we give up */
