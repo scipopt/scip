@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.24 2010/09/03 19:25:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.25 2010/12/27 11:59:46 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -37,8 +37,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-   
-typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constraint update method */
 
 /** data structure to store a single term associated to a quadratic variable
  */
@@ -105,7 +103,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** includes a quadratic constraint update method into the quadratic constraint handler */
+/** includes a quadratic constraint upgrade method into the quadratic constraint handler */
 extern
 SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    SCIP*                   scip,               /**< SCIP data structure */

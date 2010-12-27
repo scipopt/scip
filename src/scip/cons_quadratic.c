@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.142 2010/12/02 20:54:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.143 2010/12/27 11:59:46 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -122,6 +122,15 @@ struct SCIP_ConsData
    int                   linvar_mayincrease; /**< index of a variable in linvars that may be increased without making any other constraint infeasible, or -1 if none */
 };
 
+/** quadratic constraint update method */
+struct SCIP_QuadConsUpgrade
+{
+   SCIP_DECL_QUADCONSUPGD((*quadconsupgd));    /**< method to call for upgrading quadratic constraint */
+   int                     priority;           /**< priority of upgrading method */
+   SCIP_Bool               active;             /**< is upgrading enabled */
+};
+typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constraint update method */
+
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
@@ -153,14 +162,6 @@ struct SCIP_ConshdlrData
 #endif
 };
 
-/** quadratic constraint update method */
-struct SCIP_QuadConsUpgrade
-{
-   SCIP_DECL_QUADCONSUPGD((*quadconsupgd));    /**< method to call for upgrading quadratic constraint */
-   int                     priority;           /**< priority of upgrading method */
-   SCIP_Bool               active;             /**< is upgrading enabled */
-};
-
 /** data structure for tokenizing strings */
 struct SCIP_Tokenizer
 {
@@ -184,7 +185,7 @@ typedef enum CipSense CIPSENSE;                   /**< enum type for constraint 
  */
 
 
-/** creates a linear constraint upgrade data object */
+/** checks whether a quadratic constraint upgrade method has already be registered */
 static
 SCIP_Bool conshdlrdataHasUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -468,6 +469,7 @@ SCIP_Bool getNextToken(
  */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
 
+/** processes variable fixing or bound change event */
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
@@ -543,6 +545,7 @@ SCIP_RETCODE catchLinearVarEvents(
    
    eventdata->consdata = consdata;
    eventdata->varidx = linvarpos;
+   /* @todo catch only interesting bound tightening events (and varfixed) */
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, eventdata, &eventdata->filterpos) );
    
    consdata->lineventdata[linvarpos] = eventdata;
@@ -8277,7 +8280,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
       quadconsupgrade->priority     = priority;
       quadconsupgrade->active       = TRUE;
 
-      /* insert quadratic constraint update method into constraint handler data */
+      /* insert quadratic constraint upgrade method into constraint handler data */
       assert(conshdlrdata->nquadconsupgrades <= conshdlrdata->quadconsupgradessize);
       if( conshdlrdata->nquadconsupgrades+1 > conshdlrdata->quadconsupgradessize )
       {
@@ -8359,7 +8362,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    
    int nbilinterms;
    
-   assert( modifiable == FALSE ); /* we do not support column generation */
+   assert(modifiable == FALSE); /* we do not support column generation */
 
    /* find the quadratic constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
