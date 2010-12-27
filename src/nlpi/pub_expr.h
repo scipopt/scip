@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expr.h,v 1.2 2010/10/29 02:28:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expr.h,v 1.3 2010/12/27 20:37:56 bzfviger Exp $"
 
 /**@file   nlpi/pub_expr.h
  * @brief  methods for expressions and expression trees
@@ -388,6 +388,19 @@ SCIP_EXPRINTDATA* SCIPexprtreeGetInterpreterData(
    SCIP_EXPRTREE*        tree                /**< expression tree */
 );
 
+/** sets data of expression tree interpreter */
+extern
+void SCIPexprtreeSetInterpreterData(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
+);
+
+/** frees data of expression tree interpreter, if any */
+extern
+SCIP_RETCODE SCIPexprtreeFreeInterpreterData(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+);
+
 /** indicates whether there are parameterized constants (SCIP_EXPR_PARAM) in expression tree */
 extern
 SCIP_Bool SCIPexprtreeHasParam(
@@ -404,13 +417,6 @@ extern
 SCIP_RETCODE SCIPexprtreeGetMaxDegree(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int*                  maxdegree           /**< buffer to store maximal degree */
-);
-
-/** sets data of expression tree interpreter */
-extern
-void SCIPexprtreeSetInterpreterData(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
 );
 
 /** evaluates an expression tree w.r.t. a point */

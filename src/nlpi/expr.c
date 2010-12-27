@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.1 2010/10/25 04:27:33 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.2 2010/12/27 20:37:56 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -2645,11 +2645,7 @@ SCIP_RETCODE SCIPexprtreeFree(
    assert( tree != NULL);
    assert(*tree != NULL);
    
-   if( (*tree)->interpreterdata )
-   {
-      SCIP_CALL( SCIPexprintFreeData(&(*tree)->interpreterdata) );
-      assert((*tree)->interpreterdata == NULL);
-   }
+   SCIP_CALL( SCIPexprtreeFreeInterpreterData(*tree) );
    
    if( (*tree)->root != NULL )
    {
@@ -2745,6 +2741,33 @@ SCIP_EXPRINTDATA* SCIPexprtreeGetInterpreterData(
    return tree->interpreterdata;
 }
 
+/** sets data of expression tree interpreter */
+void SCIPexprtreeSetInterpreterData(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
+)
+{
+   assert(tree != NULL);
+   assert(interpreterdata != NULL);
+   assert(tree->interpreterdata == NULL);
+
+   tree->interpreterdata = interpreterdata;
+}
+
+/** frees data of expression tree interpreter, if any */
+SCIP_RETCODE SCIPexprtreeFreeInterpreterData(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   if( tree->interpreterdata != NULL )
+   {
+      SCIP_CALL( SCIPexprintFreeData(&tree->interpreterdata) );
+      assert(tree->interpreterdata == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** indicates whether there are parameterized constants (SCIP_EXPR_PARAM) in expression tree */
 SCIP_Bool SCIPexprtreeHasParam(
    SCIP_EXPRTREE*        tree                /**< expression tree */
@@ -2771,19 +2794,6 @@ SCIP_RETCODE SCIPexprtreeGetMaxDegree(
    SCIP_CALL( SCIPexprGetMaxDegree(tree->root, maxdegree) );
 
    return SCIP_OKAY;
-}
-
-/** sets data of expression tree interpreter */
-void SCIPexprtreeSetInterpreterData(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_EXPRINTDATA*     interpreterdata     /**< expression interpreter data */
-)
-{
-   assert(tree != NULL);
-   assert(interpreterdata != NULL);
-   assert(tree->interpreterdata == NULL);
-
-   tree->interpreterdata = interpreterdata;
 }
 
 /** evaluates an expression tree w.r.t. a point */
