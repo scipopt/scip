@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.2 2010/12/27 20:37:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.3 2010/12/27 22:28:09 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -2528,10 +2528,12 @@ void SCIPexprPrint(
          for( i = 0; i < polynomdata->nmonoms; ++i )
          {
             monomdata = polynomdata->monoms[i];
-            SCIPmessageFPrintInfo(file, " %+.20g ", monomdata->coef);
+            SCIPmessageFPrintInfo(file, " %+.20g", monomdata->coef);
 
             for( j = 0; j < monomdata->nfactors; ++j )
             {
+               SCIPmessageFPrintInfo(file, " * ");
+
                SCIPexprPrint(expr->children[monomdata->childidxs[j]], file, varnames, paramnames);
                if( monomdata->exponents[j] < 0.0 )
                {
