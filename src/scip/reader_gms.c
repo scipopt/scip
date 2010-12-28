@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.47 2010/11/15 21:11:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.48 2010/12/28 11:26:44 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -619,7 +619,7 @@ SCIP_RETCODE printQuadraticRow(
       var = quadvarterms[t].var;
       assert( var != NULL );
 
-      if( !SCIPisZero(scip, quadvarterms[t].sqrcoef) )
+      if( !SCIPisZero(scip, quadvarterms[t].lincoef) )
       {
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*", quadvarterms[t].lincoef);
 
