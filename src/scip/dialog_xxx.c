@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xxx.c,v 1.8 2010/05/03 09:24:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: dialog_xxx.c,v 1.9 2010/12/28 17:59:26 bzfviger Exp $"
 
 /**@file   dialog_xxx.c
  * @ingroup DIALOGS
@@ -58,7 +58,7 @@ struct SCIP_DialogData
 
 
 /*
- * Callback methods of presolver
+ * Callback methods of dialog
  */
 
 /* TODO: Implement all necessary dialog methods. The methods with an #if 0 ... #else #define ... are optional */
@@ -113,6 +113,14 @@ SCIP_DECL_DIALOGEXEC(dialogExecXxx)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xxx dialog not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
+
+   /* add your dialog to history of dialogs that have been executed */
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   /* TODO: Implement execution of your dialog here. */
+
+   /* next dialog will be root dialog again */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
 }
