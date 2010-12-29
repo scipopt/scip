@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.400 2010/12/21 17:01:18 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.401 2010/12/29 03:39:48 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -2889,104 +2889,110 @@ SCIP_RETCODE consdataSort(
    }
    else if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
    {
+      SCIP_EVENTDATA** eventdatas;
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      int nvars;
       int v;
       int lastbin;
 
+      /* we assume that we only have to sort the binaries one time, afterwards the sorting won't change */
       assert(consdata->nbinvars == -1);
 
-      consdata->nbinvars = 0;
-      lastbin = -1;
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+      vals = consdata->vals;
+      eventdatas = consdata->eventdatas;
+      assert(vars != NULL || nvars == 0);
+      assert(vals != NULL || nvars == 0);
+
+      lastbin = 0;
       /* count binary variables and permute variables such that binaries appear first in the sorted vars array */
-      for( v = 0; v < consdata->nvars; ++v )
+      for( v = 0; v < nvars; ++v )
       {
-	 if( SCIPvarIsBinary(consdata->vars[v]) )
+	 if( SCIPvarIsBinary(vars[v]) )
 	 {
             /* swap variable at the end of the binary variables, if necessary */
-            if( lastbin < v - 1 )
+            if( lastbin < v )
             {
 	       SCIP_VAR* tmpvar;
 	       SCIP_Real tmpval;
                
-	       ++lastbin;
+	       tmpvar = vars[lastbin];
+	       tmpval = vals[lastbin];
 
-	       tmpvar = consdata->vars[lastbin];
-	       tmpval = consdata->vals[lastbin];
+	       vars[lastbin] = vars[v];
+	       vals[lastbin] = vals[v];
 
-	       consdata->vars[lastbin] = consdata->vars[v];
-	       consdata->vals[lastbin] = consdata->vals[v];
+	       vars[v] = tmpvar;
+	       vals[v] = tmpval;
 
-	       consdata->vars[v] = tmpvar;
-	       consdata->vals[v] = tmpval;
-
-	       if( consdata->eventdatas != NULL )
+	       if( eventdatas != NULL )
 	       {
                   SCIP_EVENTDATA* tmpeventdata;
                   
-                  tmpeventdata = consdata->eventdatas[v];
-                  consdata->eventdatas[lastbin] = consdata->eventdatas[v];
-                  consdata->eventdatas[lastbin]->varpos = lastbin;
-                  consdata->eventdatas[v] = tmpeventdata;
-                  consdata->eventdatas[v]->varpos = v;
+                  tmpeventdata = eventdatas[lastbin];
+                  eventdatas[lastbin] = eventdatas[v];
+                  eventdatas[lastbin]->varpos = lastbin;
+                  eventdatas[v] = tmpeventdata;
+                  eventdatas[v]->varpos = v;
 	       }
-	       assert(SCIPvarIsBinary(consdata->vars[lastbin]));
+	       assert(SCIPvarIsBinary(vars[lastbin]));
             }
+#ifndef NDEBUG
             else
-            {
-	       assert(lastbin == v - 1);
-	       ++lastbin;
-            }
+               assert(lastbin == v);
+#endif
+            ++lastbin;
 	 }
-         consdata->nbinvars = lastbin + 1;
+      }
+      consdata->nbinvars = lastbin;
 
 #ifndef NDEBUG
-	 /* check sorting */
-	 for( v = 0; v < consdata->nvars; ++v )
-	 {
-	    assert(consdata->eventdatas == NULL || consdata->eventdatas[v]->varpos == v);
-	    assert(v >= consdata->nbinvars || SCIPvarIsBinary(consdata->vars[v]));
-	 }
+      /* check sorting */
+      for( v = 0; v < nvars; ++v )
+      {
+         assert(eventdatas == NULL || eventdatas[v]->varpos == v);
+         assert((v >= consdata->nbinvars && !SCIPvarIsBinary(vars[v])) || (v < consdata->nbinvars && SCIPvarIsBinary(vars[v])));
+      }
 #endif
-      }      
-      if( consdata->nbinvars <= 1 )
-	 consdata->binvarssorted = TRUE;
-      else
+
+      if( consdata->nbinvars > 1 )
       {
 	 SCIP_Real* absvals;
 	 int*       perm;
 
-         /* initialize absolute coefficients and the target permutation for binary variables */
-	 SCIP_CALL( SCIPallocBufferArray(scip, &absvals, consdata->nbinvars) );
-	 SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nbinvars) );
+         assert(lastbin == consdata->nbinvars);
 
-	 for( v = 0; v < consdata->nbinvars; ++v )
+         /* initialize absolute coefficients and the target permutation for binary variables */
+	 SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
+	 SCIP_CALL( SCIPallocBufferArray(scip, &perm, lastbin) );
+
+	 for( v = 0; v < lastbin; ++v )
 	 {
-             absvals[v] = ABS(consdata->vals[v]);
+             absvals[v] = ABS(vals[v]);
 	     perm[v] = v;
 	 }
 	 
          /* execute the sortation */
-	 SCIPsortDownRealInt(absvals, perm, consdata->nbinvars);
+	 SCIPsortDownRealInt(absvals, perm, lastbin);
 
-	 permSortConsdata(consdata, perm, consdata->nbinvars);
+	 permSortConsdata(consdata, perm, lastbin);
 
          /* free temporary arrays */
 	 SCIPfreeBufferArray(scip, &perm);
 	 SCIPfreeBufferArray(scip, &absvals);
-
-	 consdata->binvarssorted = TRUE;
-	 
       }
+      consdata->binvarssorted = TRUE;
+	 
       /* presolve sortation cannot be garanteed after binary sortation */
       consdata->sorted = (consdata->nbinvars <= 1);
    }
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE || consdata->binvarssorted);
    assert(SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE || consdata->sorted);
 
-
    return SCIP_OKAY;
 }
-
-
 
 
 /*
@@ -4544,7 +4550,7 @@ SCIP_RETCODE tightenBounds(
    force = (nvars == 1);
 
    /* ensure that the variables are properly sorted */
-   if( sortvars && SCIPgetStage(scip) > SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
+   if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
    {
      SCIP_CALL( consdataSort(scip, consdata) );
      assert(consdata->binvarssorted);

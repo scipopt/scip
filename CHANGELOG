@@ -79,6 +79,7 @@ fixed bugs:
 - fixed bug in heur_shiftandpropagate.c: Now, the heuristic checks rows for global infeasibility at the beginning. This check is only relevant if presolving is disabled.
 - fixed bug in vars.c which handled arrays with parts of original variables during resolving to active variables (using SCIPvarsGetProbvarBinary) wrong
 - fixed bug in reader_gms.c: linear coefficients for quadratic variables were not printed if they had no square-coefficient
+- fixed bug in cons_linear.c while sorting the eventdatas during the binary variable sorting for propagation
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
