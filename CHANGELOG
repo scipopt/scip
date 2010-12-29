@@ -42,7 +42,7 @@ fixed bugs:
   tolerance might not have been rounded correctly
 - fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
 - fixed bug in statistic w.r.t. number of calls for external branching candidates
-- fixed bug in lpi_cpx.c w.r.t. to wrong handling in case the crossover did succeed
+- fixed bug in lpi_cpx.c w.r.t. to wrong handling in case the crossover did not succeed
 - fixes to branching on continuous variables
 - fixed bug in cons_logicor, implications on none SCIP_VARTYPE_BINARY variable were handled wrong
 - fixed bug in DINS heuristic, information storage for binary variables could lead to bad memory access in column generation applications

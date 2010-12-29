@@ -33,7 +33,7 @@
  *
  * \OTHERDOCUTEXT
  *
- * @version  2.0.0.1
+ * @version  2.0.1
  *
  * <b>SCIP Authors:</b>
  * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
@@ -181,10 +181,6 @@
  *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
  * 
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
- *
- * - <code>IPOPT=\<true|false\></code> to enable/disable(default) IPOPT interface (needs IPOPT)
- *
- * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter or no expressions interpreter (default)
  *
  * There are additional parameters for Linux/Gnu compilers:
  *

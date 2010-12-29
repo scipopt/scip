@@ -1,4 +1,4 @@
-# SCIP version 2.0.0
+# SCIP version 2.0.1
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -884,6 +884,10 @@ constraints/indicator/addCoupling = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/addCouplingCons = FALSE
 
+# remove indicator constraint if corresponding variable bound constraint has been added?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/removeIndicators = FALSE
+
 # Update bounds of original variables for separation?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/updateBounds = FALSE
@@ -1180,9 +1184,13 @@ constraints/quadratic/replacebinaryprod = 2147483647
 # [type: int, range: [0,2], default: 0]
 constraints/quadratic/empathy4and = 0
 
-# minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy
+# minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy
 # [type: real, range: [0,1e+20], default: 0.0001]
-constraints/quadratic/minefficacy = 0.0001
+constraints/quadratic/minefficacysepa = 0.0001
+
+# minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored)
+# [type: real, range: [0,1e+20], default: 2e-06]
+constraints/quadratic/minefficacyenfo = 2e-06
 
 # whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1396,9 +1404,9 @@ constraints/soc/sparsifynzgrowth = 1.3
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/soc/linfeasshift = TRUE
 
-# which formulation to use when adding a SOC constraint to the NLP (q: nonconvex quadratic form, s: convex sqrt form)
-# [type: char, range: {qs}, default: q]
-constraints/soc/nlpform = q
+# which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form)
+# [type: char, range: {aqse}, default: a]
+constraints/soc/nlpform = a
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -3184,10 +3192,6 @@ heuristics/undercover/beforecuts = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 heuristics/undercover/fixintfirst = FALSE
 
-# should global bounds on variables be used instead of local bounds at focus node?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-heuristics/undercover/globalbounds = FALSE
-
 # shall LP values for integer vars be rounded according to locks?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/undercover/locksrounding = TRUE
@@ -3361,12 +3365,12 @@ separating/clique/delay = FALSE
 separating/clique/scaleval = 1000
 
 # maximal number of nodes in branch and bound tree (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/clique/maxtreenodes = -1
+# [type: int, range: [-1,2147483647], default: 10000]
+separating/clique/maxtreenodes = 10000
 
 # frequency for premature backtracking up to tree level 1 (0: no backtracking)
-# [type: int, range: [0,2147483647], default: 10000]
-separating/clique/backtrackfreq = 10000
+# [type: int, range: [0,2147483647], default: 1000]
+separating/clique/backtrackfreq = 1000
 
 # maximal number of clique cuts separated per separation round (-1: no limit)
 # [type: int, range: [-1,2147483647], default: 10]
