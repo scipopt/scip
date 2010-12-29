@@ -35,6 +35,15 @@
  *
  * @version  2.0.1
  *
+ * <b>Changes between different versions of SCIP</b>
+ *
+ * - \ref CHANGELOG    "Change log"
+ * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
+ * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
+ * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
+ * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
+ *
  * <b>SCIP Authors:</b>
  * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
  * - <a class="el" href="AUTHORS.html#programmers">Other developers</a>
@@ -103,13 +112,6 @@
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  *   - \ref PARAM   "Adding additional user parameters"
  *
- * <b>Changes between different versions of SCIP</b>
- *
- * - \ref RELEASENOTES "Release notes"
- * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
- * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
- * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
- * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *     </td>
  *     <td valign="bottom" width="200">
  *       \image html scippy.png
@@ -182,6 +184,10 @@
  * 
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
+ * - <code>IPOPT=\<true|false\></code> to enable/disable(default) IPOPT interface (needs IPOPT)
+ *
+ * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter or no expressions interpreter (default)
+ *
  * There are additional parameters for Linux/Gnu compilers:
  *
  * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked via valgrind or
@@ -194,7 +200,7 @@
  * You can use other compilers - depending on the system:
  *
  * - <code>COMP=intel</code> Uses of the Intel compiler which is only available with the main optimization flags
-     <code>OPT=\<dbg|opt\></code>. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
+ *   <code>OPT=\<dbg|opt\></code>. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
  *
  * There is the possibility to watch the compilation more precisely:
  *
@@ -5211,6 +5217,11 @@
  *
  * \verbinclude SCIP-release-notes-1.1
  */
+
+/**@page CHANGELOG CHANGELOG
+ *
+ * \verbinclude CHANGELOG
+ *
 
 /**@defgroup PUBLICMETHODS Public Methods 
  *
