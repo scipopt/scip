@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.25 2010/09/29 17:36:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.25.2.1 2010/12/29 20:22:34 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -350,6 +350,7 @@ void evalSquare(
    resultant = arg * arg;
 }
 
+#if 0
 /** specialization of square evaluation for intervals
  * for intervals, we can get tighter results if we do not just multiply the argument with itself
  */
@@ -365,6 +366,7 @@ void evalSquare(
 
    resultant = result;
 }
+#endif
 
 /** template for evaluation for square-root operator
  * default is to use the standard sqrt-function
