@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.51 2010/12/16 18:35:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.52 2010/12/29 20:11:32 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1329,6 +1329,7 @@ SCIP_RETCODE forbidFixation(
             /* literal x_i <= fixval-1 */
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
             bounds[nconsvars]     = fixval - 1.0;
+            consvars[nconsvars]   = var;
             ++nconsvars;
          }
          
@@ -1337,6 +1338,7 @@ SCIP_RETCODE forbidFixation(
             /* literal x_i >= fixval+1 */
             boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
             bounds[nconsvars]     = fixval - 1.0;
+            consvars[nconsvars]   = var;
             ++nconsvars;
          }
       }
@@ -1345,6 +1347,7 @@ SCIP_RETCODE forbidFixation(
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, nconsvars, consvars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
       
+      SCIPfreeBufferArray(scip, &consvars);
       SCIPfreeBufferArray(scip, &boundtypes);
       SCIPfreeBufferArray(scip, &bounds);
    }
