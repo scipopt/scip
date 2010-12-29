@@ -1,6 +1,6 @@
 <div id="authors">
              
-    <h3><a name="zib">Current developers at ZIB</a></h3>
+    <h2><a name="zib">Current developers at ZIB</a></h2>
 
         <table class="desc">
 	    <tr>
@@ -13,7 +13,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=gamrath&amp;language=en">Gerald Gamrath</a>
+		<a href="http://www.zib.de/gamrath/</a>
 	      </td>
 	      <td>
                 Column generation, further development
@@ -28,7 +28,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=hendel&amp;language=en">Gregor Hendel</a>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=hendel">Gregor Hendel</a>
 	      </td>
 	      <td>
                 Student assistant
@@ -36,7 +36,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=koch&amp;language=en">Thorsten Koch</a>
+		<a href="http://www.zib.de/koch/">Thorsten Koch</a>
 	      </td>
 	      <td>
                 Project head
@@ -44,15 +44,7 @@
 	    </tr>		   
 	    <tr>
 	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=vigerske&amp;language=en">Stefan Vigerske</a>
-	      </td>
-	      <td>
-               Mixed integer nonlinear programming
-	      </td>
-	    </tr>
-	    <tr>
-	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=waniek&amp;language=en">Robert Waniek</a>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=waniek">Robert Waniek</a>
 	      </td>
 	      <td>
                 Student assistant
@@ -60,7 +52,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=michael.winkler&amp;language=en">Michael Winkler</a>
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=michael.winkler">Michael Winkler</a>
 	      </td>
 	      <td>
                 Student assistant
@@ -76,15 +68,15 @@
 	    </tr>
 	</table>
 
-    <h3><a name="programmers">Other developers</a></h3>
+    <h2><a name="programmers">Other developers</a></h2>
 
     	<table class="desc">
 	    <tr>
 	      <td width="180px">
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=achterberg&amp;language=en">Tobias Achterberg</a>&nbsp;
+		<a href="http://www.zib.de/en/people/staff/member.html?mail=achterberg">Tobias Achterberg</a>&nbsp;
 	      </td>
 	      <td>
-		Main SCIP developer &ndash; now at <a href="http://www.ilog.com">IBM/ILOG</a>
+		Main SCIP developer &ndash; now at <a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM</a>
 	      </td>
 	    </tr>
 	    <tr>
@@ -106,9 +98,17 @@
 	      <td>
 	      </td>
 	    </tr>
+	    <tr>
+	      <td>
+		<a href="http://www.math.hu-berlin.de/~stefan/">Stefan Vigerske</a>
+	      </td>
+	      <td>
+               Mixed integer nonlinear programming
+	      </td>
+	    </tr>
 	</table>
 
-        <h3><a name="contributors">Contributors</a></h3>
+        <h2><a name="contributors">Contributors</a></h2>
 
     	<table class="desc">
            <tr>
@@ -116,7 +116,7 @@
 		 Livio Bertacco
 	      </td>
 	      <td>
-                 Interface to <a href="http://www.dashoptimization.com/home/products/products_optimizer.html">FICO/Xpress</a>
+                 Interface to <a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO/Xpress</a>
 	      </td>
 	    </tr>
             <tr>
@@ -195,7 +195,7 @@
 	    </tr>
             <tr>
 	      <td>
-		<a href="http://www.zib.de/mitarbeiter/mit.pl?email=raack&amp;language=en">Christian Raack</a>
+		<a href="http://www.zib.de/raack/">Christian Raack</a>
 	      </td>
 	      <td>
                  Separator for MCF cuts
@@ -243,7 +243,7 @@
 	    </tr>
             <tr>
 	      <td>
-                 <a href="http://www.zib.de/mitarbeiter/mit.pl?email=tuchscherer&amp;language=en">Andreas Tuchscherer</a>
+                 <a href="http://www.zib.de/tuchscherer/">Andreas Tuchscherer</a>
 	      </td>
 	      <td>
                  SamplePricer example
