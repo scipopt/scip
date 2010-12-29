@@ -63,8 +63,8 @@
  * was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati Wolter. The
  * persons listed above contributed or are currently contributing to SCIP.
  *
- * SCIP is developed together with <a href="http://www.math.tu-bs.de/mo/">TU Braunschweig</a> and <a
- * href="http://www.am.uni-erlangen.de/wima/en/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
+ * SCIP is developed together with <a href="http://www.tu-braunschweig.de/mo/">TU Braunschweig</a> and <a
+ * href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has approx. 270'000 lines of C code. See the web
  * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
