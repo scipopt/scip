@@ -1,10 +1,3 @@
-SCIP version 2.0.2
-===============
-
-fixed bugs:
-- fixed bug in heur_subnlp when forbidding a particular combination of integer variables in the main problem
-
-
 SCIP version 2.0.1
 ===============
 
@@ -58,6 +51,7 @@ fixed bugs:
 - fixed bug in heur_shiftandpropagate.c: Now, the heuristic checks rows for global infeasibility at the beginning. This check is only relevant if presolving is disabled.
 - fixed bug in vars.c which handled arrays with parts of original variables during resolving to active variables (using SCIPvarsGetProbvarBinary) wrong
 - fixed bug in reader_gms.c: linear coefficients for quadratic variables were not printed if they had no square-coefficient
+- fixed bug in heur_subnlp when forbidding a particular combination of integer variables in the main problem
 
 parameters:
 - replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
