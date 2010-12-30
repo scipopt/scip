@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.456 2010/12/28 15:27:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.457 2010/12/30 19:41:35 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4479,6 +4479,16 @@ extern
 SCIP_RETCODE SCIPgetLPI(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LPI**            lpi                 /**< pointer to store the LP interface */
+   );
+
+/** displays quality information about the current LP solution
+ * an LP solution need to be available
+ * information printed is subject to what the LP solver supports
+ */
+extern
+SCIP_RETCODE SCIPprintLPSolutionQuality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */

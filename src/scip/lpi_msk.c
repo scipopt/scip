@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.23 2010/09/30 08:18:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.24 2010/12/30 19:41:35 bzfviger Exp $"
 
 /**@file   lpi_msk.c
  * @ingroup LPIS
@@ -3018,6 +3018,24 @@ SCIP_RETCODE SCIPlpiGetIterations(
    assert(lpi->task != NULL);
 
    *iterations = lpi->itercount;
+
+   return SCIP_OKAY;
+}
+
+/** gets information about the quality of an LP solution
+ * Such information is usually only available, if also a (maybe not optimal) solution is available.
+ * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+extern
+SCIP_RETCODE SCIPlpiGetRealSolQuality(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
+   SCIP_Real*            quality             /**< pointer to store quality number */
+   )
+{
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   *quality = SCIP_INVALID;
 
    return SCIP_OKAY;
 }

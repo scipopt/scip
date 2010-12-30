@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.110 2010/12/02 17:57:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.111 2010/12/30 19:41:34 bzfviger Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -234,6 +234,7 @@
 #define DEFAULT_TRYSOLUTIONS       TRUE
 #define DEFAULT_NOLINCONSCONT      FALSE
 #define DEFAULT_ENFORCECUTS        FALSE
+#define DEFAULT_MAXCONDITIONALTLP  0.0
 
 
 /* other values */
@@ -282,6 +283,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             noLinconsCont;      /**< decompose problem - do not generate linear constraint if all variables are continuous */
    SCIP_Bool             enforceCuts;        /**< in enforcing try to generate cuts (only if sepaAlternativeLP is true) */
    SCIP_Real             maxCouplingValue;   /**< maximum coefficient for binary variable in coupling constraint */
+   SCIP_Real             maxConditionAltLP;  /**< maximum estimated condition of the LP solution of the alternative LP to trust its solution */
    SCIP_HEUR*            heurTrySol;         /**< trysol heuristic */
    SCIP_Bool             addedCouplingCons;  /**< whether the coupling constraints have been added already */
    SCIP_CONS**           addLinCons;         /**< additional linear constraints that should be added to the alternative LP */
@@ -1630,12 +1632,14 @@ static
 SCIP_RETCODE checkAltLPInfeasible(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_LPI*             lp,                 /**< LP */
+   SCIP_Real             maxcondition,       /**< maximal allowed condition of LP solution basis matrix */
    SCIP_Bool             primal,             /**< whether we are using the primal or dual simplex */
    SCIP_Bool*            infeasible,         /**< output: whether the LP is infeasible */
    SCIP_Bool*            error               /**< output: whether an error occured */
    )
 {
    SCIP_RETCODE retcode;
+   SCIP_Real condition;
 
    assert( scip != NULL );
    assert( lp != NULL );
@@ -1683,6 +1687,28 @@ SCIP_RETCODE checkAltLPInfeasible(
       /* reset parameters */
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+   }
+
+   if( maxcondition > 0.0 )
+   {
+      /* check estimated condition number of basis matrix */
+      SCIP_CALL( SCIPlpiGetRealSolQuality(lp, SCIP_LPSOLQUALITY_ESTIMCONDITION, &condition) );
+      if( condition != SCIP_INVALID && condition > maxcondition )
+      {
+         SCIPdebugMessage("estim. condition of basis matrix (%e) exceeds maximal allowance (%e)\n", condition, maxcondition);
+
+         *error = TRUE;
+
+         return SCIP_OKAY;
+      }
+      else if( condition != SCIP_INVALID )
+      {
+         SCIPdebugMessage("estim. condition of basis matrix (%e) is below maximal allowance (%e)\n", condition, maxcondition);
+      }
+      else
+      {
+         SCIPdebugMessage("estim. condition of basis matrix not available\n");
+      }
    }
 
    /* check whether we are in the paradoxical situtation that
@@ -1803,11 +1829,11 @@ SCIP_RETCODE extendToCover(
       {
          /* the first LP is solved without warm start, after that we use a warmstart. */
          SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
-         SCIP_CALL( checkAltLPInfeasible(scip, lp, TRUE, &infeasible, error) );
+         SCIP_CALL( checkAltLPInfeasible(scip, lp, conshdlrdata->maxConditionAltLP, TRUE, &infeasible, error) );
          SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
       }
       else
-         SCIP_CALL( checkAltLPInfeasible(scip, lp, FALSE, &infeasible, error) );
+         SCIP_CALL( checkAltLPInfeasible(scip, lp, conshdlrdata->maxConditionAltLP, FALSE, &infeasible, error) );
 
       if ( *error )
          break;
@@ -3695,7 +3721,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 
          /* check feasibility */
          SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
-         SCIP_CALL( checkAltLPInfeasible(scip, lp, TRUE, &infeasible, &error) );
+         SCIP_CALL( checkAltLPInfeasible(scip, lp, conshdlrdata->maxConditionAltLP, TRUE, &infeasible, &error) );
          SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
 
          if ( error )
@@ -4355,6 +4381,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/maxCouplingValue",
          "maximum coefficient for binary variable in coupling constraint",
          &conshdlrdata->maxCouplingValue, TRUE, DEFAULT_MAXCOUPLINGVALUE, 0.0, 1e9, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/indicator/maxConditionAltLP",
+         "maximum estimated condition of the solution basis matrix of the alternative LP to be trustworthy (0.0 to disable check)",
+         &conshdlrdata->maxConditionAltLP, TRUE, DEFAULT_MAXCONDITIONALTLP, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

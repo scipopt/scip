@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.124 2010/11/29 13:52:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.125 2010/12/30 19:41:34 bzfviger Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -980,6 +980,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayVarbranchstatistics)
 
    SCIPdialogMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPprintBranchingStatistics(scip, NULL) );
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display LP solution quality command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLPSolutionQuality)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIP_CALL( SCIPprintLPSolutionQuality(scip, NULL) );
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -2716,6 +2730,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayVarbranchstatistics, NULL, NULL,
             "varbranchstatistics", "display statistics for branching on variables", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display varbranchstatistics */
+   if( !SCIPdialogHasEntry(submenu, "lpsolquality") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayLPSolutionQuality, NULL, NULL,
+            "lpsolquality", "display quality of the current LP solution, if available", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

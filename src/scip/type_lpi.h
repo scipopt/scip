@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.29 2010/08/11 02:24:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.30 2010/12/30 19:41:35 bzfviger Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -81,6 +81,14 @@ enum SCIP_BaseStat
    SCIP_BASESTAT_ZERO  = 3              /**< free variable is non-basic and set to zero */
 };
 typedef enum SCIP_BaseStat SCIP_BASESTAT;
+
+/** LP solution quality quantities */
+enum SCIP_LPSolQuality
+{
+   SCIP_LPSOLQUALITY_ESTIMCONDITION,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_EXACTCONDITION     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
+};
+typedef enum SCIP_LPSolQuality SCIP_LPSOLQUALITY;
 
 typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent LP interface */
 typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */

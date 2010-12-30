@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.714 2010/12/28 15:27:11 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.715 2010/12/30 19:41:35 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13369,8 +13369,59 @@ SCIP_RETCODE SCIPgetLPI(
    return SCIP_OKAY;
 }
 
+/** displays quality information about the current LP solution
+ * an LP solution need to be available
+ * information printed is subject to what the LP solver supports
+ */
+extern
+SCIP_RETCODE SCIPprintLPSolutionQuality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_LPI* lpi;
+   SCIP_Real quality;
 
+   SCIP_CALL( checkStage(scip, "SCIPprintLPSolutionQuality", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_INIT:
+      case SCIP_STAGE_PROBLEM:
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_PRESOLVED:
+         SCIPmessageFPrintInfo(file, "Problem not solving yet, no LP available.\n");
+         return SCIP_OKAY;
+
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+         break;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   lpi = SCIPlpGetLPI(scip->lp);
+   assert(lpi != NULL);
+
+   SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &quality) );
+   SCIPmessageFPrintInfo(file, "Basis matrix condition (estimated): ");
+   if( quality != SCIP_INVALID )
+      SCIPmessageFPrintInfo(file, "%.6e\n", quality);
+   else
+      SCIPmessageFPrintInfo(file, "not available\n", quality);
+
+   SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_EXACTCONDITION, &quality) );
+   SCIPmessageFPrintInfo(file, "Basis matrix condition (exact):     ");
+   if( quality != SCIP_INVALID )
+      SCIPmessageFPrintInfo(file, "%.6e\n", quality);
+   else
+      SCIPmessageFPrintInfo(file, "not available\n", quality);
+
+   return SCIP_OKAY;
+}
 
 /*
  * LP column methods

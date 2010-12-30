@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.52 2010/08/31 15:50:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.53 2010/12/30 19:41:35 bzfviger Exp $"
 
 /**@file   lpi_spx121.cpp
  * @ingroup LPIS
@@ -2115,6 +2115,26 @@ SCIP_RETCODE SCIPlpiGetIterations(
    assert(lpi->spx != NULL);
 
    *iterations = lpi->spx->iterations();
+
+   return SCIP_OKAY;
+}
+
+/** gets information about the quality of an LP solution
+ * Such information is usually only available, if also a (maybe not optimal) solution is available.
+ * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+extern
+SCIP_RETCODE SCIPlpiGetRealSolQuality(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
+   SCIP_Real*            quality             /**< pointer to store quality number */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetRealSolQuality()\n");
+
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   *quality = SCIP_INVALID;
 
    return SCIP_OKAY;
 }

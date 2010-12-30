@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.142 2010/12/20 11:42:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.143 2010/12/30 19:41:35 bzfviger Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -3037,6 +3037,43 @@ SCIP_RETCODE SCIPlpiGetIterations(
    assert(iterations != NULL);
 
    *iterations = lpi->iterations;
+
+   return SCIP_OKAY;
+}
+
+/** gets information about the quality of an LP solution
+ * Such information is usually only available, if also a (maybe not optimal) solution is available.
+ * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+extern
+SCIP_RETCODE SCIPlpiGetRealSolQuality(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
+   SCIP_Real*            quality             /**< pointer to store quality number */
+   )
+{
+   int what;
+
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
+
+   switch( qualityindicator )
+   {
+      case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+         what = CPX_KAPPA;
+         break;
+
+      case SCIP_LPSOLQUALITY_EXACTCONDITION:
+         what = CPX_EXACT_KAPPA;
+         break;
+
+      default:
+         SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+         return SCIP_INVALIDDATA;
+   }
+
+   CHECK_ZERO( CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
 
    return SCIP_OKAY;
 }

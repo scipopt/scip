@@ -100,6 +100,7 @@ parameters:
 - added parameters <constraints/linear/nmincomparisons> and <constraints/linear/mingainpernmincomparisons> to influence stopping criterium
   for pairwise comparison of linear constraints
 - replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
+- added parameter <constraints/indicator/maxConditionAltLP> to enable a quality check for the solution of the alternative LP 
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -114,6 +115,8 @@ features:
 - new dual presolving methods in cons_setppc and cons_logicor
 - added dialog "write nlp" to write current NLP relaxation to a file
 - new data structure SCIP_STAIRMAP
+- information about the quality of the solution of an LP (currently the condition number of the basis matrix) can now be requested from the LPI (currently only available for CPLEX):
+  methods SCIPlpiGetRealSolQuality() and SCIPprintLPSolutionQuality() and command display lpsolquality in interactive shell 
 
 SCIP version 2.0.0
 ===============

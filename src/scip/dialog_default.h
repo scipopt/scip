@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.44 2010/09/09 10:11:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.45 2010/12/30 19:41:34 bzfviger Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -126,6 +126,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue);
 /** dialog execution method for the display varbranchstatistics command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayVarbranchstatistics);
+
+/** dialog execution method for the display LP solution quality command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLPSolutionQuality);
 
 /** dialog execution method for the display transsolution command */
 extern
