@@ -13,7 +13,7 @@
 	    </tr>
 	    <tr>
 	      <td>
-		<a href="http://www.zib.de/gamrath/"</a>
+		<a href="http://www.zib.de/gamrath/">Gerald Gamrath</a>
 	      </td>
 	      <td>
                 Column generation, further development

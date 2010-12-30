@@ -638,6 +638,7 @@ FILE_PATTERNS          = scip.h \
 		       	 scip.c \
                          *_*.h \
                          *_*.c \
+                         *_*.cpp \
                          xternal.c
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories
