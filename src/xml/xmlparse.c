@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xmlparse.c,v 1.6 2010/12/21 13:51:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: xmlparse.c,v 1.7 2010/12/30 10:39:43 bzfviger Exp $"
 
 /**@file   xmldef.h
  * @brief  declarations for XML parsing
@@ -32,7 +32,9 @@
 
 
 #include <sys/types.h>
-/* #include <unistd.h> */
+#ifdef WITH_ZLIB
+#include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
