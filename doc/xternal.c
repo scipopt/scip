@@ -64,7 +64,7 @@
  * persons listed above contributed or are currently contributing to SCIP.
  *
  * SCIP is developed together with <a href="http://www.math.tu-bs.de/mo/">TU Braunschweig</a> and <a
- * href="http://www.am.uni-erlangen.de/wima/en/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
+ * href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has approx. 270'000 lines of C code. See the web
  * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
