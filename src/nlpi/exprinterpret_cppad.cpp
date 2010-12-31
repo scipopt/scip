@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.28 2010/12/29 19:00:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.29 2010/12/31 15:06:01 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -51,18 +51,30 @@ using CppAD::SCIPInterval;
 #include <cppad/declare.hpp>
 #include <cppad/error_handler.hpp>
 
-/* sign function, not using macro */
-inline double sign(const double& x) { return SIGN(x); }
+/* Brad recomends using the discrete function feature of CppAD for sign, since it avoids the need for retaping
+ * It can be used since it's derivative is almost everywhere 0.0 */
 
-/* more sign function definitions for CppAD */
-namespace CppAD
+/* sign as function for double */
+double sign(const double &x)
 {
-template <class Base>
-inline AD<Base> sign(const AD<Base> &x) { return x / x.Abs(); }  //TODO FIXME: this looks awful
-
-template <class Base>
-inline AD<Base> sign(const VecAD_reference<Base> &x) { return sign( x.ADBase() ); }
+   return SIGN(x);
 }
+/* discrete CppAD function sign(double) for use in eval */
+CPPAD_DISCRETE_FUNCTION(double, sign)
+
+/* sign as function for SCIPInterval
+ * this time outside of the CppAD namespace
+ */
+SCIPInterval sign(const SCIPInterval& x)
+{
+   SCIPInterval resultant;
+
+   SCIPintervalSign(&resultant, x);
+
+   return resultant;
+}
+/* discrete CppAD function sign(SCIPInterval) for use in eval */
+CPPAD_DISCRETE_FUNCTION(SCIPInterval, sign)
 
 /** defintion of CondExpOp for SCIPInterval (required by CppAD) */
 inline
@@ -715,7 +727,6 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
       case SCIP_EXPR_ABS:
-      case SCIP_EXPR_SIGN:
       case SCIP_EXPR_SIGNPOWER:
          return true;
 
