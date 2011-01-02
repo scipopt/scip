@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.360.2.3 2010/11/23 20:39:13 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.360.2.4 2011/01/02 11:19:41 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and data structures

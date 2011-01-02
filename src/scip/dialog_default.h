@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.44 2010/09/09 10:11:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.44.2.1 2011/01/02 11:19:45 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog

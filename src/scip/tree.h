@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.109.2.1 2010/12/18 17:31:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.109.2.2 2011/01/02 11:19:26 bzfheinz Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree

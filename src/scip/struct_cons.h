@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.54 2010/08/31 17:44:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.54.2.1 2011/01/02 11:19:29 bzfheinz Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers

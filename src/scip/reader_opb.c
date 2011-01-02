@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.65 2010/10/04 11:48:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.64.2.1 2011/01/02 11:19:35 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -102,46 +102,33 @@
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
 #define READER_EXTENSION        "opb"
-
 #define USEINDICATOR            TRUE
 #define BACKIMPLICATION         FALSE
-#define GENCONSNAMES                      /* remove if no constraint names should be generated */
-
-
 /*
  * Data structures
  */
-
 #define HASHSIZE_OPBANDCONS   131101 /**< minimal size of hash table in and constraint tables */
 #define OPB_MAX_LINELEN       65536  /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS  2
 #define OPB_INIT_COEFSSIZE    8192
 
-
 /** Section in OPB File */
-enum OpbExpType 
-{
-   OPB_EXP_NONE,
-   OPB_EXP_UNSIGNED, 
-   OPB_EXP_SIGNED
+enum OpbExpType {
+   OPB_EXP_NONE, OPB_EXP_UNSIGNED, OPB_EXP_SIGNED
 };
 typedef enum OpbExpType OPBEXPTYPE;
 
-enum OpbSense 
-{
-   OPB_SENSE_NOTHING,
-   OPB_SENSE_LE,
-   OPB_SENSE_GE,
-   OPB_SENSE_EQ
+enum OpbSense {
+   OPB_SENSE_NOTHING, OPB_SENSE_LE, OPB_SENSE_GE, OPB_SENSE_EQ
 };
 typedef enum OpbSense OPBSENSE;
 
 /* struct for reading an opb files, used to find fast whether an and-constraint is new or already existing */
 struct ConsAndData
 {
-   SCIP_VAR**            vars;
-   SCIP_VAR*             resultant;
-   int                   nvars;
+   SCIP_VAR**           vars;
+   SCIP_VAR*            resultant;
+   int                  nvars;
 };
 
 typedef struct ConsAndData CONSANDDATA;
@@ -149,32 +136,32 @@ typedef struct ConsAndData CONSANDDATA;
 /** OPB reading data */
 struct OpbInput
 {
-   SCIP_FILE*            file;
-   char                  linebuf[OPB_MAX_LINELEN+1];
-   char*                 token;
-   char*                 tokenbuf;
-   char*                 pushedtokens[OPB_MAX_PUSHEDTOKENS];
-   int                   npushedtokens;
-   int                   linenumber;
-   int                   linepos;
-   int                   bufpos;
-   SCIP_OBJSENSE         objsense;
-   SCIP_Bool             comment;
-   SCIP_Bool             endline;
-   SCIP_Bool             eof;
-   SCIP_Bool             haserror;
-   CONSANDDATA**         consanddata;
-   int                   nconsanddata;
-   int                   sconsanddata;
-   int                   maxvarsperand;
-   int                   nproblemcoeffs;
-   SCIP_HASHTABLE*       hashtable;
-   int                   hashtablesize;
-   SCIP_Bool             wbo;
-   SCIP_Real             topcost;
-   int                   nindvars;
-#ifdef GENCONSNAMES
-   int                   consnumber;
+   SCIP_FILE*           file;
+   char                 linebuf[OPB_MAX_LINELEN+1];
+   char*                token;
+   char*                tokenbuf;
+   char*                pushedtokens[OPB_MAX_PUSHEDTOKENS];
+   int                  npushedtokens;
+   int                  linenumber;
+   int                  linepos;
+   int                  bufpos;
+   SCIP_OBJSENSE        objsense;
+   SCIP_Bool            comment;
+   SCIP_Bool            endline;
+   SCIP_Bool            eof;
+   SCIP_Bool            haserror;
+   CONSANDDATA**        consanddata;
+   int                  nconsanddata;
+   int                  sconsanddata;
+   int                  maxvarsperand;
+   int                  nproblemcoeffs;
+   SCIP_HASHTABLE*      hashtable;
+   int                  hashtablesize;
+   SCIP_Bool            wbo;
+   SCIP_Real            topcost;
+   int                  nindvars;
+#ifdef SCIP_DEBUG
+   int                  consnumber;
 #endif
 };
 
@@ -183,7 +170,6 @@ typedef struct OpbInput OPBINPUT;
 static const char delimchars[] = " \f\n\r\t\v";
 static const char tokenchars[] = "-+:<>=;[]";
 static const char commentchars[] = "*";
-
 /*
  * Local methods (for reading)
  */
@@ -1366,10 +1352,9 @@ SCIP_RETCODE readConstraints(
    dynamic = dynamicconss;
    removable = dynamicrows;
    
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
-
    /* create corresponding constraint */
    if( issoftcons )
    {
@@ -1431,7 +1416,7 @@ SCIP_RETCODE readConstraints(
 
          created = TRUE;
 
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
          ++(opbinput->consnumber);
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
@@ -1456,7 +1441,7 @@ SCIP_RETCODE readConstraints(
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
             ++(opbinput->consnumber);
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
@@ -1476,7 +1461,7 @@ SCIP_RETCODE readConstraints(
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
          ++(opbinput->consnumber);
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
@@ -1494,6 +1479,7 @@ SCIP_RETCODE readConstraints(
       }
 #else /* with indicator */
       /* @todo check whether it's better to set the initial flag to false */         
+      initial = FALSE;
       created = FALSE;
 
       if( !SCIPisInfinity(scip, rhs) )
@@ -1514,7 +1500,7 @@ SCIP_RETCODE readConstraints(
          {
             SCIP_Real* tmpcoefs;
 
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
             ++(opbinput->consnumber);
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
@@ -1547,7 +1533,7 @@ SCIP_RETCODE readConstraints(
             SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
             ++(opbinput->consnumber);
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
@@ -1565,7 +1551,7 @@ SCIP_RETCODE readConstraints(
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
          ++(opbinput->consnumber);
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "c%d", opbinput->consnumber);
 #endif
@@ -1588,7 +1574,7 @@ SCIP_RETCODE readConstraints(
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    }
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
    ++(opbinput->consnumber);
 #endif
    
@@ -3109,7 +3095,7 @@ SCIP_RETCODE SCIPreadOpb(
    opbinput.wbo = FALSE;
    opbinput.topcost = -SCIPinfinity(scip);
    opbinput.nindvars = 0;
-#ifdef GENCONSNAMES
+#ifdef SCIP_DEBUG
    opbinput.consnumber = 0;
 #endif
 

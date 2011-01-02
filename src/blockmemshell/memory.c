@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.23 2010/09/24 11:33:51 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.23.2.1 2011/01/02 11:19:53 bzfheinz Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines

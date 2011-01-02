@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.92 2010/10/04 19:23:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.91.2.1 2011/01/02 11:19:38 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -3262,7 +3262,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
  *  auxiliary SCIP instances to avoid recursion
  */
-SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
+   SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
