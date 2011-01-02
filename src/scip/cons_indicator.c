@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.113 2011/01/02 13:51:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.114 2011/01/02 14:11:33 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -1620,11 +1620,11 @@ SCIP_RETCODE deleteAltLPConstraint(
 
 /** Check whether the given LP is infeasible
  *
- *  If @a primal is false we assume that the problem is <em>dual feasible</em>, e.g., * the problem
+ *  If @a primal is false we assume that the problem is <em>dual feasible</em>, e.g., the problem
  *  was only changed by fixing bounds!
  *
- *  This is the workhorse for all methods that have to solve the alternative LP.  * We try in
- *  several ways to recover from possible stability problems.
+ *  This is the workhorse for all methods that have to solve the alternative LP. We try in several
+ *  ways to recover from possible stability problems.
  *
  *  @pre It is assumed that all parameters for the alternative LP are set.
  */
@@ -1689,25 +1689,26 @@ SCIP_RETCODE checkAltLPInfeasible(
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
    }
 
-   if( maxcondition > 0.0 )
+   /* check whether we want to ignore the result, because the condition number is too large */
+   if ( maxcondition > 0.0 )
    {
       /* check estimated condition number of basis matrix */
       SCIP_CALL( SCIPlpiGetRealSolQuality(lp, SCIP_LPSOLQUALITY_ESTIMCONDITION, &condition) );
-      if( condition != SCIP_INVALID && condition > maxcondition )
+      if ( condition != SCIP_INVALID && condition > maxcondition )
       {
-         SCIPdebugMessage("estim. condition of basis matrix (%e) exceeds maximal allowance (%e)\n", condition, maxcondition);
+         SCIPdebugMessage("estim. condition number of basis matrix (%e) exceeds maximal allowance (%e).\n", condition, maxcondition);
 
          *error = TRUE;
 
          return SCIP_OKAY;
       }
-      else if( condition != SCIP_INVALID )
+      else if ( condition != SCIP_INVALID )
       {
-         SCIPdebugMessage("estim. condition of basis matrix (%e) is below maximal allowance (%e)\n", condition, maxcondition);
+         SCIPdebugMessage("estim. condition number of basis matrix (%e) is below maximal allowance (%e).\n", condition, maxcondition);
       }
       else
       {
-         SCIPdebugMessage("estim. condition of basis matrix not available\n");
+         SCIPdebugMessage("estim. condition number of basis matrix not available.\n");
       }
    }
 
@@ -1773,9 +1774,9 @@ SCIP_RETCODE checkAltLPInfeasible(
 
 /** Tries to extend a given set of variables to a cover.
  *
- *  At each step we include a variable which covers a new IIS. Ties are
- *  broken according to the number of IISs a variable is contained in.
- *  The corresponding IIS inequalities are added to the LP if this not already happend.
+ *  At each step we include a variable which covers a new IIS. Ties are broken according to the
+ *  number of IISs a variable is contained in.  The corresponding IIS inequalities are added to the
+ *  LP if this not already happend.
  *
  *  @pre It is assumed that all parameters for the alternative LP are set and that the variables
  *  corresponding to @a S are fixed. Furthermore @c xVal_ should contain the current LP solution.
