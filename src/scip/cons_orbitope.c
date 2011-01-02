@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.25 2011/01/02 11:10:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.26 2011/01/02 13:23:08 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1660,11 +1660,13 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 		  int p1;
 		  int p2;
 
-		  SCIPinfoMessage(scip, NULL, "violated SCI: ");
+		  SCIPinfoMessage(scip, NULL, "violated SCI: bar(");
 
 		  /* first output bar */
 		  for (l = j; l < nblocks; ++l)
-		     SCIPinfoMessage(scip, NULL, "<%s> ", SCIPvarGetName(vars[i][l]));
+		     SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[i][l]), consdata->vals[i][l]);
+
+		  SCIPinfoMessage(scip, NULL, ")  SC(");
 
 		  /* output shifted column */
 		  p1 = i-1;
@@ -1682,7 +1684,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 		     {
 			/* case 2 or 3: */
 			assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-			SCIPinfoMessage(scip, NULL, "<%s> ", SCIPvarGetName(vars[p1][p2]));
+                        SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[p1][p2]), consdata->vals[p1][p2]);
 			if ( cases[p1][p2] == 3 )
 			   break;
 		     }
@@ -1690,6 +1692,8 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 		  }
 		  while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
 		  assert( cases[p1][p2] == 3 );
+
+		  SCIPinfoMessage(scip, NULL, ")");
 	       }
 
 	       return SCIP_OKAY;
@@ -2226,6 +2230,8 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
       int j;
       for (i = 0; i < nspcons; ++i)
       {
+         /* init obj to infinity */
+         obj = SCIPinfinity(scip);
 	 for (j = 0; j < nblocks; ++j)
 	 {
             SCIP_VAR* var = vars[i][j];
@@ -2233,16 +2239,17 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 	    /* all variables need to be binary */
 	    assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
 
+            /* fixed variables have obj = 0; for variables fixed to 0, we assume that there is no
+               problem (but we cannot always check it, e.g., when in the original problem
+               variables were fixed and this problem was copied.) */
+            SCIP_Bool fixedZero;
+            fixedZero = ( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisZero(scip, SCIPvarGetUbGlobal(var)) );
+
             /* check whether all variables in a row have the same objective */
-	    if ( j == 0 )
+	    if ( ! fixedZero && SCIPisInfinity(scip, obj) )
 	       obj = SCIPvarGetObj(var);
 	    else
 	    {
-               /* fixed variables have obj = 0; for variables fixed to 0, we assume that there is no
-                  problem (but we cannot always check it, e.g., when in the original problem
-                  variables were fixed and this problem was copied.) */
-               SCIP_Bool fixedZero;
-               fixedZero = ( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisZero(scip, SCIPvarGetUbGlobal(var)) );
 	       assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );    /*lint !e644*/
 	    }
 	 }
