@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.5.2.3 2011/01/02 14:58:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.5.2.4 2011/01/02 15:02:26 bzfheinz Exp $"
 
 /**@file   pricer_binpacking.c
  * @brief  binpacking variable pricer
@@ -397,9 +397,7 @@ static
 SCIP_DECL_PRICERINIT(pricerInitBinpacking)
 {  /*lint --e{715}*/
    SCIP_PRICERDATA* pricerdata;
-   SCIP_VAR** vars;
    SCIP_CONS* cons;
-   int nvars;
    int c;
 
    assert(scip != NULL);
