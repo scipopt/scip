@@ -91,11 +91,12 @@ $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
-$NAME/check/instances/MIP/* \
-$NAME/check/instances/MIQCP/* \
-$NAME/check/instances/SOS/* \
-$NAME/check/instances/Indicator/* \
-$NAME/check/instances/Semicontinuous/*
+$NAME/check/instances/Indicator/*.gz \
+$NAME/check/instances/MIP/*.gz \
+$NAME/check/instances/MIQCP/*.gz \
+$NAME/check/instances/PseudoBoolean/*.gz \
+$NAME/check/instances/SOS/*.gz \
+$NAME/check/instances/Semicontinuous/*.gz
 rm -f $NAME
 echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
