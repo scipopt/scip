@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.sh,v 1.10 2010/09/06 10:17:47 bzfwanie Exp $
+# $Id: checkcount.sh,v 1.11 2011/01/02 11:10:54 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3

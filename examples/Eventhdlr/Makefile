@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.5 2010/09/24 10:44:47 bzfheinz Exp $
+# $Id: Makefile,v 1.6 2011/01/02 11:10:53 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for event handler plugin in C 

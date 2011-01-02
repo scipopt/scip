@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_def.h,v 1.7 2010/01/04 20:35:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tclique_def.h,v 1.8 2011/01/02 11:10:39 bzfheinz Exp $"
 
 /**@file   tclique_def.h
  * @brief  tclique defines

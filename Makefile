@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.394 2010/12/20 17:08:59 bzfviger Exp $
+# $Id: Makefile,v 1.395 2011/01/02 11:10:55 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile

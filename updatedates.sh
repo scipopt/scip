@@ -11,20 +11,25 @@
 #
 # This bash script also changes the copyrights of the SCIP examples
 #
-# $Id: updatedates.sh,v 1.11 2010/09/27 12:45:43 bzfwanie Exp $
+# $Id: updatedates.sh,v 1.12 2011/01/02 11:10:55 bzfheinz Exp $
 
 NEWYEAR=`date +"%Y"`
 LASTYEAR=`expr $NEWYEAR - 1`
 
-DIRECTORIES=(check doc src src/scip src/objscip src/blockmemshell src/tclique examples examples/*/src examples/*/doc)
+DIRECTORIES=(check doc src src/scip src/objscip src/blockmemshell src/tclique examples examples/* examples/*/src examples/*/doc)
 EXTENSIONS=(sh awk h c hpp cpp)
-EXTRAFILES=(Makefile)
+EXTRAFILE=(Makefile)
+
+echo ""
+echo "This script reports *all* files which have not a correct COPYRIGHT."
+echo "Only files which are included in the distribution need a COPYRIGHT (see makedist.sh)"
+echo ""
 
 for DIRECTORY in ${DIRECTORIES[@]}
 do
   for EXTENSION in ${EXTENSIONS[@]}
   do
-    for FILE in $DIRECTORY/*.$EXTENSION 
+    for FILE in $DIRECTORY/*.$EXTENSION $DIRECTORY/$EXTRAFILE $EXTRAFILE
     do
       if test -f $FILE
       then

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.10 2010/09/27 18:15:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.11 2011/01/02 11:10:52 bzfheinz Exp $"
 
 /**@file   HeurFrats.cpp
  * @brief  fractional travelling salesman heuristic - Rounding heuristic for TSP
