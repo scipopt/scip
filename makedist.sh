@@ -49,7 +49,7 @@ $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
-$NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h $NAME/src/nlpi/*.hpp \
+$NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
@@ -91,11 +91,12 @@ $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
-$NAME/check/instances/MIP/* \
-$NAME/check/instances/MIQCP/* \
-$NAME/check/instances/SOS/* \
-$NAME/check/instances/Indicator/* \
-$NAME/check/instances/Semicontinuous/*
+$NAME/check/instances/Indicator/*.gz \
+$NAME/check/instances/MIP/*.gz \
+$NAME/check/instances/MIQCP/*.gz \
+$NAME/check/instances/PseudoBoolean/*.gz \
+$NAME/check/instances/SOS/*.gz \
+$NAME/check/instances/Semicontinuous/*.gz
 rm -f $NAME
 echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
