@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.7 2011/01/02 11:10:54 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_binpacking.c,v 1.8 2011/01/02 14:59:01 bzfheinz Exp $"
 
 /**@file   pricer_binpacking.c
  * @brief  binpacking variable pricer
@@ -421,15 +421,6 @@ SCIP_DECL_PRICERINIT(pricerInitBinpacking)
 
       /* capture transformed constraint */
       SCIP_CALL( SCIPcaptureCons(scip, pricerdata->conss[c]) );
-   }
-
-   /* set the upper bound for each decision variable to lazy since these upper bounds are enforced through the set
-    * packing constraints */
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-   for( c = 0; c < nvars; ++c )
-   {
-      SCIP_CALL( SCIPchgVarUbLazy(scip, vars[c], 1.0) );
    }
 
    return SCIP_OKAY;
