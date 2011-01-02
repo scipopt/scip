@@ -3612,7 +3612,7 @@ SCIP_Real SCIPlpiInfinity(
 /** checks if given value is treated as infinity in the LP solver */
 SCIP_Bool SCIPlpiIsInfinity(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
