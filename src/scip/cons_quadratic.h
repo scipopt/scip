@@ -12,10 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.26 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.27 2011/01/02 14:44:03 bzfheinz Exp $"
 
 /**@file   cons_quadratic.h
- * @ingroup CONSHDLRS
  * @brief  constraint handler for quadratic constraints
  * @author Stefan Vigerske
  * 
