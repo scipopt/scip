@@ -3,7 +3,6 @@ SCIP version NEXT
 
 interface:
 - new method SCIPstartSolvingTime() and SCIPstopSolvingTime() which can be used to start or stop the solving time clock
-- allow access of transformed constraints in SCIP_STAGE_TRANSFORMED
 - new methods SCIPcheckCumulativeCondition(), SCIPpropCumulativeCondition, and SCIPrespropCumulativeCondition in cons_cumulative.h;
   these methods can be used to check, propagate, or resolve the propagation of a cumulative condition
 - new methods SCIPstrGetValue() and SCIPstrCopySection() in pub_misc.h; these methods can be used to 
@@ -25,63 +24,16 @@ interface:
   multi-aggregated, or the negated variables of active, fixed, or multi-aggregated variables
 
 performance improvements:
-- SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
-  this fixes timeouts on instances where devex converges very slowly
-- fixing lifting of new knapsack items which are negated items of already included items, this previously could lead to very long presolving
-- fixed performance issue in presolving w.r.t. to computing the number of new fixings, aggregated, and so on before a 
-  constraint handler presolver is called
-- in case of adding constraints during pricing with initial flag set to TRUE, we add now these constraints 
-  after the pricing round to the LP
-- changed parameter values in clique separator in order to avoid very large branch-and-bound trees
 - performance improvements in prop_vbounds
 
 fixed bugs:
-- fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
-- fixed bug in SCIPcopyConss (valid was not initialized to TRUE)
-- fixed bug in reader_mps: indicator constraints do not output the slack variables anymore
-- fixed bug in heur_undercover: removed option globalbounds, since we are not allowed to relax bounds at a probing node
 - fixed bug in SCIPcopyConss: copy all active constraints (including disabled ones)
-- corrected behavior of the copy function in cons_indicator.c: create artificial linear constraint if linear constraint was deleted
-- fixed bug in cons_indicator.c: presolving cannot delete linear constraints; several other minor bugfixes
-- fixed bug w.r.t. looseobjval; the counting of number of loose variables in the LP data structure was incorrect in case a 
   variable got aggregated or multi-aggregated 
-- fixed bug in debug.c w.r.t. checking of constraints and continuous variables
-- fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
-- fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
-- fixed bug in heur_shiftandpropagate where some variables were initialized too late
-- fixed bug in cons.c which didn't allow the changing of the separation and enforcement flag of a constraint in the problem stage
-- fixed bug in lp.c where in case of objlimit reached and fastmip not all variables where priced because of an incorrect dual solution
-- fixed bugs in SCIPnlpiOracleChgLinearCoefs and SCIPnlpiOracleChgQuadCoefs for the case where new coefficients where added
-- fixed bug in nlp.c: nlrowSearchQuadElem was using SCIPquadelemSortedFind incorrectly
-- fixed bugs in cons_bounddisjunction where the branching during the constraint enforcement was done incorrectly
-- fixed bugs in binpacking example w.r.t. empty struct and not initializing an array
-- fixed bugs in sepa_clique.c concerning incorrect way to ignore implicit binary variables in cliques and non-active variables in implications 
-- fixed assertions w.r.t. probing during the propagation round of a branch-and-bound node
 - fixed bug in cons_bounddisjunction where branching on multiaggregated variables was tried while all aggregation variables are fixed 
-- fixed bugs in lpi_none.c w.r.t. debug and opt mode 
-- fixed bugs in cons_orbitope.c: orbitopal fixing for the packing case had two bugs; also fixed one wrong assert
 - fixed assertion in tree.c w.r.t. node estimation
-- fixed computation of node's objective value estimate when branching on continuous variables (see SCIPtreeCalcChildEstimate, SCIPtreeBranchVar)
 - fixed bug in presolving of cons_logicor.c: adding variable implications can lead to further reductions; added call to applyFixings()
-- fixed bugs in cons_sos?.c: take average of objestimate
-- fixed numerical issue in some heuristics: nearly-integral values that are between the feasibility and the integrality
-  tolerance might not have been rounded correctly
-- fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
-- fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
-- fixed bug in statistic w.r.t. number of calls for external branching candidates
-- fixed bug in lpi_cpx.c w.r.t. to wrong handling in case the crossover did succeed
-- fixes to branching on continuous variables
-- fixed bug in cons_logicor, implications on none SCIP_VARTYPE_BINARY variable were handled wrong
-- fixed bug in DINS heuristic, information storage for binary variables could lead to bad memory access in column generation applications
-- fixed some bugs w.r.t. to casting pointer arrays
-- fixed bug in cons_linear while trying to add a conflict without any variables
-- fixed bug in heur_shiftandpropagate.c: Now, the heuristic checks rows for global infeasibility at the beginning. This check is only relevant if presolving is disabled.
-- fixed bug in vars.c which handled arrays with parts of original variables during resolving to active variables (using SCIPvarsGetProbvarBinary) wrong
-- fixed bug in reader_gms.c: linear coefficients for quadratic variables were not printed if they had no square-coefficient
 - fixed bug in cons_linear.c while sorting the eventdatas during the binary variable sorting for propagation
-- fixed bug in heur_subnlp when forbidding a particular combination of integer variables in the main problem
-- fixed bug in cons_indicator.c: creating constraints in transformed stage is now possible
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
@@ -89,7 +41,6 @@ plugins:
  
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
-- added possible values 'a' and 'e' for <constraints/soc/nlpform> to enable automatic choice and convex exponential-sqrt form for SOC constraint representation in NLP
 - added parameter <constraints/indicator/removeIndicators> to remove indicator constraints if corresponding vub has been added
 - change default value of parameter "nodeselection/restartdfs/selectbestfreq" 100
 - added parameter "nodeselection/restartdfs/countonlyleafs" in node selector restart dfs which can be used to select 
@@ -100,7 +51,6 @@ parameters:
   as the best known are checked; this is of interest if the check of a solution is expensive; default value is FALSE
 - added parameters <constraints/linear/nmincomparisons> and <constraints/linear/mingainpernmincomparisons> to influence stopping criterium
   for pairwise comparison of linear constraints
-- replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
 - added parameter <constraints/indicator/maxConditionAltLP> to enable a quality check for the solution of the alternative LP 
 
 features:
@@ -118,6 +68,68 @@ features:
 - new data structure SCIP_STAIRMAP
 - information about the quality of the solution of an LP (currently the condition number of the basis matrix) can now be requested from the LPI (currently only available for CPLEX):
   methods SCIPlpiGetRealSolQuality() and SCIPprintLPSolutionQuality() and command display lpsolquality in interactive shell 
+
+
+SCIP version 2.0.1
+===============
+
+interface:
+- allow access of transformed constraints in SCIP_STAGE_TRANSFORMED
+
+performance improvements:
+- SCIP with SoPlex as LP solver now uses auto pricing by default (start with devex, switch to steepest edge after some iterations);
+  this fixes timeouts on instances where devex converges very slowly
+- fixing lifting of new knapsack items which are negated items of already included items, this could lead to very long presolving
+- fixed performance issue in presolving w.r.t. to computing the number of new fixings, aggregated, and so on before a 
+  constraint handler presolver is called
+- in case of adding constraints during pricing with initial flag set to TRUE, we add now these constraints 
+  after the pricing round to the LP
+- changed parameter values in clique separator in order to avoid very large branch-and-bound trees
+
+fixed bugs:
+- fixed bug in heur_subnlp when initialized starting values of a fixed variable in the NLP of the subscip
+- fixed bugs in SCIPcopyConss: copy all active constraints (including disabled ones), *valid was not initialized to TRUE
+- fixed bug in reader_mps: indicator constraints do not output the slack variables anymore
+- fixed bug in heur_undercover: removed option globalbounds, since we are not allowed to relax bounds at a probing node
+- corrected behavior of the copy function in cons_indicator.c: create artificial linear constraint if linear constraint was deleted
+- fixed bug in cons_indicator.c: presolving cannot delete linear constraints; several other minor bugfixes
+- fixed bug w.r.t. looseobjval; the counting of number of loose variables in the LP data structure was incorrect in case a variable got aggregated or multi-aggregated
+- fixed bug in debug.c w.r.t. checking of constraints and continuous variables
+- fixed bug w.r.t. memory allocation for all values of a column in lpi_cpx.c
+- fixed bug in copy method of objvardata which should only create a new SCIP_VARDATA if the implemented subclass create a copy of the given objvardata object
+- fixed bug in heur_shiftandpropagate where some variables were initialized too late
+- fixed bug in cons.c which didn't allow the changing of the separation and enforcement flag of a constraint in the problem stage
+- fixed bug in lp.c where in case of objlimit reached and fastmip not all variables where priced because of an incorrect dual solution
+- fixed bugs in SCIPnlpiOracleChgLinearCoefs and SCIPnlpiOracleChgQuadCoefs for the case where new coefficients where added
+- fixed bug in nlp.c: nlrowSearchQuadElem was using SCIPquadelemSortedFind incorrectly
+- fixed bugs in cons_bounddisjunction where the branching during the constraint enforcement was done incorrectly
+- fixed bugs in binpacking example w.r.t. empty struct and not initializing an array
+- fixed bugs in sepa_clique.c concerning incorrect way to ignore implicit binary variables in cliques and non-active variables in implications 
+- fixed assertion w.r.t. to probing during the propagation round of a branch-and-bound node
+- fixed bugs in lpi_none.c w.r.t. debug and opt mode 
+- fixed bugs in cons_orbitope.c: orbitopal fixing for the packing case had two bugs; also fixed one wrong assert
+- fixed computation of node's objective value estimate when branching on continuous variables (see SCIPtreeCalcChildEstimate, SCIPtreeBranchVar)
+- fixed bugs in cons_sos?.c: take average of objestimate
+- fixed numerical issue in some heuristics: nearly-integral values that are between the feasibility and the integrality
+  tolerance might not have been rounded correctly
+- fixed bug in heur_guideddiving: best solution is now copied to avoid deletion in case of many new solutions
+- fixed bug in statistic w.r.t. number of calls for external branching candidates
+- fixed bug in lpi_cpx.c w.r.t. to wrong handling in case the crossover did not succeed
+- fixes to branching on continuous variables
+- fixed bug in cons_logicor, implications on none SCIP_VARTYPE_BINARY variable were handled wrong
+- fixed bug in DINS heuristic, information storage for binary variables could lead to bad memory access in column generation applications
+- fixed some bugs w.r.t. to casting pointer arrays
+- fixed bug in cons_linear while trying to add a conflict without any variables
+- fixed bug in heur_shiftandpropagate.c: Now, the heuristic checks rows for global infeasibility at the beginning. This check is only relevant if presolving is disabled.
+- fixed bug in vars.c which handled arrays with parts of original variables during resolving to active variables (using SCIPvarsGetProbvarBinary) wrong
+- fixed bug in reader_gms.c: linear coefficients for quadratic variables were not printed if they had no square-coefficient
+- fixed bug in heur_subnlp when forbidding a particular combination of integer variables in the main problem
+- fixed bug in cons_indicator.c: creating constraints in transformed stage is now possible
+
+parameters:
+- replaced parameter <constraints/quadratic/minefficacy> by <constraints/quadratic/minefficacysepa> and <constraints/quadratic/minefficacyenfo>
+- added possible values 'a' and 'e' for <constraints/soc/nlpform> to enable automatic choice and convex exponential-sqrt form for SOC constraint representation in NLP
+
 
 SCIP version 2.0.0
 ===============
