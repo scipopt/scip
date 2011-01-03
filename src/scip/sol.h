@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.61 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.62 2011/01/03 17:40:00 bzfberth Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -316,7 +316,8 @@ SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol2,               /**< second primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve */
    );
 
 /** outputs non-zero elements of solution to file stream */

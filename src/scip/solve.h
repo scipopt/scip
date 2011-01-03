@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.62 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.63 2011/01/03 17:40:01 bzfberth Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -153,7 +153,8 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_MEM*             mem,                /**< block memory pools */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.716 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.717 2011/01/03 17:40:00 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6828,7 +6828,7 @@ SCIP_RETCODE SCIPsolve(
          SCIPstatResetDisplay(scip->stat);
 
          /* continue solution process */
-         SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->stat, scip->mem, scip->transprob,
+         SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->stat, scip->mem, scip->origprob, scip->transprob,
                scip->primal, scip->tree, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore, 
                scip->cutpool, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
 
@@ -17201,7 +17201,7 @@ SCIP_Bool SCIPareSolsEqual(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPareSolsEqual", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->transprob);
+   return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
 
 /** outputs non-zero variables of solution in original problem space to file stream */
@@ -17407,7 +17407,7 @@ SCIP_RETCODE SCIPaddSol(
       SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
    }
 
-   SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+   SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
          scip->lp, scip->eventfilter, sol, stored) );
 
    return SCIP_OKAY;
@@ -17431,7 +17431,7 @@ SCIP_RETCODE SCIPaddSolFree(
       SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
    }
 
-   SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+   SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
          scip->lp, scip->eventfilter, sol, stored) );
 
    return SCIP_OKAY;
@@ -17446,7 +17446,7 @@ SCIP_RETCODE SCIPaddCurrentSol(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPprimalAddCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+   SCIP_CALL( SCIPprimalAddCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
          scip->tree, scip->lp, scip->eventfilter, heur, stored) );
 
    return SCIP_OKAY;
@@ -17584,7 +17584,7 @@ SCIP_RETCODE SCIPtrySol(
       SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, TRUE) );
       if( feasible )
       {
-         SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
                scip->tree, scip->lp, scip->eventfilter, sol, stored) );
       }
       else
@@ -17592,7 +17592,7 @@ SCIP_RETCODE SCIPtrySol(
    }
    else
    {
-      SCIP_CALL( SCIPprimalTrySol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->tree,
+      SCIP_CALL( SCIPprimalTrySol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree,
             scip->lp, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
    }
 
@@ -17634,7 +17634,7 @@ SCIP_RETCODE SCIPtrySolFree(
       
       if( feasible )
       {
-         SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
                scip->tree, scip->lp, scip->eventfilter, sol, stored) );
       }
       else
@@ -17645,7 +17645,7 @@ SCIP_RETCODE SCIPtrySolFree(
    }
    else
    {
-      SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+      SCIP_CALL( SCIPprimalTrySolFree(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
             scip->tree, scip->lp, scip->eventfilter, sol, printreason, checkbounds, checkintegrality, checklprows, stored) );
    }
 
@@ -17664,7 +17664,7 @@ SCIP_RETCODE SCIPtryCurrentSol(
 {
    SCIP_CALL( checkStage(scip, "SCIPtryCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPprimalTryCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+   SCIP_CALL( SCIPprimalTryCurrentSol(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->transprob,
          scip->tree, scip->lp, scip->eventfilter, heur, printreason, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;

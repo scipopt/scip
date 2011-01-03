@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.100 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.101 2011/01/03 17:40:00 bzfberth Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1208,26 +1208,46 @@ SCIP_RETCODE SCIPsolRetransform(
    return SCIP_OKAY;
 }
 
-/** returns whether the given solutions in transformed space are equal */
+/** returns whether the given solutions are equal */
 SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
    SCIP_SOL*             sol2,               /**< second primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve */
    )
 {
+   SCIP_PROB* prob;
+   SCIP_Real obj1;
+   SCIP_Real obj2;
    int v;
-
+   
    assert(sol1 != NULL);
    assert(sol2 != NULL);
-   assert(sol1->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-   assert(sol2->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-   assert(prob != NULL);
+   assert(transprob != NULL);  
 
-   if( !SCIPsetIsEQ(set, sol1->obj, sol2->obj) )
+   obj1 = sol1->obj;
+   obj2 = sol2->obj;
+
+   /* both objective values have to be defined on the same space */
+   if( sol1->solorigin != sol2->solorigin )
+   {
+      obj1 = SCIPsolGetObj(sol1, set, transprob);
+      obj2 = SCIPsolGetObj(sol2, set, transprob);
+   }
+   
+   /* solutions with different objective values cannot be the same */
+   if( !SCIPsetIsEQ(set, obj1, obj2) )
       return FALSE;
+   
+   /* if one of the solutions is defined in original space, the comparison has to be performed in the original space */
+   prob = transprob;
+   if( sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+      prob = origprob;  
+   assert(prob != NULL);  
 
+   /* compare each variable value */
    for( v = 0; v < prob->nvars; ++v )
    {
       SCIP_Real val1;

@@ -68,7 +68,7 @@ features:
 - new data structure SCIP_STAIRMAP
 - information about the quality of the solution of an LP (currently the condition number of the basis matrix) can now be requested from the LPI (currently only available for CPLEX):
   methods SCIPlpiGetRealSolQuality() and SCIPprintLPSolutionQuality() and command display lpsolquality in interactive shell 
-
+- comparison of solutions now also works for original solutions
 
 SCIP version 2.0.1
 ===============
