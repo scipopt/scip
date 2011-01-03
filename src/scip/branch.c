@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.108 2011/01/02 11:10:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.109 2011/01/03 13:13:59 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1935,11 +1935,16 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    }
    else
    {
-      /* if no point is suggested, try the LP or pseudo LP solution, projected into the bounds */
+      /* if no point is suggested and the value in LP solution is not too big, try the LP or pseudo LP solution
+       * otherwise, if the value in the LP or pseudosolution is large (here 1e+10), use 0.0
+       * in both cases, project onto bounds of course
+       */
       branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
+      if( REALABS(branchpoint) > 1e+12 )
+         branchpoint = 0.0;
       branchpoint = MAX(lb, MIN(branchpoint, ub));
    }
-   
+
    /* if value is at +/- infty, then choose some value a bit off from bounds or 0.0 */
    if( SCIPsetIsInfinity(set, branchpoint) )
    {
