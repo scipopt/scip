@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.159 2011/01/02 11:10:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.160 2011/01/03 20:45:48 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -714,6 +714,7 @@ SCIP_RETCODE findpairsandsets(
 {
    SCIP_CONSDATA* consdata;
    int v;
+   int nbinvars;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -729,11 +730,12 @@ SCIP_RETCODE findpairsandsets(
 
    *redundant = FALSE;
    *correct = FALSE;
+   nbinvars = SCIPgetNBinVars(scip);
 
    /** check size of array entries and in case of return necessary size */
-   if( *nentries < SCIPgetNBinVars(scip) )
+   if( *nentries < nbinvars )
    {
-      *nentries = SCIPgetNBinVars(scip);
+      *nentries = nbinvars;
       return SCIP_OKAY;
    }
 
@@ -743,13 +745,13 @@ SCIP_RETCODE findpairsandsets(
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex(consdata->vars[v]) >= -1);
-      assert(SCIPvarGetProbindex(consdata->vars[v]) < SCIPgetNBinVars(scip));
+      assert(SCIPvarGetProbindex(consdata->vars[v]) < nbinvars);
       /** var is not active yet */
       if( SCIPvarGetProbindex(consdata->vars[v]) >= 0 )
          (*entries)[SCIPvarGetProbindex(consdata->vars[v])] = 0;
    }
 
-   /** check all vars for multiple entries*/
+   /** check all vars for multiple entries */
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
       /** var is not active yet */
@@ -2329,7 +2331,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
                coef = 1.0;
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "fixmaggr_%s_%s", SCIPconsGetName(cons),SCIPvarGetName(consdata->vars[0]) );
-               SCIP_CALL( SCIPcreateConsLinear(scip,&conslinear,consname,1,consdata->vars,&coef,1.0,1.0,
+               SCIP_CALL( SCIPcreateConsLinear(scip, &conslinear, consname, 1, consdata->vars, &coef, 1.0, 1.0,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
