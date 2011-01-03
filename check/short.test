@@ -18,7 +18,6 @@ instances/MIP/vpm2.mps.gz
 instances/MIQCP/clay0205m.lp.gz
 instances/MIQCP/estein5_data1.lp.gz
 instances/MIQCP/ex1266.mps.gz
-#instances/MIQCP/feedtray2.mps.gz
 instances/MIQCP/meanvarx.mps.gz
 instances/MIQCP/robust_20_0.mps.gz
 instances/MIQCP/sep1.mps.gz
