@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.110 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.111 2011/01/03 19:35:07 bzfwinkm Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -44,6 +44,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
    SCIP_CALL( SCIPincludeConshdlrOr(scip) );
    SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
+   SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
@@ -93,6 +94,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );

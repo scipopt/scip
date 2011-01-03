@@ -38,6 +38,7 @@ fixed bugs:
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
 - added clique heuristic (heur_clique.{c,h})
+- added pseudoboolean constraint handler (cons_pseudoboolean.{c,h})
  
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
@@ -52,6 +53,8 @@ parameters:
 - added parameters <constraints/linear/nmincomparisons> and <constraints/linear/mingainpernmincomparisons> to influence stopping criterium
   for pairwise comparison of linear constraints
 - added parameter <constraints/indicator/maxConditionAltLP> to enable a quality check for the solution of the alternative LP 
+- moved parameters for pseudoboolean constraints from opb-reader to pseudoboolean constraint handler
+- new parameter for pseudoboolean constraints <constraints/pseudoboolean/decompose>, to transform pseudoboolean constraints into linear- and and-constraints
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -69,6 +72,8 @@ features:
 - information about the quality of the solution of an LP (currently the condition number of the basis matrix) can now be requested from the LPI (currently only available for CPLEX):
   methods SCIPlpiGetRealSolQuality() and SCIPprintLPSolutionQuality() and command display lpsolquality in interactive shell 
 - comparison of solutions now also works for original solutions
+- added writing for wbo files
+- changed opb(/wbo) reader which now creates pseudoboolean constraints instead of linear- and and-constraints, only a non-linear objective will create and-constraints inside the reader and while reading a wbo file the topcost constraint is created as well
 
 SCIP version 2.0.1
 ===============

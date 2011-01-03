@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.396 2011/01/03 15:25:10 bzfwinkm Exp $
+# $Id: Makefile,v 1.397 2011/01/03 19:35:06 bzfwinkm Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -525,6 +525,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_logicor.o \
 			scip/cons_or.o \
 			scip/cons_orbitope.o \
+			scip/cons_pseudoboolean.o \
 			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
 			scip/cons_soc.o \
@@ -535,8 +536,8 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
 			scip/heur_actconsdiving.o \
-			scip/heur_coefdiving.o \
 			scip/heur_clique.o \
+			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_feaspump.o \

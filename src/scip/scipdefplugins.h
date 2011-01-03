@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.54 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.55 2011/01/03 19:35:07 bzfwinkm Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -51,6 +51,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_or.h"
 #include "scip/cons_orbitope.h"
+#include "scip/cons_pseudoboolean.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
@@ -61,6 +62,7 @@
 #include "scip/dialog_default.h"
 #include "scip/disp_default.h"
 #include "scip/heur_actconsdiving.h"
+#include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
