@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.c,v 1.42 2011/01/02 11:10:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.c,v 1.43 2011/01/03 15:14:45 bzfviger Exp $"
 
 /**@file   branch_leastinf.c
  * @ingroup BRANCHINGRULES
@@ -67,19 +67,121 @@ void updateBestCandidate(
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
       /* for a multiaggregated variable, we call updateBestCandidate function recursively with all variables in the multiaggregation */
+      SCIP_VAR** multvars;
+      int nmultvars;
       int i;
-      
+      SCIP_Bool success;
+      SCIP_Real multvarlb;
+      SCIP_Real multvarub;
+
       cand = SCIPvarGetProbvar(cand);
-      
-      for( i = 0; i < SCIPvarGetMultaggrNVars(cand); ++i )
+      multvars = SCIPvarGetMultaggrVars(cand);
+      nmultvars = SCIPvarGetMultaggrNVars(cand);
+
+      /* if we have a candidate branching point, then first register only aggregation variables
+       * for which we can compute a corresponding branching point too (see also comments below)
+       * if this fails, then register all (unfixed) aggregation variables, thereby forgetting about candsol
+       */
+      success = FALSE;
+      if( candsol != SCIP_INVALID )
       {
-         /* skip fixed variables */
-         if( SCIPisEQ(scip, SCIPvarGetLbLocal(SCIPvarGetMultaggrVars(cand)[i]), SCIPvarGetUbLocal(SCIPvarGetMultaggrVars(cand)[i])) )
-            continue;
-         
-         updateBestCandidate(scip, bestvar, bestscore, bestobj, bestsol,
-            SCIPvarGetMultaggrVars(cand)[i], candscore, SCIP_INVALID);
+         SCIP_Real* multscalars;
+         SCIP_Real minact;
+         SCIP_Real maxact;
+         SCIP_Real aggrvarsol;
+
+         multscalars = SCIPvarGetMultaggrScalars(cand);
+
+         /* for computing the branching point, we need the current bounds of the multiaggregated variable */
+         minact = SCIPcomputeVarLbLocal(scip, cand);
+         maxact = SCIPcomputeVarUbLocal(scip, cand);
+
+         for( i = 0; i < nmultvars; ++i )
+         {
+            /* skip fixed variables */
+            multvarlb = SCIPcomputeVarLbLocal(scip, multvars[i]);
+            multvarub = SCIPcomputeVarUbLocal(scip, multvars[i]);
+            if( SCIPisEQ(scip, multvarlb, multvarub) )
+               continue;
+
+            SCIP_Real aggrvarsol1;
+            SCIP_Real aggrvarsol2;
+
+            assert(multscalars != NULL);
+            assert(multscalars[i] != 0.0);
+
+            /* we cannot ensure that both the upper bound in the left node and the lower bound in the right node
+             * will be candsol by a clever choice for the branching point of multvars[i],
+             * but we can try to ensure that at least one of them will be at candsol
+             */
+            if( multscalars[i] > 0.0 )
+            {
+               /*    cand >= candsol
+                * if multvars[i] >= (candsol - (maxact - multscalars[i] * ub(multvars[i]))) / multscalars[i]
+                *                 = (candsol - maxact) / multscalars[i] + ub(multvars[i])
+                */
+               aggrvarsol1 = (candsol - maxact) / multscalars[i] + multvarub;
+
+               /*     cand <= candsol
+                * if multvars[i] <= (candsol - (minact - multscalar[i] * lb(multvars[i]))) / multscalars[i]
+                *                 = (candsol - minact) / multscalars[i] + lb(multvars[i])
+                */
+               aggrvarsol2 = (candsol - minact) / multscalars[i] + multvarlb;
+            }
+            else
+            {
+               /*    cand >= candsol
+                * if multvars[i] <= (candsol - (maxact - multscalars[i] * lb(multvars[i]))) / multscalars[i]
+                *                 = (candsol - maxact) / multscalars[i] + lb(multvars[i])
+                */
+               aggrvarsol2 = (candsol - maxact) / multscalars[i] + multvarlb;
+
+               /*    cand <= candsol
+                * if multvars[i] >= (candsol - (minact - multscalar[i] * ub(multvars[i]))) / multscalars[i]
+                *                 = (candsol - minact) / multscalars[i] + ub(multvars[i])
+                */
+               aggrvarsol1 = (candsol - minact) / multscalars[i] + multvarub;
+            }
+
+            /* by the above choice, aggrvarsol1 <= ub(multvars[i]) and aggrvarsol2 >= lb(multvars[i])
+             * if aggrvarsol1 <= lb(multvars[i]) or aggrvarsol2 >= ub(multvars[i]), then choose the other one
+             * if both are out of bounds, then give up
+             * if both are inside bounds, then choose the one closer to 0.0 (someone has better idea???)
+             */
+            if( SCIPisFeasLE(scip, aggrvarsol1, multvarlb) )
+            {
+               if( SCIPisFeasGE(scip, aggrvarsol2, multvarub) )
+                  continue;
+               else
+                  aggrvarsol = aggrvarsol2;
+            }
+            else
+            {
+               if( SCIPisFeasGE(scip, aggrvarsol2, multvarub) )
+                  aggrvarsol = aggrvarsol1;
+               else
+                  aggrvarsol = REALABS(aggrvarsol1) < REALABS(aggrvarsol2) ? aggrvarsol1 : aggrvarsol2;
+            }
+            success = TRUE;
+
+            updateBestCandidate(scip, bestvar, bestscore, bestobj, bestsol,
+                  multvars[i], candscore, aggrvarsol);
+         }
       }
+
+      if( !success )
+         for( i = 0; i < nmultvars; ++i )
+         {
+            /* skip fixed variables */
+            multvarlb = SCIPcomputeVarLbLocal(scip, multvars[i]);
+            multvarub = SCIPcomputeVarUbLocal(scip, multvars[i]);
+            if( SCIPisEQ(scip, multvarlb, multvarub) )
+               continue;
+
+            updateBestCandidate(scip, bestvar, bestscore, bestobj, bestsol,
+               multvars[i], candscore, SCIP_INVALID);
+         }
+
       assert(*bestvar != NULL); /* if all variables were fixed, something is strange */
       
       return;
