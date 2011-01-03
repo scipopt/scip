@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.16 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.17 2011/01/03 20:25:42 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -244,7 +244,7 @@ SCIP_RETCODE depthFirstSearch(
       if( varPosMap != NULL && !SCIPhashmapExists(varPosMap, vbvar) )
       {
          SCIPdebugMessage("insert variable <%s> with position %d into the hash map\n", SCIPvarGetName(vbvar), *nusedvars);
-         SCIP_CALL( SCIPhashmapInsert(varPosMap, vbvar, (void*) (size_t)(*nusedvars)) );
+         SCIP_CALL( SCIPhashmapInsert(varPosMap, vbvar, (void*)(size_t)(*nusedvars)) );
          usedvars[*nusedvars] =  vbvar;
          (*nusedvars)++;
       }
@@ -282,7 +282,10 @@ SCIP_RETCODE catchEvents(
 {
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_VAR** vbvars;
+   SCIP_VAR* vbvar;
    SCIP_Real* coefs;
+   SCIP_Real coef;
+   SCIP_Real constant;
    int nvbvars;
    int n;
    SCIP_VAR* var;
@@ -313,11 +316,21 @@ SCIP_RETCODE catchEvents(
          /* loop over all variable lower bounds; a variable lower bound has the form: x >= b*y + d*/
          for( n = 0; n < nvbvars; ++n )
          {
-            assert(SCIPhashmapExists(propdata->varHashmap, vbvars[n]));
-            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvars[n]);
+            vbvar = vbvars[n];
+            coef == coefs[n];
+            constant = 1.0;
+                        
+            /* transform variable bound variable to an active variable if possible */
+            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+         
+            if( !SCIPvarIsActive(vbvar) )
+               continue;
+
+            assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
+            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
             assert(idx < propdata->nvars);
             
-            if( coefs[n] > 0.0 )
+            if( coef > 0.0 )
             {
                /* change in lower bound of y may lead to a propagation for x */
                propdata->lbeventtypes[idx] = propdata->lbeventtypes[idx] | SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED;
@@ -352,11 +365,21 @@ SCIP_RETCODE catchEvents(
          /* loop over all variable upper bounds; a variable upper bound has the form: x <= b*y + d*/
          for( n = 0; n < nvbvars; ++n )
          {
-            assert(SCIPhashmapExists(propdata->varHashmap, vbvars[n]));
-            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvars[n]);
+            vbvar = vbvars[n];
+            coef == coefs[n];
+            constant = 1.0;
+                        
+            /* transform variable bound variable to an active variable if possible */
+            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+         
+            if( !SCIPvarIsActive(vbvar) )
+               continue;
+
+            assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
+            idx = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
             assert(idx < propdata->nvars);
             
-            if( coefs[n] > 0.0 )
+            if( coef > 0.0 )
             {
                /* change in upper bound of y may lead to a propagation for x */
                propdata->ubeventtypes[idx] = propdata->ubeventtypes[idx] | SCIP_EVENTTYPE_UBCHANGED | SCIP_EVENTTYPE_VARFIXED;
@@ -804,7 +827,7 @@ SCIP_DECL_PROPINITSOL(propInitsolVbounds)
    int nvars;
    int v;
 
-   SCIPdebugMessage("initialize prop_vbounds propagator for problem <%s>\n", SCIPgetProbName(scip));
+   SCIPdebugMessage("initialize vbounds propagator for problem <%s>\n", SCIPgetProbName(scip));
 
    /* free propagator data */
    propdata = SCIPpropGetData(prop);
@@ -977,7 +1000,7 @@ SCIP_RETCODE SCIPincludePropVbounds(
 /** create a topological sorted variable array of the given variables and stores if (needed) the involved variables into
  *  the corresponding variable array and hash map
  *
- * @note: for all arrays and the hash map (if needed) you need to allocate enough memory before calling this method 
+ * @note: for all arrays and the hash map (if requested) you need to allocate enough memory before calling this method 
  */
 SCIP_RETCODE SCIPcreateTopoSortedVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1057,7 +1080,8 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
          SCIPdebugMessage("start depth-first-search with variable <%s>\n", SCIPvarGetName(vars[v]));
          
          /* use depth first search to get a "almost" topological sorted variables for the connected component which
-          * includes vars[v] */
+          * includes vars[v]
+          */
          nsortedvars = 0;
          SCIP_CALL( depthFirstSearch(scip, vars[v], varPosMap, usedvars, nusedvars, connected, sortedvars, &nsortedvars, lowerbound) );
          
