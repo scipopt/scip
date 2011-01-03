@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.17 2011/01/03 20:25:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.18 2011/01/03 20:41:18 bzfwinkm Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -317,7 +317,7 @@ SCIP_RETCODE catchEvents(
          for( n = 0; n < nvbvars; ++n )
          {
             vbvar = vbvars[n];
-            coef == coefs[n];
+            coef = coefs[n];
             constant = 1.0;
                         
             /* transform variable bound variable to an active variable if possible */
@@ -366,7 +366,7 @@ SCIP_RETCODE catchEvents(
          for( n = 0; n < nvbvars; ++n )
          {
             vbvar = vbvars[n];
-            coef == coefs[n];
+            coef = coefs[n];
             constant = 1.0;
                         
             /* transform variable bound variable to an active variable if possible */
