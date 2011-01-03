@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.1 2011/01/03 19:35:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.2 2011/01/03 20:10:03 bzfwinkm Exp $"
 
 /**@file   cons_pseudoboolean.c
  * @ingroup CONSHDLRS 
@@ -621,6 +621,7 @@ SCIP_RETCODE lockRoundingVar(
    return SCIP_OKAY;
 }
 
+#if 0
 /** removes rounding locks for the given variable associated to the given coefficient in the linear part */
 static
 SCIP_RETCODE unlockRoundingVar(
@@ -654,6 +655,7 @@ SCIP_RETCODE unlockRoundingVar(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** installs rounding locks for the given term associated to the given coefficient in the nonlinear part */
 static
@@ -704,6 +706,7 @@ SCIP_RETCODE lockRoundingTerm(
    return SCIP_OKAY;
 }
 
+#if 0
 /** removes rounding locks for the given term associated to the given coefficient in the nonlinear part */
 static
 SCIP_RETCODE unlockRoundingTerm(
@@ -752,6 +755,7 @@ SCIP_RETCODE unlockRoundingTerm(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** adds a variable to the pseudo boolean constraint (if it is not zero) */
 static
@@ -894,6 +898,7 @@ SCIP_RETCODE addCoefTerm(
    return SCIP_OKAY;
 }
 
+#if 0
 /** deletes coefficient at given position from linear part of constraint */
 static
 SCIP_RETCODE delCoefLinear(
@@ -989,6 +994,7 @@ SCIP_RETCODE delCoefTerm(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** sets left hand side of linear constraint */
 static
