@@ -44,7 +44,7 @@
  * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
- * <b>SCIP Authors:</b>
+ * <b>SCIP Authors</b>
  * - <a class="el" href="AUTHORS.html#zib">Current developers at ZIB</a>
  * - <a class="el" href="AUTHORS.html#programmers">Other developers</a>
  * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
@@ -59,11 +59,12 @@
  * - is also a constraint programming (CP) solver, and
  * - incorporates SAT-solving features (conflict analysis, restarts).
  *
- * SCIP is based on SIP (Solving Integer Programs) by Alexander Martin. The main developer of SCIP
- * was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati Wolter. The
- * persons listed above contributed or are currently contributing to SCIP.
+ * SCIP is based on SIP (Solving Integer Programs) by <a
+ * href="http://fauam2m.am.uni-erlangen.de/optimization/edom/staff-members/martin-alexander/prof-dr-alexander-martin.html">Alexander
+ * Martin</a>. The main developer of SCIP was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati
+ * Wolter. The persons listed above contributed or are currently contributing to SCIP.
  *
- * SCIP is developed together with <a href="http://www.math.tu-bs.de/mo/">TU Braunschweig</a> and <a
+ * SCIP is developed together with <a href="http://www.tu-braunschweig.de/mo/">TU Braunschweig</a> and <a
  * href="http://www.am.uni-erlangen.de/optimization/edom.html">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has approx. 270'000 lines of C code. See the web
  * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
@@ -71,6 +72,7 @@
  *
  * <b>General Information</b>
  *
+ * - \ref LICENSE "License"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
  *
  * - \ref PUBLICMETHODS "List of callable functions"
@@ -5193,6 +5195,11 @@
  *
  */
 
+/**@page LICENSE License
+ *
+ * \verbinclude COPYING  
+ */
+
 /**@page FAQ Frequently Asked Questions (FAQ)
  * \htmlinclude faqcss.inc  
  * \htmlinclude faq.inc  
@@ -5225,13 +5232,14 @@
 
 /**@defgroup PUBLICMETHODS Public Methods 
  *
- * @brief This page lists headers which contain methods that can be used via the callable library. If you are in the <a
- * href="../html/index.html">User Manual</a> you only find methods which are public and therefore, allowed to be
- * used. In the <a href="../html_devel/index.html">Developer Manual</a> you find, however, all methods.
+ * This page lists headers which contain methods, which are provided by the core of \SCIP, that can be used via the
+ * callable library. If you are in the <a href="../html/index.html">User Manual</a> you only find methods which are
+ * public and therefore, allowed to be used. In the <a href="../html_devel/index.html">Developer Manual</a> you find,
+ * however, all methods.
  *
- * All the headers listed above include functions which are allowed to be called by external users. Besides those
+ * All the headers listed below include functions which are allowed to be called by external users. Besides those
  * functions it is also valid to call methods that are listed in one of the headers of the (default) plugins, e.g.,
- * cons_linear.h. 
+ * cons_linear.h.
  *
  * If you are locking for information about a particular object of SCIP, such as a variable or a constraint, you should
  * first search the corresponding "pub_<...>.h" header. E.g., in case of a constraint pub_cons.h. If you need some
@@ -5271,34 +5279,53 @@
  */
 
 /**@defgroup TYPEDEFINITIONS Type Definitions
- * @brief This page lists headers which contain type definitions of callback methods.
+ * This page lists headers which contain type definitions of callback methods.
  *
- * All headers above include the descriptions of callback methods of
- * certain plugin. For more detail see the corresponding header.
+ * All headers below include the descriptions of callback methods of
+ * certain plugins. For more detail see the corresponding header.
  */
 
 /**@defgroup BRANCHINGRULES Branching Rules 
- * @brief This page contains a list of all branching rule which are currently available.
+ * @brief This page contains a list of all branching rule which are currently available. 
+ *
+ * A detailed description what a branching rule does and how to add a branching rule to \SCIP can be found 
+ * \ref BRANCH "here".
  */
 
 /**@defgroup CONSHDLRS  Constraint Handler 
  * @brief This page contains a list of all constraint handlers which are currently available.
+ *
+ * A detailed description what a constraint handler does and how to add a constraint handler to \SCIP can be found 
+ * \ref CONS "here".
  */
 
 /**@defgroup DIALOGS Dialogs 
  * @brief This page contains a list of all dialogs which are currently available.
+ *
+ * A detailed description what a dialog does and how to add a dialog to \SCIP can be found 
+ * \ref DIALOG "here".
  */
 
 /**@defgroup DISPLAYS Displays 
  * @brief This page contains a list of all displays (output columns)  which are currently available.
+ *
+ * A detailed description what a display does and how to add a display to \SCIP can be found 
+ * \ref DISP "here".
+ *
  */
 
 /**@defgroup EXPRINTS Expression Interpreter
  * @brief This page contains a list of all expression interpreter which are currently available.
+ *
+ * A detailed description what a expression interpreter does and how to add a expression interpreter to \SCIP can be found 
+ * \ref EXPRINT "here".
  */
 
 /**@defgroup FILEREADERS File Readers 
  * @brief This page contains a list of all file readers which are currently available.
+ *
+ * A detailed description what a file reader does and how to add a file reader to \SCIP can be found 
+ * \ref READER "here".
  */
  
 /**@defgroup LPIS LP Solver Interfaces
@@ -5307,26 +5334,44 @@
 
 /**@defgroup NODESELECTORS Node Selectors
  * @brief This page contains a list of all node selectors which are currently available.
+ *
+ * A detailed description what a node selector does and how to add a node selector to \SCIP can be found 
+ * \ref NODESEL "here".
  */
 
 /**@defgroup NLPIS NLP Solver Interfaces
  * @brief This page contains a list of all NLP solver interfaces which are currently available.
+ *
+ * A detailed description what a NLP solver interface does and how to add a NLP solver interface to \SCIP can be found 
+ * \ref NLPI "here".
  */
 
 /**@defgroup PRESOLVERS Presolvers
  * @brief This page contains a list of all presolvers which are currently available.
+ *
+ * A detailed description what a presolver does and how to add a presolver to \SCIP can be found 
+ * \ref PRESOL "here".
  */
 
 /**@defgroup PRICERS Pricers
  * @brief This page contains a list of all pricers which are currently available.
+ *
+ * Per default there exist no variable pricer. A detailed description what a variable pricer does and how to add a
+ * variable pricer to \SCIP can be found \ref PRICER "here".
  */
 
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
  * @brief This page contains a list of all primal heuristics which are currently available.
+ *
+ * A detailed description what a primal heuristic does and how to add a primal heuristic to \SCIP can be found 
+ * \ref HEUR "here".
  */
 
 /**@defgroup PROPAGATORS Propagators
  * @brief This page contains a list of all propagators which are currently available.
+ *
+ * A detailed description what a propagator does and how to add a propagator to \SCIP can be found 
+ * \ref PROP "here".
  */
 
 /**@defgroup RELAXATORS Relaxators
@@ -5335,6 +5380,9 @@
 
 /**@defgroup SEPARATORS Separators
  * @brief This page contains a list of all separators  which are currently available.
+ *
+ * A detailed description what a separator does and how to add a separator to \SCIP can be found 
+ * \ref SEPA "here".
  */
 
 /**@page PARAMETERS List of all SCIP parameters

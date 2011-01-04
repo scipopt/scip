@@ -188,7 +188,7 @@ ALIASES                = "SCIP=<a href= http://scip.zib.de>SCIP</a>" \
 # For instance, some of the names that are used will be different. The list
 # of all members will be omitted, etc.
 
-OPTIMIZE_OUTPUT_FOR_C  = NO
+OPTIMIZE_OUTPUT_FOR_C  = YES
 
 # Set the OPTIMIZE_OUTPUT_JAVA tag to YES if your project consists of Java
 # sources only. Doxygen will then generate output that is more tailored for
@@ -305,7 +305,7 @@ EXTRACT_ALL            = YES
 # If the EXTRACT_PRIVATE tag is set to YES all private members of a class
 # will be included in the documentation.
 
-EXTRACT_PRIVATE        = YES
+EXTRACT_PRIVATE        = NO
 
 # If the EXTRACT_STATIC tag is set to YES all static members of a file
 # will be included in the documentation.
@@ -512,7 +512,7 @@ SHOW_NAMESPACES        = YES
 # provided by doxygen. Whatever the program writes to standard output
 # is used as the file version. See the manual for examples.
 
-FILE_VERSION_FILTER    =
+FILE_VERSION_FILTER    = "sed -n 's/^#pragma ident \"@(#) \$Id: [a-zA-Z\_]*.[cph]*,v \([0-9\.]*\).*/CVS version \1/p'"
 
 # The LAYOUT_FILE tag can be used to specify a layout file which will be parsed
 # by doxygen. The layout file controls the global structure of the generated
@@ -521,7 +521,7 @@ FILE_VERSION_FILTER    =
 # You can optionally specify a file name after the option, if omitted
 # DoxygenLayout.xml will be used as the name of the layout file.
 
-LAYOUT_FILE            =
+LAYOUT_FILE            = sciplayout.xml
 
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
@@ -584,32 +584,6 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = . \
-                         ../src/scip/scip.h \
-                         ../src/scip/pub_branch.h \
-                         ../src/scip/pub_conflict.h \
-                         ../src/scip/pub_cons.h \
-                         ../src/scip/pub_cutpool.h \
-                         ../src/scip/pub_dialog.h \
-                         ../src/scip/pub_disp.h \
-                         ../src/scip/pub_event.h \
-                         ../src/scip/pub_fileio.h \
-                         ../src/scip/pub_heur.h \
-                         ../src/scip/pub_implics.h \
-                         ../src/scip/pub_lp.h \
-                         ../src/scip/pub_message.h \
-                         ../src/scip/pub_misc.h \
-                         ../src/scip/pub_nlp.h \
-                         ../src/scip/pub_nodesel.h \
-                         ../src/scip/pub_paramset.h \
-                         ../src/scip/pub_presol.h \
-                         ../src/scip/pub_pricer.h \
-                         ../src/scip/pub_prop.h \
-                         ../src/scip/pub_reader.h \
-                         ../src/scip/pub_relax.h \
-                         ../src/scip/pub_sepa.h \
-                         ../src/scip/pub_sol.h \
-                         ../src/scip/pub_tree.h \
-                         ../src/scip/pub_var.h \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \
@@ -671,7 +645,11 @@ EXCLUDE_PATTERNS       = *xxx*
 # wildcard * is used, a substring. Examples: ANamespace, AClass,
 # AClass::ANamespace, ANamespace::*Test
 
-EXCLUDE_SYMBOLS        =
+EXCLUDE_SYMBOLS        = Ipopt \
+		       	 CppAD \
+			 _* \
+			 SCIP_*Data
+
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see
@@ -700,7 +678,7 @@ EXAMPLE_RECURSIVE      = NO
 # the \image command).
 
 IMAGE_PATH             = pictures/scippy.png \
-		       pictures/miniscippy.png
+		         pictures/miniscippy.png
  
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -750,7 +728,7 @@ INLINE_SOURCES         = NO
 # doxygen to hide any special comment blocks from generated source code
 # fragments. Normal C and C++ comments will always remain visible.
 
-STRIP_CODE_COMMENTS    = YES
+STRIP_CODE_COMMENTS    = NO
 
 # If the REFERENCED_BY_RELATION tag is set to YES
 # then for each documented function all documented
@@ -840,7 +818,7 @@ HTML_HEADER            = scipheader.html
 # each generated HTML page. If it is left blank doxygen will generate a
 # standard footer.
 
-HTML_FOOTER            =
+HTML_FOOTER            = scipfooter.html
 
 # The HTML_STYLESHEET tag can be used to specify a user-defined cascading
 # style sheet that is used by each HTML page. It can be used to
@@ -865,7 +843,7 @@ HTML_COLORSTYLE_HUE    = 220
 # the colors in the HTML output. For a value of 0 the output will use
 # grayscales only. A value of 255 will produce the most vivid colors.
 
-HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_SAT    = 0
 
 # The HTML_COLORSTYLE_GAMMA tag controls the gamma correction applied to
 # the luminance component of the colors in the HTML output. Values below
@@ -1480,7 +1458,7 @@ PERL_PATH              =
 # fallback. It is recommended to install and use dot, since it yields more
 # powerful graphs.
 
-CLASS_DIAGRAMS         = YES
+CLASS_DIAGRAMS         = NO
 
 # You can define message sequence charts within doxygen comments using the \msc
 # command. Doxygen will then run the mscgen tool (see
@@ -1547,7 +1525,7 @@ CLASS_GRAPH            = NO
 # indirect implementation dependencies (inheritance, containment, and
 # class references variables) of the class with other documented classes.
 
-COLLABORATION_GRAPH    = YES
+COLLABORATION_GRAPH    = NO
 
 # If the GROUP_GRAPHS and HAVE_DOT tags are set to YES then doxygen
 # will generate a graph for groups, showing the direct groups dependencies
@@ -1570,14 +1548,14 @@ TEMPLATE_RELATIONS     = NO
 # file showing the direct and indirect include dependencies of the file with
 # other documented files.
 
-INCLUDE_GRAPH          = YES
+INCLUDE_GRAPH          = NO
 
 # If the ENABLE_PREPROCESSING, SEARCH_INCLUDES, INCLUDED_BY_GRAPH, and
 # HAVE_DOT tags are set to YES then doxygen will generate a graph for each
 # documented header file showing the documented files that directly or
 # indirectly include this file.
 
-INCLUDED_BY_GRAPH      = YES
+INCLUDED_BY_GRAPH      = NO
 
 # If the CALL_GRAPH and HAVE_DOT options are set to YES then
 # doxygen will generate a call dependency graph for every global function
