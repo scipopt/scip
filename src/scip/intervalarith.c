@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.55 2011/01/02 11:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.56 2011/01/04 17:06:53 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -230,6 +230,8 @@ static SCIP_Bool warned_unsafe_log = FALSE;
 #undef SCIPintervalIsEmpty
 #undef SCIPintervalSetEntire
 #undef SCIPintervalIsEntire
+#undef SCIPintervalIsPositiveInfinity
+#undef SCIPintervalIsNegativeInfinity
 
 /** returns infimum of interval */
 SCIP_Real SCIPintervalGetInf(
@@ -311,6 +313,24 @@ SCIP_Bool SCIPintervalIsEntire(
    )
 {
    return operand.inf <= -infinity && operand.sup >= infinity;
+}
+
+/** indicates whether interval is positive infinity, i.e., [infinity, infinity] */
+SCIP_Bool SCIPintervalIsPositiveInfinity(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   return operand.inf >=  infinity && operand.sup >= operand.inf;
+}
+
+/** indicates whether interval is negative infinity, i.e., [-infinity, -infinity] */
+SCIP_Bool SCIPintervalIsNegativeInfinity(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   return operand.sup <= -infinity && operand.inf <= operand.sup;
 }
 
 /** indicates whether operand1 is contained in operand2 */
@@ -451,16 +471,18 @@ void SCIPintervalAddScalar(
 
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
-   assert(operand1.inf <  infinity);
-   assert(operand1.sup > -infinity);
-   assert(operand2     <  infinity);
-   assert(operand2     > -infinity);
 
    roundmode = SCIPintervalGetRoundingMode();
 
-   if( operand1.inf <= -infinity )
+   /* -inf + something >= -inf */
+   if( operand1.inf <= -infinity || operand2 <= -infinity )
    {
       resultant->inf = -infinity;
+   }
+   else if( operand1.inf >= infinity || operand2 >= infinity )
+   {
+      /* inf + finite = inf, inf + inf = inf */
+      resultant->inf = infinity;
    }
    else
    {
@@ -468,9 +490,15 @@ void SCIPintervalAddScalar(
       resultant->inf = operand1.inf + operand2;
    }
    
-   if( operand1.sup >=  infinity )
+   /* inf + something <= inf */
+   if( operand1.sup >=  infinity || operand2 >= infinity )
    {
       resultant->sup =  infinity;
+   }
+   else if( operand1.sup <= -infinity || operand2 <= -infinity )
+   {
+      /* -inf + finite = -inf, -inf + (-inf) = -inf */
+      resultant->sup = -infinity;
    }
    else
    {
@@ -567,38 +595,7 @@ void SCIPintervalSubScalar(
    SCIP_Real             operand2            /**< second operand of operation */
    )
 {
-   SCIP_ROUNDMODE roundmode;
-
-   assert(resultant != NULL);
-   assert(operand1.inf <= operand1.sup);
-   assert(operand1.inf <  infinity);
-   assert(operand1.sup > -infinity);
-   assert(operand2     <  infinity);
-   assert(operand2     > -infinity);
-
-   roundmode = SCIPintervalGetRoundingMode();
-
-   if( operand1.inf <= -infinity )
-   {
-      resultant->inf = -infinity;
-   }
-   else
-   {
-      SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-      resultant->inf = operand1.inf - operand2;
-   }
-   
-   if( operand1.sup >=  infinity )
-   {
-      resultant->sup =  infinity;
-   }
-   else
-   {
-      SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-      resultant->sup = operand1.sup - operand2;
-   }
-
-   SCIPintervalSetRoundingMode(roundmode);
+   SCIPintervalAddScalar(infinity, resultant, operand1, -operand2);
 }
 
 /** multiplies operand1 with operand2 and stores infimum of result in infimum of resultant */
@@ -889,29 +886,26 @@ void SCIPintervalDiv(
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
    assert(operand2.inf <= operand2.sup);
-   assert(operand1.inf <  infinity);
-   assert(operand2.inf <  infinity);
-   assert(operand1.sup > -infinity);
-   assert(operand2.sup > -infinity);
 
-   if( operand2.inf == 0.0 && operand2.sup == 0.0 )
-   {  /* division by [0,0] */
-      SCIPintervalSetEmpty(resultant);
-      return;
-   }
-  
    if( operand1.inf == 0.0 && operand1.sup == 0.0 )
    {  /* division of [0,0] by something */
       SCIPintervalSet(resultant, 0.0);
       return;
    }
+
+   if( operand2.inf == 0.0 && operand2.sup == 0.0 )
+   {  /* division by [0,0] gives [-inf, +inf] */
+      resultant->inf = -infinity;
+      resultant->sup =  infinity;
+      return;
+   }
   
    roundmode = SCIPintervalGetRoundingMode();
-  
+
    if( operand2.inf > 0.0 || operand2.sup < 0.0 )
    {  /* divison by nonzero: resultant = x * (1/y) */
       SCIP_INTERVAL intmed;
-      if( operand2.sup >=  infinity )
+      if( operand2.sup >=  infinity || operand2.sup <= -infinity )
       {
          intmed.inf = 0.0;
       }
@@ -920,7 +914,7 @@ void SCIPintervalDiv(
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
          intmed.inf = 1 / operand2.sup;
       }
-      if( operand2.inf <= -infinity )
+      if( operand2.inf <= -infinity || operand2.inf >= infinity )
       {
          intmed.sup = 0.0;
       }
@@ -933,8 +927,32 @@ void SCIPintervalDiv(
    }
    else if( operand1.inf >= 0.0 )
    {
-      if( operand2.inf == 0.0 )
+      /* division of [+,+] by something */
+      if( operand1.inf == infinity )
       {
+         /* division of [+inf, +inf] by something */
+         if( operand2.inf == 0.0 )
+         {
+            /* [+inf,+inf] / [0,+] = +inf */
+            resultant->inf = infinity;
+            resultant->sup = infinity;
+         }
+         else if( operand2.sup == 0.0 )
+         {
+            /* [+inf,+inf] / [-,0] = -inf */
+            resultant->inf = -infinity;
+            resultant->sup = -infinity;
+         }
+         else
+         {
+            /* [+inf,+inf] / [-,+] = [-inf, +inf] */
+            resultant->inf = -infinity;
+            resultant->sup =  infinity;
+         }
+      }
+      else if( operand2.inf == 0.0 )
+      {
+         /* [0,+] / [0,+] = [..., +inf] */
          if( operand2.sup >=  infinity )
          {
             resultant->inf = 0.0;
@@ -948,6 +966,7 @@ void SCIPintervalDiv(
       }
       else if( operand2.sup == 0.0 )
       {
+         /* [0,+] / [-,0] = [-inf, ...] */
          resultant->inf = -infinity;
          if( operand2.inf <= -infinity )
          {
@@ -961,14 +980,39 @@ void SCIPintervalDiv(
       }
       else
       {
+         /* [0,+] / [-,+] = [-inf, +inf] */
          resultant->inf = -infinity;
          resultant->sup =  infinity;
       }
    }
    else if( operand1.sup <= 0.0 )
    {
-      if( operand2.inf == 0.0 )
+      /* division of [-,-] by something */
+      if( operand1.sup == -infinity )
       {
+         /* division of [-inf,-inf] by something */
+         if( operand2.inf == 0.0 )
+         {
+            /* [-inf,-inf] / [0,+] = -inf */
+            resultant->inf = -infinity;
+            resultant->sup = -infinity;
+         }
+         else if( operand2.sup == 0.0 )
+         {
+            /* [-inf,-inf] / [-,0] = +inf */
+            resultant->inf =  infinity;
+            resultant->sup =  infinity;
+         }
+         else
+         {
+            /* [-inf,-inf] / [-,+] = [-inf, +inf] */
+            resultant->inf = -infinity;
+            resultant->sup =  infinity;
+         }
+      }
+      else if( operand2.inf == 0.0 )
+      {
+         /* [-,0] / [0,+] = [-inf, ...] */
          resultant->inf = -infinity;
          if( operand2.sup >= infinity )
          {
@@ -982,6 +1026,7 @@ void SCIPintervalDiv(
       }
       else if( operand2.sup == 0.0 )
       {
+         /* [-,0] / [-,0] = [..., +inf] */
          if( operand2.inf <= -infinity )
          {
             resultant->inf = 0.0;
@@ -995,12 +1040,14 @@ void SCIPintervalDiv(
       }
       else
       {
+         /* [-,0] / [-,+] = [-inf, +inf] */
          resultant->inf = -infinity;
          resultant->sup =  infinity;
       }
    }
    else
    {
+      /* division of [-,+] by [-,+] */
       resultant->inf = -infinity;
       resultant->sup =  infinity;
    }
@@ -1008,9 +1055,7 @@ void SCIPintervalDiv(
   SCIPintervalSetRoundingMode(roundmode);
 }
 
-/** divides operand1 by scalar operand2 and stores result in resultant
- * 
- * if operand2 is 0.0, gives an empty interval as result */
+/** divides operand1 by scalar operand2 and stores result in resultant */
 void SCIPintervalDivScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1022,18 +1067,25 @@ void SCIPintervalDivScalar(
 
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
-   assert(operand1.inf <  infinity);
-   assert(operand2     <  infinity);
-   assert(operand1.sup > -infinity);
-   assert(operand2     > -infinity);
 
    roundmode = SCIPintervalGetRoundingMode();
    
-   if( operand2 > 0.0 )
+   if( operand2 >= infinity || operand2 <= -infinity )
+   {
+      /* division by +/-infinity is 0.0 */
+      resultant->inf = 0.0;
+      resultant->sup = 0.0;
+   }
+   else if( operand2 > 0.0 )
    {
       if( operand1.inf <= -infinity )
       {
          resultant->inf = -infinity;
+      }
+      else if( operand1.inf >= infinity )
+      {
+         /* infinity / + = infinity */
+         resultant->inf = infinity;
       }
       else
       {
@@ -1043,6 +1095,11 @@ void SCIPintervalDivScalar(
       if( operand1.sup >= infinity )
       {
          resultant->sup =  infinity;
+      }
+      else if( operand1.sup <= -infinity )
+      {
+         /* -infinity / + = -infinity */
+         resultant->sup = -infinity;
       }
       else
       {
@@ -1056,6 +1113,11 @@ void SCIPintervalDivScalar(
       {
          resultant->inf = -infinity;
       }
+      else if( operand1.sup <= -infinity )
+      {
+         /* -infinity / - = infinity */
+         resultant->inf = infinity;
+      }
       else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -1065,6 +1127,11 @@ void SCIPintervalDivScalar(
       {
          resultant->sup = infinity;
       }
+      else if( operand1.inf >= infinity )
+      {
+         /* infinity / - = -infinity */
+         resultant->sup = -infinity;
+      }
       else
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
@@ -1073,7 +1140,25 @@ void SCIPintervalDivScalar(
    }
    else
    { /* division by 0.0 */
-     SCIPintervalSetEmpty(resultant);
+      if( operand1.inf >= 0 )
+      {
+         /* [+,+] / [0,0] = [+inf, +inf] */
+         resultant->inf =  infinity;
+         resultant->sup =  infinity;
+      }
+      else if( operand1.sup <= 0 )
+      {
+         /* [-,-] / [0,0] = [-inf, -inf] */
+         resultant->inf = -infinity;
+         resultant->sup = -infinity;
+      }
+      else
+      {
+         /* [-,+] / [0,0] = [-inf, +inf] */
+         resultant->inf = -infinity;
+         resultant->sup =  infinity;
+      }
+      return;
    }
   
    SCIPintervalSetRoundingMode(roundmode);
@@ -1214,15 +1299,20 @@ void SCIPintervalSquare(
 
    assert(resultant != NULL);
    assert(operand.inf <= operand.sup);
-   assert(operand.inf <  infinity);
-   assert(operand.sup > -infinity);
   
    roundmode = SCIPintervalGetRoundingMode();
 
    if( operand.sup <= 0.0 )
    {  /* operand is left of 0.0 */
-      SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-      resultant->inf = operand.sup * operand.sup;
+      if( operand.sup <= -infinity )
+      {
+         resultant->inf =  infinity;
+      }
+      else
+      {
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf = operand.sup * operand.sup;
+      }
       if( operand.inf <= -infinity )
       {
          resultant->sup = infinity;
@@ -1235,8 +1325,15 @@ void SCIPintervalSquare(
    }
    else if( operand.inf >= 0.0 )
    {  /* operand is right of 0.0 */
-      SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-      resultant->inf = operand.inf * operand.inf;
+      if( operand.inf >= infinity )
+      {
+         resultant->inf = infinity;
+      }
+      else
+      {
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf = operand.inf * operand.inf;
+      }
       if( operand.sup >= infinity )
       {
          resultant->sup = infinity;
@@ -1248,14 +1345,22 @@ void SCIPintervalSquare(
       }
    }
    else
-   {  /* 0.0 inside resultant */
-      SCIP_Real x;
-      SCIP_Real y;
+   {  /* [-,+]^2 */
       resultant->inf = 0.0;
-      SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-      x = operand.inf * operand.inf;
-      y = operand.sup * operand.sup;
-      resultant->sup = MAX(x, y);
+      if( operand.inf <= -infinity || operand.sup >= infinity )
+      {
+         resultant->sup = infinity;
+      }
+      else
+      {
+         SCIP_Real x;
+         SCIP_Real y;
+
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+         x = operand.inf * operand.inf;
+         y = operand.sup * operand.sup;
+         resultant->sup = MAX(x, y);
+      }
    }
 
    SCIPintervalSetRoundingMode(roundmode);
@@ -1272,8 +1377,6 @@ void SCIPintervalSquareRoot(
 
    assert(resultant != NULL);
    assert(operand.inf <= operand.sup);
-   assert(operand.inf <  infinity);
-   assert(operand.sup > -infinity);
    
    if( operand.sup < 0.0 )
    {
@@ -1286,6 +1389,11 @@ void SCIPintervalSquareRoot(
    if( operand.inf <= 0.0 )
    {
       resultant->inf = 0.0;
+   }
+   else if( operand.inf >= infinity )
+   {
+      resultant->inf = infinity;
+      resultant->sup = infinity;
    }
    else
    {
@@ -1319,10 +1427,6 @@ void SCIPintervalPower(
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
    assert(operand2.inf <= operand2.sup);
-   assert(operand1.inf <  infinity);
-   assert(operand2.inf <  infinity);
-   assert(operand1.sup > -infinity);
-   assert(operand2.sup > -infinity);
 
    if( operand2.inf == operand2.sup )
    {  /* operand is number */
@@ -1333,7 +1437,7 @@ void SCIPintervalPower(
    /* resultant := log(op1) */
    SCIPintervalLog(infinity, resultant, operand1);
    if( SCIPintervalIsEmpty(*resultant) )
-     return;
+      return;
    
    /* resultant := op2 * resultant */
    SCIPintervalMul(infinity, resultant, operand2, *resultant);
@@ -1355,11 +1459,59 @@ void SCIPintervalPowerScalar(
 
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
-   assert(operand1.inf <  infinity);
-   assert(operand1.sup > -infinity);
-   assert(operand2     <  infinity);
-   assert(operand2     > -infinity);
    
+   if( operand2 == infinity )
+   {
+      /* 0^infinity =  0
+       * +^infinity =  infinity
+       * -^infinity = -infinity
+       */
+      if( operand1.inf < 0.0 )
+         resultant->inf = -infinity;
+      else
+         resultant->inf = 0.0;
+      if( operand1.sup > 0.0 )
+         resultant->sup =  infinity;
+      else
+         resultant->sup = 0.0;
+      return;
+   }
+
+   if( operand2 == 0.0 )
+   { /* special case, since x^0 = 1 for x != 0, but 0^0 = 0 */
+      if( operand1.inf == 0.0 && operand1.sup == 0.0 )
+      {
+         resultant->inf = 0.0;
+         resultant->sup = 0.0;
+      }
+      else if( operand1.inf <= 0.0 || operand1.sup >= 0.0 )
+      { /* 0.0 in x gives [0,1] */
+         resultant->inf = 0.0;
+         resultant->sup = 1.0;
+      }
+      else
+      { /* 0.0 outside x gives [1,1] */
+         resultant->inf = 1.0;
+         resultant->sup = 1.0;
+      }
+      return;
+   }
+
+   if( operand2 == 0.0 )
+   {
+      /* x^0 = 1 */
+      resultant->inf = 1.0;
+      resultant->sup = 1.0;
+      return;
+   }
+
+   if( operand2 == 1.0 )
+   {
+      /* x^1 = x */
+      *resultant = operand1;
+      return;
+   }
+
    op2isint = (ceil(operand2) == operand2);
    
    if( !op2isint && operand1.inf < 0.0 )
@@ -1384,8 +1536,16 @@ void SCIPintervalPowerScalar(
    {  /* easy case: x^n with x>=0 */
       if( operand2 >= 0.0 )
       {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-         resultant->inf = pow(operand1.inf, operand2);
+         if( operand1.inf >= infinity )
+         {
+            /* inf^+ = inf */
+            resultant->inf = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+            resultant->inf = pow(operand1.inf, operand2);
+         }
          if( operand1.sup >= infinity )
          {
             resultant->sup = infinity;
@@ -1402,22 +1562,48 @@ void SCIPintervalPowerScalar(
          {
             resultant->inf = 0.0;
          }
+         else if( operand1.sup == 0.0 )
+         {
+            /* x^(negative even) = infinity for x->0 (from both sides),
+             * but x^(negative odd) = -infinity for x->0 from left side */
+            if( ceil(operand2/2) == operand2/2 )
+               resultant->inf =  infinity;
+            else
+               resultant->inf = -infinity;
+         }
          else
          {
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             resultant->inf = pow(operand1.sup, operand2);
          }
-         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-         resultant->sup = pow(operand1.inf, operand2);
+         if( operand1.inf == 0.0 )
+         {
+            /* 0^(negative) = infinity */
+            resultant->sup = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            resultant->sup = pow(operand1.inf, operand2);
+         }
       }
    }
-   else if( operand1.sup < 0.0 )
+   else if( operand1.sup <= 0.0 )
    {  /* more difficult case: x^n with x < 0; we now know, that n is integer */
       assert(op2isint);
-      if( (operand2 >= 0.0 && ceil(operand2/2) == operand2/2) || (operand2 <= 0.0 && ceil(operand2/2) != operand2/2) )
-      {  /* x^n with (n>=0 and even) or (n<=0 and odd) -> x^n is mon. decreasing for x<0 */
-         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-         resultant->inf = pow(operand1.sup, operand2);
+      if( operand2 >= 0.0 && ceil(operand2/2) == operand2/2 )
+      {
+         /* x^n with n>=2 and even -> x^n is mon. decreasing for x < 0 */
+         if( operand1.sup == -infinity )
+         {
+            /* (-inf)^n = inf */
+            resultant->inf = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+            resultant->inf = pow(operand1.sup, operand2);
+         }
          if( operand1.inf <= -infinity )
          {
             resultant->sup = infinity;
@@ -1428,8 +1614,43 @@ void SCIPintervalPowerScalar(
             resultant->sup = pow(operand1.inf, operand2);
          }
       }
-      else
-      {  /* x^n with (n<0 and even) or (n>0 and odd) -> x^n is mon. increasing for x<0 */
+      else if( operand2 <= 0.0 && ceil(operand2/2) != operand2/2 )
+      {
+         /* x^n with n<=-1 and odd -> x^n = 1/x^(-n) is mon. decreasing for x<0 */
+         if( operand1.sup == -infinity )
+         {
+            /* (-inf)^n = 1/(-inf)^(-n) = 1/(-inf) = 0 */
+            resultant->inf = 0.0;
+         }
+         else if( operand1.sup == 0.0 )
+         {
+            /* x^n -> -infinity for x->0 from left */
+            resultant->inf = -infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+            resultant->inf = pow(operand1.sup, operand2);
+         }
+         if( operand1.inf <= -infinity )
+         {
+            /* (-inf)^n = 1/(-inf)^(-n) = 1/(-inf) = 0 */
+            resultant->sup = 0.0;
+         }
+         else if( operand1.inf == 0.0 )
+         {
+            /* x^n -> infinity for x->0 from right */
+            resultant->sup = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            resultant->sup = pow(operand1.inf, operand2);
+         }
+      }
+      else if( operand2 >= 0.0 )
+      {
+         /* x^n with n>0 and odd -> x^n is mon. increasing for x<0 */
          if( operand1.inf <= -infinity )
          {
             resultant->inf = -infinity;
@@ -1439,79 +1660,111 @@ void SCIPintervalPowerScalar(
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             resultant->inf = pow(operand1.inf, operand2);
          }
-         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-         resultant->sup = pow(operand1.sup, operand2);
-      }
-   }
-   else
-   {  /* most difficult case: x^n with x in [-,+], but n is integer */
-      assert(op2isint); /* otherwise we had set operand1.inf == 0.0, which was handled in first case */
-      if( operand2 < 0.0 )
-      {  /* division of [-,+] by zero */
-         resultant->inf = -infinity;
-         resultant->sup =  infinity;
-      }
-      else
-      {  /* x^n with n positive integer */
-         if( operand2/2 == ceil(operand2/2) )
-         {  /* n is even */
-            if( -operand1.inf >= operand1.sup )
-            {
-               if( operand1.sup >= infinity )
-               {  /* and so is inf == -infty */
-                  resultant->inf = -infinity;
-                  resultant->sup =  infinity;
-               }
-               else if( operand1.inf <= -infinity )
-               {
-                  SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-                  resultant->inf = pow(operand1.sup, operand2);
-                  resultant->sup = infinity;
-               }
-               else
-               {
-                  SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-                  resultant->inf = pow(operand1.sup, operand2);
-                   SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-                  resultant->sup = pow(operand1.inf, operand2);
-               }
-            }
-            else
-            {  /* -inf < sup, so -inf is not -infty */
-                SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-                resultant->inf = pow(operand1.inf, operand2);
-               if( operand1.sup >= infinity )
-               {
-                  resultant->sup = infinity;
-               }
-               else
-               {
-                  SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-                  resultant->sup = pow(operand1.sup, operand2);
-               }
-            }
+         if( operand1.sup <= -infinity )
+         {
+            resultant->sup = -infinity;
          }
          else
-         {  /* n is odd */
-            if( operand1.inf <= -infinity )
-            {
-               resultant->inf = -infinity;
-            }
-            else
-            {
-               SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-               resultant->inf = pow(operand1.inf, operand2);
-            }
-            if( operand1.sup >= infinity )
-            {
-               resultant->sup =  infinity;
-            }
-            else
-            {
-               SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-               resultant->sup = pow(operand1.sup, operand2);
-            }
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            resultant->sup = pow(operand1.sup, operand2);
          }
+      }
+      else
+      {
+         /* x^n with n<0 and even -> x^n is mon. increasing for x<0 */
+         if( operand1.inf <= -infinity )
+         {
+            resultant->inf = 0.0;
+         }
+         else if( operand1.inf == 0.0 )
+         {
+            /* x^n -> infinity for x->0 from both sides */
+            resultant->inf = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+            resultant->inf = pow(operand1.inf, operand2);
+         }
+         if( operand1.sup <= -infinity )
+         {
+            resultant->sup = 0.0;
+         }
+         else if( operand1.sup == 0.0 )
+         {
+            /* x^n -> infinity for x->0 from both sides */
+            resultant->sup = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            resultant->sup = pow(operand1.sup, operand2);
+         }
+      }
+      assert(resultant->inf <= resultant->sup);
+
+   }
+   else
+   {  /* similar difficult case: x^n with x in [<0, >0], but n is integer */
+      assert(op2isint); /* otherwise we had set operand1.inf == 0.0, which was handled in first case */
+      if( operand2 >= 0.0 && operand2/2 == ceil(operand2/2) )
+      {
+         /* n even positive integer */
+         resultant->inf = 0.0;
+         if( operand1.inf == -infinity || operand1.sup == infinity )
+         {
+            resultant->sup = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            resultant->sup = pow(MAX(-operand1.inf, operand1.sup), operand2);
+         }
+      }
+      else if( operand2 <= 0.0 && ceil(operand2/2) != operand2/2 )
+      {
+         /* n even negative integer */
+         resultant->sup = infinity;  /* since 0^n = infinity */
+         if( operand1.inf == -infinity || operand1.sup == infinity )
+         {
+            resultant->inf = 0.0;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+            resultant->inf = pow(MAX(-operand1.inf, operand1.sup), operand2);
+         }
+      }
+      else if( operand2 >= 0.0 )
+      {
+         /* n odd positive integer, so monotonically increasing function */
+         if( operand1.inf == -infinity )
+         {
+            resultant->inf = -infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+            resultant->inf = pow(operand1.inf, operand2);
+         }
+         if( operand1.sup == infinity )
+         {
+            resultant->sup = infinity;
+         }
+         else
+         {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            resultant->sup = pow(operand1.sup, operand2);
+         }
+      }
+      else
+      {
+         /* n odd negative integer:
+          * x^n -> -infinity for x->0 from left
+          * x^n ->  infinity for x->0 from right */
+         resultant->inf = -infinity;
+         resultant->sup =  infinity;
       }
    }
   
@@ -1530,47 +1783,43 @@ void SCIPintervalSignPowerScalar(
    )
 {
    SCIP_ROUNDMODE roundmode;
-
    assert(resultant != NULL);
+
    assert(operand1.inf <= operand1.sup);
-   assert(operand1.inf <  infinity);
-   assert(operand1.sup > -infinity);
-   assert(operand2     <  infinity);
    assert(operand2     >= 0.0);
-   
+
+   if( operand2 == infinity )
+   {
+      /* 0^infinity =  0
+       * +^infinity =  infinity
+       *-+^infinity = -infinity
+       */
+      if( operand1.inf < 0.0 )
+         resultant->inf = -infinity;
+      else
+         resultant->inf = 0.0;
+      if( operand1.sup > 0.0 )
+         resultant->sup =  infinity;
+      else
+         resultant->sup = 0.0;
+      return;
+   }
+
    if( operand2 == 0.0 )
    { /* special case, since x^0 = 1 for x != 0, but 0^0 = 0 */
-      if( operand1.inf < 0.0 && operand1.sup > 0.0 )
-      { /* 0.0 inside the interval gives [-1,1] */
+      if( operand1.inf < 0.0 )
          resultant->inf = -1.0;
-         resultant->sup =  1.0;
-      }
-      else if( operand1.inf < 0.0 && operand1.sup == 0.0 )
-      { /* 0.0 as right bound of interval gives [-1,0] */ 
-         resultant->inf = -1.0;
-         resultant->sup =  0.0;
-      }
-      else if( operand1.inf == 0.0 && operand1.sup > 0.0 )
-      { /* 0.0 as left bound of interval gives [0,1] */
+      else if( operand1.inf == 0.0 )
          resultant->inf =  0.0;
-         resultant->sup =  1.0;
-      }
-      else if( operand1.inf == 0.0 && operand1.sup == 0.0 )
-      { /* 0.0^0.0 gives 0 */
-         resultant->inf =  0.0;
-         resultant->sup =  0.0;
-      }
-      else if( operand1.inf > 0.0 )
-      { /* interval right of 0.0 gives [1,1] */
-         resultant->inf =  1.0;
-         resultant->sup =  1.0;
-      }
       else
-      { /* last case left: interval is left of 0.0, which gives [-1,-1] */
-         assert(operand1.sup < 0.0);
-         resultant->inf = -1.0;
+         resultant->inf =  1.0;
+
+      if( operand1.sup < 0.0 )
          resultant->sup = -1.0;
-      }
+      else if( operand1.sup == 0.0 )
+         resultant->sup =  0.0;
+      else
+         resultant->sup =  1.0;
       
       return;
    }
@@ -1589,6 +1838,10 @@ void SCIPintervalSignPowerScalar(
       {
          resultant->inf = -infinity;
       }
+      else if( operand1.inf >= infinity )
+      {
+         resultant->inf =  infinity;
+      }
       else if( operand1.inf > 0.0 )
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -1605,6 +1858,10 @@ void SCIPintervalSignPowerScalar(
       if( operand1.sup >=  infinity )
       {
          resultant->sup =  infinity;
+      }
+      else if( operand1.sup <= -infinity )
+      {
+         resultant->sup = -infinity;
       }
       else if( operand1.sup > 0.0 )
       {
@@ -1626,6 +1883,10 @@ void SCIPintervalSignPowerScalar(
       {
          resultant->inf = -infinity;
       }
+      else if( operand1.inf >= infinity )
+      {
+         resultant->inf = infinity;
+      }
       else if( operand1.inf >= 0.0 )
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -1640,6 +1901,10 @@ void SCIPintervalSignPowerScalar(
       if( operand1.sup >=  infinity )
       {
          resultant->sup =  infinity;
+      }
+      else if( operand1.sup <= -infinity )
+      {
+         resultant->sup = -infinity;
       }
       else if( operand1.sup > 0.0 )
       {
@@ -1664,6 +1929,10 @@ void SCIPintervalSignPowerScalar(
       {
          resultant->inf = -infinity;
       }
+      else if( operand1.inf >= infinity )
+      {
+         resultant->inf =  infinity;
+      }
       else if( operand1.inf > 0.0 )
       {
          SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -1679,6 +1948,10 @@ void SCIPintervalSignPowerScalar(
       if( operand1.sup >=  infinity )
       {
          resultant->sup =  infinity;
+      }
+      else if( operand1.sup <= -infinity )
+      {
+         resultant->sup = -infinity;
       }
       else if( operand1.sup > 0.0 )
       {
@@ -1697,8 +1970,6 @@ void SCIPintervalSignPowerScalar(
 }
 
 /** computes the reciprocal of an interval
- *
- * if operand is 0.0, gives empty interval 
  */
 void SCIPintervalReciprocal(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -1710,11 +1981,9 @@ void SCIPintervalReciprocal(
 
    assert(resultant != NULL);
    assert(operand.inf <= operand.sup);
-   assert(operand.inf <  infinity);
-   assert(operand.sup > -infinity);
 
    if( operand.inf == 0.0 && operand.sup == 0.0 )
-   { /* 1/0 = empty */
+   { /* 1/0 = [-inf,inf] */
       resultant->inf =  infinity;
       resultant->sup = -infinity;
       return;
@@ -1734,7 +2003,11 @@ void SCIPintervalReciprocal(
          resultant->inf = 1.0 / operand.sup;
       }
 
-      if( operand.inf == 0.0 )
+      if( operand.inf >= infinity )
+      {
+         resultant->sup = 0.0;
+      }
+      else if( operand.inf == 0.0 )
       {
          resultant->sup = infinity;
       }
@@ -1748,7 +2021,11 @@ void SCIPintervalReciprocal(
    }
    else if( operand.sup <= 0.0 )
    {  /* 1/x with x <= 0 */
-      if( operand.sup == 0.0 )
+      if( operand.sup <= -infinity )
+      {
+         resultant->inf = 0.0;
+      }
+      else if( operand.sup == 0.0 )
       {
          resultant->inf = -infinity;
       }
@@ -1787,8 +2064,6 @@ void SCIPintervalExp(
 
    assert(resultant != NULL);
    assert(operand.inf <= operand.sup);
-   assert(operand.inf <  infinity);
-   assert(operand.sup > -infinity);
   
    roundmode = SCIPintervalGetRoundingMode();
 
@@ -1802,6 +2077,10 @@ void SCIPintervalExp(
    {
       resultant->inf = 0.0;
    }
+   else if( operand.inf >= infinity )
+   {
+      resultant->inf = infinity;
+   }
    else
    {
       SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -1811,6 +2090,10 @@ void SCIPintervalExp(
    if( operand.sup >=  infinity )
    {
       resultant->sup = infinity;
+   }
+   else if( operand.sup <= -infinity )
+   {
+      resultant->sup = 0.0;
    }
    else
    {
@@ -1832,10 +2115,8 @@ void SCIPintervalLog(
 
    assert(resultant != NULL);
    assert(operand.inf <= operand.sup);
-   assert(operand.inf <  infinity);
-   assert(operand.sup > -infinity);
   
-   if( operand.sup <= 0.0 )
+   if( operand.sup < 0.0 )
    {
       SCIPintervalSetEmpty(resultant);
       return;
@@ -1861,7 +2142,11 @@ void SCIPintervalLog(
 
    if( operand.sup >= infinity )
    {
-      resultant->sup = infinity;
+      resultant->sup =  infinity;
+   }
+   else if( operand.sup == 0.0 )
+   {
+      resultant->sup = -infinity;
    }
    else
    {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.32 2011/01/02 11:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.33 2011/01/04 17:06:53 bzfviger Exp $"
 
 /**@file   scip/intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -134,6 +134,19 @@ SCIP_Bool SCIPintervalIsEntire(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
+/** indicates whether interval is positive infinity, i.e., [infinity, infinity] */
+extern
+SCIP_Bool SCIPintervalIsPositiveInfinity(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** indicates whether interval is negative infinity, i.e., [-infinity, -infinity] */
+extern
+SCIP_Bool SCIPintervalIsNegativeInfinity(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
 #else
 
 /* In optimized mode, some methods are implemented as defines to reduce the number of function calls and
@@ -151,7 +164,8 @@ SCIP_Bool SCIPintervalIsEntire(
 #define SCIPintervalSetEntire(infinity, resultant) do { (resultant)->inf = -(infinity); (resultant)->sup =  (infinity); } while( FALSE )
 #define SCIPintervalIsEmpty(operand)               ( (operand).sup < (operand).inf )
 #define SCIPintervalIsEntire(infinity, operand)    ( (operand).inf <= -(infinity) && (operand).sup >= (infinity) )
-
+#define SCIPintervalIsPositiveInfinity(infinity, operand) ( (operand).inf >=  (infinity) && (operand).sup >= (operand).inf )
+#define SCIPintervalIsNegativeInfinity(infinity, operand) ( (operand).sup <= -(infinity) && (operand).sup >= (operand).inf )
 #endif
 
 /** indicates whether operand1 is contained in operand2 */
@@ -305,9 +319,7 @@ void SCIPintervalDiv(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
-/** divides operand1 by scalar operand2 and stores result in resultant
- * 
- * if operand2 is 0.0, gives an empty interval as result */
+/** divides operand1 by scalar operand2 and stores result in resultant */
 extern
 void SCIPintervalDivScalar(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -399,7 +411,7 @@ void SCIPintervalPowerScalar(
 /** stores operand1 to the signed power of the scalar positive operand2 in resultant 
  * 
  * the signed power of x w.r.t. an exponent n >= 0 is given as sign(x) * abs(x)^n
- * */
+ */
 extern
 void SCIPintervalSignPowerScalar(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -409,8 +421,7 @@ void SCIPintervalSignPowerScalar(
    );
 
 /** computes the reciprocal of an interval
- *
- * if operand is 0.0, gives an empty interval as result */
+ */
 extern
 void SCIPintervalReciprocal(
    SCIP_Real             infinity,           /**< value for infinity */
