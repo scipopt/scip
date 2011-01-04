@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.22 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.23 2011/01/04 20:14:09 bzfpfets Exp $"
 
 /**@file   reader_sol.c
  * @ingroup FILEREADERS 
@@ -39,6 +39,138 @@
 /*
  * Local methods of reader
  */
+
+/** reads a given SCIP solution file, problem has to be transformed in advance */
+static
+SCIP_RETCODE readSol(
+   SCIP*                 scip,              /**< SCIP data structure */
+   const char*           fname              /**< name of the input file */
+   )
+{
+   SCIP_SOL* sol;
+   SCIP_FILE* file;
+   SCIP_Bool error;
+   SCIP_Bool unknownvariablemessage;
+   SCIP_Bool stored;
+   SCIP_Bool usevartable;
+   int lineno;
+
+   assert(scip != NULL);
+   assert(fname != NULL);
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+
+   if( !usevartable )
+   {
+      SCIPerrorMessage("Cannot read solution file if vartable is disabled. Make sure parameter 'misc/usevartable' is set to TRUE.\n");
+      return SCIP_READERROR;
+   }
+
+   /* open input file */
+   file = SCIPfopen(fname, "r");
+   if( file == NULL )
+   {
+      SCIPerrorMessage("cannot open file <%s> for reading\n", fname);
+      SCIPprintSysError(fname);
+      return SCIP_NOFILE;
+   }
+
+   /* create primal solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   /* read the file */
+   error = FALSE;
+   unknownvariablemessage = FALSE;
+   lineno = 0;
+   while( !SCIPfeof(file) && !error )
+   {
+      char buffer[SCIP_MAXSTRLEN];
+      char varname[SCIP_MAXSTRLEN];
+      char valuestring[SCIP_MAXSTRLEN];
+      char objstring[SCIP_MAXSTRLEN];
+      SCIP_VAR* var;
+      SCIP_Real value;
+      int nread;
+
+      /* get next line */
+      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+         break;
+      lineno++;
+
+      /* there are some lines which may preceed the solution information */
+      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
+         strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
+         strncasecmp(buffer, "All other variables", 19) == 0 || strncasecmp(buffer, "\n", 1) == 0 || 
+         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 )    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         continue;
+
+      /* parse the line */
+      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
+      if( nread < 2 )
+      {
+         SCIPwarningMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, fname, buffer);
+         error = TRUE;
+         break;
+      }
+
+      /* find the variable */
+      var = SCIPfindVar(scip, varname);
+      if( var == NULL )
+      {
+         if( !unknownvariablemessage )
+         {
+            SCIPwarningMessage("unknown variable <%s> in line %d of solution file <%s>\n", varname, lineno, fname);
+            SCIPwarningMessage("  (further unknown variables are ignored)\n");
+            unknownvariablemessage = TRUE;
+         }
+         continue;
+      }
+
+      /* cast the value */
+      if( strncasecmp(valuestring, "inv", 3) == 0 )
+         continue;
+      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+         value = SCIPinfinity(scip);
+      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+         value = -SCIPinfinity(scip);
+      else
+      {
+         nread = sscanf(valuestring, "%lf", &value);
+         if( nread != 1 )
+         {
+            SCIPwarningMessage("invalid solution value <%s> for variable <%s> in line %d of solution file <%s>\n",
+               valuestring, varname, lineno, fname);
+            error = TRUE;
+            break;
+         }
+      }
+
+      /* set the solution value of the variable */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
+   }
+
+   /* close input file */
+   SCIPfclose(file);
+
+   if( !error )
+   {
+      /* add and free the solution */
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
+
+      /* display result */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+         fname, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
+
+      return SCIP_OKAY;
+   }
+   else
+   {
+      /* free solution */
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+      return SCIP_READERROR;
+   }
+}
 
 /** reads a given xml solution file */
 static
@@ -266,7 +398,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    else
    {
       /* read the solution and add it to the solution pool */
-      SCIP_CALL( SCIPreadSol(scip, filename) );
+      SCIP_CALL( readSol(scip, filename) );
    }
 
    *result = SCIP_SUCCESS;
