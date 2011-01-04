@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.147 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.148 2011/01/04 17:47:45 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5953,7 +5953,7 @@ SCIP_RETCODE propagateBounds(
          var  = consdata->linvars[i];
          
          /* skip fixed variables ??????????? */
-         if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
          
          if( coef > 0.0 )
