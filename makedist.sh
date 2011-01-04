@@ -98,7 +98,7 @@ $NAME/check/instances/MIQCP/*.mps \
 $NAME/check/instances/PseudoBoolean/*.opb \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
-$NAME/check/instances/Semicontinuous/*.mps \
+$NAME/check/instances/Semicontinuous/*.mps
 rm -f $NAME
 echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
