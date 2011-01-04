@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="2.0.0.2"
+VERSION="2.0.0.3"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -91,12 +91,14 @@ $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
-$NAME/check/instances/Indicator/*.gz \
-$NAME/check/instances/MIP/*.gz \
-$NAME/check/instances/MIQCP/*.gz \
-$NAME/check/instances/PseudoBoolean/*.gz \
-$NAME/check/instances/SOS/*.gz \
-$NAME/check/instances/Semicontinuous/*.gz
+$NAME/check/instances/Indicator/*.lp \
+$NAME/check/instances/MIP/*.mps \
+$NAME/check/instances/MIQCP/*.lp \
+$NAME/check/instances/MIQCP/*.mps \
+$NAME/check/instances/PseudoBoolean/*.opb \
+$NAME/check/instances/SOS/*.lp \
+$NAME/check/instances/Semicontinuous/*.lp \
+$NAME/check/instances/Semicontinuous/*.mps \
 rm -f $NAME
 echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
