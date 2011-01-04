@@ -75,9 +75,13 @@ features:
 - added writing for wbo files
 - changed opb(/wbo) reader which now creates pseudoboolean constraints instead of linear- and and-constraints, only a non-linear objective will create and-constraints inside the reader and while reading a wbo file the topcost constraint is created as well
 
-SCIP version 2.0.1
+
+SCIP version 2.0.2
 ===============
 
+
+SCIP version 2.0.1
+===============
 interface:
 - allow access of transformed constraints in SCIP_STAGE_TRANSFORMED
 
