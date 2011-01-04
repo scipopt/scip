@@ -33,7 +33,7 @@
  *
  * \OTHERDOCUTEXT
  *
- * @version  2.0.1
+ * @version  2.0.2
  *
  * <b>Changes between different versions of SCIP</b>
  *
