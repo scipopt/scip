@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.402 2011/01/02 11:10:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.403 2011/01/06 11:50:20 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4569,16 +4569,16 @@ SCIP_RETCODE tightenBounds(
       {
          oldnchgbds = *nchgbds;
 
-	 assert(!sortvars || SCIPgetStage(scip) < SCIP_STAGE_SOLVING || consdata->binvarssorted);
+         assert(!sortvars || SCIPgetStage(scip) < SCIP_STAGE_SOLVING || consdata->binvarssorted);
 
          SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
          
          /* if there was no progress, skip the rest of the binary variables */
          if( *nchgbds > oldnchgbds )
             lastchange = v;
-	 else if( consdata->binvarssorted && v < consdata->nbinvars - 1
+         else if( consdata->binvarssorted && v < consdata->nbinvars - 1
             && !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(consdata->vars[v]), SCIPvarGetLbLocal(consdata->vars[v])) )
-	    v = consdata->nbinvars - 1;
+            v = consdata->nbinvars - 1;
       }
    }
 #ifndef NDEBUG
