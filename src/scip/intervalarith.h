@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.33 2011/01/04 17:06:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.34 2011/01/07 17:59:16 bzfviger Exp $"
 
 /**@file   scip/intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -172,6 +172,13 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
 extern
 SCIP_Bool SCIPintervalIsSubsetEQ(
    SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** indicates whether operand1 and operand2 are disjoint */
+extern
+SCIP_Bool SCIPintervalAreDisjoint(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );

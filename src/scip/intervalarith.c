@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.56 2011/01/04 17:06:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.57 2011/01/07 17:59:15 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -350,6 +350,15 @@ SCIP_Bool SCIPintervalIsSubsetEQ(
    
    return (MAX(-infinity, operand1.inf) >= operand2.inf) &&
           (MIN( infinity, operand1.sup) <= operand2.sup);
+}
+
+/** indicates whether operand1 and operand2 are disjoint */
+SCIP_Bool SCIPintervalAreDisjoint(
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   )
+{
+   return (operand1.sup < operand2.inf) || (operand2.sup < operand1.inf);
 }
 
 /** intersection of two intervals */
