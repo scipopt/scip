@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.2 2011/01/03 20:10:03 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.3 2011/01/07 11:23:17 bzfviger Exp $"
 
 /**@file   cons_pseudoboolean.c
  * @ingroup CONSHDLRS 
@@ -2066,7 +2066,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyPseudoboolean)
    
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
-   
+
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 
