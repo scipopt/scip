@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.113 2011/01/02 11:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.114 2011/01/07 11:23:57 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1611,7 +1611,7 @@ SCIP_RETCODE solveSubproblem(
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, validsolved) );
-   SCIPdebugMessage("problem copied, copy %svalid\n", validsolved ? "" : "in");
+   SCIPdebugMessage("problem copied, copy %svalid\n", *validsolved ? "" : "in");
 
    /* store subproblem variables */
    for( i = nvars-1; i >= 0; i-- )
