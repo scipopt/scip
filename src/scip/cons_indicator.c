@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.115 2011/01/07 20:00:38 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.116 2011/01/07 20:10:34 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -4960,6 +4960,7 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
    assert( consdata->slackvar != NULL );
 
    /* free event on previous slack variable */
+   conshdlrdata = NULL;
    if ( SCIPconsIsTransformed(cons) )
    {
       conshdlr = SCIPconsGetHdlr(cons);
@@ -4992,6 +4993,7 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
       /* catch bound change events on slack variable and adjust nFixedNonzero */
       if ( consdata->linconsActive )
       {
+         assert( conshdlrdata != NULL );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*) consdata, NULL) );
 
          /* if slack variable is fixed to be nonzero */
