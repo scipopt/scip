@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.114 2011/01/02 14:11:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.115 2011/01/07 20:00:38 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2030,8 +2030,6 @@ SCIP_RETCODE consdataCreate(
 {
    assert( scip != NULL );
    assert( consdata != NULL );
-   assert( binvar != NULL );
-   assert( slackvar != NULL );
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -2048,44 +2046,52 @@ SCIP_RETCODE consdataCreate(
       SCIP_VAR* var;
 
       /* handle binary variable */
-      SCIP_CALL( SCIPgetTransformedVar(scip, binvar, &var) );
-      assert( var != NULL );
-      (*consdata)->binvar = var;
-
-      /* check type */
-      if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+      if ( binvar == NULL )
+         (*consdata)->binvar = NULL;
+      else
       {
-         SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
-         return SCIP_ERROR;
-      }
+         SCIP_CALL( SCIPgetTransformedVar(scip, binvar, &var) );
+         assert( var != NULL );
+         (*consdata)->binvar = var;
 
-      /* catch bound change events on binary variable */
-      if ( linconsactive )
-      {
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
-      }
+         /* check type */
+         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+         {
+            SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
+            return SCIP_ERROR;
+         }
 
-      /* if binary variable is fixed to be nonzero */
-      if ( SCIPvarGetLbLocal(var) > 0.5 )
-         ++((*consdata)->nFixedNonzero);
+         /* catch bound change events on binary variable */
+         if ( linconsactive )
+         {
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
+         }
 
-      /* handle slack variable */
-      SCIP_CALL( SCIPgetTransformedVar(scip, slackvar, &var) );
-      assert( var != NULL );
-      (*consdata)->slackvar = var;
-
-      /* catch bound change events on slack variable and adjust nFixedNonzero */
-      if ( linconsactive )
-      {
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
-
-         /* if slack variable is fixed to be nonzero */
-         if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) )
+         /* if binary variable is fixed to be nonzero */
+         if ( SCIPvarGetLbLocal(var) > 0.5 )
             ++((*consdata)->nFixedNonzero);
       }
 
+      /* handle slack variable */
+      if ( slackvar != NULL )
+      {
+         SCIP_CALL( SCIPgetTransformedVar(scip, slackvar, &var) );
+         assert( var != NULL );
+         (*consdata)->slackvar = var;
+
+         /* catch bound change events on slack variable and adjust nFixedNonzero */
+         if ( linconsactive )
+         {
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)*consdata, NULL) );
+
+            /* if slack variable is fixed to be nonzero */
+            if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) )
+               ++((*consdata)->nFixedNonzero);
+         }
+      }
+
       /* add corresponding column to alternative LP if the constraint is new */
-      if ( sepaAlternativeLP && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE )
+      if ( sepaAlternativeLP && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && lincons != NULL )
       {
          assert( lincons != NULL );
          assert( consname != NULL );
@@ -4441,7 +4447,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
    int                   nvars,              /**< number of variables in the inequality */
    SCIP_VAR**            vars,               /**< array with variables of inequality (or NULL) */
    SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
@@ -4565,7 +4571,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
 
-   /* mark linear constraint no to be upgraded - otherwise we loose control over it */
+   /* mark linear constraint not to be upgraded - otherwise we loose control over it */
    SCIP_CALL( SCIPmarkDoNotUpgradeConsLinear(scip, lincons) );
 
    /* add slack variable */
@@ -4630,14 +4636,23 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
 
    assert( scip != NULL );
    assert( lincons != NULL );
+   assert( slackvar != NULL );
 
    modifiable = FALSE;
+
+   /* check whether lincons is really a linear constraint */
+   conshdlr = SCIPconsGetHdlr(lincons);
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
+   {
+      SCIPerrorMessage("Lincons constraint is not linear.\n");
+      return SCIP_INVALIDDATA;
+   }
 
    /* find the indicator constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if ( conshdlr == NULL )
    {
-      SCIPerrorMessage("<%s> constraint handler not found\n", CONSHDLR_NAME);
+      SCIPerrorMessage("<%s> constraint handler not found.\n", CONSHDLR_NAME);
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -4698,14 +4713,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
-   /* check whether constraint is really linear */
-   conshdlr = SCIPconsGetHdlr(lincons);
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
-   {
-      SCIPerrorMessage("constraint is not linear\n");
-      return SCIP_INVALIDDATA;
-   }
 
    return SCIP_OKAY;
 }
@@ -4826,6 +4833,23 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
 }
 
 
+/** gets binary variable corresponding to indicator constraint */
+SCIP_VAR* SCIPgetBinaryVarIndicator(
+   SCIP_CONS*            cons                /**< indicator constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return consdata->binvar;
+}
+
+
 /** sets binary indicator variable for indicator constraint */
 SCIP_RETCODE SCIPsetBinaryVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4842,6 +4866,14 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
+   /* check type */
+   if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
+   {
+      SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(binvar), SCIPvarGetType(binvar));
+      return SCIP_ERROR;
+   }
+
+   /* check previous binary variable */
    if ( consdata->binvar != NULL )
    {
       /* to allow replacement of binary variables, we would need to drop events etc. */
@@ -4849,26 +4881,38 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       return SCIP_INVALIDCALL;
    }
 
-   consdata->binvar = binvar;
+   /* if we are transformed, obtain transformed variables and catch events */
+   if ( SCIPconsIsTransformed(cons) )
+   {
+      SCIP_VAR* var;
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      /* make sure we have a transformed binary variable */
+      SCIP_CALL( SCIPgetTransformedVar(scip, binvar, &var) );
+      assert( var != NULL );
+      consdata->binvar = var;
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert( conshdlr != NULL );
+      assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      /* catch bound change events on binary variable */
+      if ( consdata->linconsActive )
+      {
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*) consdata, NULL) );
+      }
+
+      /* if binary variable is fixed to be nonzero */
+      if ( SCIPvarGetLbLocal(var) > 0.5 )
+         ++(consdata->nFixedNonzero);
+   }
+   else
+      consdata->binvar = binvar;
 
    return SCIP_OKAY;
-}
-
-
-/** gets binary variable corresponding to indicator constraint */
-SCIP_VAR* SCIPgetBinaryVarIndicator(
-   SCIP_CONS*            cons                /**< indicator constraint */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
-
-   consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
-
-   return consdata->binvar;
 }
 
 
@@ -4897,6 +4941,12 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( cons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+   assert( slackvar != NULL );
 
    if ( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -4904,38 +4954,56 @@ SCIP_RETCODE SCIPsetSlackVarIndicator(
       return SCIP_INVALIDCALL;
    }
 
-   assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
-
+   /* get constraint data */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->slackvar != NULL );
 
-   /* free events if necessary */
-   if ( SCIPisTransformed(scip) )
+   /* free event on previous slack variable */
+   if ( SCIPconsIsTransformed(cons) )
    {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
       assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert( conshdlrdata != NULL );
-
+      
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*) consdata, -1) );
    }
 
-   /* free old slackvariable */
+   /* free old slack variable */
    SCIP_CALL( SCIPdelVar(scip, consdata->slackvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &(consdata->slackvar) ) );
 
-   assert( slackvar != NULL );
-   consdata->slackvar = slackvar;
-   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
-
-   /* mark slack variable not to be multi-aggregated */
+   /* mark new slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
+
+   /* handle transformed case  */
+   if ( SCIPconsIsTransformed(cons) )
+   {
+      SCIP_VAR* var;
+
+      /* make sure we have the transformed variable */
+      SCIP_CALL( SCIPgetTransformedVar(scip, slackvar, &var) );
+      assert( var != NULL );
+      consdata->slackvar = var;
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+
+      /* catch bound change events on slack variable and adjust nFixedNonzero */
+      if ( consdata->linconsActive )
+      {
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*) consdata, NULL) );
+
+         /* if slack variable is fixed to be nonzero */
+         if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) )
+            ++(consdata->nFixedNonzero);
+      }
+   }
+   else
+   {
+      consdata->slackvar = slackvar;
+      SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+   }
 
    return SCIP_OKAY;
 }
