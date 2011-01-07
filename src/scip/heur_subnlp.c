@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.48.2.4 2011/01/02 11:19:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_subnlp.c,v 1.48.2.5 2011/01/07 11:03:29 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1512,7 +1512,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       if( heurdata->subscipisvalid && SCIPgetNActivePricers(scip) == 0 )
       {
          /* if the subNLP is valid and turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
-         if( !SCIPisInfinity(scip, cutoff) && heurdata->forbidfixings )
+         if( SCIPisInfinity(scip, cutoff) && heurdata->forbidfixings )
          {
             SCIP_CALL( forbidFixation(scip, heurdata) );
          }
