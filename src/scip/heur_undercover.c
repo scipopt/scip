@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.114 2011/01/07 11:23:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.115 2011/01/07 20:02:49 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1719,13 +1719,11 @@ SCIP_RETCODE solveSubproblem(
    *nusednodes = SCIPgetNNodes(subscip);
 
    /* if a solution was found for the subproblem, create corresponding solution in the original problem */
-   if( SCIPgetNSols(subscip) > 0 )
+   if( SCIPgetNSols(subscip) > 0 && (SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE || heurdata->minimprove > 0.0) )
    {
       SCIP_SOL** subsols;
       SCIP_Bool success;
       int nsubsols;
-
-      assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE || heurdata->minimprove > 0.0);
 
       /* create solution */
       SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
