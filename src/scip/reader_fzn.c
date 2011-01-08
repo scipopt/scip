@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.65 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.66 2011/01/08 19:19:53 bzfheinz Exp $"
 
 /**@file   reader_fzn.c
  * @ingroup FILEREADERS 
@@ -3968,7 +3968,7 @@ SCIP_RETCODE writeFzn(
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
       }
-      else if(  strcmp(conshdlrname, "cumualtaive") == 0 )
+      else if(  strcmp(conshdlrname, "cumulative") == 0 )
       {
          int* intvals;
          
