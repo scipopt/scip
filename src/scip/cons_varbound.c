@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.102 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.103 2011/01/10 11:50:42 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -324,6 +324,128 @@ SCIP_Bool checkCons(
       return TRUE;
 }
 
+
+/** resolves a propagation on the given variable by supplying the variables needed for applying the corresponding
+ *  propagation rule (see propagateCons()):
+ *   (1) left hand side and bounds on y -> lower bound on x
+ *   (2) left hand side and upper bound on x -> bound on y
+ *   (3) right hand side and bounds on y -> upper bound on x
+ *   (4) right hand side and lower bound on x -> bound on y
+ */
+static
+SCIP_RETCODE resolvePropagation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   SCIP_VAR*             infervar,           /**< variable that was deduced */
+   PROPRULE              proprule,           /**< propagation rule that deduced the bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!SCIPisZero(scip, consdata->vbdcoef));
+
+   switch( proprule )
+   {
+   case PROPRULE_1:
+      /* lhs <= x + c*y: left hand side and bounds on y -> lower bound on x */
+      assert(infervar == consdata->var);
+      assert(boundtype == SCIP_BOUNDTYPE_LOWER);
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+      if( consdata->vbdcoef > 0.0 )
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      break;
+
+   case PROPRULE_2:
+      /* lhs <= x + c*y: left hand side and upper bound on x -> bound on y */
+      assert(infervar == consdata->vbdvar);
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+      SCIP_CALL( SCIPaddConflictUb(scip, consdata->var, bdchgidx) );
+      break;
+
+   case PROPRULE_3:
+      /* x + c*y <= rhs: right hand side and bounds on y -> upper bound on x */
+      assert(infervar == consdata->var);
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+      assert(!SCIPisInfinity(scip, consdata->rhs));
+      if( consdata->vbdcoef > 0.0 )
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      break;
+
+   case PROPRULE_4:
+      /* x + c*y <= rhs: right hand side and lower bound on x -> bound on y */
+      assert(infervar == consdata->vbdvar);
+      assert(!SCIPisInfinity(scip, consdata->rhs));
+      SCIP_CALL( SCIPaddConflictLb(scip, consdata->var, bdchgidx) );
+      break;
+
+   case PROPRULE_INVALID:
+   default:
+      SCIPerrorMessage("invalid inference information %d in variable bound constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** analyze infeasibility */
+static
+SCIP_RETCODE analyzeConflict(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
+   SCIP_VAR*             infervar,           /**< variable that was deduced */
+   PROPRULE              proprule,           /**< propagation rule that deduced the bound change */
+   SCIP_BOUNDTYPE        boundtype           /**< the type of the changed bound (lower or upper bound) */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* add the bound which got violated */
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
+   }
+   else
+   {
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+      SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
+   }
+
+   /* add the reason for the violated of the bound */
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, proprule, boundtype, NULL) );
+
+   /* analyze the conflict */
+   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
 /** propagation method for variable bound constraint */
 static
 SCIP_RETCODE propagateCons(
@@ -402,7 +524,16 @@ SCIP_RETCODE propagateCons(
                   SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
                SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, FALSE,
                      cutoff, &tightened) );
-
+               
+               if( *cutoff )
+               {
+                  assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
+                 
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_1, SCIP_BOUNDTYPE_LOWER) );
+                  break;
+               }
+               
                if( tightened )
                {
                   tightenedround = TRUE;
@@ -412,10 +543,12 @@ SCIP_RETCODE propagateCons(
             }
          }
 
+         assert(!*cutoff);
+
          /* propagate bounds on y:
           *  (2) left hand side and upper bound on x -> bound on y
           */
-         if( !(*cutoff) && SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, xub) ) /* cannot change bounds of multaggr vars */
+         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, xub) ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
             {
@@ -426,7 +559,16 @@ SCIP_RETCODE propagateCons(
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2, FALSE,
                         cutoff, &tightened) );
-
+                  
+                  if( *cutoff )
+                  {
+                     assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
+                     
+                     /* analyze infeasibility */
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_2, SCIP_BOUNDTYPE_LOWER) );
+                     break;
+                  }
+                  
                   if( tightened )
                   {
                      tightenedround = TRUE;
@@ -445,6 +587,15 @@ SCIP_RETCODE propagateCons(
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2, FALSE,
                         cutoff, &tightened) );
 
+                  if( *cutoff )
+                  {
+                     assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
+                     
+                     /* analyze infeasibility */
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_2, SCIP_BOUNDTYPE_UPPER) );
+                     break;
+                  }
+                  
                   if( tightened )
                   {
                      tightenedround = TRUE;
@@ -456,8 +607,10 @@ SCIP_RETCODE propagateCons(
          }
       }
 
+      assert(!*cutoff);
+
       /* propagate right hand side inequality: x + c*y <= rhs */
-      if( !(*cutoff) && !SCIPisInfinity(scip, consdata->rhs) )
+      if( !SCIPisInfinity(scip, consdata->rhs) )
       {
          /* propagate bounds on x:
           *  (3) right hand side and bounds on y -> upper bound on x
@@ -486,6 +639,15 @@ SCIP_RETCODE propagateCons(
                SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, FALSE,
                      cutoff, &tightened) );
 
+               if( *cutoff )
+               {
+                  assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
+                  
+                  /* analyze infeasibility */
+                  SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_3, SCIP_BOUNDTYPE_UPPER) );
+                  break;
+               }
+               
                if( tightened )
                {
                   tightenedround = TRUE;
@@ -495,10 +657,12 @@ SCIP_RETCODE propagateCons(
             }
          }
 
+         assert(!*cutoff);
+
          /* propagate bounds on y:
           *  (4) right hand side and lower bound on x -> bound on y
           */
-         if( !(*cutoff) && SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, -xlb) ) /* cannot change bounds of multaggr vars */
+         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, -xlb) ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
             {
@@ -509,6 +673,15 @@ SCIP_RETCODE propagateCons(
                      SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4, FALSE,
                         cutoff, &tightened) );
+
+                  if( *cutoff )
+                  {
+                     assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
+                  
+                     /* analyze infeasibility */
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_4, SCIP_BOUNDTYPE_UPPER) );
+                     break;
+                  }
 
                   if( tightened )
                   {
@@ -528,6 +701,15 @@ SCIP_RETCODE propagateCons(
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4, FALSE,
                         cutoff, &tightened) );
 
+                  if( *cutoff )
+                  {
+                     assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
+                     
+                     /* analyze infeasibility */
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_4, SCIP_BOUNDTYPE_LOWER) );
+                     break;
+                  }
+
                   if( tightened )
                   {
                      tightenedround = TRUE;
@@ -538,8 +720,9 @@ SCIP_RETCODE propagateCons(
             }
          }
       }
+      assert(!(*cutoff));
    }
-   while( !(*cutoff) && tightenedround );
+   while( tightenedround );
    
    /* check for redundancy */
    if( !(*cutoff) && (SCIPisInfinity(scip, -consdata->lhs)
@@ -560,91 +743,6 @@ SCIP_RETCODE propagateCons(
 
    /* mark the constraint propagated */
    consdata->propagated = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** resolves a propagation on the given variable by supplying the variables needed for applying the corresponding
- *  propagation rule (see propagateCons()):
- *   (1) left hand side and bounds on y -> lower bound on x
- *   (2) left hand side and upper bound on x -> bound on y
- *   (3) right hand side and bounds on y -> upper bound on x
- *   (4) right hand side and lower bound on x -> bound on y
- */
-static
-SCIP_RETCODE resolvePropagation(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
-   PROPRULE              proprule,           /**< propagation rule that deduced the bound change */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   assert(result != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(!SCIPisZero(scip, consdata->vbdcoef));
-
-   switch( proprule )
-   {
-   case PROPRULE_1:
-      /* lhs <= x + c*y: left hand side and bounds on y -> lower bound on x */
-      assert(infervar == consdata->var);
-      assert(boundtype == SCIP_BOUNDTYPE_LOWER);
-      assert(!SCIPisInfinity(scip, -consdata->lhs));
-      if( consdata->vbdcoef > 0.0 )
-      {
-         SCIP_CALL( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
-      }
-      *result = SCIP_SUCCESS;
-      break;
-
-   case PROPRULE_2:
-      /* lhs <= x + c*y: left hand side and upper bound on x -> bound on y */
-      assert(infervar == consdata->vbdvar);
-      assert(!SCIPisInfinity(scip, -consdata->lhs));
-      SCIP_CALL( SCIPaddConflictUb(scip, consdata->var, bdchgidx) );
-      *result = SCIP_SUCCESS;
-      break;
-
-   case PROPRULE_3:
-      /* x + c*y <= rhs: right hand side and bounds on y -> upper bound on x */
-      assert(infervar == consdata->var);
-      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      assert(!SCIPisInfinity(scip, consdata->rhs));
-      if( consdata->vbdcoef > 0.0 )
-      {
-         SCIP_CALL( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
-      }
-      *result = SCIP_SUCCESS;
-      break;
-
-   case PROPRULE_4:
-      /* x + c*y <= rhs: right hand side and lower bound on x -> bound on y */
-      assert(infervar == consdata->vbdvar);
-      assert(!SCIPisInfinity(scip, consdata->rhs));
-      SCIP_CALL( SCIPaddConflictLb(scip, consdata->var, bdchgidx) );
-      *result = SCIP_SUCCESS;
-      break;
-
-   case PROPRULE_INVALID:
-   default:
-      SCIPerrorMessage("invalid inference information %d in variable bound constraint <%s>\n", proprule, SCIPconsGetName(cons));
-      return SCIP_INVALIDDATA;
-   }
 
    return SCIP_OKAY;
 }
@@ -1582,7 +1680,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 static
 SCIP_DECL_CONSRESPROP(consRespropVarbound)
 {  /*lint --e{715}*/
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx) );
+
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
