@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.3 2011/01/07 11:23:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.4 2011/01/10 21:50:13 bzfwinkm Exp $"
 
 /**@file   cons_pseudoboolean.c
  * @ingroup CONSHDLRS 
@@ -23,9 +23,9 @@
  *
  * The constraint handler deals with pseudo Boolean constraints. These are constraints of the form 
  *
- * lhs <= \sum_{i=0}^n \prod_{j\in I_i} l_j <=rhs
+ * lhs <= \sum_{k=0}^m c_k * x_k  +  \sum_{i=0}^n c_i * \prod_{j\in I_i} x_j <= rhs
  *
- * where ...
+ * where all x are binary and all c are integer
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -77,6 +77,7 @@ struct Term
    SCIP_VAR**            vars;               /**< non-linear variables */
    SCIP_VAR*             resultant;          /**< resultant variable in and constraint if transform, NULL otherwise */
    int                   nvars;              /**< number of variable inside this nonlinear term */
+   int                   svars;              /**< size of variable array inside this nonlinear term */
    unsigned int          sorted:1;           /**< are all variables in this term sorted by index */
    unsigned int          merged:1;           /**< are all variables in this term merged */
    unsigned int          removedfixings:1;   /**< are all fixed variables removed */
@@ -336,7 +337,8 @@ SCIP_RETCODE createTerms(
          SCIP_CALL( SCIPallocBlockMemory(scip, &term) );
          
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(term->vars), terms[t], ntermvars[t]) );
-         term->nvars = ntermvars[t]; 
+         term->nvars = ntermvars[t];
+         term->svars = ntermvars[t];
          term->resultant = NULL;
 
          /* compute some termdata booleans */
@@ -506,6 +508,7 @@ SCIP_RETCODE consdataCreate(
          
             SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(term->vars), nonlinterms[t]->vars, nonlinterms[t]->nvars) );
             term->nvars = nonlinterms[t]->nvars; 
+            term->svars = nonlinterms[t]->nvars; 
             term->resultant = nonlinterms[t]->resultant;
             term->sorted = FALSE;
 
@@ -621,7 +624,6 @@ SCIP_RETCODE lockRoundingVar(
    return SCIP_OKAY;
 }
 
-#if 0
 /** removes rounding locks for the given variable associated to the given coefficient in the linear part */
 static
 SCIP_RETCODE unlockRoundingVar(
@@ -655,7 +657,6 @@ SCIP_RETCODE unlockRoundingVar(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** installs rounding locks for the given term associated to the given coefficient in the nonlinear part */
 static
@@ -706,7 +707,6 @@ SCIP_RETCODE lockRoundingTerm(
    return SCIP_OKAY;
 }
 
-#if 0
 /** removes rounding locks for the given term associated to the given coefficient in the nonlinear part */
 static
 SCIP_RETCODE unlockRoundingTerm(
@@ -755,7 +755,6 @@ SCIP_RETCODE unlockRoundingTerm(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** adds a variable to the pseudo boolean constraint (if it is not zero) */
 static
@@ -862,7 +861,8 @@ SCIP_RETCODE addCoefTerm(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(term->vars), vars, nvars) );
 
    /* save all data */
-   term->nvars = nvars; 
+   term->nvars = nvars;
+   term->svars = nvars;
    term->resultant = NULL;
 
    /* compute some termdata booleans */
@@ -898,7 +898,42 @@ SCIP_RETCODE addCoefTerm(
    return SCIP_OKAY;
 }
 
-#if 0
+/** adds a variable to a non-linear term */
+static
+SCIP_RETCODE addVarToTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TERM*                 term,               /**< non-linear term */
+   SCIP_VAR*             var                 /**< variable to add to non-linear part */
+   )
+{
+   assert(scip != NULL);
+   assert(term != NULL);
+   assert(term->vars != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   if( term->nvars == term->svars )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, term->nvars + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(term->vars), term->svars, newsize) );
+      term->svars = newsize;
+   }
+   assert(term->nvars < term->svars);
+
+   term->vars[term->nvars] = var;
+   ++(term->nvars);
+
+   /* if new variables has a bigger index than the old last one, we don't need to change the sorted or merged status */
+   if( term->nvars > 1 && SCIPvarGetIndex(var) <= SCIPvarGetIndex(term->vars[term->nvars - 2]) )
+   {
+      term->merged = FALSE;
+      term->sorted = FALSE;
+   }
+           
+   return SCIP_OKAY;            
+}
+
 /** deletes coefficient at given position from linear part of constraint */
 static
 SCIP_RETCODE delCoefLinear(
@@ -994,7 +1029,31 @@ SCIP_RETCODE delCoefTerm(
 
    return SCIP_OKAY;
 }
-#endif
+
+/** deletes a variable in a non-linear term at the given position */
+static
+SCIP_RETCODE delVarInTermPos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TERM*                 term,               /**< non-linear term */
+   int                   pos                 /**< position of variable in non-linear part to delete */
+   )
+{
+   assert(scip != NULL);
+   assert(term != NULL);
+   assert(term->vars != NULL);
+   assert(0 <= pos && pos < term->nvars);
+
+   if( pos < term->nvars - 1 )
+      term->vars[pos] = term->vars[term->nvars - 1];
+
+   --(term->nvars);
+
+   /* if deleted element was not one of the two last variables, we lost our sorting */
+   if( pos < term->nvars )
+      term->sorted = FALSE;
+               
+   return SCIP_OKAY;            
+}
 
 /** sets left hand side of linear constraint */
 static
@@ -1729,53 +1788,54 @@ SCIP_RETCODE copyConsPseudoboolean(
    return SCIP_OKAY;
 }
 
-#if 0
-/** replaces all fixed and aggregated variables by their non-fixed counterparts */
+/** replaces all fixed and aggregated variables in linear part of constraint */
 static
-SCIP_RETCODE applyFixings(
+SCIP_RETCODE applyFixingsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Bool*            infeasible          /**< pointer to store if infeasibility is detected */
+   SCIP_CONS*            cons                /**< pseudoboolean constraint */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
-   SCIP_VAR** aggrvars;
-   SCIP_Real val;
-   SCIP_Real* aggrscalars;
-   SCIP_Real fixedval;
-   SCIP_Real aggrconst;
    int v;
-   int naggrvars;
-   int i;
-   int t;
-
+      
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(infeasible != NULL);
-
-   *infeasible = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* first the linear part */
-   if( !consdata->removedfixings )
+   /* start removing fixings in linear part */
+   if( !consdata->removedfixings && consdata->nlinvars > 0 )
    {
+      SCIP_VAR* var;
+      SCIP_Real val;
+      SCIP_Real fixedval;
+      SCIP_Real aggrconst;
       SCIP_Real lhssubtrahend;
       SCIP_Real rhssubtrahend;
-
+#if 0 /* only for multi-aggegated variables, should not be needed here */
+      SCIP_VAR** aggrvars;
+      SCIP_Real* aggrscalars;
+      int naggrvars;
+      int i;
+#endif
       lhssubtrahend = 0.0;
       rhssubtrahend = 0.0;
 
-      SCIPdebugMessage("applying fixings:\n");
+      SCIPdebugMessage("applying fixings linear:\n");
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
+      assert(consdata->linvars != NULL);
+      assert(consdata->lincoefs != NULL);
+
       v = 0;
+      /* iterate over all variables and replace all fixed variables */
       while( v < consdata->nlinvars )
       {
          var = consdata->linvars[v];
          val = consdata->lincoefs[v];
+
+         assert(var != NULL);
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
          assert(SCIPvarIsTransformed(var));
 
@@ -1815,6 +1875,7 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( delCoefLinear(scip, cons, v) );
             break;
 
+#if 0 /* binary variables should not be multiaggregated */
          case SCIP_VARSTATUS_MULTAGGR:
             SCIP_CALL( SCIPflattenVarAggregationGraph(scip,var) );
             naggrvars = SCIPvarGetMultaggrNVars(var);
@@ -1833,9 +1894,9 @@ SCIP_RETCODE applyFixings(
 
             SCIP_CALL( delCoefLinear(scip, cons, v) );
             break;
-
+#endif
          case SCIP_VARSTATUS_NEGATED:
-            SCIP_CALL( addCoef(scip, cons, SCIPvarGetNegationVar(var), -val) );
+            SCIP_CALL( addCoefLinear(scip, cons, SCIPvarGetNegationVar(var), -val) );
             aggrconst = SCIPvarGetNegationConstant(var);
 
             if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -1852,6 +1913,7 @@ SCIP_RETCODE applyFixings(
          }
       }
       
+      /* update left hand side */
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
          if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs ) )
@@ -1864,6 +1926,7 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( chgLhs(scip, cons, consdata->lhs - lhssubtrahend) );
          }
       }
+      /* update right hand side */
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
          if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) )
@@ -1882,18 +1945,46 @@ SCIP_RETCODE applyFixings(
       SCIPdebugMessage("after fixings:\n");
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
    }
-   assert(consdata->removedfixings);
+   assert(consdata->removedfixings || consdata->nlinvars == 0);
 
 #ifndef NDEBUG
-   /* check, if all fixings are applied */
+   /* check, if all linear fixings are applied */
    for( v = 0; v < consdata->nlinvars; ++v )
       assert(SCIPvarIsActive(consdata->linvars[v]));
 #endif
 
+   return SCIP_OKAY;
+}
+
+/** replaces all fixed and aggregated variables in non-linear part */
+static
+SCIP_RETCODE applyFixingsNonLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< pseudoboolean constraint */
+   int*                  nfixedvars,         /**< pointer to number of fixed variables */
+   int*                  naggrvars,          /**< pointer to number of aggregated variables */
+   SCIP_Bool*            infeasible          /**< pointer to store if infeasibility is detected */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real lhssubtrahend;
+   SCIP_Real rhssubtrahend;
+   int v;
+   int t;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(infeasible != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
    lhssubtrahend = 0.0;
    rhssubtrahend = 0.0;
 
-   /* now the non-linear part */
+   /* iterate over all non-linear parts */
    t = 0;
    while( t < consdata->nnonlinterms )
    {
@@ -1901,11 +1992,12 @@ SCIP_RETCODE applyFixings(
       SCIP_VAR** vars;
       int nvars;
       SCIP_VAR* var;
+      SCIP_Real val;
       SCIP_Bool fixed;
 
       resultant = consdata->nonlinterms[t]->resultant;
-      vars = consdata->nnonlinterms[t]->vars;
-      nvars = consdata->nnonlinterms[t]->nvars;
+      vars = consdata->nonlinterms[t]->vars;
+      nvars = consdata->nonlinterms[t]->nvars;
 
       assert(vars != NULL);
       assert(nvars > 2);
@@ -1915,21 +2007,23 @@ SCIP_RETCODE applyFixings(
       /* if the resultant exist and is fixed */
       if( resultant != NULL && SCIPvarGetStatus(resultant) == SCIP_VARSTATUS_FIXED )
       {
+         SCIP_Real fixedval;
+         
          assert(SCIPvarGetType(resultant) == SCIP_VARTYPE_BINARY);
          assert(SCIPvarIsTransformed(resultant));
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(resultant), SCIPvarGetUbGlobal(resultant)));
          
          fixedval = SCIPvarGetLbGlobal(var);
             
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            lhssubtrahend += val * fixedval;
-         
-         if( !SCIPisInfinity(scip, consdata->rhs) )
-            rhssubtrahend += val * fixedval;
-         
-         /* fix non-linear part if not already fixed */
+         /* fix non-linear part if not already fixed, if resultant is one than all term variables should be one too */
          if( fixedval > 0.5 )
          {
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+               lhssubtrahend += val * fixedval;
+            
+            if( !SCIPisInfinity(scip, consdata->rhs) )
+               rhssubtrahend += val * fixedval;
+
             for( v = nvars - 1; v >= 0; --v )
             {
                var = vars[v];
@@ -1950,6 +2044,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_CALL( SCIPfixVar(scip, var, 1.0, infeasible, &fixed) );
                   assert(fixed);
                   assert(!(*infeasible));
+                  ++(*nfixedvars);
                }
             }
          }
@@ -1964,48 +2059,73 @@ SCIP_RETCODE applyFixings(
 
          delterm = FALSE;
          allone = TRUE;
-         
+
          v = 0;
-         while( v < consdata->nnonlinterms[t]->nvars )
+         /* delete all variables which are already fixed in that term and if an and-resultant exist fix it if possible */
+         /* note that number of term variables can decrease in this loop due to deleting */
+         while( v < consdata->nonlinterms[t]->nvars )
          {
             var = vars[v];
             assert(var != NULL);
             assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-            
+            assert(SCIPvarIsTransformed(var));
+
             /* if one variable is fixed to zero the term is redundant and the and-resultant have to be fixed to zero too */
             if( SCIPvarGetUbLocal(var) < 0.5 )
             {
                if( resultant != NULL )
                {
                   SCIPdebugMessage("fixing and-resultant <%s> to 0\n", SCIPvarGetName(resultant));
-                  SCIP_CALL( SCIPfixVar(scip, andresultant, 0.0, infeasible, &fixed) );
+                  SCIP_CALL( SCIPfixVar(scip, resultant, 0.0, infeasible, &fixed) );
                   assert(fixed);
                   assert(!(*infeasible));
+                  ++(*nfixedvars);
                }
+               allone = FALSE;
                delterm = TRUE;
                break;
             }
-            
+               
             if( SCIPvarGetLbGlobal(var) > 0.5 )
             {
-               SCIP_CALL( delInTermPos(scip, consdata->nonlinterms[t], v) );
+               /* delete variable in non-linear part */
+               SCIP_CALL( delVarInTermPos(scip, consdata->nonlinterms[t], v) );
             }
             else
             {
-               allone = FALSE;
-               ++v;
+               SCIP_VAR* repvar;
+               SCIP_Bool negated;
+
+               /* get binary representative of variable */
+               SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+
+               /* check, if the variable should be replaced with the representative */
+               if( repvar != var )
+               {
+                  /* delete old aggregated variable in non-linear part */
+                  SCIP_CALL( delVarInTermPos(scip, consdata->nonlinterms[t], v) );
+
+                  /* add representative variable instead to non-linear part */
+                  SCIP_CALL( addVarToTerm(scip, consdata->nonlinterms[t], repvar) );
+               }
+               else
+               {
+                  allone = FALSE;
+                  ++v;
+               }
             }
          }
          
-         /* all variables inside the non-linear part are fixed to one then we can delete this part(and possible delete the and-resultant */
+         /* all variables inside the non-linear part are fixed to one then we can delete this part (and possible fix the and-resultant) */
          if( allone )
          {
             if( resultant != NULL )
             {
                SCIPdebugMessage("fixing and-resultant <%s> to 1, all and-variables are fixed to 1\n", SCIPvarGetName(resultant));
-               SCIP_CALL( SCIPfixVar(scip, andresultant, 1.0, infeasible, &fixed) );
+               SCIP_CALL( SCIPfixVar(scip, resultant, 1.0, infeasible, &fixed) );
                assert(fixed);
                assert(!(*infeasible));
+               ++(*nfixedvars);
             }
             delterm = TRUE;
 
@@ -2017,21 +2137,25 @@ SCIP_RETCODE applyFixings(
          }
          
          /* if only one variable is left, convert the non-linear term into a linear part */
-         if( consdata->nnonlinterms[t]->nvars == 1 )
+         if( !delterm && consdata->nonlinterms[t]->nvars == 1 )
          {
             SCIP_Bool redundant;
             SCIP_Bool aggregated;
 
-            SCIP_CALL( addCoefLinear(scip, cons, consdata->nnonlinterms[t]->vars[0], val) );
+            assert(consdata->nonlinterms[t]->vars == vars);
+            assert(vars[0] != NULL);
+            SCIP_CALL( addCoefLinear(scip, cons, vars[0], val) );
 
-            /* @todo: check for the correct aggregation order to throw the resultant away */
-            SCIPdebugMessage("aggregating last unfixed variable <%s> in a non-linear part with the and-resultant <%s>\n", SCIPvarGetName(consdata->nnonlinterms[t]->vars[0]), SCIPvarGetName(resultant));
-            SCIP_CALL( SCIPaggregateVars(scip, consdata->nnonlinterms[t]->vars[0], resultant, 1.0, -1.0, 0.0, infeasible, &redundant, &aggregated) );
-            assert(aggregated);
-            assert(!redundant);
-            assert(!(*infeasible));
-            ++(*naggrvars);
-
+            if( resultant != NULL )
+            { 
+               /* @todo: check for the correct aggregation order to throw the resultant away */
+               SCIPdebugMessage("aggregating last unfixed variable <%s> in a non-linear part with the and-resultant <%s>\n", SCIPvarGetName(vars[0]), SCIPvarGetName(resultant));
+               SCIP_CALL( SCIPaggregateVars(scip, vars[0], resultant, 1.0, -1.0, 0.0, infeasible, &redundant, &aggregated) );
+               assert(aggregated);
+               assert(!redundant);
+               assert(!(*infeasible));
+               ++(*naggrvars);
+            }
             delterm = TRUE;
          }
 
@@ -2048,9 +2172,84 @@ SCIP_RETCODE applyFixings(
          ++t;
    }
 
+#ifndef NDEBUG
+   /* check, if all non-linear fixings are applied */
+   for( t = 0; t < consdata->nnonlinterms; ++t )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+
+      vars = consdata->nonlinterms[t]->vars;
+      nvars = consdata->nonlinterms[t]->nvars;
+
+      for( v = 0; v < nvars; ++v )
+         assert(SCIPvarIsActive(vars[v]) || (SCIPvarIsNegated(vars[v]) && SCIPvarIsActive(SCIPvarGetNegationVar(vars[v]))) );
+   }
+#endif
+
    return SCIP_OKAY;
 }
-#endif
+
+/** replaces all fixed and aggregated variables by their non-fixed counterparts */
+static
+SCIP_RETCODE applyFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< pseudoboolean constraint */
+   int*                  nfixedvars,         /**< number of fixed variables */
+   int*                  naggrvars,          /**< number of aggregated variables */
+   SCIP_Bool*            infeasible          /**< pointer to store if infeasibility is detected */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* first the non-linear part, because maybe a non-linear part will be 'upgraded' into a linear */
+   SCIP_CALL( applyFixingsNonLinear(scip, cons, nfixedvars, naggrvars, infeasible) );
+
+   /* second the linear part */
+   SCIP_CALL( applyFixingsLinear(scip, cons) );
+
+   return SCIP_OKAY;
+}
+
+
+/** replaces multiple occurrences of a variable or its negation by a single coefficient */
+static
+SCIP_RETCODE mergeMultiples(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  ndelconss,          /**< pointer to store number of deleted constraints */
+   int*                  nchgcoefs,          /**< pointer to store number of changed coefficients */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a fixing leads to a cutoff */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   //   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(cutoff != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->merged ) 
+      return SCIP_OKAY;
+
+   if( consdata->nlinvars <= 1 )
+   {
+      consdata->merged = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -2746,7 +2945,6 @@ SCIP_DECL_CONSPROP(consPropPseudoboolean)
 
 
 /** presolving method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 {  /*lint --e{715}*/
@@ -2775,11 +2973,15 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
 
+#if 0
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+#endif
 
    for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
    {
+      SCIP_CONS* cons;
+      SCIP_CONSDATA* consdata;
       SCIP_Bool infeasible;
 
       infeasible = FALSE;
@@ -2790,11 +2992,11 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       assert(consdata != NULL);
 
       /* incorporate fixings and aggregations in constraint */
-      SCIP_CALL( applyFixings(scip, cons, &infeasible) );
+      SCIP_CALL( applyFixings(scip, cons, nfixedvars, naggrvars, &infeasible) );
 
       if( infeasible )
       {
-         SCIPdebugMessage(" -> infeasible fixing\n");
+         SCIPdebugMessage(" -> cutoff due to infeasible fixing(s)\n");
          cutoff = TRUE;
          break;
       }
@@ -2804,17 +3006,15 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
        * to clean up the constraint
        */
-      SCIP_CALL( mergeMultiples(scip, cons) );
+      SCIP_CALL( mergeMultiples(scip, cons, ndelconss, nchgcoefs, &cutoff) );
 
       SCIPdebugMessage("after merging:\n");
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
-
-      /* we can only presolve linear constraints, that are not modifiable */
+      /* we can only presolve pseudoboolean constraints, that are not modifiable */
       if( SCIPconsIsModifiable(cons) )
          continue;
    }
-
 
    /* return the correct result code */
    if( cutoff )
@@ -2827,9 +3027,6 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolPseudoboolean NULL
-#endif
 
 
 /** propagation conflict resolving method of constraint handler */
