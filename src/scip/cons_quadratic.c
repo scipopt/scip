@@ -12,14 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.148 2011/01/04 17:47:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.149 2011/01/10 20:35:34 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
  * @brief  constraint handler for quadratic constraints
  * @author Stefan Vigerske
  * 
- * @todo SCIP might fix variables on +/- infinity; remove them in presolve and take care later
+ * @todo SCIP might fix linear variables on +/- infinity; remove them in presolve and take care later
  * @todo constraints that are always feasible w.r.t. local/global bounds should be enabled/disabled (see logicor, setppc)
  * @todo round constraint bounds to integers if all coefficients and variables are (impl.) integer
  * @todo constraints in one variable should be replaced by linear variable or similar
@@ -113,6 +113,10 @@ struct SCIP_ConsData
    unsigned int          ispropagated:1;     /**< was the constraint propagated with respect to the current bounds ? */
    unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
 
+   SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
+   SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
+   int                   minlinactivityinf;  /**< number of linear terms with infinite minimal activity */
+   int                   maxlinactivityinf;  /**< number of linear terms with infinity maximal activity */
    SCIP_INTERVAL         quadactivitybounds; /**< bounds on the activity of the quadratic term, if up to date, otherwise empty interval */
    SCIP_Real             activity;           /**< activity of quadratic function w.r.t. current solution */
    SCIP_Real             lhsviol;            /**< violation of lower bound by current solution (used temporarily inside constraint handler) */
@@ -145,6 +149,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
    SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
+   int                   maxproprounds;             /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
 
    SCIP_HEUR*            subnlpheur;                /**< a pointer to the subNLP heuristic, if available */
    SCIP_HEUR*            rensheur;                  /**< a pointer to the RENS heuristic, if available */
@@ -469,55 +474,6 @@ SCIP_Bool getNextToken(
  */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
 
-/** processes variable fixing or bound change event */
-static
-SCIP_DECL_EVENTEXEC(processVarEvent)
-{
-   SCIP_CONSDATA* consdata;
-   
-   assert(scip != NULL);
-   assert(event != NULL);
-   assert(eventdata != NULL);
-   assert(eventhdlr != NULL);
-
-   consdata = eventdata->consdata;
-   assert(consdata != NULL);
-   assert(eventdata->varidx <  0 || eventdata->varidx    < consdata->nlinvars);
-   assert(eventdata->varidx >= 0 || -eventdata->varidx-1 < consdata->nquadvars);
-
-   if( SCIPeventGetType(event) & SCIP_EVENTTYPE_VARFIXED )
-   {
-      consdata->isremovedfixings = FALSE;
-   }
-
-   if( consdata->ispropagated )
-   {
-      /* if we have a bound tightening, we might not have propagated bounds anymore */
-      if( SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED )
-      {
-         consdata->ispropagated =
-            eventdata->varidx >= 0 &&
-            (SCIPisInfinity(scip, -consdata->lhs) || consdata->lincoefs[eventdata->varidx] < 0) &&
-            (SCIPisInfinity(scip,  consdata->rhs) || consdata->lincoefs[eventdata->varidx] > 0);
-      }
-      else if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED )
-      {
-         consdata->ispropagated =
-            eventdata->varidx >= 0 &&
-            (SCIPisInfinity(scip, -consdata->lhs) || consdata->lincoefs[eventdata->varidx] > 0) &&
-            (SCIPisInfinity(scip,  consdata->rhs) || consdata->lincoefs[eventdata->varidx] < 0);
-      }
-   }
-   
-   if( eventdata->varidx < 0 )
-   {
-      /* mark activity bounds for this quad var term variable as not up to date anymore */
-      SCIPintervalSetEmpty(&consdata->quadactivitybounds);
-   }
-
-   return SCIP_OKAY;
-}
-
 /* catches variable bound change events on a linear variable in a quadratic constraint */
 static
 SCIP_RETCODE catchLinearVarEvents(
@@ -527,8 +483,9 @@ SCIP_RETCODE catchLinearVarEvents(
    int                   linvarpos           /**< position of variable in linear variables array */
    )
 {
-   SCIP_CONSDATA* consdata;
+   SCIP_CONSDATA*  consdata;
    SCIP_EVENTDATA* eventdata;
+   SCIP_EVENTTYPE  eventtype;
    
    assert(scip != NULL);
    assert(eventhdlr != NULL);
@@ -545,9 +502,29 @@ SCIP_RETCODE catchLinearVarEvents(
    
    eventdata->consdata = consdata;
    eventdata->varidx = linvarpos;
-   /* @todo catch only interesting bound tightening events (and varfixed) */
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, eventdata, &eventdata->filterpos) );
    
+   eventtype = SCIP_EVENTTYPE_VARFIXED;
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      /* if right hand side is finite, then a tightening in the lower bound of coef*linvar is of interest
+       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+      if( consdata->lincoefs[linvarpos] > 0.0 )
+         eventtype |= SCIP_EVENTTYPE_LBCHANGED;
+      else
+         eventtype |= SCIP_EVENTTYPE_UBCHANGED;
+   }
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      /* if left hand side is finite, then a tightening in the upper bound of coef*linvar is of interest
+       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+      if( consdata->lincoefs[linvarpos] > 0.0 )
+         eventtype |= SCIP_EVENTTYPE_UBCHANGED;
+      else
+         eventtype |= SCIP_EVENTTYPE_LBCHANGED;
+   }
+
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[linvarpos], eventtype, eventhdlr, eventdata, &eventdata->filterpos) );
+
    consdata->lineventdata[linvarpos] = eventdata;
 
    return SCIP_OKAY;
@@ -563,7 +540,8 @@ SCIP_RETCODE dropLinearVarEvents(
    )
 {
    SCIP_CONSDATA* consdata;
-   
+   SCIP_EVENTTYPE  eventtype;
+
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(cons != NULL);
@@ -579,7 +557,27 @@ SCIP_RETCODE dropLinearVarEvents(
    assert(consdata->lineventdata[linvarpos]->varidx == linvarpos);
    assert(consdata->lineventdata[linvarpos]->filterpos >= 0);
    
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->linvars[linvarpos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, consdata->lineventdata[linvarpos], consdata->lineventdata[linvarpos]->filterpos) );
+   eventtype = SCIP_EVENTTYPE_VARFIXED;
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      /* if right hand side is finite, then a tightening in the lower bound of coef*linvar is of interest
+       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+      if( consdata->lincoefs[linvarpos] > 0.0 )
+         eventtype |= SCIP_EVENTTYPE_LBCHANGED;
+      else
+         eventtype |= SCIP_EVENTTYPE_UBCHANGED;
+   }
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      /* if left hand side is finite, then a tightening in the upper bound of coef*linvar is of interest
+       * since we also want to keep activities in consdata uptodate, we also need to know when the corresponding bound is relaxed */
+      if( consdata->lincoefs[linvarpos] > 0.0 )
+         eventtype |= SCIP_EVENTTYPE_UBCHANGED;
+      else
+         eventtype |= SCIP_EVENTTYPE_LBCHANGED;
+   }
+
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->linvars[linvarpos], eventtype, eventhdlr, consdata->lineventdata[linvarpos], consdata->lineventdata[linvarpos]->filterpos) );
    
    SCIPfreeBlockMemory(scip, &consdata->lineventdata[linvarpos]);
 
@@ -825,6 +823,367 @@ SCIP_RETCODE unlockQuadraticVariable(
    return SCIP_OKAY;
 }
 
+/** computes the minimal and maximal activity for the linear part in a constraint data
+ *  only sums up terms that contribute finite values
+ *  gives the number of terms that contribute infinite values
+ *  only computes those activities where the corresponding side of the constraint is finite
+ */
+static
+void consdataUpdateLinearActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Real             intervalinfty       /**< infinity value used in interval operations */
+   )
+{  /*lint --e{666}*/
+   SCIP_ROUNDMODE prevroundmode;
+   int       i;
+   SCIP_Real bnd;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+
+   if (consdata->minlinactivity != SCIP_INVALID && consdata->maxlinactivity != SCIP_INVALID)
+   {
+      /* activities should be uptodate */
+      assert(consdata->minlinactivityinf >= 0);
+      assert(consdata->maxlinactivityinf >= 0);
+      return;
+   }
+
+   consdata->minlinactivityinf = 0;
+   consdata->maxlinactivityinf = 0;
+
+   /* if lhs is -infinite, then we do not compute a maximal activity, so we set it to  infinity
+    * if rhs is  infinite, then we do not compute a minimal activity, so we set it to -infinity
+    */
+   consdata->minlinactivity = SCIPisInfinity(scip,  consdata->rhs) ? -intervalinfty : 0.0;
+   consdata->maxlinactivity = SCIPisInfinity(scip, -consdata->lhs) ?  intervalinfty : 0.0;
+
+   if( consdata->nlinvars == 0 )
+      return;
+
+   /* if the activities computed here should be still uptodate after boundchanges,
+    * variable events need to be catched */
+   assert(consdata->lineventdata != NULL);
+
+   prevroundmode = SCIPintervalGetRoundingMode();
+
+   if( !SCIPisInfinity(scip,  consdata->rhs) )
+   {
+      /* compute minimal activity only if there is a finite right hand side */
+      SCIPintervalSetRoundingModeDownwards();
+
+      for( i = 0; i < consdata->nlinvars; ++i )
+      {
+         assert(consdata->lineventdata[i] != NULL);
+         if( consdata->lincoefs[i] >= 0.0 )
+         {
+            bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
+            if( SCIPisInfinity(scip, -bnd) )
+            {
+               ++consdata->minlinactivityinf;
+               continue;
+            }
+            assert(!SCIPisInfinity(scip, bnd)); /* do not like variables that are fixed at +infinity */
+         }
+         else
+         {
+            bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
+            if( SCIPisInfinity(scip,  bnd) )
+            {
+               ++consdata->minlinactivityinf;
+               continue;
+            }
+            assert(!SCIPisInfinity(scip, -bnd)); /* do not like variables that are fixed at -infinity */
+         }
+         consdata->minlinactivity += consdata->lincoefs[i] * bnd;
+      }
+   }
+
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      /* compute maximal activity only if there is a finite left hand side */
+      SCIPintervalSetRoundingModeUpwards();
+
+      for( i = 0; i < consdata->nlinvars; ++i )
+      {
+         assert(consdata->lineventdata[i] != NULL);
+         if( consdata->lincoefs[i] >= 0.0 )
+         {
+            bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
+            if( SCIPisInfinity(scip,  bnd) )
+            {
+               ++consdata->maxlinactivityinf;
+               continue;
+            }
+            assert(!SCIPisInfinity(scip, -bnd)); /* do not like variables that are fixed at -infinity */
+         }
+         else
+         {
+            bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
+            if( SCIPisInfinity(scip, -bnd) )
+            {
+               ++consdata->maxlinactivityinf;
+               continue;
+            }
+            assert(!SCIPisInfinity(scip, bnd)); /* do not like variables that are fixed at +infinity */
+         }
+         consdata->maxlinactivity += consdata->lincoefs[i] * bnd;
+      }
+   }
+
+   SCIPintervalSetRoundingMode(prevroundmode);
+}
+
+/** update the linear activities after a change in the lower bound of a variable */
+static
+void consdataUpdateLinearActivityLbChange(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Real             coef,               /**< coefficient of variable in constraint */
+   SCIP_Real             oldbnd,             /**< previous lower bound of variable */
+   SCIP_Real             newbnd              /**< new lower bound of variable */
+   )
+{
+   SCIP_ROUNDMODE prevroundmode;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   /* we can't deal with lower bounds at infinity */
+   assert(!SCIPisInfinity(scip, oldbnd));
+   assert(!SCIPisInfinity(scip, newbnd));
+
+   /* assume lhs <= a*x + y <= rhs, then the following boundchanges can be deduced:
+    * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
+    * a < 0:  y <= rhs - a*ub(x),  y >= lhs - a*lb(x)
+    */
+
+   if( coef > 0.0 )
+   {
+      /* we should only be called if rhs is finite */
+      assert(!SCIPisInfinity(scip, consdata->rhs));
+
+      /* we have no min activities computed so far, so cannot update */
+      if( consdata->minlinactivity == SCIP_INVALID )
+         return;
+
+      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
+
+      prevroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeDownwards();
+
+      /* update min activity */
+      if( SCIPisInfinity(scip, -oldbnd) )
+      {
+         --consdata->minlinactivityinf;
+         assert(consdata->minlinactivityinf >= 0);
+      }
+      else
+      {
+         SCIP_Real minuscoef;
+         minuscoef = -coef;
+         consdata->minlinactivity += minuscoef * oldbnd;
+      }
+
+      if( SCIPisInfinity(scip, -newbnd) )
+      {
+         ++consdata->minlinactivityinf;
+      }
+      else
+      {
+         consdata->minlinactivity += coef * newbnd;
+      }
+
+      SCIPintervalSetRoundingMode(prevroundmode);
+   }
+   else
+   {
+      /* we should only be called if lhs is finite */
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+
+      /* we have no max activities computed so far, so cannot update */
+      if( consdata->maxlinactivity == SCIP_INVALID )
+         return;
+
+      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
+
+      prevroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+
+      /* update max activity */
+      if( SCIPisInfinity(scip, -oldbnd) )
+      {
+         --consdata->maxlinactivityinf;
+         assert(consdata->maxlinactivityinf >= 0);
+      }
+      else
+      {
+         SCIP_Real minuscoef;
+         minuscoef = -coef;
+         consdata->maxlinactivity += minuscoef * oldbnd;
+      }
+
+      if( SCIPisInfinity(scip, -newbnd) )
+      {
+         ++consdata->maxlinactivityinf;
+      }
+      else
+      {
+         consdata->maxlinactivity += coef * newbnd;
+      }
+
+      SCIPintervalSetRoundingMode(prevroundmode);
+   }
+}
+
+/** update the linear activities after a change in the upper bound of a variable */
+static
+void consdataUpdateLinearActivityUbChange(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Real             coef,               /**< coefficient of variable in constraint */
+   SCIP_Real             oldbnd,             /**< previous lower bound of variable */
+   SCIP_Real             newbnd              /**< new lower bound of variable */
+   )
+{
+   SCIP_ROUNDMODE prevroundmode;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   /* we can't deal with upper bounds at -infinity */
+   assert(!SCIPisInfinity(scip, -oldbnd));
+   assert(!SCIPisInfinity(scip, -newbnd));
+
+   /* assume lhs <= a*x + y <= rhs, then the following boundchanges can be deduced:
+    * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
+    * a < 0:  y <= rhs - a*ub(x),  y >= lhs - a*lb(x)
+    */
+
+   if( coef > 0.0 )
+   {
+      /* we should only be called if lhs is finite */
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+
+      /* we have no max activities computed so far, so cannot update */
+      if( consdata->maxlinactivity == SCIP_INVALID )
+         return;
+
+      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
+
+      prevroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+
+      /* update max activity */
+      if( SCIPisInfinity(scip, oldbnd) )
+      {
+         --consdata->maxlinactivityinf;
+         assert(consdata->maxlinactivityinf >= 0);
+      }
+      else
+      {
+         SCIP_Real minuscoef;
+         minuscoef = -coef;
+         consdata->maxlinactivity += minuscoef * oldbnd;
+      }
+
+      if( SCIPisInfinity(scip, newbnd) )
+      {
+         ++consdata->maxlinactivityinf;
+      }
+      else
+      {
+         consdata->maxlinactivity += coef * newbnd;
+      }
+
+      SCIPintervalSetRoundingMode(prevroundmode);
+   }
+   else
+   {
+      /* we should only be called if rhs is finite */
+      assert(!SCIPisInfinity(scip, consdata->rhs));
+
+      /* we have no min activities computed so far, so cannot update */
+      if( consdata->minlinactivity == SCIP_INVALID )
+         return;
+
+      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
+
+      prevroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeDownwards();
+
+      /* update min activity */
+      if( SCIPisInfinity(scip, oldbnd) )
+      {
+         --consdata->minlinactivityinf;
+         assert(consdata->minlinactivityinf >= 0);
+      }
+      else
+      {
+         SCIP_Real minuscoef;
+         minuscoef = -coef;
+         consdata->minlinactivity += minuscoef * oldbnd;
+      }
+
+      if( SCIPisInfinity(scip, newbnd) )
+      {
+         ++consdata->minlinactivityinf;
+      }
+      else
+      {
+         consdata->minlinactivity += coef * newbnd;
+      }
+
+      SCIPintervalSetRoundingMode(prevroundmode);
+   }
+}
+
+/** processes variable fixing or bound change event */
+static
+SCIP_DECL_EVENTEXEC(processVarEvent)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_EVENTTYPE eventtype;
+
+   assert(scip != NULL);
+   assert(event != NULL);
+   assert(eventdata != NULL);
+   assert(eventhdlr != NULL);
+
+   consdata = eventdata->consdata;
+   assert(consdata != NULL);
+   assert(eventdata->varidx <  0 ||  eventdata->varidx   < consdata->nlinvars);
+   assert(eventdata->varidx >= 0 || -eventdata->varidx-1 < consdata->nquadvars);
+
+   eventtype = SCIPeventGetType(event);
+
+   if( eventtype & SCIP_EVENTTYPE_VARFIXED )
+   {
+      consdata->isremovedfixings = FALSE;
+   }
+
+   if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
+   {
+      if( eventdata->varidx < 0 )
+      {
+         /* mark activity bounds for this quad var term variable as not up to date anymore */
+         SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+      }
+      else
+      {
+         /* update activity bounds for linear terms */
+         if( eventtype & SCIP_EVENTTYPE_LBCHANGED )
+            consdataUpdateLinearActivityLbChange(scip, consdata, consdata->lincoefs[eventdata->varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+         else
+            consdataUpdateLinearActivityUbChange(scip, consdata, consdata->lincoefs[eventdata->varidx], SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
+      }
+
+      if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
+         consdata->ispropagated = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** ensures, that linear vars and coefs arrays can store at least num entries */
 static
 SCIP_RETCODE consdataEnsureLinearVarsSize(
@@ -960,6 +1319,11 @@ SCIP_RETCODE consdataCreateEmpty(
    (*consdata)->linvar_maydecrease = -1;
    (*consdata)->linvar_mayincrease = -1;
 
+   (*consdata)->minlinactivity = SCIP_INVALID;
+   (*consdata)->maxlinactivity = SCIP_INVALID;
+   (*consdata)->minlinactivityinf = -1;
+   (*consdata)->maxlinactivityinf = -1;
+
    return SCIP_OKAY;
 }
 
@@ -993,6 +1357,11 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
    BMSclearMemory(*consdata);
 
+   (*consdata)->minlinactivity = SCIP_INVALID;
+   (*consdata)->maxlinactivity = SCIP_INVALID;
+   (*consdata)->minlinactivityinf = -1;
+   (*consdata)->maxlinactivityinf = -1;
+
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    
@@ -1013,6 +1382,10 @@ SCIP_RETCODE consdataCreate(
    {
       (*consdata)->linvarssorted = TRUE;
       (*consdata)->linvarsmerged = TRUE;
+      (*consdata)->minlinactivity = 0.0;
+      (*consdata)->maxlinactivity = 0.0;
+      (*consdata)->minlinactivityinf = 0;
+      (*consdata)->maxlinactivityinf = 0;
    }
    
    if( nquadvars > 0 )
@@ -1539,6 +1912,10 @@ SCIP_RETCODE addLinearCoef(
 
    /* invalidate activity information */
    consdata->activity = SCIP_INVALID;
+   consdata->minlinactivity = SCIP_INVALID;
+   consdata->maxlinactivity = SCIP_INVALID;
+   consdata->minlinactivityinf = -1;
+   consdata->maxlinactivityinf = -1;
 
    /* invalidate nonlinear row */
    if( consdata->nlrow != NULL )
@@ -1618,6 +1995,10 @@ SCIP_RETCODE delLinearCoefPos(
    
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+   consdata->minlinactivity = SCIP_INVALID;
+   consdata->maxlinactivity = SCIP_INVALID;
+   consdata->minlinactivityinf = -1;
+   consdata->maxlinactivityinf = -1;
 
    /* invalidate nonlinear row */
    if( consdata->nlrow != NULL )
@@ -1640,6 +2021,8 @@ SCIP_RETCODE chgLinearCoefPos(
    SCIP_Real             newcoef             /**< new value of linear coefficient */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_Real coef;
@@ -1647,6 +2030,8 @@ SCIP_RETCODE chgLinearCoefPos(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPisZero(scip, newcoef));
+
+   conshdlrdata = NULL;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1661,6 +2046,10 @@ SCIP_RETCODE chgLinearCoefPos(
 
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+   consdata->minlinactivity = SCIP_INVALID;
+   consdata->maxlinactivity = SCIP_INVALID;
+   consdata->minlinactivityinf = -1;
+   consdata->maxlinactivityinf = -1;
 
    /* invalidate nonlinear row */
    if( consdata->nlrow != NULL )
@@ -1668,20 +2057,48 @@ SCIP_RETCODE chgLinearCoefPos(
       SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
-   /* if necessary, update the rounding locks of the variable */
-   if( SCIPconsIsLocked(cons) && newcoef * coef < 0.0 )
+   /* if necessary, remove the rounding locks and event catching of the variable */
+   if( newcoef * coef < 0.0 )
    {
-      assert(SCIPconsIsTransformed(cons));
+      if( SCIPconsIsLocked(cons) )
+      {
+         assert(SCIPconsIsTransformed(cons));
 
-      /* remove rounding locks for variable with old coefficient */
-      SCIP_CALL( unlockLinearVariable(scip, cons, var, coef) );
+         /* remove rounding locks for variable with old coefficient */
+         SCIP_CALL( unlockLinearVariable(scip, cons, var, coef) );
+      }
 
-      /* install rounding locks for variable with new coefficient */
-      SCIP_CALL( lockLinearVariable(scip, cons, var, newcoef) );
+      if( consdata->lineventdata[pos] != NULL )
+      {
+         /* get event handler */
+         conshdlr = SCIPconsGetHdlr(cons);
+         conshdlrdata = SCIPconshdlrGetData(conshdlr);
+         assert(conshdlrdata != NULL);
+         assert(conshdlrdata->eventhdlr != NULL);
+
+         /* drop bound change events of variable */
+         SCIP_CALL( dropLinearVarEvents(scip, conshdlrdata->eventhdlr, cons, pos) );
+      }
    }
 
    /* change the coefficient */
    consdata->lincoefs[pos] = newcoef;
+
+   /* if necessary, install the rounding locks and event catching of the variable again */
+   if( newcoef * coef < 0.0 )
+   {
+      if( SCIPconsIsLocked(cons) )
+      {
+         /* install rounding locks for variable with new coefficient */
+         SCIP_CALL( lockLinearVariable(scip, cons, var, newcoef) );
+      }
+
+      if( conshdlrdata != NULL )
+      {
+         /* catch bound change events of variable */
+         SCIP_CALL( catchLinearVarEvents(scip, conshdlrdata->eventhdlr, cons, pos) );
+      }
+   }
 
    consdata->ispropagated = FALSE;
    consdata->ispresolved = FALSE;
@@ -3962,7 +4379,7 @@ SCIP_RETCODE computeViolation(
    {
       SCIP_Real norm = getGradientNorm(scip, cons, sol);
       if( norm > 1.0 )
-      { /* TODO scale only if > 1., or should it be larger SCIPsumepsilon? */
+      { /* scale only if > 1.0, since LP solvers may scale also only if cut norm is > 1 */
          consdata->lhsviol /= norm;
          consdata->rhsviol /= norm;
       }
@@ -4013,340 +4430,6 @@ SCIP_RETCODE computeViolations(
       }
    }
    
-   return SCIP_OKAY;
-}
-
-/** computes minimal activity of linear part of constraint */
-static
-SCIP_Real consdataGetLinearMinActivity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Real             intervalinfty       /**< value of infinity to use for interval operations */
-   )
-{
-   SCIP_ROUNDMODE prevroundmode;
-   SCIP_Real minact;
-   SCIP_Real bnd;
-   int i;
-   
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(intervalinfty > 0.0);
-   
-   if( consdata->nlinvars == 0 )
-      return 0.0;
-   
-   minact = 0.0;
-   
-   prevroundmode = SCIPintervalGetRoundingMode();
-
-   SCIPintervalSetRoundingModeDownwards();
-
-   for( i = 0; i < consdata->nlinvars; ++i )
-   {
-      if( consdata->lincoefs[i] >= 0.0 )
-      {
-         bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
-         if( SCIPisInfinity(scip, -bnd) )
-         {
-            minact = -intervalinfty;
-            break;
-         }
-         minact += consdata->lincoefs[i] * bnd;
-      }
-      else
-      {
-         bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
-         if( SCIPisInfinity(scip,  bnd) )
-         {
-            minact = -intervalinfty;
-            break;
-         }
-         minact += consdata->lincoefs[i] * bnd;
-      }
-   }
-
-   SCIPintervalSetRoundingMode(prevroundmode);
-   
-   return minact;
-}
-
-/** computes maximal activity of linear part of constraint */
-static
-SCIP_Real consdataGetLinearMaxActivity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Real             intervalinfty       /**< value of infinity to use for interval operations */
-   )
-{
-   SCIP_ROUNDMODE prevroundmode;
-   SCIP_Real maxact;
-   SCIP_Real bnd;
-   int i;
-   
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(intervalinfty > 0.0);
-   
-   if( consdata->nlinvars == 0 )
-      return 0.0;
-   
-   maxact = 0.0;
-   
-   prevroundmode = SCIPintervalGetRoundingMode();
-
-   SCIPintervalSetRoundingModeUpwards();
-
-   for( i = 0; i < consdata->nlinvars; ++i )
-   {
-      if( consdata->lincoefs[i] >= 0.0 )
-      {
-         bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
-         if( SCIPisInfinity(scip,  bnd) )
-         {
-            maxact = intervalinfty;
-            break;
-         }
-         maxact += consdata->lincoefs[i] * bnd;
-      }
-      else
-      {
-         bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
-         if( SCIPisInfinity(scip, -bnd) )
-         {
-            maxact = intervalinfty;
-            break;
-         }
-         maxact += consdata->lincoefs[i] * bnd;
-      }
-   }
-
-   SCIPintervalSetRoundingMode(prevroundmode);
-   
-   return maxact;   
-}
-
-/** updates the activity bounds of a single quadvarterm, if not up to date, and stores results in this term
- * minactivity will be -infinity if consdata->rhs is +infinity
- * maxactivity will be +infinity if consdata->lhs is -infinity
- */
-static
-void consdataGetQuadVarTermActivity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Real             intervalinfty,      /**< value of infinity to use for interval operations */
-   int                   termindex,          /**< index of quadratic variable term which activity bounds to update */
-   SCIP_INTERVAL*        resultant           /**< buffer to store activity of quad var term */
-   )
-{
-   SCIP_QUADVARTERM* quadvarterm;
-   SCIP_INTERVAL xrng;
-   SCIP_INTERVAL tmp;
-   SCIP_INTERVAL lincoef;
-   int j;
-   int k;
-   
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(intervalinfty > 0.0);
-   assert(termindex >= 0);
-   assert(termindex < consdata->nquadvars);
-   assert(resultant != NULL);
-   
-   quadvarterm = &consdata->quadvarterms[termindex];
-
-   SCIPintervalSetBounds(&xrng,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(quadvarterm->var), SCIPvarGetUbLocal(quadvarterm->var))),  /*lint !e666*/
-       infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(quadvarterm->var), SCIPvarGetUbLocal(quadvarterm->var)))); /*lint !e666*/
-   
-   SCIPintervalSet(&lincoef, quadvarterm->lincoef);
-   for( j = 0; j < quadvarterm->nadjbilin; ++j )
-   {
-      k = quadvarterm->adjbilin[j];
-      if( consdata->bilinterms[k].var1 != quadvarterm->var )
-         continue; /* this term is handled in another quadvarterm later */
-      
-      SCIPintervalSetBounds(&tmp, 
-         -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),  /*lint !e666*/
-          infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2)))); /*lint !e666*/
-      SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
-      SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
-   }
-
-   /* compute max activity only if constraint lhs is finite, otherwise there should be no use for it */
-   if( !SCIPisInfinity(scip, -consdata->lhs) )
-   {
-      resultant->sup =  SCIPintervalQuadUpperBound(intervalinfty,  quadvarterm->sqrcoef, lincoef, xrng);
-   }
-   else
-   {
-      resultant->sup =  intervalinfty;
-   }
-   
-   /* compute min activity only if constraint rhs is finite, otherwise there should be no use for it */
-   if( !SCIPisInfinity(scip,  consdata->rhs) )
-   {
-      SCIPintervalSetBounds(&lincoef, -lincoef.sup, -lincoef.inf);
-      resultant->inf = -SCIPintervalQuadUpperBound(intervalinfty, -quadvarterm->sqrcoef, lincoef, xrng);
-   }
-   else
-   {
-      resultant->inf = -intervalinfty;
-   }
-   
-   assert(!SCIPintervalIsEmpty(*resultant));
-}
-
-
-/** updates the bounds on the activity of the quadratic var terms
- *  minactivity will be -infinity if consdata->rhs is +infinity
- *  maxactivity will be +infinity if consdata->lhs is -infinity
- */
-static
-void consdataUpdateQuadActivity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Real             intervalinfty       /**< value of infinity to use for interval operations */
-   )
-{  /*lint --e{666}*/
-   SCIP_INTERVAL  tmp;
-   int i;
-   
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(intervalinfty > 0.0);
-   
-   if( !SCIPintervalIsEmpty(consdata->quadactivitybounds) )
-   {
-      /* consdata claims, that activity of quadratic term is still up to date */
-#ifndef NDEBUG
-      SCIP_INTERVAL actcheck;
-
-      /* put activity for first term into actcheck */
-      consdataGetQuadVarTermActivity(scip, consdata, intervalinfty, 0, &actcheck);
-      
-      /* add activities for remaining terms until all done or activity is at -/+ infinity */
-      for( i = 1; i < consdata->nquadvars && !SCIPintervalIsEntire(intervalinfty, actcheck); ++i )
-      {
-         consdataGetQuadVarTermActivity(scip, consdata, intervalinfty, i, &tmp);
-         SCIPintervalAdd(intervalinfty, &actcheck, actcheck, tmp);
-      }
-      assert(SCIPintervalIsSubsetEQ(intervalinfty, actcheck, consdata->quadactivitybounds));
-#endif
-      return;
-   }
-   
-   if( consdata->nquadvars == 0 )
-   {
-      SCIPintervalSet(&consdata->quadactivitybounds, 0.0);
-      return;
-   }
-
-   /* put activity for first term into consdata->quadactivitybounds */
-   consdataGetQuadVarTermActivity(scip, consdata, intervalinfty, 0, &consdata->quadactivitybounds);
-   
-   /* add activities for remaining terms until all done or activity is at -/+ infinity */
-   for( i = 1; i < consdata->nquadvars && !SCIPintervalIsEntire(intervalinfty, consdata->quadactivitybounds); ++i )
-   {
-      consdataGetQuadVarTermActivity(scip, consdata, intervalinfty, i, &tmp);
-      SCIPintervalAdd(intervalinfty, &consdata->quadactivitybounds, consdata->quadactivitybounds, tmp);
-   }
-}
-
-/** checks by interval analysis whether a violated constraint is infeasible
- * 
- *  If lhsviol and rhsviol is below feasibility tolerance, the check is skipped.
- * 
- *  If isfeasible is set to false, then constraint is infeasible w.r.t. current local bounds.
- *  If isfeasible is set to true, then this gives no information.
- */
-static
-SCIP_RETCODE isIntervalFeasible(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to check */
-   SCIP_Bool*            isfeasible          /**< buffer to store the result */
-   )
-{  /*lint --e{666}*/
-   SCIP_CONSDATA* consdata;
-   SCIP_Real      intervalinfty;
-   SCIP_Real      linminact;
-   SCIP_Real      linmaxact;
-   
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(isfeasible != NULL);
-   assert(SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) < SCIP_STAGE_SOLVED);
-   
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   
-   *isfeasible = TRUE;
-   
-   if( !SCIPisPositive(scip, consdata->lhsviol) && !SCIPisPositive(scip, consdata->rhsviol) )
-      return SCIP_OKAY; /* obviously we have a feasible point */
-
-   intervalinfty = 1000 * SCIPinfinity(scip) * SCIPinfinity(scip);
-
-   /* update bound on activities of quadratic part, where necessary */
-   consdataUpdateQuadActivity(scip, consdata, intervalinfty);
-
-   if( !SCIPisInfinity(scip, -consdata->lhs) )
-   {
-      linmaxact = consdataGetLinearMaxActivity(scip, consdata, intervalinfty);
-      *isfeasible = !SCIPisFeasGT(scip, consdata->lhs, linmaxact + SCIPintervalGetSup(consdata->quadactivitybounds));
-   }
-   if( *isfeasible && !SCIPisInfinity(scip, consdata->rhs) )
-   {
-      linminact = consdataGetLinearMinActivity(scip, consdata, intervalinfty);
-      *isfeasible = !SCIPisFeasLT(scip, consdata->rhs, linminact + SCIPintervalGetInf(consdata->quadactivitybounds));
-   }
-
-   if( !*isfeasible )
-   {
-      SCIPdebugMessage("interval arithmetic found constraint <%s> infeasible: sides = [%g, %g], linear activity = [%g, %g], quadratic activity = [%g, %g]\n",
-         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, 
-         consdataGetLinearMinActivity(scip, consdata, intervalinfty), consdataGetLinearMaxActivity(scip, consdata, intervalinfty),
-         SCIPintervalGetInf(consdata->quadactivitybounds), SCIPintervalGetSup(consdata->quadactivitybounds));
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
-   }
-   
-   return SCIP_OKAY;
-}
-
-/** checks by interval analysis whether a set of constraints is infeasible
- *  If isfeasible is set to false, then one constraint is infeasible w.r.t. current local bounds.
- *  If isfeasible is set to true, then this gives no information.
- */
-static
-SCIP_RETCODE areIntervalFeasible(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           conss,              /**< constraints to check */
-   int                   nconss,             /**< number of constraints to check */
-   SCIP_CONS*            firstcons,          /**< constraint to check first, can be NULL */
-   SCIP_Bool*            isfeasible          /**< buffer to store the result */
-   )
-{
-   int c;
-   
-   assert(scip != NULL);
-   assert(conss != NULL || nconss == 0);
-   assert(isfeasible != NULL);
-
-   if( firstcons != NULL )
-   {
-      SCIP_CALL( isIntervalFeasible(scip, firstcons, isfeasible) );
-      if( !*isfeasible )
-         return SCIP_OKAY;
-   }
-
-   for( c = 0; *isfeasible && c < nconss; ++c )
-   {
-      assert(conss != NULL);
-      if( conss[c] == firstcons )
-         continue;
-      SCIP_CALL( isIntervalFeasible(scip, conss[c], isfeasible) );
-   }
-
    return SCIP_OKAY;
 }
 
@@ -4906,6 +4989,8 @@ SCIP_RETCODE separatePoint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
+   SCIP_Real          feasibility;
+   SCIP_Real          norm;
    SCIP_Real          efficacy;
    SCIP_BOUNDTYPE     violbound;
    int                c;
@@ -4956,7 +5041,20 @@ SCIP_RETCODE separatePoint(
          if( row == NULL ) /* failed to generate cut */
             continue;
 
-         efficacy = SCIPgetCutEfficacy(scip, sol, row);
+         if( sol == NULL )
+            feasibility = SCIPgetRowLPFeasibility(scip, row);
+         else
+            feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
+         norm = SCIProwGetNorm(row);
+
+         /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
+          * this avoid finding cuts efficiant which are only very slightly violated
+          * CPLEX does not seem to scale row coefficients up too
+          */
+         if( norm > 1.0 )
+            efficacy = -feasibility / norm;
+         else
+            efficacy = -feasibility;
 
          if( efficacy > minefficacy ||
             (convexalways &&
@@ -4968,7 +5066,8 @@ SCIP_RETCODE separatePoint(
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
+            SCIPdebugMessage("add cut with efficacy %g and feasibility %g for constraint <%s> violated by %g\n", efficacy, feasibility,
+               SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
             if( bestefficacy != NULL && efficacy > *bestefficacy )
                *bestefficacy = efficacy;
          }
@@ -5358,6 +5457,10 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    assert(*result == SCIP_DIDNOTFIND || *result == SCIP_REDUCEDDOM);
    assert(nchgbds != NULL);
    
+   /* new bound is no improvement */
+   if( SCIPisLE(scip, bnd, SCIPvarGetLbLocal(var)) )
+      return SCIP_OKAY;
+
    if( SCIPisInfinity(scip, bnd) )
    { /* domain will be outside [-infty, +infty] -> declare node infeasible */
       *result = SCIP_CUTOFF;
@@ -5413,6 +5516,10 @@ SCIP_RETCODE propagateBoundsTightenVarUb(
    assert(*result == SCIP_DIDNOTFIND || *result == SCIP_REDUCEDDOM);
    assert(nchgbds != NULL);
    
+   /* new bound is no improvement */
+   if( SCIPisGE(scip, bnd, SCIPvarGetUbLocal(var)) )
+      return SCIP_OKAY;
+
    if( SCIPisInfinity(scip, -bnd) )
    { /* domain will be outside [-infty, +infty] -> declare node infeasible */
       *result = SCIP_CUTOFF;
@@ -5625,112 +5732,6 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
    return SCIP_OKAY;
 }
 
-/** computes the minimal and maximal activity for the linear part in a constraint data
- *  only sums up terms that contribute finite values
- *  gives the number of terms that contribute infinite values
- *  only computes those activities where the corresponding side of the constraint is finite
- */
-static
-void propagateBoundsGetLinearActivity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Real             intervalinfty,      /**< infinity value used in interval operations */
-   SCIP_Real*            minlinactivity,     /**< buffer to store lower bound on activity of linear term, if only taking finite contributions */
-   SCIP_Real*            maxlinactivity,     /**< buffer to store upper bound on activity of linear term, if only taking finite contributions */
-   int*                  minactivityinf,     /**< number of variable that contribute -infinity to minimal activity */
-   int*                  maxactivityinf      /**< number of variable that contribute +infinity to maximal activity */
-   )
-{  /*lint --e{666}*/
-   SCIP_ROUNDMODE prevroundmode;
-   int       i;
-   SCIP_Real bnd;
-
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(minlinactivity != NULL);
-   assert(maxlinactivity != NULL);
-   assert(minactivityinf != NULL);
-   assert(maxactivityinf != NULL);
-
-   *minactivityinf = 0;
-   *maxactivityinf = 0;
-
-   /* if lhs is -infinite, then we do not compute a maximal activity, so we set it to  infinity
-    * if rhs is  infinite, then we do not compute a minimal activity, so we set it to -infinity
-    */
-   *minlinactivity = SCIPisInfinity(scip,  consdata->rhs) ? -intervalinfty : 0.0;
-   *maxlinactivity = SCIPisInfinity(scip, -consdata->lhs) ?  intervalinfty : 0.0;
-
-   if( consdata->nlinvars == 0 )
-      return;
-   
-   prevroundmode = SCIPintervalGetRoundingMode();
-
-   if( !SCIPisInfinity(scip,  consdata->rhs) )
-   {
-      /* compute minimal activity only if there is a finite right hand side */
-      SCIPintervalSetRoundingModeDownwards();
-
-      for( i = 0; i < consdata->nlinvars; ++i )
-      {
-         if( consdata->lincoefs[i] >= 0.0 )
-         {
-            bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
-            if( SCIPisInfinity(scip, -bnd) )
-            {
-               ++*minactivityinf;
-               continue;
-            }
-            assert(!SCIPisInfinity(scip, bnd)); /* do not like variables that are fixed at +infinity */
-         }
-         else
-         {
-            bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
-            if( SCIPisInfinity(scip,  bnd) )
-            {
-               ++*minactivityinf;
-               continue;
-            }
-            assert(!SCIPisInfinity(scip, -bnd)); /* do not like variables that are fixed at -infinity */
-         }
-         *minlinactivity += consdata->lincoefs[i] * bnd;
-      }
-   }
-
-   if( !SCIPisInfinity(scip, -consdata->lhs) )
-   {
-      /* compute maximal activity only if there is a finite left hand side */
-      SCIPintervalSetRoundingModeUpwards();
-
-      for( i = 0; i < consdata->nlinvars; ++i )
-      {
-         if( consdata->lincoefs[i] >= 0.0 )
-         {
-            bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
-            if( SCIPisInfinity(scip,  bnd) )
-            {
-               ++*maxactivityinf;
-               continue;
-            }
-            assert(!SCIPisInfinity(scip, -bnd)); /* do not like variables that are fixed at -infinity */
-         }
-         else
-         {
-            bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
-            if( SCIPisInfinity(scip, -bnd) )
-            {
-               ++*maxactivityinf;
-               continue;
-            }
-            assert(!SCIPisInfinity(scip, bnd)); /* do not like variables that are fixed at +infinity */
-         }
-         *maxlinactivity += consdata->lincoefs[i] * bnd;
-      }
-   }
-
-   SCIPintervalSetRoundingMode(prevroundmode);
-}
-
 /** computes the minimal and maximal activity for the quadratic part in a constraint data
  *  only sums up terms that contribute finite values
  *  gives the number of terms that contribute infinite values
@@ -5782,8 +5783,12 @@ void propagateBoundsGetQuadActivity(
    
    for( i = 0; i < consdata->nquadvars; ++i )
    {
+      /* there should be no quadratic variables fixed at -/+ infinity due to our locks */
+      assert(!SCIPisInfinity(scip,  SCIPvarGetLbLocal(consdata->quadvarterms[i].var)));
+      assert(!SCIPisInfinity(scip, -SCIPvarGetUbLocal(consdata->quadvarterms[i].var)));
+
       SCIPintervalSetBounds(&quadactcontr[i], -intervalinfty, intervalinfty);
-      
+
       SCIPintervalSetBounds(&xrng,
          -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var))),
           infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var))));
@@ -5852,22 +5857,20 @@ void propagateBoundsGetQuadActivity(
 
 /** propagates bounds on a quadratic constraint */
 static
-SCIP_RETCODE propagateBounds(
+SCIP_RETCODE propagateBoundsCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint to process */
    SCIP_RESULT*          result,             /**< pointer to store the result of the propagation call */
-   int*                  nchgbds             /**< buffer where to add the the number of changed bounds */
-  )
+   int*                  nchgbds,            /**< buffer where to add the the number of changed bounds */
+   SCIP_Bool*            redundant           /**< buffer where to store whether constraint has been found to be redundant */
+   )
 {  /*lint --e{666}*/
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_INTERVAL      consbounds;    /* lower and upper bounds of constraint */
+   SCIP_INTERVAL      consactivity;  /* activity of linear plus quadratic part */
    SCIP_Real          intervalinfty; /* infinity used for interval computation */  
-   int                linminactinf;  /* number of linear variables that contribute -infinity to minimal activity of linear term */
-   int                linmaxactinf;  /* number of linear variables that contribute +infinity to maximal activity of linear term */
-   SCIP_Real          minlinactivity; /* lower bound on finite activities of linear part */
-   SCIP_Real          maxlinactivity; /* upper bound on finite activities of linear part */
    SCIP_Real          minquadactivity; /* lower bound on finite activities of quadratic part */
    SCIP_Real          maxquadactivity; /* upper bound on finite activities of quadratic part */
    int                quadminactinf; /* number of quadratic variables that contribute -infinity to minimal activity of quadratic term */
@@ -5886,6 +5889,7 @@ SCIP_RETCODE propagateBounds(
    assert(cons != NULL);
    assert(result != NULL);
    assert(nchgbds != NULL);
+   assert(redundant != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5894,28 +5898,10 @@ SCIP_RETCODE propagateBounds(
    assert(consdata != NULL);
 
    *result = SCIP_DIDNOTRUN;
+   *redundant = FALSE;
 
    if( consdata->ispropagated )
       return SCIP_OKAY;
-   
-   SCIPdebugMessage("start domain propagation for constraint <%s>\n", SCIPconsGetName(cons));
-
-#ifndef NDEBUG
-   /* assert that there are no variables that are fixed to -/+ infinity */
-   for( i = 0; i < consdata->nlinvars; ++i )
-   {
-      assert(!SCIPisInfinity(scip,  SCIPvarGetLbLocal(consdata->linvars[i])));
-      assert(!SCIPisInfinity(scip, -SCIPvarGetUbLocal(consdata->linvars[i])));
-   }
-
-   for( i = 0; i < consdata->nquadvars; ++i )
-   {
-      assert(!SCIPisInfinity(scip,  SCIPvarGetLbLocal(consdata->quadvarterms[i].var)));
-      assert(!SCIPisInfinity(scip, -SCIPvarGetUbLocal(consdata->quadvarterms[i].var)));
-   }
-#endif
-
-   consdata->ispropagated = TRUE;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -5925,9 +5911,17 @@ SCIP_RETCODE propagateBounds(
    quadminactinf = -1;
    quadmaxactinf = -1;
 
-   /* compute activity of linear term */
-   propagateBoundsGetLinearActivity(scip, consdata, intervalinfty, &minlinactivity, &maxlinactivity, &linminactinf, &linmaxactinf);
-   
+   SCIPdebugMessage("start domain propagation for constraint <%s>\n", SCIPconsGetName(cons));
+
+   consdata->ispropagated = TRUE;
+
+   /* make sure we have activity of linear term */
+   consdataUpdateLinearActivity(scip, consdata, intervalinfty);
+   assert(consdata->minlinactivity != SCIP_INVALID);
+   assert(consdata->maxlinactivity != SCIP_INVALID);
+   assert(consdata->minlinactivityinf >= 0);
+   assert(consdata->maxlinactivityinf >= 0);
+
    /* compute activity of quad term part, if not up to date
     * in that case, we also collect the contribution of each quad var term for later */
    if( SCIPintervalIsEmpty(consdata->quadactivitybounds) )
@@ -5937,38 +5931,60 @@ SCIP_RETCODE propagateBounds(
       assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
    }
 
+   /* extend constraint bounds by feasibility tolerance to avoid some numerical difficulties */
    SCIPintervalSetBounds(&consbounds,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -consdata->lhs),
-       infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs));
-   
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -consdata->lhs+SCIPfeastol(scip)),
+       infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs+SCIPfeastol(scip)));
+
+   /* check redundancy and infeasibility */
+   SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity, consdata->maxlinactivityinf > 0 ? intervalinfty : consdata->maxlinactivity);
+   SCIPintervalAdd(intervalinfty, &consactivity, consactivity, consdata->quadactivitybounds);
+   if( SCIPintervalIsSubsetEQ(intervalinfty, consactivity, consbounds) )
+   {
+      SCIPdebugMessage("found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
+         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
+      *redundant = TRUE;
+      goto propagateBoundsConsCleanup;
+   }
+
+   if( SCIPintervalAreDisjoint(consbounds, consactivity) )
+   {
+      SCIPdebugMessage("found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %g\n",
+         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
+         MAX(consdata->lhs - SCIPintervalGetSup(consactivity), SCIPintervalGetInf(consactivity) - consdata->rhs));
+      *result = SCIP_CUTOFF;
+      goto propagateBoundsConsCleanup;
+   }
+
    /* propagate linear part \in rhs = consbounds - quadactivity (use the one from consdata, since that includes infinities) */
    SCIPintervalSub(intervalinfty, &rhs, consbounds, consdata->quadactivitybounds);
    if( !SCIPintervalIsEntire(intervalinfty, rhs) )
    {
       SCIP_Real coef;
-      
+
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          coef = consdata->lincoefs[i];
          var  = consdata->linvars[i];
-         
+
          /* skip fixed variables ??????????? */
          if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
-         
+
          if( coef > 0.0 )
          {
             if( SCIPintervalGetSup(rhs) < intervalinfty )
             {
+               assert(consdata->minlinactivity != SCIP_INVALID);
                /* try to tighten the upper bound on var x */
-               if( linminactinf == 0 )
+               if( consdata->minlinactivityinf == 0 )
                {
                   assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-                  /* tighten upper bound on x to (rhs.sup - (minlinactivity - coef * xlb)) / coef */ 
+                  /* tighten upper bound on x to (rhs.sup - (minlinactivity - coef * xlb)) / coef */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeUpwards();
                   bnd  = SCIPintervalGetSup(rhs);
-                  bnd -= minlinactivity;
+                  bnd -= consdata->minlinactivity;
                   bnd += coef * SCIPvarGetLbLocal(var);
                   bnd /= coef;
                   SCIPintervalSetRoundingMode(roundmode);
@@ -5976,14 +5992,14 @@ SCIP_RETCODE propagateBounds(
                   if( *result == SCIP_CUTOFF )
                      break;
                }
-               else if( linminactinf == 1 && SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+               else if( consdata->minlinactivityinf == 1 && SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
                {
                   /* x was the variable that made the minimal linear activity equal -infinity, so
                    * we tighten upper bound on x to just (rhs.sup - minlinactivity) / coef */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeUpwards();
                   bnd  = SCIPintervalGetSup(rhs);
-                  bnd -= minlinactivity;
+                  bnd -= consdata->minlinactivity;
                   bnd /= coef;
                   SCIPintervalSetRoundingMode(roundmode);
                   SCIP_CALL( propagateBoundsTightenVarUb(scip, cons, intervalinfty, var, bnd, result, nchgbds) );
@@ -5992,18 +6008,19 @@ SCIP_RETCODE propagateBounds(
                }
                /* otherwise the minimal activity is -infinity and x is not solely responsible for this */
             }
-            
+
             if( SCIPintervalGetInf(rhs) > -intervalinfty )
             {
+               assert(consdata->maxlinactivity != SCIP_INVALID);
                /* try to tighten the lower bound on var x */
-               if( linmaxactinf == 0 )
+               if( consdata->maxlinactivityinf == 0 )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-                  /* tighten lower bound on x to (rhs.inf - (maxlinactivity - coef * xub)) / coef */ 
+                  /* tighten lower bound on x to (rhs.inf - (maxlinactivity - coef * xub)) / coef */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeDownwards();
                   bnd  = SCIPintervalGetInf(rhs);
-                  bnd -= maxlinactivity;
+                  bnd -= consdata->maxlinactivity;
                   bnd += coef * SCIPvarGetUbLocal(var);
                   bnd /= coef;
                   SCIPintervalSetRoundingMode(roundmode);
@@ -6011,14 +6028,14 @@ SCIP_RETCODE propagateBounds(
                   if( *result == SCIP_CUTOFF )
                      break;
                }
-               else if( linmaxactinf == 1 && SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+               else if( consdata->maxlinactivityinf == 1 && SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
                {
                   /* x was the variable that made the maximal linear activity equal infinity, so
                    * we tighten upper bound on x to just (rhs.inf - maxlinactivity) / coef */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeDownwards();
                   bnd  = SCIPintervalGetInf(rhs);
-                  bnd -= maxlinactivity;
+                  bnd -= consdata->maxlinactivity;
                   bnd /= coef;
                   SCIPintervalSetRoundingMode(roundmode);
                   SCIP_CALL( propagateBoundsTightenVarLb(scip, cons, intervalinfty, var, bnd, result, nchgbds) );
@@ -6033,14 +6050,15 @@ SCIP_RETCODE propagateBounds(
             assert(coef < 0.0 );
             if( SCIPintervalGetInf(rhs) > -intervalinfty )
             {
+               assert(consdata->maxlinactivity != SCIP_INVALID);
                /* try to tighten the upper bound on var x */
-               if( linmaxactinf == 0 )
+               if( consdata->maxlinactivityinf == 0 )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetLbLocal(var)));
                   /* compute upper bound on x to (maxlinactivity - coef * xlb) - rhs.inf / (-coef) */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeUpwards();
-                  bnd  = maxlinactivity;
+                  bnd  = consdata->maxlinactivity;
                   bnd += (-coef) * SCIPvarGetLbLocal(var);
                   bnd -= SCIPintervalGetInf(rhs);
                   bnd /= (-coef);
@@ -6049,13 +6067,13 @@ SCIP_RETCODE propagateBounds(
                   if( *result == SCIP_CUTOFF )
                      break;
                }
-               else if( linmaxactinf == 1 && SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+               else if( consdata->maxlinactivityinf == 1 && SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
                {
                   /* x was the variable that made the maximal linear activity equal infinity, so
                    * we tighten upper bound on x to just (maxlinactivity - rhs.inf) / (-coef) */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeUpwards();
-                  bnd  = maxlinactivity;
+                  bnd  = consdata->maxlinactivity;
                   bnd -= SCIPintervalGetInf(rhs);
                   bnd /= (-coef);
                   SCIPintervalSetRoundingMode(roundmode);
@@ -6065,17 +6083,18 @@ SCIP_RETCODE propagateBounds(
                }
                /* otherwise the maximal activity is infinity and x is not solely responsible for this */
             }
-            
+
             if( SCIPintervalGetSup(rhs) < intervalinfty )
             {
+               assert(consdata->minlinactivity != SCIP_INVALID);
                /* try to tighten the lower bound on var x */
-               if( linminactinf == 0 )
+               if( consdata->minlinactivityinf == 0 )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
                   /* compute lower bound on x to (minlinactivity - coef * xub) - rhs.sup / (-coef) */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeDownwards();
-                  bnd  = minlinactivity;
+                  bnd  = consdata->minlinactivity;
                   bnd += (-coef) * SCIPvarGetUbLocal(var);
                   bnd -= SCIPintervalGetSup(rhs);
                   bnd /= (-coef);
@@ -6084,13 +6103,13 @@ SCIP_RETCODE propagateBounds(
                   if( *result == SCIP_CUTOFF )
                      break;
                }
-               else if( linminactinf == 1 && SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+               else if( consdata->minlinactivityinf == 1 && SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
                {
                   /* x was the variable that made the maximal linear activity equal -infinity, so
                    * we tighten lower bound on x to just (minlinactivity - rhs.sup) / (-coef) */
                   roundmode = SCIPintervalGetRoundingMode();
                   SCIPintervalSetRoundingModeDownwards();
-                  bnd  = minlinactivity;
+                  bnd  = consdata->minlinactivity;
                   bnd -= SCIPintervalGetSup(rhs);
                   bnd /= (-coef);
                   SCIPintervalSetRoundingMode(roundmode);
@@ -6103,22 +6122,15 @@ SCIP_RETCODE propagateBounds(
          }
       }
       if( *result == SCIP_CUTOFF )
-      {
-         SCIPfreeBufferArrayNull(scip, &quadactcontr);
-         return SCIP_OKAY;
-      }
+         goto propagateBoundsConsCleanup;
    }
 
-   /* if we found some reduction, recompute activity of linear part */
-   if( *result == SCIP_REDUCEDDOM )
-   {
-      propagateBoundsGetLinearActivity(scip, consdata, intervalinfty, &minlinactivity, &maxlinactivity, &linminactinf, &linmaxactinf);
-   }
-   
    /* propagate quadratic part \in rhs = consbounds - linactivity */
+   assert(consdata->minlinactivity != SCIP_INVALID);
+   assert(consdata->maxlinactivity != SCIP_INVALID);
    SCIPintervalSetBounds(&tmp,
-      linminactinf > 0 ? -intervalinfty : minlinactivity,
-      linmaxactinf > 0 ?  intervalinfty : maxlinactivity);
+      consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity,
+      consdata->maxlinactivityinf > 0 ?  intervalinfty : consdata->maxlinactivity);
    SCIPintervalSub(intervalinfty, &rhs, consbounds, tmp);
    if( !SCIPintervalIsEntire(intervalinfty, rhs) )
    {
@@ -6126,12 +6138,12 @@ SCIP_RETCODE propagateBounds(
       {
          /* quadratic part is just a*x^2+b*x -> a common case that we treat directly */
          SCIP_INTERVAL lincoef;    /* linear coefficient of quadratic equation */
-         
+
          assert(consdata->nbilinterms == 0);
-         
+
          var = consdata->quadvarterms[0].var;
          SCIPintervalSet(&lincoef, consdata->quadvarterms[0].lincoef);
-         
+
          /* propagate a*x^2 + b*x \in rhs */
          SCIP_CALL( propagateBoundsQuadVar(scip, cons, intervalinfty, var, consdata->quadvarterms[0].sqrcoef, lincoef, rhs, result, nchgbds) );
       }
@@ -6140,9 +6152,9 @@ SCIP_RETCODE propagateBounds(
          /* quadratic part is just ax*x^2+bx*x + ay*y^2+by*y + c*xy -> a common case that we treat directly */
          assert(consdata->bilinterms[0].var1 == consdata->quadvarterms[0].var || consdata->bilinterms[0].var1 == consdata->quadvarterms[1].var);
          assert(consdata->bilinterms[0].var2 == consdata->quadvarterms[0].var || consdata->bilinterms[0].var2 == consdata->quadvarterms[1].var);
-         
+
          /* find domain reductions for x from a_x x^2 + b_x x + a_y y^2 + b_y y + c x y \in rhs */
-         SCIP_CALL( propagateBoundsBilinearTerm(scip, cons, intervalinfty, 
+         SCIP_CALL( propagateBoundsBilinearTerm(scip, cons, intervalinfty,
             consdata->quadvarterms[0].var, consdata->quadvarterms[0].sqrcoef, consdata->quadvarterms[0].lincoef,
             consdata->quadvarterms[1].var, consdata->quadvarterms[1].sqrcoef, consdata->quadvarterms[1].lincoef,
             consdata->bilinterms[0].coef,
@@ -6150,23 +6162,25 @@ SCIP_RETCODE propagateBounds(
          if( *result != SCIP_CUTOFF )
          {
             /* find domain reductions for y from a_x x^2 + b_x x + a_y y^2 + b_y y + c x y \in rhs */
-            SCIP_CALL( propagateBoundsBilinearTerm(scip, cons, intervalinfty, 
+            SCIP_CALL( propagateBoundsBilinearTerm(scip, cons, intervalinfty,
                consdata->quadvarterms[1].var, consdata->quadvarterms[1].sqrcoef, consdata->quadvarterms[1].lincoef,
                consdata->quadvarterms[0].var, consdata->quadvarterms[0].sqrcoef, consdata->quadvarterms[0].lincoef,
                consdata->bilinterms[0].coef,
                rhs, result, nchgbds) );
          }
       }
-      else 
+      else
       {
          /* general case */
 
-         /* compute "advanced" information on quad var term activities, if not done in the beginning */
-         if( quadactcontr == NULL )
+         /* compute "advanced" information on quad var term activities, if not uptodate */
+         if( quadminactinf == -1  )
          {
+            assert(quadactcontr == NULL);
             SCIP_CALL( SCIPallocBufferArray(scip, &quadactcontr, consdata->nquadvars) );
             propagateBoundsGetQuadActivity(scip, consdata, intervalinfty, &minquadactivity, &maxquadactivity, &quadminactinf, &quadmaxactinf, quadactcontr);
          }
+         assert(quadactcontr != NULL);
          assert(quadminactinf >= 0);
          assert(quadmaxactinf >= 0);
 
@@ -6184,14 +6198,14 @@ SCIP_RETCODE propagateBounds(
                var = consdata->quadvarterms[i].var;
 
                /* skip fixed variables ??????????? */
-               if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+               if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
                   continue;
 
                /* compute rhs2 such that we can propagate quadvarterm(x_i) \in rhs2 */
 
                /* setup rhs2.sup = rhs.sup - (quadactivity.inf - quadactcontr[i].inf), if everything were finite
                 * if only quadactcontr[i].inf is infinite (i.e., the other i are all finite), we just get rhs2.sup = rhs.sup
-                * otherwise we get rhs2.sup = infinity */ 
+                * otherwise we get rhs2.sup = infinity */
                if( SCIPintervalGetSup(rhs) < intervalinfty )
                {
                   if( quadminactinf == 0 || (quadminactinf == 1 && SCIPintervalGetInf(quadactcontr[i]) <= -intervalinfty) )
@@ -6262,9 +6276,9 @@ SCIP_RETCODE propagateBounds(
                   if( consdata->bilinterms[k].var1 != var )
                      continue; /* this term does not contribute to the activity of quad var term i */
 
-                  SCIPintervalSetBounds(&tmp, 
+                  SCIPintervalSetBounds(&tmp,
                      -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),
-                      infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
+                     infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
                   SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
                   SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
                }
@@ -6272,14 +6286,74 @@ SCIP_RETCODE propagateBounds(
                /* deduce domain reductions for x_i */
                SCIP_CALL( propagateBoundsQuadVar(scip, cons, intervalinfty, var, consdata->quadvarterms[i].sqrcoef, lincoef, rhs2, result, nchgbds) );
                if( *result == SCIP_CUTOFF )
-                  break;
+                  goto propagateBoundsConsCleanup;
             }
          }
       }
    }
 
+propagateBoundsConsCleanup:
    SCIPfreeBufferArrayNull(scip, &quadactcontr);
    
+   return SCIP_OKAY;
+}
+
+/** calls domain propagation for a set of constraints */
+static
+SCIP_RETCODE propagateBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the propagation calls */
+   int*                  nchgbds             /**< buffer where to add the the number of changed bounds */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_RESULT propresult;
+   SCIP_Bool   redundant;
+   int         c;
+   int         roundnr;
+   SCIP_Bool   success;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(result != NULL);
+   assert(nchgbds != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+   roundnr = 0;
+
+   do
+   {
+      success = FALSE;
+
+      SCIPdebugMessage("starting domain propagation round %d for %d constraints\n", roundnr, nconss);
+
+      for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+      {
+         assert(conss != NULL);
+         if( !SCIPconsIsEnabled(conss[c]) )
+            continue;
+
+         SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
+         if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
+         {
+            *result = propresult;
+            success = TRUE;
+         }
+         if( redundant )
+         {
+            SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
+         }
+      }
+
+   } while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
+
    return SCIP_OKAY;
 }
 
@@ -6619,8 +6693,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
       assert(consdata->linvarsmerged);
       assert(consdata->quadvarsmerged);
       assert(consdata->bilinmerged);
-      
-      /* @todo should check if constraint is linear now and upgrade */
 
 #ifndef NDEBUG
       for( i = 0; i < consdata->nlinvars; ++i )
@@ -6927,7 +6999,6 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
 {  
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
-   SCIP_Bool          intervalfeas;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6943,14 +7014,6 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   /* @todo does it makes sense to call this here, or should consprop and consenfo be enough? */
-   SCIP_CALL( areIntervalFeasible(scip, conss, nconss, maxviolcon, &intervalfeas) );
-   if( !intervalfeas )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
    if( *result == SCIP_SEPARATED )
       return SCIP_OKAY;
@@ -6964,7 +7027,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
-   SCIP_Bool          intervalfeas;
    
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6981,14 +7043,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   /* @todo does it makes sense to call this here, or should consprop and consenfo be enough? */
-   SCIP_CALL( areIntervalFeasible(scip, conss, nconss, maxviolcon, &intervalfeas) );
-   if( !intervalfeas )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
 
    return SCIP_OKAY;
@@ -7002,8 +7056,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    SCIP_CONSDATA*     consdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Real          maxviol;
-   SCIP_Bool          intervalfeas;
+   SCIP_RESULT        propresult;
    SCIP_RESULT        separateresult;
+   int                nchgbds;
    int                nnotify;
    SCIP_Real          sepaefficacy;
    SCIP_Real          minefficacy;
@@ -7024,19 +7079,21 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    
    *result = SCIP_INFEASIBLE;
 
-   SCIP_CALL( areIntervalFeasible(scip, conss, nconss, maxviolcon, &intervalfeas) );
-   if( !intervalfeas )
-   {
-       *result = SCIP_CUTOFF;
-       return SCIP_OKAY;
-   }
-   
    consdata = SCIPconsGetData(maxviolcon);
    assert(consdata != NULL);
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(!SCIPisFeasZero(scip, maxviol));
 
    SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcon));
+
+   /* run domain propagation */
+   nchgbds = 0;
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
+   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
+   {
+      *result = propresult;
+      return SCIP_OKAY;
+   }
 
    /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
     * however, if the maximal violation is very small, also the best cut efficacy cannot be large
@@ -7102,9 +7159,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_CONSDATA*     consdata;
-   SCIP_Bool          intervalfeas;
+   SCIP_RESULT        propresult;
    SCIP_VAR*          var;
-   int                c, i;
+   int                c;
+   int                i;
+   int                nchgbds;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -7122,13 +7181,16 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
    
    *result = SCIP_INFEASIBLE;
 
-   SCIP_CALL( areIntervalFeasible(scip, conss, nconss, maxviolcon, &intervalfeas) );
-   if( !intervalfeas )
+   SCIPdebugMessage("enfops with max violation in cons <%s>\n", SCIPconsGetName(maxviolcon));
+
+   /* run domain propagation */
+   nchgbds = 0;
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &nchgbds) );
+   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
-       *result = SCIP_CUTOFF;
-       return SCIP_OKAY;
+      *result = propresult;
+      return SCIP_OKAY;
    }
-   
 
    /* we are not feasible and we cannot proof that the whole node is infeasible
     * -> collect all variables in violated constraints for branching
@@ -7169,26 +7231,15 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
 static
 SCIP_DECL_CONSPROP(consPropQuadratic)
 {
-   SCIP_RESULT propresult;
-   int         c;
-   int         nchgbds = 0;
+   int         nchgbds;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    assert(result != NULL);
 
-   *result = SCIP_DIDNOTFIND;
-
-   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
-   {
-      assert(conss != NULL);
-      SCIP_CALL( propagateBounds(scip, conshdlr, conss[c], &propresult, &nchgbds) );
-      if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
-         *result = propresult;
-      if( c >= nusefulconss && *result != SCIP_DIDNOTFIND )
-         break;
-   }
+   nchgbds = 0;
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, result, &nchgbds) );
 
    return SCIP_OKAY;
 }
@@ -7351,7 +7402,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       if( !consdata->ispropagated )
       { /* try domain propagation if there were bound changes or constraint has changed (in which case, processVarEvents may have set ispropagated to false) */
          SCIP_RESULT propresult;
-         SCIP_CALL( propagateBounds(scip, conshdlr, conss[c], &propresult, nchgbds) );
+         SCIP_Bool redundant;
+         SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
          switch( propresult )
          {
             case SCIP_REDUCEDDOM:
@@ -7363,6 +7415,16 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                return SCIP_OKAY;
             default:
                assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
+         }
+
+         /* delete constraint if found redundant by bound tightening */
+         if( redundant )
+         {
+            SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            ++*ndelconss;
+            *result = SCIP_SUCCESS;
+            continue;
          }
 
          if( propresult != SCIP_REDUCEDDOM && !SCIPisInfinity(scip, conshdlrdata->defaultbound) )
@@ -8249,6 +8311,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",
          "whether to disaggregate quadratic parts that decompose into a sum of non-overlapping quadratic terms",
          &conshdlrdata->disaggregate, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproprounds",
+         "limit on number of propagation rounds for a single constraint within one round of SCIP propagation",
+         &conshdlrdata->maxproprounds, FALSE, 1, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,

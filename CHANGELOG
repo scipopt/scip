@@ -56,6 +56,7 @@ parameters:
 - added parameter <constraints/indicator/maxConditionAltLP> to enable a quality check for the solution of the alternative LP 
 - moved parameters for pseudoboolean constraints from opb-reader to pseudoboolean constraint handler
 - new parameter for pseudoboolean constraints <constraints/pseudoboolean/decompose>, to transform pseudoboolean constraints into linear- and and-constraints
+- added parameter <constraints/quadratic/maxproprounds> to limit the number of propagations rounds for quadratic constraints within one propagation round of SCIP
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
