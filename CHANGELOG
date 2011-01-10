@@ -34,7 +34,6 @@ fixed bugs:
 - fixed assertion in tree.c w.r.t. node estimation
 - fixed bug in presolving of cons_logicor.c: adding variable implications can lead to further reductions; added call to applyFixings()
 - fixed bug in cons_linear.c while sorting the eventdatas during the binary variable sorting for propagation
-- fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the subproblem
 - fixed bug in reader_fzn.c w.r.t. cumulative constraints
 
 plugins:
@@ -81,6 +80,9 @@ features:
 
 SCIP version 2.0.2
 ==================
+
+fixed bugs:
+- fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the subproblem
 
 
 SCIP version 2.0.1
