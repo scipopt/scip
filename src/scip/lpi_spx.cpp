@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.123.2.2 2011/01/02 11:19:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.123.2.3 2011/01/11 19:10:34 bzfberth Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -2804,7 +2804,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
+   return FALSE;
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */

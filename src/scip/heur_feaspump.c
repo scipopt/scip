@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.70.2.2 2011/01/02 11:19:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.70.2.3 2011/01/11 19:10:34 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -280,7 +280,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    /* memory allociation */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );  
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
-   
+
    /* set initial left and right hand sides of local branching constraint */
    lhs = 0.0;
    rhs = neighborhoodsize;
@@ -549,9 +549,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP_Bool lperror; 
    SCIP_Bool* cycles;           /* are there short cycles */
 
-#ifdef NDEBUG
-   SCIP_RETCODE retstat;
-#endif
+   SCIP_RETCODE retcode;
    
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -930,20 +928,23 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       iterlimit = MAX((int)nlpiterationsleft, MINLPITER);
       SCIPdebugMessage(" -> solve LP with iteration limit %d\n", iterlimit);
 
+      retcode = SCIPsolveDiveLP(scip, iterlimit, &lperror);
+      lpsolstat = SCIPgetLPSolstat(scip);
+
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      retstat = SCIPsolveDiveLP(scip, iterlimit, &lperror);
-      if( retstat != SCIP_OKAY )
+      if( retcode != SCIP_OKAY )
       { 
-         SCIPwarningMessage("Error while solving LP in Feaspump heuristic; LP solve terminated with code <%d>\n",retstat);
-      }
-#else
-      SCIP_CALL( SCIPsolveDiveLP(scip, iterlimit, &lperror) );
+#ifndef NDEBUG
+         if( lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {        
+            SCIP_CALL( retcode );     
+         }
 #endif
-
-      lpsolstat = SCIPgetLPSolstat(scip);
+         SCIPwarningMessage("Error while solving LP in Feaspump heuristic; LP solve terminated with code <%d>\n", retcode);
+         SCIPwarningMessage("This does not affect the remaining solution procedure --> continue\n");
+      }
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
@@ -1109,11 +1110,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
           * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
           */
 #ifdef NDEBUG
-         retstat = SCIPsolve(probingscip);
-         if( retstat != SCIP_OKAY )
+         retcode = SCIPsolve(probingscip);
+         if( retcode != SCIP_OKAY )
          { 
             SCIPwarningMessage("Error while solving subMIP in stage 3 of feasibility pump heuristic; subSCIP terminated with code <%d>\n",
-               retstat);
+               retcode);
          }
 #else
          SCIP_CALL( SCIPsolve(probingscip) );
@@ -1127,6 +1128,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
             /* for copying a solution we need an explicit mapping */
             SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
+
             for( i = 0; i < nvars; i++ )
                subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
             
