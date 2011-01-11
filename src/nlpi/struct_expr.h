@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expr.h,v 1.2 2010/10/29 02:28:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expr.h,v 1.3 2011/01/11 17:24:15 bzfviger Exp $"
 
 /**@file   struct_expr.h
  * @brief  data definitions for expressions and expression trees
@@ -29,10 +29,6 @@
 #include "nlpi/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
 #include "blockmemshell/memory.h"
-
-#ifndef __SCIP_TYPE_VAR_H__
-#define SCIP_VAR void
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,7 +54,7 @@ struct SCIP_ExprTree {
    BMS_BLKMEM*           blkmem;           /**< block memory data structure */
    SCIP_EXPR*            root;             /**< root node expression of expression tree */
    int                   nvars;            /**< number of variables */
-   SCIP_VAR**            vars;             /**< mapping of variable indices to SCIP variables, may be NULL, e.g., if not used in context of SCIP */
+   void**                vars;             /**< mapping of variable indices to user variables, may be NULL */
    int                   nparams;          /**< number of parameters (modifiable constants) in expression */
    SCIP_Real*            params;           /**< current values for parameters, or NULL if no parameters */
    SCIP_EXPRINTDATA*     interpreterdata;  /**< data of expression interpreter (evaluator) */

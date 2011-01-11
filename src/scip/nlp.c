@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.37 2011/01/02 11:10:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.38 2011/01/11 17:24:15 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -97,7 +97,7 @@ SCIP_VAR** SCIPexprtreeGetVars(
 {
    assert(tree != NULL);
 
-   return tree->vars;
+   return (SCIP_VAR**)tree->vars;
 }
 
 /** stores array of variables in expression tree */
@@ -120,11 +120,11 @@ SCIP_RETCODE SCIPexprtreeSetVars(
    if( tree->vars != NULL )
    {
       SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, nvars) );
-      BMScopyMemoryArray(tree->vars, vars, nvars);
+      BMScopyMemoryArray(tree->vars, (void**)vars, nvars);
    }
    else
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(tree->blkmem, &tree->vars, vars, nvars) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(tree->blkmem, &tree->vars, (void**)vars, nvars) );
    }
 
    tree->nvars = nvars;
@@ -148,14 +148,14 @@ SCIP_RETCODE SCIPexprtreeAddVars(
 
    if( tree->nvars == 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(tree->blkmem, &tree->vars, vars, nvars) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(tree->blkmem, &tree->vars, (void**)vars, nvars) );
       tree->nvars = nvars;
       return SCIP_OKAY;
    }
 
    /* append vars to tree->vars array */
    SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, tree->nvars + nvars) );
-   BMScopyMemoryArray(&tree->vars[tree->nvars], vars, nvars);  /*lint !e866*/
+   BMScopyMemoryArray(&tree->vars[tree->nvars], (void**)vars, nvars);  /*lint !e866*/
    tree->nvars += nvars;
 
    return SCIP_OKAY;
@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPexprtreePrintWithNames(
 
    SCIP_ALLOC( BMSallocMemoryArray(&varnames, tree->nvars) );
    for( i = 0; i < tree->nvars; ++i )
-      varnames[i] = SCIPvarGetName(tree->vars[i]);
+      varnames[i] = SCIPvarGetName((SCIP_VAR*)tree->vars[i]);
 
    SCIPexprtreePrint(tree, file, varnames, NULL);
 
@@ -205,7 +205,7 @@ int SCIPexprtreeFindVar(
    assert(var  != NULL);
 
    for( i = 0; i < tree->nvars; ++i )
-      if( tree->vars[i] == var )
+      if( (SCIP_VAR*)tree->vars[i] == var )
          return i;
 
    return -1;
@@ -246,8 +246,8 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, SCIPcalcHashtableSize(5 * tree->nvars)) );
    for( i = 0; i < tree->nvars; ++i )
    {
-      SCIP_CALL( SCIPhashmapInsert(varhash, (void*)tree->vars[i], (void*)(size_t)i) );
-      if( !SCIPvarIsActive(tree->vars[i]) )
+      SCIP_CALL( SCIPhashmapInsert(varhash, tree->vars[i], (void*)(size_t)i) );
+      if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
          havefixedvar = TRUE;
    }
 
@@ -270,9 +270,9 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    /* construct for each nonactive variable an expression that replaces this variable in the tree */
    for( i = 0; i < nvarsold; ++i )
    {
-      var = tree->vars[i];
+      var = (SCIP_VAR*)tree->vars[i];
 
-      if( SCIPvarIsActive(tree->vars[i]) )
+      if( SCIPvarIsActive(var) )
          continue;
 
       scalar   = 1.0;
@@ -301,7 +301,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
             idx = (int)(size_t) SCIPhashmapGetImage(varhash, (void*)var);
          }
          assert(idx >= 0 && idx < tree->nvars);
-         assert(tree->vars[idx] == var);
+         assert((SCIP_VAR*)tree->vars[idx] == var);
 
          SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_VARIDX, idx) );
          if( scalar != 1.0 )
@@ -362,7 +362,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
                idx = (int)(size_t) SCIPhashmapGetImage(varhash, (void*)mvar);
             }
             assert(idx >= 0 && idx < tree->nvars);
-            assert(tree->vars[idx] == mvar);
+            assert((SCIP_VAR*)tree->vars[idx] == mvar);
 
             assert(nsummands < summandssize);
             SCIP_CALL( SCIPexprCreate(tree->blkmem, &summands[nsummands], SCIP_EXPR_VARIDX, idx) );
@@ -421,10 +421,10 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    offset = 0;
    for( i = 0; i < tree->nvars; ++i )
    {
-      if( SCIPvarIsActive(tree->vars[i]) || i >= nvarsold )
+      if( SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || i >= nvarsold )
       {
          /* a new variable need to be either active or multiaggregated */
-         assert(i < nvarsold || SCIPvarIsActive(tree->vars[i]) || SCIPvarGetStatus(tree->vars[i]) == SCIP_VARSTATUS_MULTAGGR);
+         assert(i < nvarsold || SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || SCIPvarGetStatus((SCIP_VAR*)tree->vars[i]) == SCIP_VARSTATUS_MULTAGGR);
          newpos[i] = i - offset;
       }
       else
@@ -446,12 +446,12 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
       if( newpos[i] == -1 )
       {
          /* variable was removed */
-         assert(!SCIPvarIsActive(tree->vars[i]));
+         assert(!SCIPvarIsActive((SCIP_VAR*)tree->vars[i]));
          continue;
       }
       /* variable is moved */
       tree->vars[newpos[i]] = tree->vars[i];
-      if( !SCIPvarIsActive(tree->vars[i]) )
+      if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
          havefixedvar = TRUE;
    }
 
