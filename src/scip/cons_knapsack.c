@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.218 2011/01/02 11:10:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.219 2011/01/11 17:53:17 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -84,6 +84,7 @@
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
                                          *   comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+
 
 /*
  * Data structures
@@ -344,22 +345,28 @@ void sortItems(
 static
 SCIP_RETCODE calcCliquepartition(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Bool             normalclique,       /** should normal cliquepartition be created */
+   SCIP_Bool             negatedclique       /** should negated cliquepartition be created */
    )
 {
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || (consdata->cliquepartition != NULL && consdata->negcliquepartition != NULL));
 
-   if( !consdata->cliquepartitioned )
+   if( normalclique && !consdata->cliquepartitioned )
    {
       SCIP_CALL( SCIPcalcCliquePartition(scip, consdata->vars, consdata->nvars, consdata->cliquepartition, &consdata->ncliques) );
       consdata->cliquepartitioned = TRUE;
    }
-   if( !consdata->negcliquepartitioned )
+
+   if( negatedclique && !consdata->negcliquepartitioned )
    {
       SCIP_CALL( SCIPcalcNegatedCliquePartition(scip, consdata->vars, consdata->nvars, consdata->negcliquepartition, &consdata->nnegcliques) );
       consdata->negcliquepartitioned = TRUE;
    }
+
+   assert(!consdata->cliquepartitioned || consdata->ncliques <= consdata->nvars);
+   assert(!consdata->negcliquepartitioned || consdata->nnegcliques <= consdata->nvars);
 
    return SCIP_OKAY;
 }
@@ -667,10 +674,7 @@ void consdataChgWeight(
    consdata->propagated = FALSE;
    consdata->presolved = FALSE;
    consdata->sorted = FALSE;
-#if 0
-   consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a weight was changed */
-   consdata->negcliquepartitioned = FALSE; /* recalculate the negated clique partition after a weight was changed */
-#endif
+
    /* recalculate cliques extraction after a weight was increased */
    if( oldweight < newweight )
    {
@@ -3553,7 +3557,8 @@ SCIP_RETCODE delCoefPos(
    consdata->propagated = FALSE;
    consdata->presolved = FALSE;
    consdata->sorted = FALSE;
-#if 1 /* try to use old clique partitions */
+
+   /* try to use old clique partitions */
    if( consdata->cliquepartitioned )
    {
       assert(consdata->cliquepartition != NULL);
@@ -3586,18 +3591,30 @@ SCIP_RETCODE delCoefPos(
                      consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
                      break;
                   }
+               /* if we reached the end in the for loop, it means we have deleted the last element of the clique with
+                * the biggest index, so decrease the number of cliques 
+                */
+               if( i == consdata->nvars )
+                  --(consdata->ncliques);
             }
             /* if the old clique number was smaller than the new one we have to check the front for an element with 
              * cliquenumber minus 1 */
             else if( oldcliqenum < consdata->cliquepartition[pos] )
             {
                cliquenumbefore = consdata->cliquepartition[pos] - 1;
-               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] <= cliquenumbefore; --i )
-                  if( cliquenumbefore == consdata->cliquepartition[i] )
-                     break;
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] < cliquenumbefore; --i );
 
                if( i < cliquenumbefore )
                   consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
+            }
+            /* if we deleted the last element of the clique with biggest index, we have to decrease the clique number */
+            else if( pos == consdata->nvars - 1)
+            {
+               cliquenumbefore = consdata->cliquepartition[pos];
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->cliquepartition[i] < cliquenumbefore; --i );
+
+               if( i < cliquenumbefore )
+                  --(consdata->ncliques);
             }
             /* if the old clique number is equal to the new one the cliquepartition should be ok */
 	 }
@@ -3626,8 +3643,8 @@ SCIP_RETCODE delCoefPos(
 	    int i;
 	    int cliquenumbefore;
 
-            /* if the old clique number was greater than the new one we have to check that before a bigger cliquenumber 
-             * occurs the same as the old one is still in the negcliquepartition */
+            /* if the old clique number was greater than the new one we have to check that, before a bigger cliquenumber
+             * occurs, the same as the old one occurs */
             if( oldcliqenum > consdata->negcliquepartition[pos] )
             {
                for( i = 0; i < consdata->nvars; ++i )
@@ -3638,29 +3655,38 @@ SCIP_RETCODE delCoefPos(
                      consdata->negcliquepartitioned = FALSE; /* recalculate the negated clique partition after a coefficient was removed */
                      break;
                   }
+               /* if we reached the end in the for loop, it means we have deleted the last element of the clique with
+                * the biggest index, so decrease the number of negeated cliques 
+                */
+               if( i == consdata->nvars )
+                  --(consdata->nnegcliques);
             }
             /* if the old clique number was smaller than the new one we have to check the front for an element with 
              * cliquenumber minus 1 */
             else if( oldcliqenum < consdata->negcliquepartition[pos] )
             {
                cliquenumbefore = consdata->negcliquepartition[pos] - 1;
-               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] <= cliquenumbefore; --i )
-                  if( cliquenumbefore == consdata->negcliquepartition[i] )
-                     break;
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i );
 
                if( i < cliquenumbefore )
                   consdata->negcliquepartitioned = FALSE; /* recalculate the negated clique partition after a coefficient was removed */
             }
-            /* if the old clique number is equal to the new one the cliquepartition should be ok */
+            /* if we deleted the last element of the clique with biggest index, we have to decrease the clique number */
+            else if( pos == consdata->nvars - 1)
+            {
+               cliquenumbefore = consdata->negcliquepartition[pos];
+               for( i = pos - 1; i >= 0 && i >= cliquenumbefore && consdata->negcliquepartition[i] < cliquenumbefore; --i );
+
+               if( i < cliquenumbefore )
+                  --(consdata->nnegcliques);
+            }
+            /* otherwise if the old clique number is equal to the new one the cliquepartition should be ok */
 	 }
       }
       else
-	 --(consdata->ncliques);
+	 --(consdata->nnegcliques);
    }
-#else
-   consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a coefficient was removed */
-   consdata->negcliquepartitioned = FALSE; /* recalculate the negated clique partition after a coefficient was removed */
-#endif
+
    --(consdata->nvars);
 
    return SCIP_OKAY;
@@ -3972,6 +3998,131 @@ SCIP_RETCODE dualPresolving(
    return SCIP_OKAY;
 }
 
+/** sort the variables and weights w.r.t. the clique partition; thereby ensure the current order of the variables when a
+ *  weight of one variable is greater or equal another weight and both variables are in the same cliques */
+static
+SCIP_RETCODE stableSort(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< knapsack constraint data */
+   SCIP_VAR**            vars,               /**< array for sorted variables */
+   SCIP_Longint*         weights,            /**< array for sorted weights */
+   int*                  cliquestartposs,    /**< starting position array for each clique */
+   SCIP_Bool             usenegatedclique    /**< should negated or normal clique partition be used */
+   )
+{ 
+   SCIP_VAR** origvars;
+   int norigvars;
+   SCIP_Longint* origweights;
+   int* cliquepartition;
+   int ncliques;
+
+   SCIP_VAR*** varpointers;
+   SCIP_Longint** weightpointers;
+   int* cliquecount;
+
+   int nextpos;
+   int c;
+   int v;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   assert(vars != NULL);
+   assert(weights != NULL);
+   assert(cliquestartposs != NULL);
+
+   origweights = consdata->weights;
+   origvars = consdata->vars;
+   norigvars = consdata->nvars;
+
+   assert(origvars != NULL || norigvars == 0);
+   assert(origweights != NULL || norigvars == 0);
+
+   if( norigvars == 0 )
+      return SCIP_OKAY;
+
+   if( usenegatedclique )
+   {
+      assert(consdata->negcliquepartitioned);
+         
+      cliquepartition = consdata->negcliquepartition;
+      ncliques = consdata->nnegcliques;
+   }
+   else
+   {
+      assert(consdata->cliquepartitioned);
+
+      cliquepartition = consdata->cliquepartition;
+      ncliques = consdata->ncliques;
+   }
+
+   assert(cliquepartition != NULL);
+   assert(ncliques > 0);
+
+   /* we first count all clique items and alloc temporary memory for a bucket sort */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquecount, ncliques) );
+   BMSclearMemoryArray(cliquecount, ncliques);
+      
+   /* first we count for each clique the number of elements */
+   for( v = norigvars - 1; v >= 0; --v )
+   {
+      assert(0 <= cliquepartition[v] && cliquepartition[v] < ncliques);
+      ++(cliquecount[cliquepartition[v]]);
+   }
+
+   /*@todo: maybe it is better to put largest cliques up front */
+
+#ifndef NDEBUG
+   BMSclearMemoryArray(vars, norigvars);
+   BMSclearMemoryArray(weights, norigvars);
+#endif
+   SCIP_CALL( SCIPallocBufferArray(scip, &varpointers, ncliques) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weightpointers, ncliques) );
+   
+   nextpos = 0;
+   /* now we initialize all start pointers for each clique, so they will be ordered */
+   for( c = 0; c < ncliques; ++c )
+   {
+      /* to reach the goal that all variables of each clique will be standing next to each other we will initialize the
+       * starting pointers for each clique by adding the number of each clique to the last clique starting pointer
+       * e.g. clique1 has 4 elements and clique2 has 3 elements the the starting pointer for clique1 will be the pointer
+       *      to vars[0], the starting pointer to clique2 will be the pointer to vars[4] and to clique3 it will be 
+       *      vars[7]
+       *
+       */
+      varpointers[c] = (SCIP_VAR**) (vars + nextpos);
+      cliquestartposs[c] = nextpos;
+      weightpointers[c] = (SCIP_Longint*) (weights + nextpos);
+      assert(cliquecount[c] > 0);
+      nextpos += cliquecount[c];
+      assert(nextpos > 0);
+   }
+   assert(nextpos == norigvars);
+   cliquestartposs[c] = nextpos;
+
+   /* now we copy all variable and weights to the right order */
+   for( v = 0; v < norigvars; ++v )
+   {
+      *(varpointers[cliquepartition[v]]) = origvars[v];
+      ++(varpointers[cliquepartition[v]]);
+      *(weightpointers[cliquepartition[v]]) = origweights[v];
+      ++(weightpointers[cliquepartition[v]]);
+   }
+#ifndef NDEBUG
+   for( v = 0; v < norigvars; ++v )
+   {
+      assert(vars[v] != NULL);
+      assert(weights[v] > 0);
+   }
+#endif
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &weightpointers);        
+   SCIPfreeBufferArray(scip, &varpointers);
+   SCIPfreeBufferArray(scip, &cliquecount);
+
+   return SCIP_OKAY;
+}
+
 /** propagation method for knapsack constraints */
 static
 SCIP_RETCODE propagateCons(
@@ -3987,16 +4138,19 @@ SCIP_RETCODE propagateCons(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
    SCIP_Longint zerosweightsum;
-   SCIP_Longint onesweightsum;
-
-   SCIP_Longint* maxweights;
    SCIP_Longint* secondmaxweights;
    SCIP_Longint minweightsum;
-   SCIP_Bool* secondmaxweightsinitialized;
 
    int nvars;
-   int cliquenum;
    int i;
+   int nnegcliques;
+
+   SCIP_VAR** myvars;
+   SCIP_Longint* myweights;
+   int* cliquestartposs;
+   SCIP_Longint localminweightsum;
+   SCIP_Bool foundmax;
+   int c;
 
    assert(cutoff != NULL);
    assert(redundant != NULL);
@@ -4023,17 +4177,18 @@ SCIP_RETCODE propagateCons(
    /* we need a merged constraint cause without it the negated clique information could be invalid */
    usenegatedclique = usenegatedclique && consdata->merged;
    secondmaxweights = NULL;
+   nnegcliques = -1;
 
    do
    {
-      /* store the sum of weights of fixed-to-one variables locally, because the constraint data's sum can
-       * change due to event processing
-       */
-      onesweightsum = consdata->onesweightsum;
       zerosweightsum = 0;
       nvars = consdata->nvars;
       
       minweightsum = 0;
+      localminweightsum = 0;
+
+      /* make sure, the items are sorted by non-increasing weight */
+      sortItems(consdata);
       
       /* (1) compute the minimum weight of the knapsack constraint using negated clique information;
        *     a negated clique means, that at most one of the clique variables can be zero
@@ -4044,73 +4199,104 @@ SCIP_RETCODE propagateCons(
        */
       if( usenegatedclique && nvars > 0 )
       {
-         int nnegcliques;
-
-         /* make sure, the items are sorted by non-increasing weight */
-         sortItems(consdata);
-
          /* compute clique partitions */
-         SCIP_CALL( calcCliquepartition(scip, consdata) );
+         SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
          nnegcliques = consdata->nnegcliques;
 
+         /* if we have no real negated cliques we can stop here */
+         if( nnegcliques == nvars )
+            break;
+
          /* allocate temporary memory and initialize it */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &myvars, consdata->vars, nvars) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &myweights, consdata->weights, nvars) ) ;  
+         SCIP_CALL( SCIPallocBufferArray(scip, &cliquestartposs, nnegcliques + 1) );
          SCIP_CALL( SCIPallocBufferArray(scip, &secondmaxweights, nnegcliques) );
          BMSclearMemoryArray(secondmaxweights, nnegcliques);
-         SCIP_CALL( SCIPallocBufferArray(scip, &secondmaxweightsinitialized, nnegcliques) );
-         BMSclearMemoryArray(secondmaxweightsinitialized, nnegcliques);
-         SCIP_CALL( SCIPallocBufferArray(scip, &maxweights, nnegcliques) );
-         BMSclearMemoryArray(maxweights, nnegcliques);
+
+         /* resort variables to avoid quadratic algorithm later on */
+         SCIP_CALL( stableSort(scip, consdata, myvars, myweights, cliquestartposs, TRUE) );
+
+         c = 0;
+         foundmax = FALSE;
          
          for( i = 0; i < nvars; ++i )
          {
             /* ignore variables of the negated clique which are fixed to one since these are counted in
              * consdata->onesweightsum 
              */
-            if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 )
-            {
-               cliquenum = consdata->negcliquepartition[i];
-               assert(cliquenum >= 0 && cliquenum < nnegcliques);
-	       assert(consdata->weights[i] > 0); 
 
-               if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
+            /* if there are only one variable negated cliques left we can stop */
+            if( nnegcliques - c == nvars - i )
+            {
+               minweightsum += localminweightsum;
+               localminweightsum = 0;
+               break;
+            }
+
+            /* for summing up the minimum active weights due to cliques we have to omit the biggest weights of each
+             * clique, we can only skip this clique if this variables is not fixed to zero, otherwise we have to fix all
+             * other clique variables to one 
+             */
+            if( cliquestartposs[c] == i )
+            {
+	       assert(myweights[i] > 0);
+               ++c;
+               minweightsum += localminweightsum;
+               localminweightsum = 0;
+               foundmax = TRUE;
+
+               if( SCIPvarGetLbLocal(myvars[i]) > 0.5 )
+                  foundmax = FALSE;
+               
+               if( SCIPvarGetUbLocal(myvars[i]) > 0.5 )
+                  continue;
+            }
+
+            if( SCIPvarGetLbLocal(myvars[i]) < 0.5 )
+            {
+	       assert(myweights[i] > 0);
+
+               if( SCIPvarGetUbLocal(myvars[i]) > 0.5 )
                {
-                  if( maxweights[cliquenum] != 0 )
-		  {
-		     assert(consdata->weights[i] <= maxweights[cliquenum]); 
-                     minweightsum += consdata->weights[i];
-                     if( !secondmaxweightsinitialized[cliquenum] )
-                     {
-                        secondmaxweightsinitialized[cliquenum] = TRUE;
-                        secondmaxweights[cliquenum] = consdata->weights[i];
-                     }
-                  }
-                  /* first weight of this clique, have to be the biggest one(cause the weights are sorted) */
-                  else 
+                  assert(myweights[i] <= myweights[cliquestartposs[c - 1]]); 
+
+                  if( !foundmax )
                   {
-                     maxweights[cliquenum] = consdata->weights[i];
-                     secondmaxweights[cliquenum] = 0;
+                     foundmax = TRUE;
+
+                     /* overwrite cliquestartpos to the position of the first unfixed variable in this clique */
+                     cliquestartposs[c - 1] = i;
+
+                     continue;
                   }
+                  /* memorize second max weight for each clique */
+                  if( secondmaxweights[c - 1] == 0 )
+                     secondmaxweights[c - 1] = myweights[i];
+
+                  localminweightsum += myweights[i];
                }
+               /* we found a fixed variable to zero so all other variables in this negated clique have to be fixed to one */
                else
                {
 		  int v;
 		  /* fix all other variables of the negated clique to 1 */
-		  for( v = nvars - 1; v >= 0; --v )
+		  for( v = cliquestartposs[c - 1]; v < cliquestartposs[c]; ++v )
 		  {
-                     if( v != i && SCIPvarGetLbLocal(consdata->vars[v]) < 0.5 && consdata->negcliquepartition[v] == cliquenum )
+                     if( v != i && SCIPvarGetLbLocal(myvars[v]) < 0.5 )
                      {
-                        SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(consdata->vars[v]));
-                        SCIP_CALL( SCIPinferBinvarCons(scip, consdata->vars[v], TRUE, cons, SCIPvarGetIndex(consdata->vars[i]), &infeasible, &tightened) );
+                        SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[v]));
+                        SCIP_CALL( SCIPinferBinvarCons(scip, myvars[v], TRUE, cons, SCIPvarGetIndex(myvars[i]), &infeasible, &tightened) );
                         if( infeasible )
                         {
-                           assert( SCIPvarGetUbLocal(consdata->vars[v]) < 0.5 );
+                           assert( SCIPvarGetUbLocal(myvars[v]) < 0.5 );
                           
                            /* initialize the conflict analysis */
                            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
                            /* add the two variables which are fixed to zero within a negated clique */
-                           SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
-                           SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+                           SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
+                           SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v]) );
 
                            /* start the conflict analysis */
                            SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -4126,72 +4312,84 @@ SCIP_RETCODE propagateCons(
 		  if( *cutoff )
 		     break;
 
-                  /* due to all variables in this negated clique should be fixed now, we set the maxweight for the clique to 0 */
-                  maxweights[cliquenum] = 0;
+                  /* reset local minweightsum for clique because all fixed to one variables are now counted in consdata->onesweightsum */
+                  localminweightsum = 0;
+                  /* we can jump to the end of this clique */
+                  i = cliquestartposs[c] - 1;
                }
             }
          }
-         
+         /* add last clique minweightsum */
+         minweightsum += localminweightsum;
+
          SCIPdebugMessage("knapsack constraint <%s> has minimum weigth sum of <%"SCIP_LONGINT_FORMAT">\n", 
             SCIPconsGetName(cons), minweightsum + consdata->onesweightsum );
 
          /* check, if weights of fixed variables don't exceeds knapsack capacity */
-         if( !(*cutoff) && consdata->capacity >= minweightsum + onesweightsum )
+         if( !(*cutoff) && consdata->capacity >= minweightsum + consdata->onesweightsum )
          {
+            SCIP_Longint maxweight;
+
+            c = 0;
+            maxweight = -1;
+
             /* check for each negated clique if we can conclude a fixing of a variable to one */
             for( i = 0; i < nvars; ++i )
             {
-               cliquenum = consdata->negcliquepartition[i];
-               assert(cliquenum >= 0 && cliquenum < nvars);
+               /* if there are only one variable negated cliques left we can stop */
+               if( nnegcliques - c == nvars - i )
+                  break;
+
+               /* we cannot fix the biggest weight */
+               if( cliquestartposs[c] == i )
+               {
+                  maxweight = myweights[i];
+                  ++c;
+                  continue;
+               }
 
                /* only check variables of negated cliques for which no variable is locally fixed */
-               if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 && maxweights[cliquenum] != -1 )
+               if( SCIPvarGetLbLocal(myvars[i]) < 0.5 && SCIPvarGetUbLocal(myvars[i]) > 0.5  )
                {		 
+                  assert(maxweight >= myweights[i]);
+
                   /* if for i \in C (a negated clique) minweightsum - wi + W(C) > capacity => xi = 1 
                    * since replacing i with the element of maximal weight leads to infeasibility */
-                  if( onesweightsum + minweightsum - consdata->weights[i] + maxweights[cliquenum] > consdata->capacity  )
+                  if( consdata->onesweightsum + minweightsum - myweights[i] + maxweight > consdata->capacity  )
                   {
-                     assert(SCIPvarGetUbLocal(consdata->vars[i]) > 0.5);
-                     SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(consdata->vars[i]));
-                     SCIP_CALL( SCIPinferBinvarCons(scip, consdata->vars[i], TRUE, cons, -i, &infeasible, &tightened) );
+                     SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[i]));
+                     SCIP_CALL( SCIPinferBinvarCons(scip, myvars[i], TRUE, cons, -i, &infeasible, &tightened) );
                      assert(!infeasible);
                      assert(tightened);
                      ++(*nfixedvars);
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
+                     /* update minweightsum because now the variable is fixed to one and its weight is counted by
+                      * consdata->onesweightsum 
+                      */
+                     minweightsum -= myweights[i];
+                     assert(minweightsum >= 0);
                   }
                }
             }
          }
-         
-         SCIPfreeBufferArray(scip, &maxweights);
-         
-         assert(consdata->onesweightsum >= onesweightsum);  
-         if( !(*cutoff) && consdata->onesweightsum > onesweightsum )
-         {
-            SCIPfreeBufferArray(scip, &secondmaxweightsinitialized);
-            SCIPfreeBufferArray(scip, &secondmaxweights);
-	    continue;
-         }
+
 	 if( *cutoff )
-	 {
-            SCIPfreeBufferArray(scip, &secondmaxweightsinitialized);
+         {
             SCIPfreeBufferArray(scip, &secondmaxweights);
-	    return SCIP_OKAY;
-	 }
+            SCIPfreeBufferArray(scip, &cliquestartposs);
+            SCIPfreeBufferArray(scip, &myweights);
+            SCIPfreeBufferArray(scip, &myvars);
+
+            return SCIP_OKAY;
+         }
       }
 
-      /* make sure, the items are sorted by non-increasing weight */
-      sortItems(consdata);
-      
-      /* we may have lost our cliques due to sorting */
-      if( !consdata->cliquepartitioned || !consdata->negcliquepartitioned )
-         continue;
-
       /* check, if weights of fixed variables already exceed knapsack capacity */
-      if( consdata->capacity < minweightsum + onesweightsum )
+      if( consdata->capacity < minweightsum + consdata->onesweightsum )
       {
          SCIPdebugMessage(" -> cutoff - fixed weight: %"SCIP_LONGINT_FORMAT", capacity: %"SCIP_LONGINT_FORMAT", minimum weight sum: %"SCIP_LONGINT_FORMAT" \n", 
-            onesweightsum, consdata->capacity, minweightsum);
+            consdata->onesweightsum, consdata->capacity, minweightsum);
             
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
@@ -4218,54 +4416,113 @@ SCIP_RETCODE propagateCons(
 
          if( usenegatedclique && nvars > 0 )
          {
-            SCIPfreeBufferArray(scip, &secondmaxweightsinitialized);
             SCIPfreeBufferArray(scip, &secondmaxweights);
+            SCIPfreeBufferArray(scip, &cliquestartposs);
+            SCIPfreeBufferArray(scip, &myweights);
+            SCIPfreeBufferArray(scip, &myvars);
          }
          return SCIP_OKAY;
       }
 
-      /* fix all variables to zero, that don't fit into the knapsack anymore */
-      for( i = 0; i < nvars; ++i )
+      assert(consdata->negcliquepartitioned || minweightsum == 0);
+      
+      /* if the sum of all weights of fixed variables to one plus the minimalweightsum (minimal weight which is already
+       * used in this knapsack due to negated cliques) plus any weight minus the second largest weight in this cliques
+       * exceeds the capacity the variables have to be fixed to zero (these variables should only be variables in the
+       * cliques which have maxweights)
+       */
+      if( usenegatedclique && nvars > 0 )
       {
-         assert(consdata->negcliquepartitioned || minweightsum == 0);
-         assert(usenegatedclique ? (secondmaxweights != NULL) : TRUE);
+         SCIP_VAR* var;
 
-         /* 1. if all weights of fixed variables to one plus any weight exceeds the capacity the variables have to be
-          *    fixed to zero
-          *
-          * 2. if the sum of all weights of fixed variables to one plus the minimalweightsum(minimal weight which is
-          *    already used in this knapsack due to negated cliques) plus any weight minus the second largest weight in
-          *    this cliques exceeds the capacity the variables have to be fixed to zero (these variables should only be
-          *    variables in the cliques which have maxweights)
-          */
-         if( (consdata->onesweightsum + consdata->weights[i] > consdata->capacity) 
-            || (usenegatedclique && consdata->onesweightsum + minweightsum + consdata->weights[i] 
-                  - secondmaxweights[consdata->negcliquepartition[i]] > consdata->capacity) )
+         assert(nnegcliques == consdata->nnegcliques);
+         for( c = 0; c < nnegcliques; ++c )
          {
-            if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 )
+            if( consdata->onesweightsum + minweightsum + myweights[cliquestartposs[c]] - secondmaxweights[c] > consdata->capacity )
             {
-               if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
+               assert(myweights[cliquestartposs[c]] >= secondmaxweights[c]);
+                              
+               var = myvars[cliquestartposs[c]];
+               if( SCIPvarGetLbLocal(var) < 0.5 && SCIPvarGetUbLocal(var) > 0.5 )
                {
-                  SCIPdebugMessage(" -> fixing variable <%s> to 0\n", SCIPvarGetName(consdata->vars[i]));
+                  SCIPdebugMessage(" -> fixing variable <%s> to 0\n", SCIPvarGetName(var));
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
-                  SCIP_CALL( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, i, &infeasible, &tightened) );
+                  SCIP_CALL( SCIPinferBinvarCons(scip, var, FALSE, cons, cliquestartposs[c], &infeasible, &tightened) );
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
                }
+            }
+         }
+
+         SCIPfreeBufferArray(scip, &secondmaxweights);
+         SCIPfreeBufferArray(scip, &cliquestartposs);
+         SCIPfreeBufferArray(scip, &myweights);
+         SCIPfreeBufferArray(scip, &myvars);
+      }
+   } while( FALSE );
+
+   /* check, if weights of fixed variables already exceed knapsack capacity, this can only happen if 'usenegatedclique'
+    * is FALSE, or 'nnegcliques == nvars', otherwise the stronger condition above should have led to a cutoff 
+    */
+   if( consdata->capacity < consdata->onesweightsum )
+   {
+      SCIPdebugMessage(" -> cutoff - fixed weight: %"SCIP_LONGINT_FORMAT", capacity: %"SCIP_LONGINT_FORMAT" \n", 
+         consdata->onesweightsum, consdata->capacity);
+            
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      *cutoff = TRUE;
+
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+         /* start conflict analysis with the fixed-to-one variables, add only as many as need to exceed the capacity */
+         SCIP_Longint weight;
+
+         weight = 0;
+
+         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         for( i = 0; i < nvars && weight <= consdata->capacity; i++ )
+         {
+            if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+            {
+               SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+               weight += consdata->weights[i];
+            }
+         }
+         
+         SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+      }
+
+      return SCIP_OKAY;
+   }
+      
+   /* fix all variables to zero, that don't fit into the knapsack anymore */
+   for( i = 0; i < nvars; ++i )
+   {
+      /* if all weights of fixed variables to one plus any weight exceeds the capacity the variables have to be fixed
+       * to zero
+       */
+      if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 )
+      {
+         if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
+         {
+            if( consdata->onesweightsum + consdata->weights[i] > consdata->capacity )
+            {
+               SCIPdebugMessage(" -> fixing variable <%s> to 0\n", SCIPvarGetName(consdata->vars[i]));
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               SCIP_CALL( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, i, &infeasible, &tightened) );
+               assert(!infeasible);
+               assert(tightened);
+               (*nfixedvars)++;
                zerosweightsum += consdata->weights[i];
             }
          }
-      }
-      assert(consdata->onesweightsum >= onesweightsum);  
-
-      if( usenegatedclique && nvars > 0 )
-      {
-         SCIPfreeBufferArray(scip, &secondmaxweightsinitialized);
-         SCIPfreeBufferArray(scip, &secondmaxweights);
+         else
+            zerosweightsum += consdata->weights[i];
       }
    }
-   while( consdata->onesweightsum > onesweightsum );
+
+   assert(consdata->onesweightsum + zerosweightsum <= consdata->weightsum);
 
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
    if( !SCIPconsIsModifiable(cons) && consdata->weightsum - zerosweightsum <= consdata->capacity )
@@ -4288,7 +4545,7 @@ SCIP_RETCODE propagateCons(
  *  Afterwards we use the normalize method to further simplify the inequality. 
  *  @todo if all variables with odd weights are in one (not negated!) clique we can decrease all weights and the capacity
  *        by 1 but we need to enforce this clique information (because we maybe loose this information by reducing 
- *        the weights) by creating a setppc constraint
+ *        the weights) by creating a setppc constraint, but this seems to be expensive?!
  */
 static
 SCIP_RETCODE simplifyInequalities(
@@ -5137,7 +5394,7 @@ SCIP_RETCODE tightenWeightsLift(
 
    /* calculate the clique partition and the maximal sum of weights using the clique information */
    assert(consdata->sorted);
-   SCIP_CALL( calcCliquepartition(scip, consdata) );
+   SCIP_CALL( calcCliquepartition(scip, consdata, TRUE, FALSE) );
 
    assert(conshdlrdata->bools3size > 0);
 
@@ -5471,7 +5728,7 @@ SCIP_RETCODE tightenWeights(
          sortItems(consdata);
 
          /* calculate a clique partition */
-         SCIP_CALL( calcCliquepartition(scip, consdata) );
+         SCIP_CALL( calcCliquepartition(scip, consdata, TRUE, FALSE) );
 
          /* if there are only single element cliques, rule (2) is equivalent to rule (1) */
          if( consdata->cliquepartition[consdata->nvars - 1] == consdata->nvars - 1 )
@@ -5755,7 +6012,7 @@ SCIP_RETCODE addNegatedCliques(
    assert(consdata->merged);
 
    /* calculate a clique partition */
-   SCIP_CALL( calcCliquepartition(scip, consdata) );
+   SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
    nnegcliques = consdata->nnegcliques;
    
    /* get temporary memory */
@@ -5956,7 +6213,7 @@ SCIP_RETCODE addCliques(
    assert(consdata->merged);
 
    /* calculate a clique partition */
-   SCIP_CALL( calcCliquepartition(scip, consdata) );
+   SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
    nnegcliques = consdata->nnegcliques;
 
    /* get temporary memory */
@@ -6471,7 +6728,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          v = consdata0->nvars - 1;
       }
 
-      SCIPdebugMessage("preprocess linear constraint pair <%s> and <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+      SCIPdebugMessage("preprocess knapsack constraint pair <%s> and <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
 
       /* check consdata0 against consdata1:
        * 1. if all variables var_i of cons1 are in cons0 and for each of these variables (consdata0->weights[i] / quotient) >= consdata1->weights[i] 
