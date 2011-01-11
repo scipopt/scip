@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.149 2011/01/10 20:35:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.150 2011/01/11 12:01:54 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -842,7 +842,11 @@ void consdataUpdateLinearActivity(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   if (consdata->minlinactivity != SCIP_INVALID && consdata->maxlinactivity != SCIP_INVALID)
+   /* if variable bounds are not strictly consistent, then the activity update methods may yield inconsistent activities
+    * in this case, we also recompute the activities
+    */
+   if( consdata->minlinactivity != SCIP_INVALID && consdata->maxlinactivity != SCIP_INVALID &&
+       (consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0 || consdata->minlinactivity <= consdata->maxlinactivity) )
    {
       /* activities should be uptodate */
       assert(consdata->minlinactivityinf >= 0);
@@ -878,7 +882,7 @@ void consdataUpdateLinearActivity(
          assert(consdata->lineventdata[i] != NULL);
          if( consdata->lincoefs[i] >= 0.0 )
          {
-            bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
+            bnd = MIN(SCIPvarGetLbLocal(consdata->linvars[i]), SCIPvarGetUbLocal(consdata->linvars[i]));
             if( SCIPisInfinity(scip, -bnd) )
             {
                ++consdata->minlinactivityinf;
@@ -888,7 +892,7 @@ void consdataUpdateLinearActivity(
          }
          else
          {
-            bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
+            bnd = MAX(SCIPvarGetLbLocal(consdata->linvars[i]), SCIPvarGetUbLocal(consdata->linvars[i]));
             if( SCIPisInfinity(scip,  bnd) )
             {
                ++consdata->minlinactivityinf;
@@ -910,7 +914,7 @@ void consdataUpdateLinearActivity(
          assert(consdata->lineventdata[i] != NULL);
          if( consdata->lincoefs[i] >= 0.0 )
          {
-            bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
+            bnd = MAX(SCIPvarGetLbLocal(consdata->linvars[i]), SCIPvarGetUbLocal(consdata->linvars[i]));
             if( SCIPisInfinity(scip,  bnd) )
             {
                ++consdata->maxlinactivityinf;
@@ -920,7 +924,7 @@ void consdataUpdateLinearActivity(
          }
          else
          {
-            bnd = SCIPvarGetLbLocal(consdata->linvars[i]);
+            bnd = MIN(SCIPvarGetLbLocal(consdata->linvars[i]), SCIPvarGetUbLocal(consdata->linvars[i]));
             if( SCIPisInfinity(scip, -bnd) )
             {
                ++consdata->maxlinactivityinf;
@@ -933,6 +937,8 @@ void consdataUpdateLinearActivity(
    }
 
    SCIPintervalSetRoundingMode(prevroundmode);
+
+   assert(consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0 || consdata->minlinactivity <= consdata->maxlinactivity);
 }
 
 /** update the linear activities after a change in the lower bound of a variable */
@@ -5683,7 +5689,7 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
       return SCIP_OKAY;
   
    /* try to find domain reductions for x */
-   SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y));
+   SCIPintervalSetBounds(&varbnds, MIN(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y)), MAX(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y)));
 
    /* put ysqrcoef*y^2 + ylincoef * y into rhs */
    if( SCIPintervalGetSup(rhs) >= intervalinfty )
@@ -5915,7 +5921,7 @@ SCIP_RETCODE propagateBoundsCons(
 
    consdata->ispropagated = TRUE;
 
-   /* make sure we have activity of linear term */
+   /* make sure we have activity of linear term and that they are consistent */
    consdataUpdateLinearActivity(scip, consdata, intervalinfty);
    assert(consdata->minlinactivity != SCIP_INVALID);
    assert(consdata->maxlinactivity != SCIP_INVALID);
@@ -6128,6 +6134,8 @@ SCIP_RETCODE propagateBoundsCons(
    /* propagate quadratic part \in rhs = consbounds - linactivity */
    assert(consdata->minlinactivity != SCIP_INVALID);
    assert(consdata->maxlinactivity != SCIP_INVALID);
+   consdataUpdateLinearActivity(scip, consdata, intervalinfty); /* make sure, activities of linear part did not become invalid by above boundchanges, if any */
+   assert(consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0 || consdata->minlinactivity <= consdata->maxlinactivity);
    SCIPintervalSetBounds(&tmp,
       consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity,
       consdata->maxlinactivityinf > 0 ?  intervalinfty : consdata->maxlinactivity);
