@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.57.2.1 2011/01/02 11:19:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.57.2.2 2011/01/11 10:32:55 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @ingroup PRIMALHEURISTICS
@@ -217,7 +217,10 @@ SCIP_RETCODE createNewSol(
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert( nvars == SCIPgetNOrigVars(subscip) );  
+   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
+    */ 
+   assert(nvars <= SCIPgetNOrigVars(subscip));  
  
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
