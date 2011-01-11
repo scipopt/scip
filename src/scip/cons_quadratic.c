@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.151 2011/01/11 13:29:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.152 2011/01/11 16:59:57 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -959,6 +959,8 @@ void consdataUpdateLinearActivityLbChange(
    assert(!SCIPisInfinity(scip, oldbnd));
    assert(!SCIPisInfinity(scip, newbnd));
 
+   /* @todo since we check the linear activity for consistency later anyway, we may skip changing the rounding mode here */
+
    /* assume lhs <= a*x + y <= rhs, then the following boundchanges can be deduced:
     * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
     * a < 0:  y <= rhs - a*ub(x),  y >= lhs - a*lb(x)
@@ -1059,6 +1061,8 @@ void consdataUpdateLinearActivityUbChange(
    /* we can't deal with upper bounds at -infinity */
    assert(!SCIPisInfinity(scip, -oldbnd));
    assert(!SCIPisInfinity(scip, -newbnd));
+
+   /* @todo since we check the linear activity for consistency later anyway, we may skip changing the rounding mode here */
 
    /* assume lhs <= a*x + y <= rhs, then the following boundchanges can be deduced:
     * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
@@ -5127,6 +5131,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    /* we are only interested in solution coming from the NLP or RENS heuristic (is that good?) */
    if( SCIPsolGetHeur(sol) == NULL )
       return SCIP_OKAY;
+   /* @todo maybe we should just linearize in every solution that is found, or in every improving solution? */
    if( SCIPsolGetHeur(sol) != conshdlrdata->subnlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensheur)
       return SCIP_OKAY;
 
