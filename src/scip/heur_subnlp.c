@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_subnlp.c,v 1.54 2011/01/07 10:54:26 bzfviger Exp $"
 
 /**@file    heur_subnlp.c
  * @ingroup PRIMALHEURISTICS
@@ -854,7 +853,11 @@ SCIP_RETCODE createSolFromNLP(
    nlp = SCIPgetNLP(heurdata->subscip);
    assert(nlp != NULL);
    
-   assert(heurdata->nsubvars == SCIPgetNOrigVars(heurdata->subscip));
+   /* subSCIP may have more variable than the number of active (transformed) variables in the main SCIP
+    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
+    */ 
+   assert(heurdata->nsubvars <= SCIPgetNOrigVars(heurdata->subscip));
+
    for( i = 0; i < heurdata->nsubvars; ++i )
    {
       var = heurdata->var_subscip2scip[i];

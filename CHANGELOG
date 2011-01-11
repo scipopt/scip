@@ -84,7 +84,7 @@ SCIP version 2.0.2
 
 fixed bugs:
 - fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the subproblem
-
+- fixed wrong assert in plugins that use SCIPcopy()
 
 SCIP version 2.0.1
 ==================
