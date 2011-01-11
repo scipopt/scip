@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.322 2011/01/03 17:40:01 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1602,6 +1601,7 @@ SCIP_RETCODE priceAndCutLoop(
                SCIPdebugMessage(" -> global lower bound changed from %g to %g: propagate domains again\n",
                                 oldlowerbound, newlowerbound);
                SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
+               assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
                /* if we found something, solve LP again */
                if( !lp->flushed && !(*cutoff) )
@@ -1631,6 +1631,8 @@ SCIP_RETCODE priceAndCutLoop(
             SCIP_Bool foundsol;
 
             SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
+            assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
             *lperror = *lperror || lp->resolvelperror;
          }
       }
@@ -1711,6 +1713,7 @@ SCIP_RETCODE priceAndCutLoop(
             /* apply a separation round */
             SCIP_CALL( separationRoundLP(blkmem, set, stat, eventqueue, eventfilter, prob, lp, sepastore, actdepth, bounddist, delayedsepa,
                   &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
+            assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
             /* if we are close to the stall round limit, also call the delayed separators */
             if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved
@@ -1719,6 +1722,7 @@ SCIP_RETCODE priceAndCutLoop(
             {
                SCIP_CALL( separationRoundLP(blkmem, set, stat, eventqueue, eventfilter, prob, lp, sepastore, actdepth, bounddist, delayedsepa,
                      &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
+               assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
          }
          assert(*cutoff || *lperror || SCIPlpIsSolved(lp));
@@ -1753,6 +1757,7 @@ SCIP_RETCODE priceAndCutLoop(
                {
                   /* propagate domains */
                   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
+                  assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
@@ -2630,6 +2635,8 @@ SCIP_RETCODE solveNode(
          oldnboundchgs = stat->nboundchgs;
 
          SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, fullpropagation, cutoff) );
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
          fullpropagation = FALSE;
 
          /* check, if the path was cutoff */
@@ -2651,6 +2658,7 @@ SCIP_RETCODE solveNode(
       {
          /* if the heuristics find a new incumbent solution, propagate again */
          SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_AFTERPROPLOOP, &propagateagain) );
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
       }
          
       /* solve external relaxations with non-negative priority */
@@ -2660,6 +2668,7 @@ SCIP_RETCODE solveNode(
          SCIPbranchcandClearExternCands(branchcand);
 
          SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, TRUE, cutoff, &propagateagain, &solvelpagain, &solverelaxagain) );
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
@@ -2744,7 +2753,8 @@ SCIP_RETCODE solveNode(
       if( solverelax && !(*cutoff) )
       {
          SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, FALSE, cutoff, &propagateagain, &solvelpagain, &solverelaxagain) );
-        
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
+
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
@@ -2777,7 +2787,8 @@ SCIP_RETCODE solveNode(
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
          }
-         
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
+            
          /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );
       }
@@ -2832,6 +2843,8 @@ SCIP_RETCODE solveNode(
          assert(*infeasible || (!branched && !(*cutoff) && !propagateagain && !solvelpagain));
          assert(!propagateagain || (!branched && !(*cutoff) && *infeasible));
          assert(!solvelpagain || (!branched && !(*cutoff) && *infeasible));
+
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* apply found cuts */
          SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, eventfilter, (actdepth == 0),
@@ -2893,6 +2906,7 @@ SCIP_RETCODE solveNode(
                SCIPnodeGetDepth(focusnode), nlpcands);
             SCIP_CALL( SCIPbranchExecLP(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
                   primal->cutoffbound, FALSE, &result) );
+            assert(SCIPbufferGetNUsed(set->buffer) == 0);
             assert(result != SCIP_DIDNOTRUN);
          }
          else 
@@ -2904,6 +2918,7 @@ SCIP_RETCODE solveNode(
                   SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNExternCands(branchcand));
                SCIP_CALL( SCIPbranchExecExtern(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
                      primal->cutoffbound, TRUE, &result) );
+               assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
 
             if( result == SCIP_DIDNOTRUN )
@@ -2913,6 +2928,7 @@ SCIP_RETCODE solveNode(
                   SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
                SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue,
                      primal->cutoffbound, TRUE, &result) );
+               assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
          }
          

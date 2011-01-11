@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.53 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -359,9 +358,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          || (divedepth < maxdivedepth && nlpcands <= startnlpcands - divedepth/10
 	     && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
    {
-#ifdef NDEBUG
-      SCIP_RETCODE retstat;
-#endif
+      SCIP_RETCODE retcode;
 
       divedepth++;
 
@@ -529,19 +526,23 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
+      retcode =  SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+      lpsolstat = SCIPgetLPSolstat(scip);
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      retstat = SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
-      if( retstat != SCIP_OKAY )
+      if( retcode != SCIP_OKAY )
       { 
-         SCIPwarningMessage("Error while solving LP in Objpscostdiving heuristic; LP solve terminated with code <%d>\n",retstat);
-      }
-#else
-      SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+#ifndef NDEBUG
+         if( lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {        
+            SCIP_CALL( retcode );     
+         }
 #endif
+         SCIPwarningMessage("Error while solving LP in Objpscostdiving heuristic; LP solve terminated with code <%d>\n", retcode);
+         SCIPwarningMessage("This does not affect the remaining solution procedure --> continue\n");
+      }
 
       if( lperror )
          break;
@@ -550,7 +551,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
 
       /* get LP solution status  and fractional variables, that should be integral */
-      lpsolstat = SCIPgetLPSolstat(scip);
       if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
          /* get new fractional variables */

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.53 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @ingroup PRIMALHEURISTICS
@@ -312,9 +311,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIP_Real hardroundingnewbd;
       SCIP_Bool boundschanged;
 
-#ifdef NDEBUG
-      SCIP_RETCODE retstat;
-#endif
+      SCIP_RETCODE retcode;
 
       /* create solution from diving LP and try to round it */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
@@ -464,18 +461,23 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
 
+      retcode = SCIPsolveDiveLP(scip,  MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+      lpsolstat = SCIPgetLPSolstat(scip);
+
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      retstat = SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
-      if( retstat != SCIP_OKAY )
+      if( retcode != SCIP_OKAY )
       { 
-         SCIPwarningMessage("Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n",retstat);
-      }
-#else
-      SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+#ifndef NDEBUG
+         if( lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {        
+            SCIP_CALL( retcode );     
+         }
 #endif
+         SCIPwarningMessage("Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n", retcode);
+         SCIPwarningMessage("This does not affect the remaining solution procedure --> continue\n");
+      }
 
       if( lperror )
          break;
@@ -491,7 +493,6 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          ncycles++;
 
       /* get LP solution status and number of fractional variables, that should be integral */
-      lpsolstat = SCIPgetLPSolstat(scip);
       if( lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE && hardroundingidx != -1 )
       {
          SCIP_VAR* var;

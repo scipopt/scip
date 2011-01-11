@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.365 2011/01/02 11:10:45 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and data structures
@@ -13512,6 +13511,11 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* check if the values are already calculated */
    if( lp->validsollp == stat->lpcount )
       return SCIP_OKAY;
+
+   /* check if the LP solver is able to provide a primal unbounded ray */
+   if( !SCIPlpiHasPrimalRay(lp->lpi) )
+      return SCIP_LPERROR;
+
    lp->validsollp = stat->lpcount;
 
    SCIPdebugMessage("getting new unbounded LP solution %d\n", stat->lpcount);
