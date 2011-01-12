@@ -92,6 +92,7 @@ fixed bugs:
 - fixed wrong assert in plugins that use SCIPcopy()
 - fixed wrong (neg)cliquepartition check in cons_knapsack.c when deleting a coefficient
 - fixed memory leak in SoPlex LP interface when requesting an unbounded solution
+- fixed memory leak in SoPlex LP interface when solving with LP scaling
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions

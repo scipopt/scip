@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.128 2011/01/12 19:55:37 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -699,6 +700,10 @@ public:
             /* if the original lp cannot be reloaded, we are in trouble */
             std::string s = x.what();      
             SCIPerrorMessage("SoPlex threw an exception when restoring original lp after scaling: %s\n", s.c_str());
+            if ( rstat != NULL )
+               delete [] rstat;
+            if ( cstat != NULL ) 
+               delete [] cstat;
             m_stat = SPxSolver::status();
             return m_stat;
          }
@@ -709,6 +714,12 @@ public:
             SPxSolver::setBasis(rstat, cstat);
             doSolve();
          }
+
+         /* free basis arrays */
+         if ( rstat != NULL )
+            delete [] rstat;
+         if ( cstat != NULL ) 
+            delete [] cstat;
       }
 
       if( m_stat == OPTIMAL )
