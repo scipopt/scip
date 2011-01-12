@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.316 2011/01/02 11:10:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.317 2011/01/12 08:51:30 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -12879,9 +12879,9 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetNCliques
 #undef SCIPvarGetCliques
 #undef SCIPvarGetLPSol
-#undef SCIPvarGetBdchgInfosLb
+#undef SCIPvarGetBdchgInfoLb
 #undef SCIPvarGetNBdchgInfosLb
-#undef SCIPvarGetBdchgInfosUb
+#undef SCIPvarGetBdchgInfoUb
 #undef SCIPvarGetNBdchgInfosUb
 #undef SCIPvarGetPseudoSol
 #undef SCIPvarCatchEvent
@@ -13745,13 +13745,17 @@ SCIP_Real SCIPvarGetLPSol(
       return SCIPvarGetLPSol_rec(var);
 }
 
-/** gets the lower bound change info array */
-SCIP_BDCHGINFO** SCIPvarGetBdchgInfosLb(
-   SCIP_VAR*             var                 /**< problem variable */
+/** return lower bound change info at requested position */
+SCIP_BDCHGINFO* SCIPvarGetBdchgInfoLb(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   pos                 /**< requested position */
    )
 {
-   return &(var->lbchginfos);
-}
+   assert(pos >= 0);
+   assert(pos < var->nlbchginfos);
+
+   return &var->lbchginfos[pos];
+} 
 
 /** gets the number of lower bound change info array */
 int SCIPvarGetNBdchgInfosLb(
@@ -13761,12 +13765,16 @@ int SCIPvarGetNBdchgInfosLb(
    return var->nlbchginfos;
 } 
 
-/** gets the upper bound change info array */
-SCIP_BDCHGINFO** SCIPvarGetBdchgInfosUb(
-   SCIP_VAR*             var                 /**< problem variable */
+/** return upper bound change info at requested position */
+SCIP_BDCHGINFO* SCIPvarGetBdchgInfoUb(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   pos                 /**< requested position */
    )
 {
-   return &(var->ubchginfos);
+   assert(pos >= 0);
+   assert(pos < var->nubchginfos);
+
+   return &var->ubchginfos[pos];
 } 
 
 /** gets the number upper bound change info array */

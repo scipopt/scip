@@ -22,6 +22,9 @@ interface:
   renamed to SCIPevalExprtreeSol(), SCIPevalExprtreeLocalBounds(), and SCIPevalExprtreeGlobalBounds() (now located in scip.h)
 - new method SCIPgetBinvarRepresentatives() which gets binary variables that are equal to some given binary variables, and which are either active, fixed, or 
   multi-aggregated, or the negated variables of active, fixed, or multi-aggregated variables
+- new methods SCIPvarGetNBdchgInfosLb() and SCIPvarGetNBdchgInfosUb() in pub_var.h returning the number of lower or upper 
+  bound changes on the active path
+- new methods SCIPvarGetBdchgInfoLb() and SCIPvarGetBdchgInfoUb() returning the bound change information at the given position
 
 performance improvements:
 - performance improvements in prop_vbounds

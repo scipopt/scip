@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.85 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.86 2011/01/12 08:51:30 bzfheinz Exp $"
 
 /**@file   pub_var.h
  * @ingroup PUBLICMETHODS
@@ -724,10 +724,11 @@ SCIP_Real SCIPvarGetLPSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets the lower bound change info array */
+/** return lower bound change info at requested position */
 extern
-SCIP_BDCHGINFO** SCIPvarGetBdchgInfosLb(
-   SCIP_VAR*             var                 /**< problem variable */
+SCIP_BDCHGINFO* SCIPvarGetBdchgInfoLb(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   pos                 /**< requested position */
    );
 
 /** gets the number of lower bound change info array */
@@ -736,10 +737,11 @@ int SCIPvarGetNBdchgInfosLb(
    SCIP_VAR*             var                 /**< problem variable */
    );
  
-/** gets the upper bound change info array */
+/** return upper bound change info at requested position */
 extern
-SCIP_BDCHGINFO** SCIPvarGetBdchgInfosUb(
-   SCIP_VAR*             var                 /**< problem variable */
+SCIP_BDCHGINFO* SCIPvarGetBdchgInfoUb(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   pos                 /**< requested position */
    );
 
 /** gets the number upper bound change info array */
@@ -828,9 +830,9 @@ int SCIPvarGetNBdchgInfosUb(
 #define SCIPvarGetNCliques(var, fix)    (SCIPcliquelistGetNCliques((var)->cliquelist, fix))
 #define SCIPvarGetCliques(var, fix)     (SCIPcliquelistGetCliques((var)->cliquelist, fix))
 #define SCIPvarGetLPSol(var)            ((var)->varstatus == SCIP_VARSTATUS_COLUMN ? SCIPcolGetPrimsol((var)->data.col) : SCIPvarGetLPSol_rec(var))
-#define SCIPvarGetBdchgInfosLb(var)       (&(var)->lbchginfos)
+#define SCIPvarGetBdchgInfoLb(var, pos)   (&((var)->lbchginfos[pos]))
 #define SCIPvarGetNBdchgInfosLb(var)      ((var)->nlbchginfos)
-#define SCIPvarGetBdchgInfosUb(var)       (&(var)->ubchginfos)
+#define SCIPvarGetBdchgInfoUb(var, pos)   (&((var)->ubchginfos[pos]))
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #endif
 
