@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.5 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.6 2011/01/12 14:04:47 bzfheinz Exp $"
 
 /**@file   cons_pseudoboolean.c
  * @ingroup CONSHDLRS 
@@ -2030,7 +2030,7 @@ SCIP_RETCODE applyFixingsNonLinear(
          assert(SCIPvarIsTransformed(resultant));
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(resultant), SCIPvarGetUbGlobal(resultant)));
          
-         fixedval = SCIPvarGetLbGlobal(var);
+         fixedval = SCIPvarGetLbGlobal(resultant);
             
          /* fix non-linear part if not already fixed, if resultant is one than all term variables should be one too */
          if( fixedval > 0.5 )
