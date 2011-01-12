@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.317 2011/01/12 08:51:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.318 2011/01/12 11:59:40 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1973,7 +1973,7 @@ SCIP_RETCODE SCIPvarCopy(
    result = SCIP_DIDNOTRUN;
    targetdata = NULL;
 
-   /* creates and captures the variable in the target SCIP and initial all callback methods with NULL */
+   /* creates and captures the variable in the target SCIP and initialize callback methods and variable data to NULL */
    SCIP_CALL( SCIPvarCreateOriginal(var, blkmem, set, stat, SCIPvarGetName(sourcevar), 
          global ? SCIPvarGetLbGlobal(sourcevar) : SCIPvarGetLbLocal(sourcevar),
          global ? SCIPvarGetUbGlobal(sourcevar) : SCIPvarGetUbLocal(sourcevar), 

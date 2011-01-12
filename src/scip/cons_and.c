@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.132 2011/01/02 11:10:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.133 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -2625,7 +2625,12 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    sourceresvar = SCIPgetResultantAnd(sourcescip, sourcecons);
 
    /* map resultant to active variable of the target SCIP  */
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global) );
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global, valid) );
+   assert(!(*valid) || resvar != NULL);
+
+   /* we do not copy, if a variable is missing */
+   if( !(*valid) )
+      goto TERMINATE;
 
    /* map operand variables to active variables of the target SCIP  */
    sourcevars = SCIPgetVarsAnd(sourcescip, sourcecons);
@@ -2636,7 +2641,12 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || vars[v] != NULL);
+
+      /* we do not copy, if a variable is missing */
+      if( !(*valid) )
+         goto TERMINATE;
    }
    
    if( name != NULL )
@@ -2647,7 +2657,8 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    /* creates and captures a and constraint */
    SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   
+
+ TERMINATE:   
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
    

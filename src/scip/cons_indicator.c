@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.116 2011/01/07 20:10:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.117 2011/01/12 11:59:39 bzfberth Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3997,12 +3997,10 @@ static
 SCIP_DECL_CONSCOPY(consCopyIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* sourceconsdata;
-   SCIP_VAR* sourcebinvar;
+   SCIP_CONS* targetlincons;
    SCIP_VAR* targetbinvar;
-   SCIP_VAR* sourceslackvar;
    SCIP_VAR* targetslackvar;
    SCIP_CONS* sourcelincons;
-   SCIP_CONS* targetlincons;
    SCIP_CONSHDLR* conshdlrlinear;
    const char* consname;
 
@@ -4013,7 +4011,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
 
    *valid = TRUE;
 
-   if ( name != NULL )
+   if( name != NULL )
       consname = name;
    else
       consname = SCIPconsGetName(sourcecons);
@@ -4027,7 +4025,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    sourcelincons = sourceconsdata->lincons;
 
    /* if the constraint has been deleted -> create empty constraint (multi-aggregation might still contain slackvariable, so indicator is valid) */
-   if ( SCIPconsIsDeleted(sourcelincons) )
+   if( SCIPconsIsDeleted(sourcelincons) )
    {
       SCIPdebugMessage("Linear constraint <%s> deleted! Create empty linear constraint.\n", SCIPconsGetName(sourceconsdata->lincons));
 
@@ -4047,30 +4045,46 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
             SCIPconsIsRemovable(sourcelincons), SCIPconsIsStickingAtNode(sourcelincons), global, valid) );
    }
 
-   if ( *valid )
+   /* find copied variable corresponding to binvar */
+   if( *valid )
    {
-      assert( targetlincons != NULL );
-
+      SCIP_VAR* sourcebinvar;
+      
       sourcebinvar = sourceconsdata->binvar;
+      assert(sourcebinvar != NULL);
+
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, consmap, global, valid) );
+   }
+
+   /* find copied variable corresponding to slackvar */
+   if( *valid )
+   {
+      SCIP_VAR* sourceslackvar;
+
       sourceslackvar = sourceconsdata->slackvar;
-      assert( sourcebinvar != NULL );
-      assert( sourceslackvar != NULL );
+      assert(sourceslackvar != NULL);
 
-      /* find copied variables corresponding to binvar and slackvar */
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcebinvar, &targetbinvar, varmap, consmap, global) );
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceslackvar, &targetslackvar, varmap, consmap, global, valid) );
+   }
 
-      /* create indicator constraint */
+   /* create indicator constraint */
+   if( *valid )
+   {
+      assert(targetlincons != NULL);
+      assert(targetbinvar != NULL);
+      assert(targetslackvar != NULL);
+
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
             initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
    }
-   else
+
+   if( !(*valid) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
 
-   /* free empty constraint */
-   if ( SCIPconsIsDeleted(sourcelincons) )
+   /* release empty constraint */
+   if( SCIPconsIsDeleted(sourcelincons) )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
    }   

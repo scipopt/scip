@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.26 2011/01/02 13:23:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.27 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1989,24 +1989,28 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    sourcevars = sourcedata->vars;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nspcons) );
-   for (i = 0; i < nspcons; ++i)
+   for( i = 0; i < nspcons && *valid; ++i )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), nblocks) );  /*lint !e866*/
 
-      for (j = 0; j < nblocks; ++j)
+      for( j = 0; j < nblocks && *valid; ++j )
       {
-	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global) );
-	 assert(vars[i][j] != NULL);
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global, valid) );
+	 assert(!(*valid) || vars[i][j] != NULL);
       }
    }
    
-   /* create copied constraint */
-   if ( name == NULL )
-      name = SCIPconsGetName(sourcecons);
-   
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
-         vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   /* only create the target constraint, if all variables could be copied */
+   if( *valid )
+   {
+      /* create copied constraint */
+      if( name == NULL )
+         name = SCIPconsGetName(sourcecons);
+      
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
+            vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
    
    for (i = 0; i < nspcons; ++i)
       SCIPfreeBufferArray(scip, &vars[i]);

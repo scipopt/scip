@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.90 2011/01/02 11:10:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.91 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -1806,27 +1806,34 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    assert(valid != NULL);
    (*valid) = TRUE;
    
-   sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons);
-
-   /* map resultant to active variable of the target SCIP  */
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global) );
-   
-   /* map operand variables to active variables of the target SCIP  */
+   /* get variables that need to be copied */
+   sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons); 
    sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
    nvars = SCIPgetNVarsOr(sourcescip, sourcecons);
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    
-   for( v = 0; v < nvars; ++v )
+   /* map operand variables to active variables of the target SCIP */
+   for( v = 0; v < nvars && *valid; ++v )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || vars[v] != NULL);
    }
-   
-   SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+
+   /* map resultant to active variable of the target SCIP  */
+   if( *valid )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceresvar, &resvar, varmap, consmap, global, valid) );
+      assert(!(*valid) || resvar != NULL);
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if( *valid )
+   {
+      SCIP_CALL( SCIPcreateConsOr(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   
-   *valid = TRUE;
+   }
    
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);

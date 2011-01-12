@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.152 2011/01/11 16:59:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.153 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7847,14 +7847,20 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
    linvars = NULL;
    quadvarterms = NULL;
    bilinterms = NULL;
+
+   *valid = TRUE;
    
    if( consdata->nlinvars != 0 )
    {
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &linvars, consdata->nlinvars) );
       for( i = 0; i < consdata->nlinvars; ++i )
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->linvars[i], &linvars[i], varmap, consmap, global) );
-         assert(linvars[i] != NULL);
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->linvars[i], &linvars[i], varmap, consmap, global, valid) );
+         assert(!(*valid) || linvars[i] != NULL);
+
+         /* we do not copy, if a variable is missing */
+         if( !(*valid) )
+            goto TERMINATE;  
       }
    }
    
@@ -7868,8 +7874,12 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &quadvarterms, consdata->nquadvars) );
       for( i = 0; i < consdata->nquadvars; ++i )
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->quadvarterms[i].var, &quadvarterms[i].var, varmap, consmap, global) );
-         assert(quadvarterms[i].var != NULL);
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->quadvarterms[i].var, &quadvarterms[i].var, varmap, consmap, global, valid) );
+         assert(!(*valid) || quadvarterms[i].var != NULL);
+         
+         /* we do not copy, if a variable is missing */
+         if( !(*valid) )
+            goto TERMINATE;
          
          quadvarterms[i].lincoef   = consdata->quadvarterms[i].lincoef;
          quadvarterms[i].sqrcoef   = consdata->quadvarterms[i].sqrcoef;
@@ -7902,7 +7912,6 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
          }
       }
    }
-
       
    assert(stickingatnode == FALSE);
    SCIP_CALL( SCIPcreateConsQuadratic2(scip, cons, name ? name : SCIPconsGetName(sourcecons),
@@ -7918,12 +7927,11 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
    targetconsdata->isconcave     = consdata->isconcave;
    targetconsdata->iscurvchecked = consdata->iscurvchecked;
 
+ TERMINATE:
    SCIPfreeBufferArrayNull(sourcescip, &quadvarterms);
    SCIPfreeBufferArrayNull(sourcescip, &bilinterms);
    SCIPfreeBufferArrayNull(sourcescip, &linvars);
    
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 

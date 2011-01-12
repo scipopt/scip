@@ -17,7 +17,7 @@ interface:
 - new functions SCIPcomputeVarCurrent{L,U}b{Local,Global}() to compute local or global lower or upper bounds of a multiaggregated variable
   from the bounds of the aggregation variables
 - new method SCIPsetConsModifiable()
-- new method SCIPgetNegatedVars() which returns for a ǵiven array of variables all negated variables, if the negated variables are not existing yet, they will be created
+- new method SCIPgetNegatedVars() which returns all negated variables for a given array of variables, if the negated variables are not existing yet, they will be created
 - methods SCIPexprtreeEvalSol(), SCIPexprtreeEvalIntLocalBounds(), and SCIPexprtreeEvalIntGlobalBounds() have been
   renamed to SCIPevalExprtreeSol(), SCIPevalExprtreeLocalBounds(), and SCIPevalExprtreeGlobalBounds() (now located in scip.h)
 - new method SCIPgetBinvarRepresentatives() which gets binary variables that are equal to some given binary variables, and which are either active, fixed, or 
@@ -25,6 +25,7 @@ interface:
 - new methods SCIPvarGetNBdchgInfosLb() and SCIPvarGetNBdchgInfosUb() in pub_var.h returning the number of lower or upper 
   bound changes on the active path
 - new methods SCIPvarGetBdchgInfoLb() and SCIPvarGetBdchgInfoUb() returning the bound change information at the given position
+- new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -38,6 +39,7 @@ fixed bugs:
 - fixed bug in presolving of cons_logicor.c: adding variable implications can lead to further reductions; added call to applyFixings()
 - fixed bug in cons_linear.c while sorting the eventdatas during the binary variable sorting for propagation
 - fixed bug in reader_fzn.c w.r.t. cumulative constraints
+- fixed bug in copying if the target SCIP already is in solving stage: it might be that the copy of a variable cannot be found/created
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

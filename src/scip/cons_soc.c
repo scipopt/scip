@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.64 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.65 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3703,21 +3703,30 @@ SCIP_DECL_CONSCOPY(consCopySOC)
 
    *valid = TRUE; 
 
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->rhsvar, &rhsvar, varmap, consmap, global) );
-   assert(rhsvar != NULL);
-
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &vars, consdata->nvars) );
-   
-   for( i = 0; i < consdata->nvars; ++i )
+
+   /* map variables to active variables of the target SCIP */   
+   for( i = 0; i < consdata->nvars && *valid; ++i )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->vars[i], &vars[i], varmap, consmap, global) );
-      assert(vars[i] != NULL);
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->vars[i], &vars[i], varmap, consmap, global, valid) );
+      assert(!(*valid) || vars[i] != NULL);
    }
-   
-   SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
-      consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
-      rhsvar, consdata->rhscoeff, consdata->rhsoffset,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+
+   /* map rhs variable to active variable of the target SCIP */   
+   if( *valid )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->rhsvar, &rhsvar, varmap, consmap, global, valid) );
+      assert(!(*valid) || rhsvar != NULL);
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if( *valid )
+   {
+      SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
+            consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
+            rhsvar, consdata->rhscoeff, consdata->rhsoffset,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+   }
 
    SCIPfreeBufferArray(sourcescip, &vars);
 

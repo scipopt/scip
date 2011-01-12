@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.66 2011/01/02 11:10:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.67 2011/01/12 11:59:40 bzfberth Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -638,7 +638,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  reductions made in the copied SCIP instance can be transfer to the original SCIP instance. If the valid pointer is
  *  set to TRUE and it was not one to one copy, it might happen that optimal solutions are cut off.
  *
- *  To get copy of variable in the target SCIP you should use the function SCIPgetVarCopy(). 
+ *  To get a copy of a variable in the target SCIP you should use the function SCIPgetVarCopy(). 
  *
  *  input:
  *  - scip            : target SCIP data structure

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.718 2011/01/04 20:15:38 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.719 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1042,7 +1042,8 @@ SCIP_RETCODE SCIPgetVarCopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   SCIP_Bool             global              /**< should global or local bounds be used? */
+   SCIP_Bool             global,             /**< should global or local bounds be used? */
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
    SCIP_HASHMAP* localvarmap;
@@ -1061,7 +1062,8 @@ SCIP_RETCODE SCIPgetVarCopy(
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
-   
+   *success = TRUE;
+
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
@@ -1075,6 +1077,17 @@ SCIP_RETCODE SCIPgetVarCopy(
       *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, sourcevar);
       if( *targetvar != NULL )
          return SCIP_OKAY;
+   }
+
+   /* if the target SCIP is already in solving stage and the target variable is not in the hash map, abort!
+    * this has to be done because we cannot simply add variables to SCIP during solving and thereby enlarge the search space.
+    * unlike column generation we cannot assume here that the variable could be implicitly set to zero in all prior computations 
+    */
+   if( SCIPgetStage(targetscip) > SCIP_STAGE_PROBLEM )
+   {
+      *success = FALSE;
+      *targetvar = NULL;
+      return SCIP_OKAY;
    }
 
    if( uselocalconsmap )
@@ -1112,7 +1125,8 @@ SCIP_RETCODE SCIPgetVarCopy(
       constant = SCIPvarGetAggrConstant(sourcevar);
 
       /* get copy of the aggregation variable */
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, localvarmap, localconsmap, global) );      
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvar, &targetaggrvar, localvarmap, localconsmap, global, success) );
+      assert(*success);
 
       /* create copy of the aggregated variable */
       SCIP_CALL( SCIPvarCopy(&var, targetscip->mem->probmem, targetscip->set, targetscip->stat, 
@@ -1158,7 +1172,8 @@ SCIP_RETCODE SCIPgetVarCopy(
       /* get copies of the active variables of the multiaggregation */
       for( i = 0; i < naggrvars; ++i )
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], localvarmap, localconsmap, global) );
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourceaggrvars[i], &targetaggrvars[i], localvarmap, localconsmap, global, success) );
+         assert(*success);
       }
          
       /* create copy of the multiaggregated variable */
@@ -1189,7 +1204,8 @@ SCIP_RETCODE SCIPgetVarCopy(
       assert(SCIPvarGetStatus(sourcenegatedvar) != SCIP_VARSTATUS_NEGATED);
 
       /* get copy of negated source variable */         
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, localvarmap, localconsmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcenegatedvar, &targetnegatedvar, localvarmap, localconsmap, global, success) );
+      assert(*success);
       assert(SCIPvarGetStatus(targetnegatedvar) != SCIP_VARSTATUS_NEGATED);
 
       /* get negation of copied negated source variable, this is the target variable */
@@ -1230,7 +1246,7 @@ SCIP_RETCODE SCIPgetVarCopy(
 }
 
 /** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
- *  variables are stored in the variable hashmap, fixed and aggregated variables do not get copied
+ *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage
  *
  *  @note the variables are added to the target-SCIP but not captured
  */
@@ -1284,10 +1300,12 @@ SCIP_RETCODE SCIPcopyVars(
    /* create the variables of the target SCIP */
    for( i = 0; i < nsourcevars; ++i )
    {          
+      SCIP_Bool success;
       SCIP_VAR* targetvar;
 
       /* copy variable and add this copy to the target SCIP if the copying was valid */
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global, &success) );
+      assert(success);
       assert(targetvar != NULL);
    }
 

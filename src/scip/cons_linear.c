@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.403 2011/01/06 11:50:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.404 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -10658,22 +10658,27 @@ SCIP_RETCODE SCIPcopyConsLinear(
    }
    
    /* map variables of the source constraint to variables of the target SCIP */
-   for( v = 0; v < nvars; ++v )
+   for( v = 0; v < nvars && *valid; ++v )
    {
       SCIP_VAR* var;
       var = vars[v];
       
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || vars[v] != NULL);
    }
 
-   if( !SCIPisInfinity(scip, -lhs) )
-      lhs -= constant;
-   
-   if( !SCIPisInfinity(scip, rhs) )
-      rhs -= constant;
+    /* only create the target constraint, if all variables could be copied */
+   if( *valid )
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+         lhs -= constant;
       
-   SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      if( !SCIPisInfinity(scip, rhs) )
+         rhs -= constant;
+      
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
       
    /* free buffer array */
    SCIPfreeBufferArray(scip, &coefs);

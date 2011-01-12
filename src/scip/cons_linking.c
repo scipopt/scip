@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linking.c,v 1.21 2011/01/02 11:10:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linking.c,v 1.22 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_linking.c
  * @brief  constraint handler for linking constraints
@@ -2756,22 +2756,31 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
       binvars = NULL;
    
    /* get copy for the binary variables */
-   for( v = 0; v < nbinvars; ++v )
+   for( v = 0; v < nbinvars && *valid; ++v )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, binvars[v], &binvars[v], varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, binvars[v], &binvars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || binvars[v] != NULL);
    }
       
-   /* copy the integer variables */
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &intvar, varmap, consmap, global) );
+   /* copy the integer variable */
+   if( *valid )
+   { 
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &intvar, varmap, consmap, global, valid) );
+      assert(!(*valid) || intvar != NULL);
+   }
    
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
-   
-   SCIP_CALL( SCIPcreateConsLinking(scip, cons, consname, intvar, binvars, nbinvars, offset,  
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   
+   /* only create the target constraint, if all variables could be copied */
+   if( *valid )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+      
+      SCIP_CALL( SCIPcreateConsLinking(scip, cons, consname, intvar, binvars, nbinvars, offset,  
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
    /* free buffer array */
    if( nbinvars > 0 )
    {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.4 2011/01/10 21:50:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.5 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_pseudoboolean.c
  * @ingroup CONSHDLRS 
@@ -1701,7 +1701,12 @@ SCIP_RETCODE copyConsPseudoboolean(
       for( v = 0; v < nlinvars; ++v )
       {
          assert(linvars[v] != NULL);
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, linvars[v], &linvars[v], varmap, consmap, global) );
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, linvars[v], &linvars[v], varmap, consmap, global, valid) );
+         assert(!(*valid) || linvars[v] != NULL);
+
+         /* we do not copy, if a variable is missing */
+         if( !(*valid) )
+            goto TERMINATE;         
       }
    }
 
@@ -1739,7 +1744,12 @@ SCIP_RETCODE copyConsPseudoboolean(
          /* map variables of the source constraint to variables of the target SCIP */
          for( v = 0; v < ntermvars[t]; ++v )
          {
-            SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, term->vars[v], &(termvars[t][v]), varmap, consmap, global) );
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, term->vars[v], &(termvars[t][v]), varmap, consmap, global, valid) );
+            assert(!(*valid) || termvars[t][v] != NULL);
+            
+            /* we do not copy, if a variable is missing */
+            if( !(*valid) )
+               goto TERMINATE;
          }
       }
    }
@@ -1751,22 +1761,29 @@ SCIP_RETCODE copyConsPseudoboolean(
 
    if( indvar != NULL )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, indvar, &indvar, varmap, consmap, global) );
+      assert(*valid);
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, indvar, &indvar, varmap, consmap, global, valid) );
+      assert(!(*valid) || indvar != NULL);
    }
-   if( intvar != NULL )
+   if( intvar != NULL && *valid )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, intvar, &intvar, varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, intvar, &intvar, varmap, consmap, global, valid) );
+      assert(!(*valid) || intvar != NULL);
    }
 
    /* the sides */
    lhs = sourceconsdata->lhs;   
    rhs = sourceconsdata->rhs;   
 
-   SCIP_CALL( SCIPcreateConsPseudoboolean(targetscip, targetcons, name, linvars, nlinvars, lincoefs, 
-         termvars, nterms, ntermvars, termcoefs,
-         indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, lhs, rhs, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-      
+   if( *valid )
+   {
+      SCIP_CALL( SCIPcreateConsPseudoboolean(targetscip, targetcons, name, linvars, nlinvars, lincoefs, 
+            termvars, nterms, ntermvars, termcoefs,
+            indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, lhs, rhs, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }  
+
+ TERMINATE:
    /* free buffer array */
    if( sourceconsdata->nnonlinterms > 0 )
    {

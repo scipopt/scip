@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_cumulative.c,v 1.27 2011/01/02 11:10:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_cumulative.c,v 1.28 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_cumulative.c
  * @ingroup CONSHDLRS 
@@ -6446,21 +6446,26 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
-   for( v = 0; v < nvars; ++v )
+   for( v = 0; v < nvars && *valid; ++v )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global) );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &vars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || vars[v] != NULL);
    }
    
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
-   
-   /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcreateConsCumulative(scip, cons, consname, nvars, vars, 
-         sourceconsdata->durations, sourceconsdata->demands, sourceconsdata->capacity,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   
+   /* only create the target constraint, if all variables could be copied */
+   if( *valid )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+      
+      /* copy the logic using the linear constraint copy method */
+      SCIP_CALL( SCIPcreateConsCumulative(scip, cons, consname, nvars, vars, 
+            sourceconsdata->durations, sourceconsdata->demands, sourceconsdata->capacity,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
 
