@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.719 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.720 2011/01/12 14:30:48 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -912,7 +912,8 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
  *  copied SCIP instance might not represent the same problem semantics as the original. 
- *  Note that in this case dual reductions might be invalid. */
+ *  Note that in this case dual reductions might be invalid. 
+ */
 SCIP_RETCODE SCIPcopyPlugins(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
