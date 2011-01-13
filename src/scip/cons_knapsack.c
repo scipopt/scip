@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.219 2011/01/11 17:53:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.220 2011/01/13 15:44:00 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -4436,6 +4436,11 @@ SCIP_RETCODE propagateCons(
          SCIP_VAR* var;
 
          assert(nnegcliques == consdata->nnegcliques);
+         assert(myvars != NULL);
+         assert(myweights != NULL);
+         assert(secondmaxweights != NULL);
+         assert(cliquestartposs != NULL);
+
          for( c = 0; c < nnegcliques; ++c )
          {
             if( consdata->onesweightsum + minweightsum + myweights[cliquestartposs[c]] - secondmaxweights[c] > consdata->capacity )
