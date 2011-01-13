@@ -1752,6 +1752,11 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
          SCIPdebugMessage("NLP heuristic delayed because no start candidate given and current LP solution is fractional\n");
          return SCIP_OKAY;
       }
+      else if( !SCIPisInfinity(scip, SCIPgetPrimalbound(scip)) && SCIPisEQ(scip, SCIPgetLocalDualbound(scip), SCIPgetPrimalbound(scip)) )
+      { /* only call heuristic, if there is still room for improvement in the current node */
+         SCIPdebugMessage("NLP heuristic delayed because lower and upper bound coincide in current node\n");
+         return SCIP_OKAY;
+      }
    }
    else
    {
@@ -1976,6 +1981,10 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    if( heurdata->subscip == NULL )
       return SCIP_OKAY;
    
+   /* if the solution is from our heuristic, then it is useless to use it as starting point again */
+   if( SCIPsolGetHeur(solcand) == heur )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("consider solution candidate with violation %g and objective %g from %s\n",
       violation, SCIPgetSolTransObj(scip, solcand), SCIPsolGetHeur(solcand) ? SCIPheurGetName(SCIPsolGetHeur(solcand)) : "tree");
 
