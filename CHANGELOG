@@ -39,6 +39,7 @@ fixed bugs:
 - fixed assertion in tree.c w.r.t. node estimation
 - fixed bug in presolving of cons_logicor.c: adding variable implications can lead to further reductions; added call to applyFixings()
 - fixed bug in cons_linear.c while sorting the eventdatas during the binary variable sorting for propagation
+- fixed bug and wrong assert in heur_shiftandpropagate.c when relaxing continuous variables from the problem
 - fixed bug in reader_fzn.c w.r.t. cumulative constraints
 - fixed bug in copying if the target SCIP already is in solving stage: it might be that the copy of a variable cannot be found/created
 
