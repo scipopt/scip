@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.17 2011/01/02 11:10:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.18 2011/01/13 12:32:23 bzfwinkm Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -173,7 +173,7 @@ SCIP_RETCODE ReaderTSP::scip_read(
    double*  y_coords = NULL;
 
 #ifdef SCIP_DEBUG
-   double** weights = new double* [0];
+   double** weights = NULL;
 #endif
    
    double x;                         // concrete coordinates
@@ -235,6 +235,9 @@ SCIP_RETCODE ReaderTSP::scip_read(
          // the graph is created and filled with nodes 
          else if( create_graph(nnodes, nedges, &graph) )
          {
+            assert(x_coords == NULL);
+            assert(y_coords == NULL);
+
             x_coords = new double[nnodes];
             y_coords = new double[nnodes];
             getNodesFromFile(filedata, x_coords, y_coords, graph);
@@ -303,11 +306,11 @@ SCIP_RETCODE ReaderTSP::scip_read(
             else if( edgeweighttype == "GEO")
             {
                const double pi =  3.141592653589793;
-               double* rads   = new double[4];
-               double* coords = new double[4];
-               double* degs   = new double[4];
-               double* mins   = new double[4];
-               double* euler  = new double[3];
+               double rads[4];
+               double coords[4];
+               double degs[4];
+               double mins[4];
+               double euler[3];
                int k;
 
                coords[0] = x_coords[(*nodestart).id];
@@ -372,7 +375,19 @@ SCIP_RETCODE ReaderTSP::scip_read(
    delete[] x_coords;
       
    if( retcode != SCIP_OKAY )
+   {
+#ifdef SCIP_DEBUG
+      if( weights != NULL )
+      {
+         for( i = 0; i < nnodes; i++ )
+         {    
+            delete[] weights[i];
+         }
+         delete[] weights;
+      }
+#endif
       return retcode;
+   }
 
 #ifdef SCIP_DEBUG
    printf("Matrix:\n");
@@ -381,7 +396,9 @@ SCIP_RETCODE ReaderTSP::scip_read(
       for( j = 0; j < nnodes; j++ )
          printf(" %4.0f ",weights[i][j]);
       printf("\n");
+      delete[] weights[i];
    }
+   delete[] weights;
 #endif
 
    // create the problem's data structure
