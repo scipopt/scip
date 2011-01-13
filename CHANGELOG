@@ -26,6 +26,7 @@ interface:
   bound changes on the active path
 - new methods SCIPvarGetBdchgInfoLb() and SCIPvarGetBdchgInfoUb() returning the bound change information at the given position
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
+- SCIP_DECL_PROBCOPY got a new parameter global
 
 performance improvements:
 - performance improvements in prop_vbounds

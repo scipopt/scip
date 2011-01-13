@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.720 2011/01/12 14:30:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.721 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -960,6 +960,7 @@ SCIP_RETCODE SCIPcopyProb(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL  */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
    const char*           name                /**< problem name of target */
    )
 {
@@ -1011,7 +1012,7 @@ SCIP_RETCODE SCIPcopyProb(
    SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set) );
 
    /* create the problem by copying the source problme */
-   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap) );
+   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
 
    if( uselocalvarmap )
    {
@@ -1728,7 +1729,7 @@ SCIP_RETCODE SCIPcopy(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
    /* create problem in the target SCIP and copying the source problem data */
-   SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, name) );
+   SCIP_CALL( SCIPcopyProb(sourcescip, targetscip, localvarmap, localconsmap, global, name) );
 
    /* copy all active variables */
    SCIP_CALL( SCIPcopyVars(sourcescip, targetscip, localvarmap, localconsmap, global) );

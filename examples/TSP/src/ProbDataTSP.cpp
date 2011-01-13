@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ProbDataTSP.cpp,v 1.9 2011/01/02 11:10:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ProbDataTSP.cpp,v 1.10 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   ProbDataTSP.cpp
  * @brief  C++ problem data for TSP
@@ -121,6 +121,7 @@ SCIP_RETCODE ProbDataTSP::scip_copy(
    SCIP_HASHMAP*   consmap,      /**< a hashmap which stores the mapping of source contraints to
 				  * corresponding target constraints */ 
    ObjProbData**   objprobdata,  /**< pointer to store the copied problem data object */
+   SCIP_Bool       global,       /**< create a global or a local copy? */
    SCIP_RESULT*    result        /**< pointer to store the result of the call */
    )
 {
@@ -139,13 +140,17 @@ SCIP_RETCODE ProbDataTSP::scip_copy(
    int m = graph->nedges;
    for(int e = 0; e < m; ++e)
    {
+      SCIP_Bool success;
       GRAPHEDGE * edgeforw  = &(graph->edges[e]);
       GRAPHEDGE * edgebackw = &(graph->edges[e + m]);
 
       assert( sourcegraph->edges[e].var != NULL );
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcegraph->edges[e].var, &(edgeforw->var), varmap, consmap, TRUE) );
-      edgebackw->var = edgeforw->var; // anti-parallel arcs share variable
-      assert( edgebackw->var != NULL );
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcegraph->edges[e].var, &(edgeforw->var), varmap, consmap, global, &success) );
+      assert(success);
+      assert(edgeforw->var != NULL);
+
+      // anti-parallel arcs share variable
+      edgebackw->var = edgeforw->var;
       SCIP_CALL( SCIPcaptureVar(scip, edgebackw->var) );
    }
 

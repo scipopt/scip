@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.6 2011/01/12 14:04:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.7 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   cons_pseudoboolean.c
  * @ingroup CONSHDLRS 
@@ -1706,7 +1706,7 @@ SCIP_RETCODE copyConsPseudoboolean(
 
          /* we do not copy, if a variable is missing */
          if( !(*valid) )
-            goto TERMINATE;         
+            goto TERMINATE;
       }
    }
 
@@ -1724,6 +1724,8 @@ SCIP_RETCODE copyConsPseudoboolean(
 
       /* allocate nonlinear array of variable array */
       SCIP_CALL( SCIPallocBufferArray(targetscip, &termvars, nterms) );
+      BMSclearMemoryArray(&termvars, nterms);
+
       /* allocate array for length for all nonlinear variable array */
       SCIP_CALL( SCIPallocBufferArray(targetscip, &ntermvars, nterms) );
       /* duplicate coefficient array */
@@ -1789,9 +1791,12 @@ SCIP_RETCODE copyConsPseudoboolean(
    {
       int t;
 
-      for( t = sourceconsdata->nnonlinterms - 1; t >= 0; --t )
-         SCIPfreeBufferArrayNull(targetscip, &(termvars[t]));
-   
+      if( termvars != NULL )
+      {
+         for( t = sourceconsdata->nnonlinterms - 1; t >= 0; --t )
+            SCIPfreeBufferArrayNull(targetscip, &(termvars[t]));
+      }
+
       SCIPfreeBufferArrayNull(targetscip, &termcoefs);
       SCIPfreeBufferArrayNull(targetscip, &ntermvars);
       SCIPfreeBufferArrayNull(targetscip, &termvars);

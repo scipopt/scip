@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.133 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.134 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -2630,7 +2630,7 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
 
    /* we do not copy, if a variable is missing */
    if( !(*valid) )
-      goto TERMINATE;
+      return SCIP_OKAY;
 
    /* map operand variables to active variables of the target SCIP  */
    sourcevars = SCIPgetVarsAnd(sourcescip, sourcecons);

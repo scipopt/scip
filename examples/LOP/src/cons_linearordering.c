@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.16 2011/01/02 11:10:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.17 2011/01/13 14:47:21 bzfberth Exp $"
 
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
@@ -1018,29 +1018,35 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
    sourcevars = sourcedata->vars;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, n) );
-   for (i = 0; i < n; ++i)
+   BMSclearMemoryArray(&vars, n);
+
+   for( i = 0; i < n; ++i )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) );
 
-      for (j = 0; j < n; ++j)
+      for( j = 0; j < n && *valid; ++j )
       {
-         if ( i != j )
+         if( i != j )
          {
-            SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global) );
-            assert( vars[i][j] != 0 );
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global, valid) );
+            assert(!(*valid) || vars[i][j] != NULL);                       
          }
       }
    }
 
-   /* create copied constraint */
-   if ( name == 0 )
-      name = SCIPconsGetName(sourcecons);
-
-   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-
-   for (i = 0; i < n; ++i)
-      SCIPfreeBufferArray(scip, &vars[i]);
+   if( *valid )
+   {
+      
+      /* create copied constraint */
+      if( name == 0 )
+         name = SCIPconsGetName(sourcecons);
+      
+      SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+      
+   for( i = 0; i < n; ++i )
+      SCIPfreeBufferArrayNull(scip, &vars[i]);
    SCIPfreeBufferArray(scip, &vars);
  
    return SCIP_OKAY;

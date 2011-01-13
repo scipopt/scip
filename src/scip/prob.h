@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.71 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.72 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -63,8 +63,9 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_PROB*            sourceprob,         /**< source problem structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_Bool             global              /**< create a global or a local copy? */
    );
 
 /** creates problem data structure

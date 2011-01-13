@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.121 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.122 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -190,8 +190,9 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_PROB*            sourceprob,         /**< source problem structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables */
-   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints */
+   SCIP_Bool             global              /**< create a global or a local copy? */
    )
 {
    SCIP_PROBDATA* targetdata;
@@ -214,7 +215,7 @@ SCIP_RETCODE SCIPprobCopy(
    /* call user copy callback method */
    if ( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
-      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, &result) );
+      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, global, &result) );
 
       /* evaluate result */
       if ( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )

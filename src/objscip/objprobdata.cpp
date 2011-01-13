@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.21 2011/01/02 11:10:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.22 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -160,7 +160,7 @@ SCIP_DECL_PROBCOPY(probCopyObj)
    assert(*targetdata == NULL);
 
    /* call virtual method of probdata object */
-   SCIP_CALL( sourcedata->objprobdata->scip_copy(scip, sourcescip, varmap, consmap, &objprobdata, result) ); /*lint !e40*/
+   SCIP_CALL( sourcedata->objprobdata->scip_copy(scip, sourcescip, varmap, consmap, &objprobdata, global, result) ); /*lint !e40*/
 
    /* create transformed user problem data */
    *targetdata = new SCIP_PROBDATA;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.459 2011/01/12 11:59:40 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.460 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -283,6 +283,7 @@ SCIP_RETCODE SCIPcopyProb(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
    const char*           name                /**< problem name */
    );
 
