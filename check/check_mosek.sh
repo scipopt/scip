@@ -23,9 +23,8 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
-DISPFREQ=${11}
-CONTINUE=${12}
+DISPFREQ=${10}
+CONTINUE=${11}
 
 if test ! -e results
 then
@@ -113,7 +112,7 @@ do
             then
                 ENVPARAM="$ENVPARAM -d  MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"
             fi
-            ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_NEAR_TOL_REL_GAP $MIPGAP"
+            ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_NEAR_TOL_REL_GAP 0.0"
             echo -----------------------------
             date
             date >>$ERRFILE

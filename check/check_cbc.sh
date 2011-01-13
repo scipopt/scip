@@ -23,8 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
-CONTINUE=${11}
+CONTINUE=${10}
 
 if test ! -e results
 then
@@ -116,11 +115,8 @@ do
             TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
             echo seconds $TIMELIMIT                 >> $TMPFILE
 #$MEMLIMIT not supported (version 2.4)
-            echo threads $THREADS                 >> $TMPFILE
-            if test $MIPGAP != "default"
-            then
-                echo ratioGap $MIPGAP               >> $TMPFILE
-            fi
+            echo threads $THREADS                   >> $TMPFILE
+            echo ratioGap 0.0                       >> $TMPFILE
             echo maxNodes $NODELIMIT                >> $TMPFILE
             echo import $i                          >> $TMPFILE
             echo ratioGap                           >> $TMPFILE

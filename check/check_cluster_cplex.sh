@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cplex.sh,v 1.4 2011/01/02 11:10:54 bzfheinz Exp $
+# $Id: check_cluster_cplex.sh,v 1.5 2011/01/13 17:45:47 bzfgamra Exp $
 #
 # Call with "make testcluster"
 #
@@ -41,8 +41,8 @@
 #  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
 #  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
 #  - PPN=1 means we need one core, therefore time measuring is not possible
-PPN=8
-QUEUE=ib
+PPN=4
+QUEUE=gbe
 
 TSTNAME=$1
 BINNAME=$2
@@ -51,10 +51,10 @@ BINID=$BINNAME.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-DISPFREQ=$9
-CONTINUE=${10}
-LOCK=${11}
+THREADS=$8
+FEASTOL=$9
+DISPFREQ=${10}
+CONTINUE=${11}
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -63,13 +63,6 @@ if test ! -e $SCIPPATH/results
 then
     mkdir $SCIPPATH/results
 fi
-
-if test ! -e $SCIPPATH/locks
-then
-    mkdir $SCIPPATH/locks
-fi
-
-LOCKFILE=locks/$TSTNAME.$SETNAME.lock
 
 SETTINGS=$SCIPPATH/../settings/$SETNAME.set
 
@@ -83,20 +76,9 @@ then
     fi
 fi
 
-if test "$LOCK" = "true"
-then
-    if test -e $LOCKFILE
-    then
-        echo skipping test due to existing lock file $LOCKFILE
-        exit
-    fi
-    date > $LOCKFILE
-fi
-
-
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
-#       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
+#       jobs get automatically assigned in the "express" queue; this queue has only 4 CPUs
 #       available 
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
@@ -113,7 +95,7 @@ COUNT=1
 for i in `cat $TSTNAME.test` DONE
 do
   if test "$i" = "DONE"
-      then
+  then
       break
   fi
 
@@ -142,12 +124,17 @@ do
 
   # in case we want to continue we check if the job was already performed 
   if test "$CONTINUE" != "false"
-      then
+  then
       if test -e results/$FILENAME.out
-	  then 
-	  echo skipping file $i due to existing output file $FILENAME.out
+      then 
+          echo skipping file $i due to existing output file $FILENAME.out
 	  continue
       fi
+  fi
+
+  if test -e $SETFILE
+  then
+      rm -f $SETFILE
   fi
   
   echo > $TMPFILE
@@ -160,11 +147,8 @@ do
   echo set timelimit $TIMELIMIT           >> $TMPFILE
   echo set clocktype 0                    >> $TMPFILE
   echo set mip display 3                  >> $TMPFILE
-  echo set mip interval 10000             >> $TMPFILE
-  if test $MIPGAP != "default"
-  then
-      echo set mip tolerances mipgap $MIPGAP >> $TMPFILE
-  fi
+  echo set mip interval $DISPFREQ         >> $TMPFILE
+  echo set mip tolerances mipgap 0.0      >> $TMPFILE
   echo set mip limits nodes $NODELIMIT    >> $TMPFILE
   echo set mip limits treememory $MEMLIMIT >> $TMPFILE
   echo set threads $THREADS               >> $TMPFILE

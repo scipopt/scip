@@ -23,7 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
+DISPFREQ=${10}
 CONTINUE=${11}
 
 if test ! -e results
@@ -105,10 +105,7 @@ do
 #            fi
             PARAMETERS="--fpump --cuts --tmlim $TIMELIMIT --memlim $MEMLIMIT"
 # $THREADS not supported (version 4.43)
-            if test $MIPGAP != "default"
-            then
-                PARAMETERS=$PARAMETERS" --mipgap $MIPGAP"
-            fi
+            PARAMETERS=$PARAMETERS" --mipgap 0.0"
 # $NODELIMIT not supported (version 4.43)
             LP=`echo $i | grep "\.lp"`
             if test $LP

@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de       *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cbc.sh,v 1.11 2011/01/02 11:10:54 bzfheinz Exp $
+# $Id: check_cluster_cbc.sh,v 1.12 2011/01/13 17:45:47 bzfgamra Exp $
 #
 # Call with "make testclustercbc"
 #
@@ -51,10 +51,9 @@ BINID=$BINNAME.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-MIPGAP=$9
+THREADS=$8
+FEASTOL=$9
 CONTINUE=${10}
-LOCK=${11}
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -63,13 +62,6 @@ if test ! -e $SCIPPATH/results
 then
     mkdir $SCIPPATH/results
 fi
-
-if test ! -e $SCIPPATH/locks
-then
-    mkdir $SCIPPATH/locks
-fi
-
-LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
 
 SETTINGS=$SCIPPATH/../settings/$SETNAME.set
 
@@ -83,21 +75,14 @@ then
     fi
 fi
 
-if test "$LOCK" = "true"
-then
-    if test -e $LOCKFILE
-    then
-        echo skipping test due to existing lock file $LOCKFILE
-        exit
-    fi
-    date > $LOCKFILE
-fi
-
 # we add 10% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
 #       available 
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
+
+# since bash counts cpu time we need the time limit for each thread
+HARDTIMELIMIT=`expr $HARDTIMELIMIT \* $THREADS`
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -152,11 +137,11 @@ do
       echo primalTolerance $FEASTOL       >> $TMPFILE
       echo integerTolerance $FEASTOL      >> $TMPFILE
   fi
+#workaround: since CBC only looks at cpu-time, we multiply the timelimit with the number of threads
+  TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
   echo seconds $TIMELIMIT                 >> $TMPFILE
-  if test $MIPGAP != "default"
-      then
-      echo ratioGap $MIPGAP               >> $TMPFILE
-  fi
+  echo threads $THREADS                   >> $TMPFILE
+  echo ratioGap 0.0                       >> $TMPFILE
   echo maxNodes $NODELIMIT                >> $TMPFILE
   echo import $SCIPPATH/$i                >> $TMPFILE
   echo ratioGap                           >> $TMPFILE

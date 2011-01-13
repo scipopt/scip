@@ -23,7 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
+DISPFREQ=${10}
 CONTINUE=${11}
 
 if test ! -e results
@@ -115,11 +115,8 @@ do
             echo set timelimit $TIMELIMIT           >> $TMPFILE
             echo set clocktype 0                    >> $TMPFILE
             echo set mip display 3                  >> $TMPFILE
-            echo set mip interval 10000             >> $TMPFILE
-            if test $MIPGAP != "default"
-            then
-                echo set mip tolerances mipgap $MIPGAP >> $TMPFILE
-            fi
+            echo set mip interval $DISPFREQ         >> $TMPFILE
+            echo set mip tolerances mipgap 0.0      >> $TMPFILE
             echo set mip limits nodes $NODELIMIT    >> $TMPFILE
             echo set mip limits treememory $MEMLIMIT >> $TMPFILE
             echo set threads $THREADS               >> $TMPFILE

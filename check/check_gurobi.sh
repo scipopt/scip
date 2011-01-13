@@ -23,7 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
+DISPFREQ=${10}
 CONTINUE=${11}
 
 GRBNODEFILEDIR=gurobi_nodefiledir
@@ -122,11 +122,8 @@ do
                 echo "setParam(\"IntFeasTol\",$FEASTOL)"     >> $TMPFILE
             fi
             echo "setParam(\"TimeLimit\",$TIMELIMIT)" >> $TMPFILE
-            echo "setParam(\"DisplayInterval\",100)"  >> $TMPFILE
-            if test $MIPGAP != "default"
-            then
-                echo "setParam(\"MIPGap\",$MIPGAP)"   >> $TMPFILE
-            fi
+            echo "setParam(\"DisplayInterval\",$DISPFREQ)"  >> $TMPFILE
+            echo "setParam(\"MIPGap\",0.0)"           >> $TMPFILE
             echo "setParam(\"NodeLimit\",$NODELIMIT)" >> $TMPFILE
             echo "setParam(\"NodefileStart\",$GRBMEMLIMIT)" >> $TMPFILE
             rm -fr $GRBNODEFILEDIR

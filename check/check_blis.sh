@@ -23,7 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
+DISPFREQ=${10}
 CONTINUE=${11}
 
 if test ! -e results
@@ -106,10 +106,7 @@ do
             then
                 echo "integerTol $FEASTOL"            >> $TMPFILE
             fi
-            if test $MIPGAP != "default"
-            then
-               echo "optimalRelGap $MIPGAP"           >> $TMPFILE
-            fi
+            echo "optimalRelGap 0.0"                  >> $TMPFILE
             echo Alps_timeLimit $TIMELIMIT            >> $TMPFILE
             echo Alps_nodeLimit $NODELIMIT            >> $TMPFILE
 #$MEMLIMIT not supported (version 0.91)

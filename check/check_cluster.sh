@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.43 2011/01/02 11:10:54 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.44 2011/01/13 17:45:47 bzfgamra Exp $
 #
 # Call with "make testcluster"
 #
@@ -51,10 +51,10 @@ BINID=$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-DISPFREQ=$9
-CONTINUE=${10}
-LOCK=${11}
+THREADS=$8
+FEASTOL=$9
+DISPFREQ=${10}
+CONTINUE=${11}
 VERSION=${12}
 LPS=${13}
 
@@ -65,13 +65,6 @@ if test ! -e $SCIPPATH/results
 then
     mkdir $SCIPPATH/results
 fi
-
-if test ! -e $SCIPPATH/locks
-then
-    mkdir $SCIPPATH/locks
-fi
-
-LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
 
 SETTINGS=$SCIPPATH/../settings/$SETNAME.set
 
@@ -91,17 +84,6 @@ then
     echo skipping test since the binary $BINNAME does not exist
     exit
 fi
-
-if test "$LOCK" = "true"
-then
-    if test -e $LOCKFILE
-    then
-        echo skipping test due to existing lock file $LOCKFILE
-        exit
-    fi
-    date > $LOCKFILE
-fi
-
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
@@ -169,6 +151,7 @@ do
   echo set limits time $TIMELIMIT        >> $TMPFILE
   echo set limits nodes $NODELIMIT       >> $TMPFILE
   echo set limits memory $MEMLIMIT       >> $TMPFILE
+  echo set lp advanced threads $THREADS  >> $TMPFILE
   echo set timing clocktype 1            >> $TMPFILE
   echo set display verblevel 4           >> $TMPFILE
   echo set display freq $DISPFREQ        >> $TMPFILE

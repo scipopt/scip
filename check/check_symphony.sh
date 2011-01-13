@@ -23,7 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
+DISPFREQ=${10}
 CONTINUE=${11}
 
 if test ! -e results
@@ -112,10 +112,7 @@ do
 #            fi
             echo "set time_limit $TIMELIMIT"        >> $TMPFILE
             echo "set verbosity 0"                  >> $TMPFILE
-            if test $MIPGAP != "default"
-            then
-                echo "set gap_limit" $MIPGAP        >> $TMPFILE
-            fi
+            echo "set gap_limit 0.0"                >> $TMPFILE
             echo "set node_limit $NODELIMIT"        >> $TMPFILE
 #$MEMLIMIT not supported (version 5.2)
 #$THREADS only supported as command line parameter (version 5.2)
