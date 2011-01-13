@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.21 2011/01/02 11:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.22 2011/01/13 18:06:00 bzfhende Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -190,28 +190,27 @@ void relaxVar(
 {
    SCIP_Real* colvals;
    int* colmatind;
-   int ncolvals;
-   int r;
    SCIP_Real ub;
    SCIP_Real lb;
-   int probindex;
+   int ncolvals;
+   int r;
+   int colpos;
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
-   probindex = SCIPvarGetProbindex(var);
-   
-   assert(matrix->ndiscvars <= probindex && probindex < matrix->ncols);
+   colpos = SCIPcolGetLPPos(SCIPvarGetCol(var));
+   assert(0 <= colpos && colpos < matrix->ncols);
 
    /* get nonzero values and corresponding rows of variable */
-   getColumnData(matrix, probindex, &colvals, &colmatind, &ncolvals);
+   getColumnData(matrix, colpos, &colvals, &colmatind, &ncolvals);
 
    ub = SCIPvarGetUbGlobal(var);
    lb = SCIPvarGetLbGlobal(var);
    
-   SCIPdebugMessage("Relaxating variable <%s> (probindex %d) with lb <%g> and ub <%g>\n",
-		    SCIPvarGetName(var), probindex, lb, ub);
+   SCIPdebugMessage("Relaxing variable <%s> with lb <%g> and ub <%g>\n",
+		    SCIPvarGetName(var), lb, ub);
 
    /* relax variable from all its constraints */
    for( r = 0; r < ncolvals; ++r )
@@ -286,7 +285,7 @@ void transformVariable(
    SCIP_COL* col;
    SCIP_Real lb;
    SCIP_Real ub;
-   int       colindex;
+   int       colpos;
 
    assert(SCIPvarIsIntegral(var));
    assert(matrix != NULL);
@@ -298,10 +297,10 @@ void transformVariable(
    assert(col != NULL);
    assert(SCIPcolIsInLP(col));
 
-   colindex = SCIPcolGetLPPos(col);
+   colpos = SCIPcolGetLPPos(col);
 
-   assert(0 <= colindex && colindex < matrix->ncols);
-   assert(matrix->transformstatus[colindex] == TRANSFORMSTATUS_NONE);
+   assert(0 <= colpos && colpos < matrix->ncols);
+   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE);
 
    /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status. 
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the 
@@ -309,15 +308,15 @@ void transformVariable(
     */
    if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
    {
-      matrix->upperbounds[colindex] = ub;
-      matrix->transformstatus[colindex] = TRANSFORMSTATUS_FREE;
-      matrix->transformshiftvals[colindex] = 0.0;
+      matrix->upperbounds[colpos] = ub;
+      matrix->transformstatus[colpos] = TRANSFORMSTATUS_FREE;
+      matrix->transformshiftvals[colpos] = 0.0;
    } 
    else if( SCIPisFeasEQ(scip, lb, 0.0) )
    {
-      matrix->transformstatus[colindex] = TRANSFORMSTATUS_LB;
-      matrix->upperbounds[colindex] = ub;
-      matrix->transformshiftvals[colindex] = 0.0;
+      matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
+      matrix->upperbounds[colpos] = ub;
+      matrix->transformshiftvals[colpos] = 0.0;
    }
    else
    {
@@ -333,19 +332,19 @@ void transformVariable(
        */
       if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
       {
-         matrix->transformstatus[colindex] = TRANSFORMSTATUS_LB;
+         matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
          bound = lb;
       }
       else
       {
-         matrix->transformstatus[colindex] = TRANSFORMSTATUS_NEG;
+         matrix->transformstatus[colpos] = TRANSFORMSTATUS_NEG;
          bound = ub;
       }
 
       assert(!SCIPisInfinity(scip, bound));
 
       /* get nonzero values and corresponding rows of column */
-      getColumnData(matrix, colindex, &vals, &rows, &nrows);
+      getColumnData(matrix, colpos, &vals, &rows, &nrows);
       assert(nrows == 0 || (vals != NULL && rows != NULL));
 
       /* go through rows and modify its lhs, rhs and the variable coefficient, if necessary */
@@ -360,21 +359,21 @@ void transformVariable(
          if( !SCIPisInfinity(scip, matrix->rhs[rows[i]]) )
             matrix->rhs[rows[i]] -= (vals[i]) * bound;
 
-         if( matrix->transformstatus[colindex] == TRANSFORMSTATUS_NEG )
+         if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
             (vals[i]) = -(vals[i]);
 
          assert(SCIPisFeasLE(scip, matrix->lhs[rows[i]], matrix->rhs[rows[i]]));
       }
 
       if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
-         matrix->upperbounds[colindex] = ub - lb;
+         matrix->upperbounds[colpos] = ub - lb;
       else       
-         matrix->upperbounds[colindex] = SCIPinfinity(scip);
+         matrix->upperbounds[colpos] = SCIPinfinity(scip);
       
-      matrix->transformshiftvals[colindex] = bound;
+      matrix->transformshiftvals[colpos] = bound;
 
-      SCIPdebugMessage("Variable <%s> (colindex %d) transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
-		       SCIPvarGetName(var), colindex, lb, 0.0, ub, matrix->upperbounds[colindex]);
+      SCIPdebugMessage("Variable <%s> (colpos %d) transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
+		       SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);
    }
 }
 
