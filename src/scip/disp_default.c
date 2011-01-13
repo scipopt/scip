@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.82 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.83 2011/01/13 14:25:18 bzfgamra Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -618,8 +618,11 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
    assert(scip != NULL);
 
    lpobj = SCIPgetLPObjval(scip);
-   if( SCIPisInfinity(scip, REALABS(lpobj)) )
+
+   if( SCIPisInfinity(scip, -lpobj ) || lpobj == SCIP_INVALID )
       SCIPinfoMessage(scip, file, "      --      ");
+   else if( SCIPisInfinity(scip, lpobj) )
+      SCIPinfoMessage(scip, file, "    cutoff    ");
    else
       SCIPinfoMessage(scip, file, "%13.6e ", lpobj);
 
@@ -637,7 +640,10 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurDualbound)
    assert(scip != NULL);
 
    curdualbound = SCIPgetLocalDualbound(scip);
-   if( SCIPisInfinity(scip, REALABS(curdualbound)) )
+
+   if( SCIPisInfinity(scip, (SCIP_Real) SCIPgetObjsense(scip) * curdualbound ) )
+      SCIPinfoMessage(scip, file, "    cutoff    ");
+   else if( SCIPisInfinity(scip, -1.0 * (SCIP_Real) SCIPgetObjsense(scip) * curdualbound ) )
       SCIPinfoMessage(scip, file, "      --      ");
    else
       SCIPinfoMessage(scip, file, "%13.6e ", curdualbound);
@@ -695,7 +701,10 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputDualbound)
    assert(scip != NULL);
 
    dualbound = SCIPgetDualbound(scip);
-   if( SCIPisInfinity(scip, REALABS(dualbound)) )
+
+   if( SCIPisInfinity(scip, (SCIP_Real) SCIPgetObjsense(scip) * dualbound ) )
+      SCIPinfoMessage(scip, file, "    cutoff    ");
+   else if( SCIPisInfinity(scip, -1.0 * (SCIP_Real) SCIPgetObjsense(scip) * dualbound ) )
       SCIPinfoMessage(scip, file, "      --      ");
    else
       SCIPinfoMessage(scip, file, "%13.6e ", dualbound);
