@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expr.h,v 1.3 2011/01/11 17:24:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expr.h,v 1.4 2011/01/14 21:09:05 bzfviger Exp $"
 
 /**@file   struct_expr.h
  * @brief  data definitions for expressions and expression trees
@@ -70,16 +70,20 @@ struct SCIP_ExprData_Quadratic {
 struct SCIP_ExprData_Polynom {
    SCIP_Real             constant;         /**< constant term of polynom */
    SCIP_EXPRDATA_MONOM** monoms;           /**< monoms that constitute the polynom */
+   int                   monomssize;       /**< size of monoms array */
    int                   nmonoms;          /**< number of monoms */
+   SCIP_Bool             sorted;           /**< are the monoms sorted? */
 };
 
 /** data of monom in polynomial expression: coef * prod_i child_i^exponent_i
  * we allow for real values exponents here */
 struct SCIP_ExprData_Monom {
    SCIP_Real             coef;             /**< coefficient of monom */
+   int                   factorssize;      /**< size of factors arrays */
    int                   nfactors;         /**< number of factors */
    int*                  childidxs;        /**< children corresponding to factors */
    SCIP_Real*            exponents;        /**< value of exponent for each factor */
+   SCIP_Bool             sorted;           /**< are the factors sorted (by childidx)? */
 };
 
 #ifdef __cplusplus

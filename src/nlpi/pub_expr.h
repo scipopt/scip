@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expr.h,v 1.3 2010/12/27 20:37:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expr.h,v 1.4 2011/01/14 21:09:05 bzfviger Exp $"
 
 /**@file   nlpi/pub_expr.h
  * @brief  methods for expressions and expression trees
@@ -217,6 +217,12 @@ void SCIPexprChgPolynomConstant(
    SCIP_Real             constant            /**< new value for constant */
 );
 
+/** ensures that monoms of a polynom are sorted */
+extern
+void SCIPexprSortPolynomMonoms(
+   SCIP_EXPR*            expr                /**< polynom expression */
+);
+
 /** creates a monom */
 extern
 SCIP_RETCODE SCIPexprCreatePolynomMonom(
@@ -251,6 +257,23 @@ extern
 SCIP_Real* SCIPexprGetPolynomMonomExponents(
    SCIP_EXPRDATA_MONOM*  monom               /**< monom */
 );
+
+/** ensures that factors in a monom are sorted */
+extern
+void SCIPexprSortPolynomMonomFactors(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+   );
+
+/** finds a factor corresponding to a given child index in a monom
+ * note that if the factors have not been merged, the position of some factor corresponding to a given child is given
+ * returns TRUE if a factor is found, FALSE if not
+ */
+extern
+SCIP_Bool SCIPexprFindPolynomMonomFactor(
+   SCIP_EXPRDATA_MONOM*  monom,              /**< monom */
+   int                   childidx,           /**< index of the child which factor to search for */
+   int*                  pos                 /**< buffer to store position of factor */
+   );
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
 extern

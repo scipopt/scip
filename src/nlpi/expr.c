@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.3 2010/12/27 22:28:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.4 2011/01/14 21:09:05 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -30,8 +30,9 @@
 #include "nlpi/exprinterpret.h"
 
 #include "scip/intervalarith.h"
+#include "scip/pub_misc.h"
 
-#define SCIP_EXPRESSION_MAXCHILDEST 20       /* estimate on maximal number of children */
+#define SCIP_EXPRESSION_MAXCHILDEST 20       /**< estimate on maximal number of children */
 
 /** sign of a value (-1 or +1)
  * 0.0 has sign +1
@@ -986,6 +987,22 @@ int SCIPexpropGetNChildren(
    return SCIPexprOpTable[op].nargs;
 }
 
+/** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
+static
+int calcGrowSize(
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   int size;
+
+   /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
+   size = 4;
+   while( size < num )
+      size = (int)(1.2 * size + 4);
+
+   return size;
+}
+
 /** creates an expression
  * Note, that the expression is allocated but for the children only the pointer is copied.
  */
@@ -1213,6 +1230,72 @@ void quadraticdataFree(
    BMSfreeBlockMemory(blkmem, quadraticdata);
 }
 
+/** frees a SCIP_EXPRDATA_MONOM data structure */
+static
+void monomdataFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_MONOM** monomdata           /**< pointer to monom data to free */
+   )
+{
+   assert(blkmem != NULL);
+   assert( monomdata != NULL);
+   assert(*monomdata != NULL);
+
+   if( (*monomdata)->factorssize > 0 )
+   {
+      assert((*monomdata)->childidxs != NULL);
+      assert((*monomdata)->exponents != NULL);
+
+      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->childidxs, (*monomdata)->factorssize);
+      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->exponents, (*monomdata)->factorssize);
+   }
+   assert((*monomdata)->childidxs == NULL);
+   assert((*monomdata)->exponents == NULL);
+
+   BMSfreeBlockMemory(blkmem, monomdata);
+}
+
+
+/** compares two monoms
+ * gives 0 if monoms are equal */
+static
+SCIP_DECL_SORTPTRCOMP(monomdataCompare)
+{
+   SCIP_EXPRDATA_MONOM* monom1;
+   SCIP_EXPRDATA_MONOM* monom2;
+
+   int i;
+
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
+
+   monom1 = (SCIP_EXPRDATA_MONOM*)elem1;
+   monom2 = (SCIP_EXPRDATA_MONOM*)elem2;
+
+   /* make sure, both monoms are equal */
+   SCIPexprSortPolynomMonomFactors(monom1);
+   SCIPexprSortPolynomMonomFactors(monom2);
+
+   /* for the first factor where both monoms differ,
+    * we return either the difference in the child indices, if children are different
+    * or the sign of the difference in the exponents
+    */
+   for( i = 0; i < monom1->nfactors && i < monom2->nfactors; ++i )
+   {
+      if( monom1->childidxs[i] != monom2->childidxs[i] )
+         return monom1->childidxs[i] - monom2->childidxs[i];
+      if( monom1->exponents[i] > monom2->exponents[i] )
+         return 1;
+      else if( monom1->exponents[i] < monom2->exponents[i] )
+         return -1;
+   }
+
+   /* if the factors of one monom are a proper subset of the factors of the other monom,
+    * we return the difference in the number of monoms
+    */
+   return monom1->nfactors - monom2->nfactors;
+}
+
 /** creates SCIP_EXPRDATA_POLYNOM data structure from given monoms */
 static
 SCIP_RETCODE polynomdataCreate(
@@ -1220,7 +1303,8 @@ SCIP_RETCODE polynomdataCreate(
    SCIP_EXPRDATA_POLYNOM** polynomdata,       /**< buffer to store pointer to polynom data */
    int                   nmonoms,            /**< number of monoms */
    SCIP_EXPRDATA_MONOM** monoms,             /**< monoms */
-   SCIP_Real             constant            /**< constant part */
+   SCIP_Real             constant,           /**< constant part */
+   SCIP_Bool             copymonoms          /**< whether to copy monoms, or copy only given pointers, in which case polynomdata assumes ownership of monom structure */
    )
 {
    assert(blkmem != NULL);
@@ -1231,46 +1315,92 @@ SCIP_RETCODE polynomdataCreate(
 
    (*polynomdata)->constant = constant;
    (*polynomdata)->nmonoms  = nmonoms;
+   (*polynomdata)->monomssize = nmonoms;
    (*polynomdata)->monoms   = NULL;
+   (*polynomdata)->sorted   = (nmonoms <= 1);
 
    if( nmonoms > 0 )
    {
       int i;
 
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomdata)->monoms, nmonoms) );
-
-      for( i = 0; i < nmonoms; ++i )
+      if( copymonoms )
       {
-         assert(monoms[i] != NULL);  /*lint !e613*/
-         SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &(*polynomdata)->monoms[i],
-            monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomdata)->monoms, nmonoms) );
+
+         for( i = 0; i < nmonoms; ++i )
+         {
+            assert(monoms[i] != NULL);  /*lint !e613*/
+            SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &(*polynomdata)->monoms[i],
+               monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
+         }
+      }
+      else
+      {
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*polynomdata)->monoms, monoms, nmonoms) );
       }
    }
 
    return SCIP_OKAY;
 }
 
-/** frees a SCIP_EXPRDATA_MONOM data structure */
+/** creates a copy of a SCIP_EXPRDATA_POLYNOM data structure */
 static
-void monomdataFree(
+SCIP_RETCODE polynomdataCopy(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_MONOM** monomdata           /**< pointer to monom data to free */
+   SCIP_EXPRDATA_POLYNOM** polynomdata,      /**< buffer to store pointer to polynom data */
+   SCIP_EXPRDATA_POLYNOM* sourcepolynomdata  /**< polynom data to copy */
    )
 {
    assert(blkmem != NULL);
+   assert(polynomdata != NULL);
+   assert(sourcepolynomdata != NULL);
 
-   if( (*monomdata)->nfactors > 0 )
+   SCIP_ALLOC( BMSduplicateBlockMemory(blkmem, polynomdata, sourcepolynomdata) );
+
+   (*polynomdata)->monomssize = sourcepolynomdata->nmonoms;
+   if( sourcepolynomdata->nmonoms > 0 )
    {
-      assert((*monomdata)->childidxs != NULL);
-      assert((*monomdata)->exponents != NULL);
+      int i;
 
-      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->childidxs, (*monomdata)->nfactors);
-      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->exponents, (*monomdata)->nfactors);
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomdata)->monoms, (*polynomdata)->monomssize) );
+
+      for( i = 0; i < sourcepolynomdata->nmonoms; ++i )
+      {
+         assert(sourcepolynomdata->monoms[i] != NULL);  /*lint !e613*/
+         SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &(*polynomdata)->monoms[i], sourcepolynomdata->monoms[i]->coef,
+            sourcepolynomdata->monoms[i]->nfactors, sourcepolynomdata->monoms[i]->childidxs, sourcepolynomdata->monoms[i]->exponents) );
+      }
    }
-   assert((*monomdata)->childidxs == NULL);
-   assert((*monomdata)->exponents == NULL);
+   else
+   {
+      (*polynomdata)->monoms = NULL;
+   }
 
-   BMSfreeBlockMemory(blkmem, monomdata);
+   return SCIP_OKAY;
+}
+
+/** ensures that the monoms array of a polynom has at least a given size */
+static
+SCIP_RETCODE polynomdataEnsureMonomsSize(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_POLYNOM* polynomdata,       /**< polynom data */
+   int                   minsize             /**< minimal size of monoms array */
+   )
+{
+   assert(blkmem != NULL);
+   assert(polynomdata != NULL);
+
+   if( minsize > polynomdata->monomssize )
+   {
+      int newsize;
+
+      newsize = calcGrowSize(minsize);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &polynomdata->monoms, polynomdata->monomssize, newsize) );
+      polynomdata->monomssize = newsize;
+   }
+   assert(minsize <= polynomdata->monomssize);
+
+   return SCIP_OKAY;
 }
 
 /** frees a SCIP_EXPRDATA_POLYNOM data structure */
@@ -1284,7 +1414,7 @@ void polynomdataFree(
    assert(polynomdata != NULL);
    assert(*polynomdata != NULL);
 
-   if( (*polynomdata)->nmonoms > 0 )
+   if( (*polynomdata)->monomssize > 0 )
    {
       int i;
 
@@ -1295,11 +1425,70 @@ void polynomdataFree(
          assert((*polynomdata)->monoms[i] == NULL);
       }
 
-      BMSfreeBlockMemoryArray(blkmem, &(*polynomdata)->monoms, (*polynomdata)->nmonoms);
+      BMSfreeBlockMemoryArray(blkmem, &(*polynomdata)->monoms, (*polynomdata)->monomssize);
    }
    assert((*polynomdata)->monoms == NULL);
 
    BMSfreeBlockMemory(blkmem, polynomdata);
+}
+
+/** adds an array of monoms to a polynom */
+static
+SCIP_RETCODE polynomdataAddMonoms(
+   BMS_BLKMEM*           blkmem,             /**< block memory of expression */
+   SCIP_EXPRDATA_POLYNOM* polynomdata,       /**< polynom data */
+   int                   nmonoms,            /**< number of monoms to add */
+   SCIP_EXPRDATA_MONOM** monoms,             /**< the monoms to add */
+   SCIP_Bool             copymonoms          /**< whether to copy monoms or to assume ownership */
+)
+{
+   int i;
+
+   assert(blkmem != NULL);
+   assert(polynomdata != NULL);
+   assert(monoms != NULL || nmonoms == 0);
+
+   if( nmonoms == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( polynomdataEnsureMonomsSize(blkmem, polynomdata, polynomdata->nmonoms + nmonoms) );
+   assert(polynomdata->monomssize >= polynomdata->nmonoms + nmonoms);
+
+   if( copymonoms )
+   {
+      for( i = 0; i < nmonoms; ++i )
+      {
+         assert(monoms[i] != NULL);  /*lint !e613*/
+         SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &polynomdata->monoms[polynomdata->nmonoms + i],
+            monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
+      }
+   }
+   else
+   {
+      BMScopyMemoryArray(&polynomdata->monoms[polynomdata->nmonoms], monoms, nmonoms);
+   }
+   polynomdata->nmonoms += nmonoms;
+
+   polynomdata->sorted = (polynomdata->nmonoms <= 1);
+
+   return SCIP_OKAY;
+}
+
+/** ensures that monoms of a polynom are sorted */
+static
+void polynomdataSortMonoms(
+   SCIP_EXPRDATA_POLYNOM* polynomdata         /**< polynom expression */
+)
+{
+   assert(polynomdata != NULL);
+
+   if( polynomdata->sorted )
+      return;
+
+   if( polynomdata->nmonoms > 0 )
+      SCIPsortPtr((void*)polynomdata->monoms, monomdataCompare, polynomdata->nmonoms);
+
+   polynomdata->sorted = TRUE;
 }
 
 /** copies an expression including its children */
@@ -1364,12 +1553,15 @@ SCIP_RETCODE SCIPexprCopyDeep(
       case SCIP_EXPR_POLYNOM:
       {
          SCIP_EXPRDATA_POLYNOM* sourcedata;
+         SCIP_EXPRDATA_POLYNOM* targetdata;
 
          sourcedata = (SCIP_EXPRDATA_POLYNOM*)sourceexpr->data.data;
          assert(sourcedata != NULL);
 
-         SCIP_CALL( polynomdataCreate(blkmem, (SCIP_EXPRDATA_POLYNOM**)&(*targetexpr)->data.data,
-            sourcedata->nmonoms, sourcedata->monoms, sourcedata->constant) );
+         SCIP_CALL( polynomdataCopy(blkmem, &targetdata, sourcedata) );
+
+         (*targetexpr)->data.data = (void*)targetdata;
+
          break;
       }
 
@@ -1664,7 +1856,7 @@ SCIP_RETCODE SCIPexprCreatePolynom(
    else
       childrencopy = NULL;
 
-   SCIP_CALL( polynomdataCreate(blkmem, &data, nmonoms, monoms, constant) );
+   SCIP_CALL( polynomdataCreate(blkmem, &data, nmonoms, monoms, constant, TRUE) );
    opdata.data = (void*)data;
 
    SCIP_CALL( exprCreate( blkmem, expr, SCIP_EXPR_POLYNOM, nchildren, childrencopy, opdata) );
@@ -1716,9 +1908,6 @@ SCIP_RETCODE SCIPexprAddPolynomMonoms(
    SCIP_EXPRDATA_MONOM** monoms              /**< the monoms to add */
 )
 {
-   SCIP_EXPRDATA_POLYNOM* data;
-   int i;
-
    assert(blkmem != NULL);
    assert(expr != NULL);
    assert(expr->op == SCIP_EXPR_POLYNOM);
@@ -1727,26 +1916,7 @@ SCIP_RETCODE SCIPexprAddPolynomMonoms(
    if( nmonoms == 0 )
       return SCIP_OKAY;
 
-   data = (SCIP_EXPRDATA_POLYNOM*)expr->data.data;
-   assert(data != NULL);
-
-   if( data->nmonoms > 0 )
-   {
-      assert(data->monoms != NULL);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &data->monoms, data->nmonoms, data->nmonoms + nmonoms) );
-   }
-   else
-   {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &data->monoms, nmonoms) );
-   }
-
-   for( i = 0; i < nmonoms; ++i )
-   {
-      assert(monoms[i] != NULL);  /*lint !e613*/
-      SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &data->monoms[data->nmonoms + i],
-         monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
-   }
-   data->nmonoms += nmonoms;
+   SCIP_CALL( polynomdataAddMonoms(blkmem, (SCIP_EXPRDATA_POLYNOM*)expr->data.data, nmonoms, monoms, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1762,6 +1932,18 @@ void SCIPexprChgPolynomConstant(
    assert(expr->data.data != NULL);
 
    ((SCIP_EXPRDATA_POLYNOM*)expr->data.data)->constant = constant;
+}
+
+/** ensures that monoms of a polynom are sorted */
+void SCIPexprSortPolynomMonoms(
+   SCIP_EXPR*            expr                /**< polynom expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_POLYNOM);
+   assert(expr->data.data != NULL);
+
+   polynomdataSortMonoms((SCIP_EXPRDATA_POLYNOM*)expr->data.data);
 }
 
 /** creates a monom */
@@ -1783,6 +1965,8 @@ SCIP_RETCODE SCIPexprCreatePolynomMonom(
 
    (*monom)->coef     = coef;
    (*monom)->nfactors = nfactors;
+   (*monom)->factorssize = nfactors;
+   (*monom)->sorted = (nfactors <= 1);
 
    if( nfactors > 0 )
    {
@@ -1838,6 +2022,42 @@ SCIP_Real* SCIPexprGetPolynomMonomExponents(
    return monom->exponents;
 }
 
+/** ensures that factors in a monom are sorted */
+void SCIPexprSortPolynomMonomFactors(
+   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+   )
+{
+   assert(monom != NULL);
+
+   if( monom->sorted )
+      return;
+
+   if( monom->nfactors > 0 )
+      SCIPsortIntReal(monom->childidxs, monom->exponents, monom->nfactors);
+
+   monom->sorted = TRUE;
+}
+
+/** finds a factor corresponding to a given child index in a monom
+ * note that if the factors have not been merged, the position of some factor corresponding to a given child is given
+ * returns TRUE if a factor is found, FALSE if not
+ */
+SCIP_Bool SCIPexprFindPolynomMonomFactor(
+   SCIP_EXPRDATA_MONOM*  monom,              /**< monom */
+   int                   childidx,           /**< index of the child which factor to search for */
+   int*                  pos                 /**< buffer to store position of factor */
+)
+{
+   assert(monom != NULL);
+
+   if( monom->nfactors == 0 )
+      return FALSE;
+
+   SCIPexprSortPolynomMonomFactors(monom);
+
+   return SCIPsortedvecFindInt(monom->childidxs, childidx, monom->nfactors, pos);
+}
+
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
 SCIP_Bool SCIPexprHasParam(
    SCIP_EXPR*            expr                /**< expression */
@@ -1869,7 +2089,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
    assert(expr      != NULL);
    assert(maxdegree != NULL);
 
-   switch (expr->op)
+   switch( expr->op )
    {
       case SCIP_EXPR_VARIDX:
          *maxdegree = 1;
@@ -2520,7 +2740,7 @@ void SCIPexprPrint(
          polynomdata = (SCIP_EXPRDATA_POLYNOM*)expr->data.data;
          assert(polynomdata != NULL);
 
-         if( polynomdata->constant != 0.0 )
+         if( polynomdata->constant != 0.0 || polynomdata->nmonoms == 0 )
          {
             SCIPmessageFPrintInfo(file, "%.20g", polynomdata->constant);
          }
