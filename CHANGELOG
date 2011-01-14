@@ -84,7 +84,7 @@ features:
 - added writing for wbo files
 - changed opb(/wbo) reader which now creates pseudoboolean constraints instead of linear- and and-constraints, only a non-linear objective will create and-constraints inside the reader and while reading a wbo file the topcost constraint is created as well
 - moved code of scip.c:SCIPreadSol() to reader_sol.c; call solution reading via SCIPreadProb()
-
+- new presolving step "removeConstraintsDueToNegCliques" in locigor constraint handler which updates logicor constraints to setppc constraints if a negated clique inside this constraint exist, by default is off
 
 SCIP version 2.0.2
 ==================

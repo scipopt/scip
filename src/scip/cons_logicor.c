@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.160 2011/01/03 20:45:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.161 2011/01/14 22:45:26 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -29,6 +29,7 @@
 
 #include "scip/cons_logicor.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
 
 
@@ -63,6 +64,7 @@
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be preformed? */
+#define DEFAULT_NEGATEDCLIQUE     FALSE /**< should negated clique information be used in presolving */
 
 
 /* @todo make this a parameter setting */
@@ -81,6 +83,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be preformed? */
+   SCIP_Bool             usenegatedclique;   /**< should negated clique information be used in presolving */
+   int                   nlastcliques;       /**< number of cliques after last negated clique presolving round */
+   int                   nlastimpls;         /**< number of implications after last negated clique presolving round */
 };
 
 /** logic or constraint data */
@@ -146,6 +151,9 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+
+   (*conshdlrdata)->nlastcliques = 0;
+   (*conshdlrdata)->nlastimpls = 0;
 
    /* get event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -1655,6 +1663,155 @@ SCIP_RETCODE removeRedundantConstraints(
    return SCIP_OKAY;
 }
 
+/* try to find a negated clique in a constraint which makes this constraint redundant but we need to keep the negated
+ * clique information alive, so we create a corresponding setppc constraint 
+ */
+static
+SCIP_RETCODE removeConstraintsDueToNegCliques(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< logicor constraint handler */
+   SCIP_CONS**           conss,              /**< all constraints */
+   int                   nconss,             /**< number of constraints */
+   int*                  nupgdconss          /**< pointer to count number of upgraded constraints */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS* cons;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nupgdconss != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   if( SCIPgetNCliques(scip) == conshdlrdata->nlastcliques && SCIPgetNImplications(scip) == conshdlrdata->nlastimpls )
+      return SCIP_OKAY;
+      
+   /* iterate over all constraints and try to find negated cliques in logicors */
+   for( c = nconss - 1; c >= 0 && !SCIPisStopped(scip); --c )
+   {
+      int v;
+
+      cons = conss[c];
+      assert(cons != NULL);
+         
+      if( !SCIPconsIsActive(cons) )
+         continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      assert(consdata->nvars > 1);
+
+      if( SCIPconsIsModifiable(cons) && consdata->nvars == 2 )
+         continue;
+
+      for( v = consdata->nvars - 1; v > 0; --v )
+      {
+         SCIP_Bool breakloop;
+         SCIP_Bool neg1;
+         int w;
+
+         /* get binary representative of variable1 */
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, consdata->vars[v], &var1, &neg1) );
+
+         /* if there is no negated variable, there can't be a negated clique */
+         if( SCIPvarGetNegatedVar(var1) == NULL )
+            continue;
+
+         /* get active counterpart to check for common cliques */
+         if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
+         {
+            var1 = SCIPvarGetNegatedVar(var1);
+            neg1 = TRUE;
+         }
+         else
+            neg1 = FALSE;
+         
+         if( !SCIPvarIsActive(var1) )
+            continue;
+
+         breakloop = FALSE;
+
+         for( w = v - 1; w >= 0; --w )
+         {
+            SCIP_Bool neg2;
+
+            /* get binary representative of variable2 */
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, consdata->vars[w], &var2, &neg2) );
+
+            /* if there is no negated variable, there can't be a negated clique */
+            if( SCIPvarGetNegatedVar(var2) == NULL )
+               continue;
+
+            if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
+            {
+               var2 = SCIPvarGetNegatedVar(var2);
+               neg2 = TRUE;
+            }
+            else
+               neg2 = FALSE;
+
+            if( !SCIPvarIsActive(var2) )
+               continue;
+
+            if( SCIPvarsHaveCommonClique(var1, neg1, var2, neg2, TRUE) )
+            {
+               SCIP_CONS* newcons;
+               SCIP_VAR* vars[2];
+
+               /* this negated clique information could be created out of this logicor constraint even if there are more
+                * than two variables left (, for example by probing), we need to keep this information by creating a
+                * setppc constraint instead 
+                */
+
+               /* get correct variables */
+               if( !neg1 )
+                  vars[0] = SCIPvarGetNegatedVar(var1);
+               else
+                  vars[0] = var1;
+
+               if( !neg2 )
+                  vars[1] = SCIPvarGetNegatedVar(var2);
+               else
+                  vars[1] = var2;
+
+               SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), 2, vars, 
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+                     SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+               
+               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+               SCIPdebugMessage("logicor constraint <%s> is redundant due to negated clique information and will be replaced by a setppc constraint \n", SCIPconsGetName(cons));
+               SCIPdebugMessage("variable <%s> and variable <%s> are in a negated clique\n", SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[w]));
+
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               ++(*nupgdconss);
+
+               breakloop = TRUE;
+               break;
+            }
+         }
+         if( breakloop )
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * upgrading of linear constraints
@@ -2438,6 +2595,15 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             }
          }
       }
+      
+      /* check for redundant constraints due to negated clique information */
+      if( conshdlrdata->usenegatedclique )
+      {
+         SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conss, nconss, nupgdconss) );
+         
+         conshdlrdata->nlastcliques = SCIPgetNCliques(scip);
+         conshdlrdata->nlastimpls = SCIPgetNImplications(scip);
+      }
    }
 
  TERMINATE:
@@ -2862,6 +3028,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          "constraints/logicor/dualpresolving",
          "should dual presolving steps be preformed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/logicor/negatedclique",
+         "should negated clique information be used in presolving",
+         &conshdlrdata->usenegatedclique, TRUE, DEFAULT_NEGATEDCLIQUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
