@@ -125,6 +125,7 @@ do
             echo read $i                            >> $TMPFILE
             echo display problem stats              >> $TMPFILE
             echo optimize                           >> $TMPFILE
+            echo display solution quality           >> $TMPFILE
             echo quit                               >> $TMPFILE
             echo -----------------------------
             date

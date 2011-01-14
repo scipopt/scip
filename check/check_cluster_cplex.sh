@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cplex.sh,v 1.5 2011/01/13 17:45:47 bzfgamra Exp $
+# $Id: check_cluster_cplex.sh,v 1.6 2011/01/14 16:35:37 bzfgamra Exp $
 #
 # Call with "make testcluster"
 #
@@ -157,6 +157,7 @@ do
   echo read $SCIPPATH/$i                  >> $TMPFILE
   echo display problem stats              >> $TMPFILE
   echo optimize                           >> $TMPFILE
+  echo display solution quality           >> $TMPFILE
   echo quit                               >> $TMPFILE
 
   qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
