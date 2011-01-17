@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.44 2011/01/02 11:10:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.45 2011/01/17 11:54:28 bzfgamra Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -168,7 +168,7 @@ struct SCIP_Tree
    SCIP_NODE**           children;           /**< array with children of the focus node */
    SCIP_NODE**           siblings;           /**< array with siblings of the focus node */
    SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
-   SCIP_Real*            siblingsprio;       /**< array with node selection priorities of children */
+   SCIP_Real*            siblingsprio;       /**< array with node selection priorities of siblings */
    int*                  pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
                                               *   newly added columns of the focus node and the current probing node) */
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
