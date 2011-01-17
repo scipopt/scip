@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.39 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.40 2011/01/17 12:04:39 bzfheinz Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @ingroup NODESELECTORS
@@ -42,7 +42,7 @@
  */
 
 #define SELECTBESTFREQ              100 /**< frequency for selecting the best node instead of the deepest one */
-#define COUNTONLYLEAFS             TRUE /**< only count leaf nodes or all nodes */
+#define COUNTONLYLEAVES            TRUE /**< only count leaf nodes or all nodes */
 
 
 
@@ -50,9 +50,9 @@
 struct SCIP_NodeselData
 {
    SCIP_Longint          lastrestart;        /**< node number where the last best node was selected */
-   SCIP_Longint          nprocessedleafs;    /**< number of processed leafs since the last restart */
+   SCIP_Longint          nprocessedleaves;   /**< number of processed leafs since the last restart */
    int                   selectbestfreq;     /**< frequency for selecting the best node instead of the deepest one */
-   SCIP_Bool             countonlyleafs;     /**< only count leaf nodes or all nodes */
+   SCIP_Bool             countonlyleaves;    /**< only count leaf nodes or all nodes */
 };
 
 
@@ -114,7 +114,7 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
 
    /* reset counters */
    nodeseldata->lastrestart = 0;
-   nodeseldata->nprocessedleafs = 0;
+   nodeseldata->nprocessedleaves = 0;
 
    return SCIP_OKAY;
 }
@@ -143,17 +143,18 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
       assert(nodeseldata != NULL);
 
       /* increase the number of processed leafs since we are in a leaf */
-      nodeseldata->nprocessedleafs++;
+      nodeseldata->nprocessedleaves++;
 
       nnodes = SCIPgetNNodes(scip);
 
-      /* check if in case of "only leafs" the number processed leafs exceeds the frequency or in the other case the
-       * number of processed node does it */
-      if( (nodeseldata->countonlyleafs && nodeseldata->nprocessedleafs >= nodeseldata->selectbestfreq) 
-         || (!nodeseldata->countonlyleafs && nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq ) )
+      /* check if in case of "only leaves" the number processed leavess exceeds the frequency or in the other case the
+       * number of processed node does it 
+       */
+      if( (nodeseldata->countonlyleaves && nodeseldata->nprocessedleaves >= nodeseldata->selectbestfreq) 
+         || (!nodeseldata->countonlyleaves && nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq ) )
       {
          nodeseldata->lastrestart = nnodes;
-         nodeseldata->nprocessedleafs = 0;
+         nodeseldata->nprocessedleaves = 0;
          *selnode = SCIPgetBestboundNode(scip);
       }
       else
@@ -190,9 +191,9 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
    nodeseldata->lastrestart = 0;
-   nodeseldata->nprocessedleafs = 0;
+   nodeseldata->nprocessedleaves = 0;
    nodeseldata->selectbestfreq = SELECTBESTFREQ;
-   nodeseldata->countonlyleafs = COUNTONLYLEAFS;
+   nodeseldata->countonlyleaves = COUNTONLYLEAVES;
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
@@ -209,9 +210,9 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    
    /* add node selector parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "nodeselection/restartdfs/countonlyleafs",
+         "nodeselection/restartdfs/countonlyleaves",
          "count only leaf nodes (otherwise all nodes)?",
-         &nodeseldata->countonlyleafs, FALSE, COUNTONLYLEAFS, NULL, NULL) );
+         &nodeseldata->countonlyleaves, FALSE, COUNTONLYLEAVES, NULL, NULL) );
    
    return SCIP_OKAY;
 }
