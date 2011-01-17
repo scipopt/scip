@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.4 2011/01/14 21:09:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.5 2011/01/17 13:11:02 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -1230,32 +1230,6 @@ void quadraticdataFree(
    BMSfreeBlockMemory(blkmem, quadraticdata);
 }
 
-/** frees a SCIP_EXPRDATA_MONOM data structure */
-static
-void monomdataFree(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_MONOM** monomdata           /**< pointer to monom data to free */
-   )
-{
-   assert(blkmem != NULL);
-   assert( monomdata != NULL);
-   assert(*monomdata != NULL);
-
-   if( (*monomdata)->factorssize > 0 )
-   {
-      assert((*monomdata)->childidxs != NULL);
-      assert((*monomdata)->exponents != NULL);
-
-      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->childidxs, (*monomdata)->factorssize);
-      BMSfreeBlockMemoryArray(blkmem, &(*monomdata)->exponents, (*monomdata)->factorssize);
-   }
-   assert((*monomdata)->childidxs == NULL);
-   assert((*monomdata)->exponents == NULL);
-
-   BMSfreeBlockMemory(blkmem, monomdata);
-}
-
-
 /** compares two monoms
  * gives 0 if monoms are equal */
 static
@@ -1421,7 +1395,7 @@ void polynomdataFree(
       for( i = 0; i < (*polynomdata)->nmonoms; ++i )
       {
          assert((*polynomdata)->monoms[i] != NULL);
-         monomdataFree(blkmem, &(*polynomdata)->monoms[i]);
+         SCIPexprFreePolynomMonom(blkmem, &(*polynomdata)->monoms[i]);
          assert((*polynomdata)->monoms[i] == NULL);
       }
 
@@ -1838,7 +1812,8 @@ SCIP_RETCODE SCIPexprCreatePolynom(
    SCIP_EXPR**           children,           /**< children of expression */
    int                   nmonoms,            /**< number of monoms */
    SCIP_EXPRDATA_MONOM** monoms,             /**< monoms */
-   SCIP_Real             constant            /**< constant part */
+   SCIP_Real             constant,           /**< constant part */
+   SCIP_Bool             copymonoms          /**< should monoms by copied or ownership be assumed? */
 )
 {
    SCIP_EXPROPDATA opdata;
@@ -1856,7 +1831,7 @@ SCIP_RETCODE SCIPexprCreatePolynom(
    else
       childrencopy = NULL;
 
-   SCIP_CALL( polynomdataCreate(blkmem, &data, nmonoms, monoms, constant, TRUE) );
+   SCIP_CALL( polynomdataCreate(blkmem, &data, nmonoms, monoms, constant, copymonoms) );
    opdata.data = (void*)data;
 
    SCIP_CALL( exprCreate( blkmem, expr, SCIP_EXPR_POLYNOM, nchildren, childrencopy, opdata) );
@@ -1905,7 +1880,8 @@ SCIP_RETCODE SCIPexprAddPolynomMonoms(
    BMS_BLKMEM*           blkmem,             /**< block memory of expression */
    SCIP_EXPR*            expr,               /**< expression */
    int                   nmonoms,            /**< number of monoms to add */
-   SCIP_EXPRDATA_MONOM** monoms              /**< the monoms to add */
+   SCIP_EXPRDATA_MONOM** monoms,             /**< the monoms to add */
+   SCIP_Bool             copymonoms          /**< should monoms by copied or ownership be assumed? */
 )
 {
    assert(blkmem != NULL);
@@ -1916,7 +1892,7 @@ SCIP_RETCODE SCIPexprAddPolynomMonoms(
    if( nmonoms == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( polynomdataAddMonoms(blkmem, (SCIP_EXPRDATA_POLYNOM*)expr->data.data, nmonoms, monoms, TRUE) );
+   SCIP_CALL( polynomdataAddMonoms(blkmem, (SCIP_EXPRDATA_POLYNOM*)expr->data.data, nmonoms, monoms, copymonoms) );
 
    return SCIP_OKAY;
 }
@@ -1980,6 +1956,30 @@ SCIP_RETCODE SCIPexprCreatePolynomMonom(
    }
 
    return SCIP_OKAY;
+}
+
+/** frees a monom */
+void SCIPexprFreePolynomMonom(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_MONOM** monom               /**< pointer to monom that should be freed */
+)
+{
+   assert(blkmem != NULL);
+   assert( monom != NULL);
+   assert(*monom != NULL);
+
+   if( (*monom)->factorssize > 0 )
+   {
+      assert((*monom)->childidxs != NULL);
+      assert((*monom)->exponents != NULL);
+
+      BMSfreeBlockMemoryArray(blkmem, &(*monom)->childidxs, (*monom)->factorssize);
+      BMSfreeBlockMemoryArray(blkmem, &(*monom)->exponents, (*monom)->factorssize);
+   }
+   assert((*monom)->childidxs == NULL);
+   assert((*monom)->exponents == NULL);
+
+   BMSfreeBlockMemory(blkmem, monom);
 }
 
 /** gets coefficient of a monom */

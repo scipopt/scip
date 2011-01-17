@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expr.h,v 1.4 2011/01/14 21:09:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expr.h,v 1.5 2011/01/17 13:11:02 bzfviger Exp $"
 
 /**@file   nlpi/pub_expr.h
  * @brief  methods for expressions and expression trees
@@ -180,7 +180,8 @@ SCIP_RETCODE SCIPexprCreatePolynom(
    SCIP_EXPR**           children,           /**< children of expression */
    int                   nmonoms,            /**< number of monoms */
    SCIP_EXPRDATA_MONOM** monoms,             /**< monoms */
-   SCIP_Real             constant            /**< constant part */
+   SCIP_Real             constant,           /**< constant part */
+   SCIP_Bool             copymonoms          /**< should monoms by copied or ownership be assumed? */
 );
 
 /** gives the monoms belonging to a SCIP_EXPR_POLYNOM expression */
@@ -207,7 +208,8 @@ SCIP_RETCODE SCIPexprAddPolynomMonoms(
    BMS_BLKMEM*           blkmem,             /**< block memory of expression */
    SCIP_EXPR*            expr,               /**< expression */
    int                   nmonoms,            /**< number of monoms to add */
-   SCIP_EXPRDATA_MONOM** monoms              /**< the monoms to add */
+   SCIP_EXPRDATA_MONOM** monoms,             /**< the monoms to add */
+   SCIP_Bool             copymonoms          /**< should monoms by copied or ownership be assumed? */
 );
 
 /** changes the constant in a SCIP_EXPR_POLYNOM expression */
@@ -232,6 +234,13 @@ SCIP_RETCODE SCIPexprCreatePolynomMonom(
    int                   nfactors,           /**< number of factors in monom */
    int*                  childidxs,          /**< indices of children corresponding to factors */
    SCIP_Real*            exponents           /**< exponent in each factor */
+);
+
+/** frees a monom */
+extern
+void SCIPexprFreePolynomMonom(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRDATA_MONOM** monom               /**< pointer to monom that should be freed */
 );
 
 /** gets coefficient of a monom */

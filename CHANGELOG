@@ -27,13 +27,12 @@ interface:
 - new methods SCIPvarGetBdchgInfoLb() and SCIPvarGetBdchgInfoUb() returning the bound change information at the given position
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
 - SCIP_DECL_PROBCOPY got a new parameter global
+- SCIPexprCreatePolynom() and SCIPexprAddPolynomMonoms() got a new parameter copymonoms 
 
 performance improvements:
 - performance improvements in prop_vbounds
 
 fixed bugs:
-- fixed bug in SCIPcopyConss: copy all active constraints (including disabled ones)
-  variable got aggregated or multi-aggregated 
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
 - fixed bug in cons_bounddisjunction where branching on multiaggregated variables was tried while all aggregation variables are fixed 
 - fixed assertion in tree.c w.r.t. node estimation
@@ -42,6 +41,7 @@ fixed bugs:
 - fixed bug and wrong assert in heur_shiftandpropagate.c when relaxing continuous variables from the problem
 - fixed bug in reader_fzn.c w.r.t. cumulative constraints
 - fixed bug in copying if the target SCIP already is in solving stage: it might be that the copy of a variable cannot be found/created
+- fixed memory leak in reader_pip.c
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

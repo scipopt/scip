@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.15 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.16 2011/01/17 13:11:02 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -1084,9 +1084,9 @@ SCIP_RETCODE readPolynom(
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &varexprs[i], SCIP_EXPR_VARIDX, i) );
    }
    
-   /* create polynomial expression */
+   /* create polynomial expression, let polynom take over ownership of monoms */
    SCIP_CALL( SCIPexprCreatePolynom(SCIPblkmem(scip), &expression, nvars, varexprs,
-      nmonoms, monoms, 0.0) );
+      nmonoms, monoms, 0.0, FALSE) );
    
    SCIPfreeBufferArray(scip, &varexprs);
    
