@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.29 2010/12/31 15:06:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.30 2011/01/17 14:16:55 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -633,28 +633,7 @@ SCIP_RETCODE eval(
                assert(childidxs[j] <  SCIPexprGetNChildren(expr));
 
                childval = buf[childidxs[j]];
-               if( childval == 1.0 )  /* 1^anything == 1 */
-                  continue;
-
                exponent = exponents[j];
-
-               if( childval == 0.0 )
-               {
-                  if( exponent > 0.0 )
-                  {
-                     /* 0^positive == 0 */
-                     monomval = 0.0;
-                     break;
-                  }
-                  else if( exponent < 0.0 )
-                  {
-                     /* 0^negative = nan */
-                     setToNaN(val);
-                     return SCIP_OKAY;
-                  }
-                  /* 0^0 == 1 */
-                  continue;
-               }
 
                /* cover some special exponents separately to avoid calling expensive pow function */
                if( exponent == 0.0 )
