@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.245.2.3 2011/01/02 11:19:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.245.2.4 2011/01/18 18:38:27 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4388,6 +4388,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed 
+                                              * fixed should only be used, when both bounds changed 
+                                              */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    )
 {
@@ -4409,9 +4412,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    downinfs = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_DOWNWARDS);
    upinfs = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_UPWARDS);
 
-   if( SCIPsetIsLT(set, targetvalue, varsol) )
+   switch( branchdir )
    {
-      /* the branch is directed downwards */
+   case SCIP_BRANCHDIR_DOWNWARDS:
       switch( SCIPvarGetBranchDirection(var) )
       {
       case SCIP_BRANCHDIR_DOWNWARDS:
@@ -4458,9 +4461,8 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = 0.0;
          break;
       }
-   }
-   else if( SCIPsetIsGT(set, targetvalue, varsol) )
-   {
+      break;
+   case SCIP_BRANCHDIR_UPWARDS:
       /* the branch is directed upwards */
       switch( SCIPvarGetBranchDirection(var) )
       {
@@ -4513,11 +4515,15 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = 0.0;
          break;
       }
-   }
-   else
-   {
-      /* the branch does not alter the value of the variable */
+      break;
+   case SCIP_BRANCHDIR_FIXED:
       prio = SCIPsetInfinity(set);
+      break;
+   default:
+      SCIPerrorMessage("invalid branching direction <%d> of variable <%s>\n", 
+         SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
+      prio = 0.0;
+      break;
    }
 
    return prio;
@@ -4820,7 +4826,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    if( downub != SCIP_INVALID )    /*lint !e777*/
    {
       /* create child node x <= downub */
-      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, downub);
+      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_DOWNWARDS, downub);
       /* if LP solution is cutoff in child, compute a new estimate
        * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
       if( SCIPsetIsGT(set, lpval, downub) )
@@ -4839,7 +4845,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    if( fixval != SCIP_INVALID )    /*lint !e777*/
    {
       /* create child node with x = fixval */
-      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, fixval);
+      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_FIXED, fixval);
       estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, fixval);
       SCIPdebugMessage(" -> creating child: <%s> == %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), fixval, priority, estimate);
@@ -4861,7 +4867,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    if( uplb != SCIP_INVALID )    /*lint !e777*/
    {
       /* create child node with x >= uplb */
-      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, uplb);
+      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_UPWARDS, uplb);
       if( SCIPsetIsLT(set, lpval, uplb) )
          estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
       else

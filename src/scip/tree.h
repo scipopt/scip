@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.109.2.2 2011/01/02 11:19:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.109.2.3 2011/01/18 18:38:27 bzfberth Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -423,6 +423,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed 
+                                              * fixed should only be used, when both bounds changed 
+                                              */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 

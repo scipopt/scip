@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.42.2.2 2011/01/02 11:19:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.42.2.3 2011/01/18 18:38:26 bzfberth Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS
@@ -737,11 +737,11 @@ SCIP_RETCODE enforceSOS1(
       /* create branches */
       SCIPdebugMessage("Creating two branches.\n");
 
-      SCIP_CALL( SCIPcreateChild(scip, &node1, SCIPcalcNodeselPriority(scip, Vars[0], 0.0), SCIPcalcChildEstimate(scip, Vars[0], 0.0) ) );
+      SCIP_CALL( SCIPcreateChild(scip, &node1, SCIPcalcNodeselPriority(scip, Vars[0], SCIP_BRANCHDIR_DOWNWARDS, 0.0), SCIPcalcChildEstimate(scip, Vars[0], 0.0) ) );
       SCIP_CALL( fixVariableZeroNode(scip, Vars[0], node1, &infeasible) );
       assert( ! infeasible );
 
-      SCIP_CALL( SCIPcreateChild(scip, &node2, SCIPcalcNodeselPriority(scip, Vars[1], 0.0), SCIPcalcChildEstimate(scip, Vars[1], 0.0) ) );
+      SCIP_CALL( SCIPcreateChild(scip, &node2, SCIPcalcNodeselPriority(scip, Vars[1], SCIP_BRANCHDIR_DOWNWARDS, 0.0), SCIPcalcChildEstimate(scip, Vars[1], 0.0) ) );
       SCIP_CALL( fixVariableZeroNode(scip, Vars[1], node2, &infeasible) );
       assert( ! infeasible );
    }
@@ -788,7 +788,7 @@ SCIP_RETCODE enforceSOS1(
       objest = 0.0;
       for (j = 0; j <= ind; ++j)
       {
-         nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], 0.0);
+         nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
          objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
       }
       /* take the average of the individual estimates */
@@ -807,7 +807,7 @@ SCIP_RETCODE enforceSOS1(
       objest = 0.0;
       for (j = ind+1; j < nVars; ++j)
       {
-         nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], 0.0);
+         nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
          objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
       }
       /* take the average of the individual estimates */
