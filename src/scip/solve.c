@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.15 2010/11/05 19:26:43 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.16 2011/01/18 11:20:50 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 
 /**@file   solve.c
@@ -589,7 +589,7 @@ SCIP_RETCODE updatePseudocost(
       lpgain = (SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound) * weight;
       /* in exact mode, lower bounds can be -inf if safe dual bounding method fails (e.g., verify); here we use lpgain=0 instead of lpgain=inf */
       if( set->misc_exactsolve && SCIPsetIsInfinity(set, -tree->focuslpstatefork->lowerbound) )
-         lpgain = 0;
+         lpgain = 0.0;
       lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
       {

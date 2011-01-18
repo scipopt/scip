@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.34 2010/11/12 11:22:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.35 2011/01/18 11:20:50 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -8226,8 +8226,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
          {
             SCIPstopClock(scip, conshdlrdata->exactinfeaslptime);
             conshdlrdata->nexactinfeaslp++;
-            if( lperror )
-               conshdlrdata->nwrongexactinfeaslp++;
          }
       }
       else
@@ -8256,12 +8254,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
 
       /* update number of wrong infeasible LP claims */
       if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && ( *result == SCIP_BRANCHED || *result ==  SCIP_SOLVELP) )
-      {
-         if( dualboundmethod == 'e' )
-            conshdlrdata->nfailprovedinfeaslp++;
-         else
-            conshdlrdata->nwrongexactinfeaslp++;
-      }
+         conshdlrdata->nwrongexactinfeaslp++; 
    }
 
    SCIPdebugMessage(" -> enforcing pseudo solution returned result <%d>\n", *result);
@@ -9643,7 +9636,8 @@ char SCIPselectDualBoundMethod(
        * or
        * - Neumair Shcherbina bound only nearly able to cutoff node 
        */
-      if( (conshdlrdata->interleavedbfreq > 0 && !SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) && SCIPgetDepth(scip) > 0 && SCIPgetDepth(scip) % (conshdlrdata->interleavedbfreq) == 0)
+      if( (conshdlrdata->interleavedbfreq > 0 && !SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) && SCIPgetDepth(scip) > 0 
+            && SCIPgetDepth(scip) % (conshdlrdata->interleavedbfreq) == 0)
          || (conshdlrdata->interleavedbfreq == 0 && SCIPisGE(scip, SCIPgetLocalLowerbound(scip), SCIPgetCutoffbound(scip))
             && SCIPgetLocalLowerbound(scip) < SCIPgetCutoffbound(scip)) )
       {

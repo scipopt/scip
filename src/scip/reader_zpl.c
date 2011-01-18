@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.11 2010/10/15 16:39:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.12 2011/01/18 11:20:50 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -1123,7 +1123,6 @@ Var* xlp_addvar(
       ninfbounds_++;
    else if( lb <= -LARGEBOUND || ub >= LARGEBOUND ) 
       nlargebounds_++;
-   
 
    /* get variable type */
    switch( usevarclass )
