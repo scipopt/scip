@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.47 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.48 2011/01/18 18:42:59 bzfberth Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS
@@ -839,8 +839,13 @@ SCIP_RETCODE enforceSOS2(
    objest = 0.0;
    for (j = 0; j < maxInd; ++j)
    {
+<<<<<<< cons_sos2.c
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], 0.0);
       objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
+=======
+      nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
+      objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
+>>>>>>> 1.43.2.3
    }
    /* take the average of the individual estimates */
    objest = objest/((SCIP_Real) maxInd);
@@ -859,8 +864,13 @@ SCIP_RETCODE enforceSOS2(
    objest = 0.0;
    for (j = maxInd+1; j < nvars; ++j)
    {
+<<<<<<< cons_sos2.c
       nodeselest += SCIPcalcNodeselPriority(scip, vars[j], 0.0);
       objest += SCIPcalcChildEstimate(scip, vars[j], 0.0);
+=======
+      nodeselest += SCIPcalcNodeselPriority(scip, Vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
+      objest += SCIPcalcChildEstimate(scip, Vars[j], 0.0);
+>>>>>>> 1.43.2.3
    }
    /* take the average of the individual estimates */
    objest = objest/((SCIP_Real) (nvars-maxInd-1));
