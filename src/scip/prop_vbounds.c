@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.19 2011/01/12 08:56:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.20 2011/01/18 18:20:44 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -75,7 +75,6 @@ struct SCIP_PropData
    int                   nvars;              /**< number of involved variables */
    int                   nlbvars;            /**< number of variables in variable lower bound array */
    int                   nubvars;            /**< number of variables in variable upper bound array */
-   SCIP_Bool             sorted;             /**< is the variable array topological sorted */
    SCIP_Bool             lbpropagated;       /**< is the lower bound variable array already propagated? */
    SCIP_Bool             ubpropagated;       /**< is the upper bound variable array already propagated? */
    SCIP_Bool             usebdwidening;      /**< should bound widening be used to initialize conflict analysis? */
@@ -162,6 +161,24 @@ INFERINFO getInferInfo(
  * Local methods
  */
 
+/** reset propagation data */
+static
+void resetPropdata(
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   propdata->vars = NULL;
+   propdata->varHashmap = NULL;
+   propdata->lbvars = NULL;
+   propdata->ubvars = NULL;
+   propdata->lbeventtypes = NULL;
+   propdata->ubeventtypes = NULL;
+   propdata->nvars = 0;
+   propdata->nlbvars = 0;
+   propdata->nubvars = 0;
+   propdata->lbpropagated = TRUE;
+   propdata->ubpropagated = TRUE;
+}
 
 /** gets the requested variables bounds */
 static
@@ -1314,6 +1331,9 @@ SCIP_DECL_PROPINITSOL(propInitsolVbounds)
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    /* allocate memory for the arrays of the propdata */
    SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->vars, nvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->lbvars, nvars) );
@@ -1342,9 +1362,11 @@ SCIP_DECL_PROPINITSOL(propInitsolVbounds)
    /* catch variable events */
    SCIP_CALL( catchEvents(scip, propdata) );
 
-   propdata->lbpropagated = FALSE;
-   propdata->ubpropagated = FALSE;
-   propdata->sorted = TRUE;
+   if( propdata->nlbvars > 0 )
+      propdata->lbpropagated = FALSE;
+   
+   if( propdata->nubvars > 0 )
+      propdata->ubpropagated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1370,8 +1392,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    }
 
    /* free hash map */
-   SCIPhashmapFree(&propdata->varHashmap);
-
+   if( propdata->varHashmap != NULL )
+      SCIPhashmapFree(&propdata->varHashmap);
+   
    /* free array */
    SCIPfreeMemoryArrayNull(scip, &propdata->lbeventtypes);
    SCIPfreeMemoryArrayNull(scip, &propdata->ubeventtypes);
@@ -1379,9 +1402,8 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    SCIPfreeMemoryArrayNull(scip, &propdata->ubvars);
    SCIPfreeMemoryArrayNull(scip, &propdata->vars);
 
-   propdata->nvars = 0;
-   propdata->nlbvars = 0;
-   propdata->nubvars = 0;
+   /* reset propagation data */
+   resetPropdata(propdata);
 
    return SCIP_OKAY;
 }
@@ -1449,17 +1471,9 @@ SCIP_RETCODE SCIPincludePropVbounds(
    
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
-   propdata->vars = NULL;
-   propdata->lbvars = NULL;
-   propdata->ubvars = NULL;
-   propdata->lbeventtypes = NULL;
-   propdata->ubeventtypes = NULL;
-   propdata->nvars = 0;
-   propdata->nlbvars = 0;
-   propdata->nubvars = 0;
-   propdata->lbpropagated = FALSE;
-   propdata->ubpropagated = FALSE;
-   propdata->sorted = FALSE;
+   
+   /*  reset propagation data */
+   resetPropdata(propdata);
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
