@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.44 2011/01/13 17:45:47 bzfgamra Exp $
+# $Id: check_cluster.sh,v 1.45 2011/01/18 16:38:57 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -108,63 +108,68 @@ do
       break
   fi
 
-  # the cluster queue has an upper bound of 2000 jobs; if this limit is
-  # reached the submitted jobs are dumped; to avoid that we check the total
-  # load of the cluster and wait until it is save (total load not more than
-  # 1900 jobs) to submit the next job.
-  ./waitcluster.sh 1500 $QUEUE 200
+  # check if problem instance exists 
+  if test -f $SCIPPATH/$i
+  then
 
-  SHORTFILENAME=`basename $i .gz`
-  SHORTFILENAME=`basename $SHORTFILENAME .mps`
-  SHORTFILENAME=`basename $SHORTFILENAME .lp`
-  SHORTFILENAME=`basename $SHORTFILENAME .opb`
+      # the cluster queue has an upper bound of 2000 jobs; if this limit is
+      # reached the submitted jobs are dumped; to avoid that we check the total
+      # load of the cluster and wait until it is save (total load not more than
+      # 1900 jobs) to submit the next job.
+      ./waitcluster.sh 1500 $QUEUE 200
 
-  FILENAME=$USER.$QUEUE.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
-  BASENAME=$SCIPPATH/results/$FILENAME
-
-  TMPFILE=$BASENAME.tmp
-  SETFILE=$BASENAME.set
-  
-  echo $BASENAME >> $EVALFILE
-
-  COUNT=`expr $COUNT + 1`
-
-  # in case we want to continue we check if the job was already performed 
-  if test "$CONTINUE" != "false"
+      SHORTFILENAME=`basename $i .gz`
+      SHORTFILENAME=`basename $SHORTFILENAME .mps`
+      SHORTFILENAME=`basename $SHORTFILENAME .lp`
+      SHORTFILENAME=`basename $SHORTFILENAME .opb`
+      
+      FILENAME=$USER.$QUEUE.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
+      BASENAME=$SCIPPATH/results/$FILENAME
+      
+      TMPFILE=$BASENAME.tmp
+      SETFILE=$BASENAME.set
+      
+      echo $BASENAME >> $EVALFILE
+      
+      COUNT=`expr $COUNT + 1`
+      
+      # in case we want to continue we check if the job was already performed 
+      if test "$CONTINUE" != "false"
       then
-      if test -e results/$FILENAME.out
+	  if test -e results/$FILENAME.out
 	  then 
-	  echo skipping file $i due to existing output file $FILENAME.out
-	  continue
+	      echo skipping file $i due to existing output file $FILENAME.out
+	      continue
+	  fi
       fi
-  fi
-  
-  echo > $TMPFILE
-  if test $SETNAME != "default"
+      
+      echo > $TMPFILE
+      if test $SETNAME != "default"
       then
-      echo set load $SETTINGS            >>  $TMPFILE
-  fi
-  if test $FEASTOL != "default"
+	  echo set load $SETTINGS            >>  $TMPFILE
+      fi
+      if test $FEASTOL != "default"
       then
-      echo set numerics feastol $FEASTOL >> $TMPFILE
-  fi
-  echo set limits time $TIMELIMIT        >> $TMPFILE
-  echo set limits nodes $NODELIMIT       >> $TMPFILE
-  echo set limits memory $MEMLIMIT       >> $TMPFILE
-  echo set lp advanced threads $THREADS  >> $TMPFILE
-  echo set timing clocktype 1            >> $TMPFILE
-  echo set display verblevel 4           >> $TMPFILE
-  echo set display freq $DISPFREQ        >> $TMPFILE
-  echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-  echo set save $SETFILE                 >> $TMPFILE
-  echo read $SCIPPATH/$i                 >> $TMPFILE
+	  echo set numerics feastol $FEASTOL >> $TMPFILE
+      fi
+      echo set limits time $TIMELIMIT        >> $TMPFILE
+      echo set limits nodes $NODELIMIT       >> $TMPFILE
+      echo set limits memory $MEMLIMIT       >> $TMPFILE
+      echo set lp advanced threads $THREADS  >> $TMPFILE
+      echo set timing clocktype 1            >> $TMPFILE
+      echo set display verblevel 4           >> $TMPFILE
+      echo set display freq $DISPFREQ        >> $TMPFILE
+      echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+      echo set save $SETFILE                 >> $TMPFILE
+      echo read $SCIPPATH/$i                 >> $TMPFILE
 #  echo presolve                         >> $TMPFILE
-  echo optimize                          >> $TMPFILE
-  echo display statistics                >> $TMPFILE
+      echo optimize                          >> $TMPFILE
+      echo display statistics                >> $TMPFILE
 #            echo display solution                  >> $TMPFILE
-  echo checksol                          >> $TMPFILE
-  echo quit                              >> $TMPFILE
-
-  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+      echo checksol                          >> $TMPFILE
+      echo quit                              >> $TMPFILE
+      
+      qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+  fi
 done
 
