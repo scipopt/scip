@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.136.2.2 2011/01/02 11:19:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.136.2.3 2011/01/19 17:34:56 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3751,7 +3751,7 @@ SCIP_RETCODE computeViolation(
    {
       SCIP_Real norm = getGradientNorm(scip, cons, sol);
       if( norm > 1.0 )
-      { /* TODO scale only if > 1., or should it be larger SCIPsumepsilon? */
+      { /* scale only if > 1.0, since LP solvers may scale also only if cut norm is > 1 */
          consdata->lhsviol /= norm;
          consdata->rhsviol /= norm;
       }
@@ -4685,6 +4685,8 @@ SCIP_RETCODE separatePoint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
+   SCIP_Real          feasibility;
+   SCIP_Real          norm;
    SCIP_Real          efficacy;
    SCIP_BOUNDTYPE     violbound;
    int                c;
@@ -4735,7 +4737,20 @@ SCIP_RETCODE separatePoint(
          if( row == NULL ) /* failed to generate cut */
             continue;
 
-         efficacy = SCIPgetCutEfficacy(scip, sol, row);
+         if( sol == NULL )
+            feasibility = SCIPgetRowLPFeasibility(scip, row);
+         else
+            feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
+         norm = SCIProwGetNorm(row);
+
+         /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0
+          * this avoid finding cuts efficiant which are only very slightly violated
+          * CPLEX does not seem to scale row coefficients up too
+          */
+         if( norm > 1.0 )
+            efficacy = -feasibility / norm;
+         else
+            efficacy = -feasibility;
 
          if( efficacy > minefficacy ||
             (convexalways &&
@@ -4747,7 +4762,8 @@ SCIP_RETCODE separatePoint(
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            SCIPdebugMessage("add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
+            SCIPdebugMessage("add cut with efficacy %g and feasibility %g for constraint <%s> violated by %g\n", efficacy, feasibility,
+               SCIPconsGetName(conss[c]), consdata->lhsviol+consdata->rhsviol);
             if( bestefficacy != NULL && efficacy > *bestefficacy )
                *bestefficacy = efficacy;
          }
@@ -5137,6 +5153,10 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    assert(*result == SCIP_DIDNOTFIND || *result == SCIP_REDUCEDDOM);
    assert(nchgbds != NULL);
    
+   /* new bound is no improvement */
+   if( SCIPisLE(scip, bnd, SCIPvarGetLbLocal(var)) )
+      return SCIP_OKAY;
+
    if( SCIPisInfinity(scip, bnd) )
    { /* domain will be outside [-infty, +infty] -> declare node infeasible */
       *result = SCIP_CUTOFF;
@@ -5192,6 +5212,10 @@ SCIP_RETCODE propagateBoundsTightenVarUb(
    assert(*result == SCIP_DIDNOTFIND || *result == SCIP_REDUCEDDOM);
    assert(nchgbds != NULL);
    
+   /* new bound is no improvement */
+   if( SCIPisGE(scip, bnd, SCIPvarGetUbLocal(var)) )
+      return SCIP_OKAY;
+
    if( SCIPisInfinity(scip, -bnd) )
    { /* domain will be outside [-infty, +infty] -> declare node infeasible */
       *result = SCIP_CUTOFF;
@@ -5355,7 +5379,7 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
       return SCIP_OKAY;
   
    /* try to find domain reductions for x */
-   SCIPintervalSetBounds(&varbnds, SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y));
+   SCIPintervalSetBounds(&varbnds, MIN(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y)), MAX(SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y)));
 
    /* put ysqrcoef*y^2 + ylincoef * y into rhs */
    if( SCIPintervalGetSup(rhs) >= intervalinfty )
@@ -5963,7 +5987,7 @@ SCIP_RETCODE propagateBounds(
                var = consdata->quadvarterms[i].var;
 
                /* skip fixed variables ??????????? */
-               if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+               if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
                   continue;
 
                /* compute rhs2 such that we can propagate quadvarterm(x_i) \in rhs2 */
@@ -6191,7 +6215,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       if( norm > 1.0 )
          viol /= norm;
       /* if still violated, we give up */
-      if( SCIPisFeasPositive(scip, ABS(norm)) )
+      if( SCIPisFeasPositive(scip, REALABS(viol)) )
          break;
 
       /* if objective value is not better than current upper bound, we give up */
