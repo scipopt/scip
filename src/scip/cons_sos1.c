@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.50 2011/01/19 12:52:28 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.51 2011/01/19 18:49:35 bzfviger Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS
@@ -741,7 +741,7 @@ SCIP_RETCODE enforceSOS1(
       SCIP_CALL( fixVariableZeroNode(scip, vars[0], node1, &infeasible) );
       assert( ! infeasible );
 
-      SCIP_CALL( SCIPcreateChild(scip, &node2, SCIPcalcNodeselPriority(scip, vars[1], SCIP_BRANCHDIR_DOWNWARDS, 0.0), SCIPcalcChildEstimate(scip, vars[1], 0.0) ) );
+      SCIP_CALL( SCIPcreateChild(scip, &node2, SCIPcalcNodeselPriority(scip, vars[1], 0.0), SCIPcalcChildEstimate(scip, vars[1], 0.0) ) );
       SCIP_CALL( fixVariableZeroNode(scip, vars[1], node2, &infeasible) );
       assert( ! infeasible );
    }
