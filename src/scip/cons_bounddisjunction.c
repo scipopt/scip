@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.45.2.3 2011/01/18 18:38:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.45.2.4 2011/01/19 13:04:45 bzfberth Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1021,10 +1021,8 @@ SCIP_RETCODE createNAryBranch(
       if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGT(scip, varlb, bounds[v]) )
          continue;
 
-      /* create a child that enforces the current literal */
-      
-      priority = SCIPcalcNodeselPriority(scip, vars[v], boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? 
-         SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS, bounds[v]);
+      /* create a child that enforces the current literal */      
+      priority = SCIPcalcNodeselPriority(scip, vars[v], bounds[v]);
       estimate = SCIPcalcChildEstimate(scip, vars[v], bounds[v]);
 
       SCIPdebugMessage(" -> creating child to enforce: <%s> %c= %g (priority: %g, estimate: %g)\n",
