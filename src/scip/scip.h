@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.462 2011/01/19 12:51:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.463 2011/01/20 08:21:26 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5932,6 +5932,9 @@ extern
 SCIP_Real SCIPcalcNodeselPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed 
+                                              * fixed should only be used, when both bounds changed
+                                              */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 

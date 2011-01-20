@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_history.h,v 1.22 2011/01/19 12:51:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_history.h,v 1.23 2011/01/20 08:21:26 bzfberth Exp $"
 
 /**@file   type_history.h
  * @ingroup TYPEDEFINITIONS
@@ -32,9 +32,10 @@ extern "C" {
 /** branching direction for branching on variables */
 enum SCIP_BranchDir
 {
-   SCIP_BRANCHDIR_DOWNWARDS = 0,        /**< downwards branching: decreasing upper bound */
-   SCIP_BRANCHDIR_UPWARDS   = 1,        /**< upwards branching: increasing lower bound */
-   SCIP_BRANCHDIR_AUTO      = 2         /**< automatic setting for choosing bound changes */
+   SCIP_BRANCHDIR_DOWNWARDS = 0,        /**< downwards branching: decreasing upper bound  */
+   SCIP_BRANCHDIR_UPWARDS   = 1,        /**< upwards branching: increasing lower bound    */
+   SCIP_BRANCHDIR_FIXED     = 2,        /**< fixed branching: both bounds changed         */
+   SCIP_BRANCHDIR_AUTO      = 3         /**< automatic setting for choosing bound changes */
 };
 typedef enum SCIP_BranchDir SCIP_BRANCHDIR;       /**< branching direction for branching on variables */
 
