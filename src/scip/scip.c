@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.724 2011/01/20 08:21:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.725 2011/01/20 20:06:49 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -19898,8 +19898,8 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
          vars[i] = var;
       }
 
-      SCIPmessageFPrintInfo(file, "                                      locks              branchings              inferences      cutoffs            LP gain   \n");
-      SCIPmessageFPrintInfo(file, "variable          prio   factor   down     up  depth    down      up    sb     down       up   down     up      down        up\n");
+      SCIPmessageFPrintInfo(file, "                                      locks              branchings              inferences      cutoffs            LP gain       pscostcount\n");
+      SCIPmessageFPrintInfo(file, "variable          prio   factor   down     up  depth    down      up    sb     down       up   down     up      down        up    down      up\n");
 
       totalnstrongbranchs = 0;
       for( v = 0; v < scip->transprob->nvars; ++v )
@@ -19912,7 +19912,7 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
 
             nstrongbranchs = SCIPgetVarNStrongbranchs(scip, vars[v]);
             totalnstrongbranchs += nstrongbranchs;
-            SCIPmessageFPrintInfo(file, "%-16s %5d %8.1f %6d %6d %6.1f %7"SCIP_LONGINT_FORMAT" %7"SCIP_LONGINT_FORMAT" %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
+            SCIPmessageFPrintInfo(file, "%-16s %5d %8.1f %6d %6d %6.1f %7"SCIP_LONGINT_FORMAT" %7"SCIP_LONGINT_FORMAT" %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.4f %9.4f %7.1f %7.1f\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
                SCIPvarGetBranchFactor(vars[v]),
@@ -19928,10 +19928,12 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
                100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
                100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
                SCIPvarGetPseudocost(vars[v], scip->stat, -1.0),
-               SCIPvarGetPseudocost(vars[v], scip->stat, +1.0));
+               SCIPvarGetPseudocost(vars[v], scip->stat, +1.0),
+               SCIPvarGetPseudocostCount(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
+               SCIPvarGetPseudocostCount(vars[v], SCIP_BRANCHDIR_UPWARDS));
          }
       }
-      SCIPmessageFPrintInfo(file, "total                                                %7"SCIP_LONGINT_FORMAT" %7"SCIP_LONGINT_FORMAT" %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
+      SCIPmessageFPrintInfo(file, "total                                                %7"SCIP_LONGINT_FORMAT" %7"SCIP_LONGINT_FORMAT" %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.4f %9.4f %7.1f %7.1f\n",
          SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS),
          SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS),
          totalnstrongbranchs,
@@ -19948,7 +19950,9 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
          ? SCIPhistoryGetCutoffSum(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)
          / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) : 0.0,
          SCIPhistoryGetPseudocost(scip->stat->glbhistory, -1.0),
-         SCIPhistoryGetPseudocost(scip->stat->glbhistory, +1.0));
+         SCIPhistoryGetPseudocost(scip->stat->glbhistory, +1.0),
+         SCIPhistoryGetPseudocostCount(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS),
+         SCIPhistoryGetPseudocostCount(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS));
 
       SCIPfreeBufferArray(scip, &vars);
 
