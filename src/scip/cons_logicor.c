@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.161 2011/01/14 22:45:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.162 2011/01/20 19:04:45 bzfberth Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2929,7 +2929,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
-      assert(bdchginfos != NULL);
+      assert(bdchginfos[i] != NULL);
 
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
 
