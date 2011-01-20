@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.h,v 1.9 2011/01/02 11:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.h,v 1.10 2011/01/20 18:22:42 bzfberth Exp $"
 
 /**@file   heur_rens.h
  * @brief  RENS primal heuristic
@@ -38,17 +38,18 @@ SCIP_RETCODE SCIPincludeHeurRens(
 
 /** main procedure of the RENS heuristic, creates and solves a subMIP */
 SCIP_RETCODE SCIPapplyRens(
-   SCIP*                 scip,               /**< original SCIP data structure                                   */
-   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
-   SCIP_RESULT*          result,             /**< result data structure                                          */
-   SCIP_Real             timelimit,          /**< timelimit for the subproblem                                   */        
-   SCIP_Real             memorylimit,        /**< memorylimit for the subproblem                                 */
-   SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed  */
-   SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent     */
-   SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                    */
-   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
-   SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)]?  */
-   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
+   SCIP*                 scip,               /**< original SCIP data structure                                        */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
+   SCIP_RESULT*          result,             /**< result data structure                                               */
+   SCIP_Real             timelimit,          /**< timelimit for the subproblem                                        */
+   SCIP_Real             memorylimit,        /**< memorylimit for the subproblem                                      */
+   SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed       */
+   SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent          */
+   SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                         */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                         */
+   char                  startsol,           /**< solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
+   SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)]?       */
+   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
    );
 
 #ifdef __cplusplus
