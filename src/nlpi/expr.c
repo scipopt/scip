@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.5 2011/01/17 13:11:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.6 2011/01/21 15:32:14 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -548,37 +548,30 @@ SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
 static
 SCIP_DECL_EVAL( SCIPexprevalIntPower )
 {
-   int       n;
-
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   n = opdata.intval;
-
-   if( n == 0 )
+   switch( opdata.intval )
    {
-      *result = 1.0;
-      return SCIP_OKAY;
-   }
+      case -1:
+         *result = 1.0 / argvals[0];
+         return SCIP_OKAY;
 
-   if( n > 0 )
-   {
-      if( n == 1 )
-      {
+      case 0:
          *result = 1.0;
          return SCIP_OKAY;
-      }
 
-      *result = SIGN(argvals[0]) * pow(ABS(argvals[0]), (SCIP_Real)n);
-      return SCIP_OKAY;
-   }
+      case 1:
+         *result = argvals[0];
+         return SCIP_OKAY;
 
-   if( n == -1 )
-   {
-      *result = 1.0 / argvals[0];
-      return SCIP_OKAY;
+      case 2:
+         *result = argvals[0] * argvals[0];
+         return SCIP_OKAY;
+
+      default:
+         *result = pow(argvals[0], (SCIP_Real)opdata.intval);
    }
-   *result = SIGN(argvals[0]) / pow(ABS(argvals[0]), (SCIP_Real)-n);
 
    return SCIP_OKAY;
 } /*lint !e715*/
