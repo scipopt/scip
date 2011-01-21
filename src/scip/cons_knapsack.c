@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.220 2011/01/13 15:44:00 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.221 2011/01/21 01:20:44 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -1616,7 +1616,7 @@ SCIP_RETCODE getLiftingSequence(
    assert(nvarsR >= 0);
    
    /* allocates temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsF, nvarsF) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sortkeypairsF, nvarsF) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
    
@@ -1628,7 +1628,7 @@ SCIP_RETCODE getLiftingSequence(
     */
    for( j = 0; j < nvarsF; j++ )
    {
-      SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairsF[j]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &sortkeypairsF[j]) );
 
       sortkeypairsF[j]->key1 = solvals[varsF[j]]; 
       sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]]; 
@@ -1662,10 +1662,10 @@ SCIP_RETCODE getLiftingSequence(
    
    /* frees temporary memory */
    for( j = nvarsF-1; j >= 0; j-- )
-      SCIPfreeBuffer(scip, &sortkeypairsF[j]);
+      SCIPfreeBlockMemory(scip, &sortkeypairsF[j]);
    SCIPfreeBufferArray(scip, &sortkeysR);
    SCIPfreeBufferArray(scip, &sortkeysC2);
-   SCIPfreeBufferArray(scip, &sortkeypairsF);
+   SCIPfreeBlockMemoryArray(scip, &sortkeypairsF, nvarsF);
    
    return SCIP_OKAY;
 }
@@ -2685,7 +2685,7 @@ SCIP_RETCODE makeCoverMinimal(
 
    /* allocates temporary memory */
    nsortkeypairs = *ncovervars;
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairs, nsortkeypairs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sortkeypairs, nsortkeypairs) );
 
    /* sorts C in the reverse order in which the variables were chosen to be in the cover, i.e. 
     *   such that (1 - x*_1)/a_1 >= ... >= (1 - x*_|C|)/a_|C|,  if          trans separation problem was used to find C 
@@ -2697,7 +2697,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairs[j]) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, &sortkeypairs[j]) );
          
          sortkeypairs[j]->key1 = solvals[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
@@ -2707,7 +2707,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairs[j]) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, &sortkeypairs[j]) );
          
          sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / weights[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]); 
@@ -2778,8 +2778,8 @@ SCIP_RETCODE makeCoverMinimal(
    
    /* frees temporary memory */
    for( j = nsortkeypairs-1; j >= 0; j-- )
-      SCIPfreeBuffer(scip, &sortkeypairs[j]);
-   SCIPfreeBufferArray(scip, &sortkeypairs);
+      SCIPfreeBlockMemory(scip, &sortkeypairs[j]);
+   SCIPfreeBlockMemoryArray(scip, &sortkeypairs, nsortkeypairs);
    
    return SCIP_OKAY;
 }

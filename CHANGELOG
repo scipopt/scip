@@ -102,6 +102,8 @@ fixed bugs:
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
 - recalculating only needed partitions in cons_knapsack.c, not always both
+- calculation of node priority now also works when variable's relaxation value is equal to a bound
+- fasten knapsack separation by replacing SCIPallocBufer(Array) through SCIPallocBlockMemory(Array)
 
 SCIP version 2.0.1
 ==================
