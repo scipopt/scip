@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expr.h,v 1.4 2011/01/14 21:09:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expr.h,v 1.5 2011/01/21 17:30:46 bzfviger Exp $"
 
 /**@file   struct_expr.h
  * @brief  data definitions for expressions and expression trees
@@ -64,6 +64,7 @@ struct SCIP_ExprTree {
 struct SCIP_ExprData_Quadratic {
    SCIP_QUADELEM*        quadelems;        /**< quadratic elements */
    int                   nquadelems;       /**< number of quadratic elements */
+   SCIP_Bool             sorted;           /**< are the quadratic elements sorted? */
 };
 
 /** data of polynomial expression: constant + sum_i monom_i */

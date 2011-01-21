@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expr.h,v 1.5 2011/01/17 13:11:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expr.h,v 1.6 2011/01/21 17:30:46 bzfviger Exp $"
 
 /**@file   nlpi/pub_expr.h
  * @brief  methods for expressions and expression trees
@@ -162,13 +162,19 @@ SCIP_RETCODE SCIPexprCreateQuadratic(
 /** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
 extern
 SCIP_QUADELEM* SCIPexprGetQuadElements(
-   SCIP_EXPR*            expr                /**< expression */
+   SCIP_EXPR*            expr                /**< quadratic expression */
 );
 
 /** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
 extern
 int SCIPexprGetNQuadElements(
-   SCIP_EXPR*            expr                /**< expression */
+   SCIP_EXPR*            expr                /**< quadratic expression */
+);
+
+/** ensures that quadratic elements of a quadratic expression are sorted */
+extern
+void SCIPexprSortQuadElems(
+   SCIP_EXPR*            expr                /**< quadratic expression */
 );
 
 /** creates a SCIP_EXPR_POLYNOM expression from an array of monoms: constant + sum_i monom_i */

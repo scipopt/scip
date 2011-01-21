@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.6 2011/01/21 15:32:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.7 2011/01/21 17:30:46 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -1194,6 +1194,7 @@ SCIP_RETCODE quadraticdataCreate(
 
    (*quadraticdata)->nquadelems = nquadelems;
    (*quadraticdata)->quadelems  = NULL;
+   (*quadraticdata)->sorted     = (nquadelems <= 1);
 
    if( nquadelems > 0 )
    {
@@ -1221,6 +1222,23 @@ void quadraticdataFree(
    }
 
    BMSfreeBlockMemory(blkmem, quadraticdata);
+}
+
+/** sorts quadratic elements in a SCIP_EXPRDATA_QUADRATIC data structure */
+static
+void quadraticdataSort(
+   SCIP_EXPRDATA_QUADRATIC* quadraticdata    /**< quadratic data */
+   )
+{
+   assert(quadraticdata != NULL);
+
+   if( quadraticdata->sorted )
+      return;
+
+   if( quadraticdata->nquadelems > 0 )
+      SCIPquadelemSort((void*)quadraticdata->quadelems, quadraticdata->nquadelems);
+
+   quadraticdata->sorted = TRUE;
 }
 
 /** compares two monoms
@@ -1775,7 +1793,7 @@ SCIP_RETCODE SCIPexprCreateQuadratic(
 
 /** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
 SCIP_QUADELEM* SCIPexprGetQuadElements(
-   SCIP_EXPR*            expr                /**< expression */
+   SCIP_EXPR*            expr                /**< quadratic expression */
 )
 {
    assert(expr != NULL);
@@ -1787,7 +1805,7 @@ SCIP_QUADELEM* SCIPexprGetQuadElements(
 
 /** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
 int SCIPexprGetNQuadElements(
-   SCIP_EXPR*            expr                /**< expression */
+   SCIP_EXPR*            expr                /**< quadratic expression */
 )
 {
    assert(expr != NULL);
@@ -1795,6 +1813,18 @@ int SCIPexprGetNQuadElements(
    assert(expr->data.data != NULL);
 
    return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->nquadelems;
+}
+
+/** ensures that quadratic elements of a quadratic expression are sorted */
+void SCIPexprSortQuadElems(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   quadraticdataSort((SCIP_EXPRDATA_QUADRATIC*)expr->data.data);
 }
 
 /** creates a SCIP_EXPR_POLYNOM expression from an array of monoms: constant + sum_i monom_i */
