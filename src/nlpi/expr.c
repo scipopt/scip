@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.7 2011/01/21 17:30:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.8 2011/01/21 20:38:14 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -2534,7 +2534,10 @@ void SCIPexprReindexVars(
    assert(newindices != NULL);
 
    if( expr->op == SCIP_EXPR_VARIDX )
+   {
       expr->data.intval = newindices[expr->data.intval];
+      assert(expr->data.intval >= 0);
+   }
 
    for( i = 0; i < expr->nchildren; ++i )
       SCIPexprReindexVars(expr->children[i], newindices);
