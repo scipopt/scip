@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nlp.h,v 1.10 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_nlp.h,v 1.11 2011/01/21 20:38:05 bzfviger Exp $"
 
 /**@file   pub_nlp.h
  * @ingroup PUBLICMETHODS
@@ -87,7 +87,9 @@ int SCIPexprtreeFindVar(
 extern
 SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Bool*            changed             /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
+   SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
+   int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
+   int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
 );
 
 /**@} */

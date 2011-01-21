@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlp.c,v 1.38 2011/01/11 17:24:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlp.c,v 1.39 2011/01/21 20:38:05 bzfviger Exp $"
 
 /**@file   nlp.c
  * @brief  NLP management methods and datastructures
@@ -214,21 +214,21 @@ int SCIPexprtreeFindVar(
 /** removes fixed variables from an expression tree, so that at exit all variables are active */
 SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Bool*            changed             /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
+   SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
+   int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
+   int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
 )
 {
    SCIP_HASHMAP* varhash;
-   int i, j;
+   int i;
+   int j;
    int nvarsold;
-   SCIP_Bool havefixedvar;
    SCIP_VAR* var;
    SCIP_Real scalar;
    SCIP_Real constant;
    SCIP_EXPR** replaceexprs;
+   SCIP_Bool havefixedvar;
    int idx;
-   SCIP_EXPR* tmp;
-   SCIP_VAR* mvar;
-   SCIP_Real mscalar;
    int* newpos;
    int offset;
 
@@ -237,6 +237,8 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    assert(changed != NULL);
 
    *changed = FALSE;
+   if( newvarsstart != NULL )
+      *newvarsstart = tree->nvars;
 
    if( tree->nvars == 0 )
       return SCIP_OKAY;
@@ -254,6 +256,9 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    if( !havefixedvar )
    {
       /* nothing to do */
+      if( varpos != NULL )
+         for( i = 0; i < tree->nvars; ++i )
+            varpos[i] = i;
       SCIPhashmapFree(&varhash);
       return SCIP_OKAY;
    }
@@ -304,38 +309,28 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          assert((SCIP_VAR*)tree->vars[idx] == var);
 
          SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_VARIDX, idx) );
-         if( scalar != 1.0 )
+         if( scalar != 1.0 || constant != 0.0 )
          {
-            /* multiply by scalar */
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &tmp, SCIP_EXPR_CONST, scalar) );
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_MUL, replaceexprs[i], tmp) );
-         }
-         if( constant != 0.0 )
-         {
-            /* add constant */
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &tmp, SCIP_EXPR_CONST, constant) );
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_PLUS, replaceexprs[i], tmp) );
+            /* multiply by scalar and add constant -> linear expression */
+            SCIP_CALL( SCIPexprCreateLinear(tree->blkmem, &replaceexprs[i], 1, &replaceexprs[i], &scalar, constant) );
          }
          continue;
       }
 
       {
-         SCIP_EXPR** summands;
-         int         nsummands;
-         int         summandssize;
+         SCIP_EXPR** children;
+         SCIP_Real*  coefs;
+         int         nchildren;
+         SCIP_VAR*   mvar;
+         SCIP_Real   mscalar;
 
+         /* var is now multiaggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant */
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
-         /* var is now multiaggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant
-          * and remember if any of the variables in multaggrvar_j are multiaggregated again */
 
-         /* allocate array for summands (number of aggr. variables, +1 if there is a constant) */
-         summandssize = SCIPvarGetMultaggrNVars(var);
-         if( constant != 0.0 || SCIPvarGetMultaggrConstant(var) != 0.0 )
-            ++summandssize;
-         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &summands, summandssize) );
-         nsummands = 0;
-
-         /* @todo use SCIP_EXPR_LINEAR instead of SCIP_EXPR_SUM */
+         /* allocate array for children and coefficients */
+         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var)) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var)) );
+         nchildren = 0;
 
          /* linear part
           * turn each variable in SCIPvarGetMultaggrVars(var) into an active or multiaggregated one and add corresponding term to summands */
@@ -348,6 +343,8 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
             /* if variable mvar is fixed, constant has been added to constant and we can continue */
             if( mscalar == 0.0 )
                continue;
+
+            assert(SCIPvarIsActive(mvar) || SCIPvarGetStatus(mvar) == SCIP_VARSTATUS_MULTAGGR);
 
             /* add mvar to tree, if not in tree yet */
             if( !SCIPhashmapExists(varhash, mvar) )
@@ -364,44 +361,32 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
             assert(idx >= 0 && idx < tree->nvars);
             assert((SCIP_VAR*)tree->vars[idx] == mvar);
 
-            assert(nsummands < summandssize);
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &summands[nsummands], SCIP_EXPR_VARIDX, idx) );
-            if( mscalar != 1.0 )
-            {
-               /* multiply by scalar */
-               SCIP_CALL( SCIPexprCreate(tree->blkmem, &tmp, SCIP_EXPR_CONST, mscalar) );
-               SCIP_CALL( SCIPexprCreate(tree->blkmem, &summands[nsummands], SCIP_EXPR_MUL, summands[nsummands], tmp) );
-            }
-            ++nsummands;
+            SCIP_CALL( SCIPexprCreate(tree->blkmem, &children[nchildren], SCIP_EXPR_VARIDX, idx) );
+            coefs[nchildren] = mscalar;
+            ++nchildren;
          }
 
          /* constant part */
-         if( constant != 0.0 || SCIPvarGetMultaggrConstant(var) != 0.0 )
-         {
-            assert(nsummands < summandssize);
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &summands[nsummands], SCIP_EXPR_CONST, scalar * SCIPvarGetMultaggrConstant(var) + constant) );
-            ++nsummands;
-         }
+         constant += scalar * SCIPvarGetMultaggrConstant(var);
 
-         if( nsummands == 0 )
+         if( nchildren == 0 )
          {
-            /* somehow everything collapsed to zero */
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_CONST, 0.0) );
-            BMSfreeBlockMemoryArray(tree->blkmem, &summands, summandssize);
-            continue;
+            /* somehow all aggregation variables were fixed */
+            SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_CONST, constant) );
          }
-         if( nsummands == 1 )
+         else if( nchildren == 1 && constant == 0.0 )
          {
             /* somehow everything collapsed to one summand -> use that one for replaceexprs[i]*/
-            replaceexprs[i] = summands[0];
-            BMSfreeBlockMemoryArray(tree->blkmem, &summands, summandssize);
-            continue;
+            replaceexprs[i] = children[0];
+         }
+         else
+         {
+            /* set replaceexprs[i] to linear expression in children */
+            SCIP_CALL( SCIPexprCreateLinear(tree->blkmem, &replaceexprs[i], nchildren, children, coefs, constant) );
          }
 
-         /* set replaceexprs[i] to summation over summands array */
-         SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_SUM, nsummands, summands) );
-
-         BMSfreeBlockMemoryArray(tree->blkmem, &summands, summandssize);
+         BMSfreeBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var));
+         BMSfreeBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var));
       }
    }
 
@@ -433,7 +418,11 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          newpos[i] = -1;
          ++offset;
       }
+      if( varpos != NULL && i < nvarsold )
+         varpos[i] = newpos[i];
    }
+   if( newvarsstart != NULL )
+      *newvarsstart -= offset;
 
    /* update indices in tree */
    SCIPexprReindexVars(tree->root, newpos);
@@ -471,10 +460,14 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
 
    if( havefixedvar )
    {
-      SCIP_Bool dummy;
-      /* call recursively if still unfixed variables are left */
-      SCIP_CALL( SCIPexprtreeRemoveFixedVars(tree, &dummy) );
-      assert(dummy == TRUE);
+      /* if there are still fixed variables left, then this are newly added multiaggregated variables
+       * it is then save to call this function recursively, since the original active variables should not be moved,
+       * i.e., varpos and *newvarsstart will remain valid
+       */
+      SCIP_Bool gotchange;
+
+      SCIP_CALL( SCIPexprtreeRemoveFixedVars(tree, &gotchange, NULL, NULL) );
+      assert(gotchange);
    }
 
    return SCIP_OKAY;
@@ -1917,7 +1910,7 @@ SCIP_RETCODE nlrowRemoveFixedExprtreeVars(
    if( nlrow->exprtree == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &changed) );
+   SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &changed, NULL, NULL) );
    if( changed )
    {
       SCIP_CALL( nlrowExprtreeChanged(nlrow, set, stat, nlp) );
@@ -2638,7 +2631,7 @@ SCIP_RETCODE SCIPnlrowChgExprtree(
       if( nlrow->nlpindex >= -1 )
       {
          SCIP_Bool dummy;
-         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &dummy) );
+         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &dummy, NULL, NULL) );
       }
    }
 
