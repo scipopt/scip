@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.10 2011/01/24 17:06:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.11 2011/01/24 19:46:19 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -2571,7 +2571,7 @@ void SCIPexprPrint(
          if( paramnames != NULL )
          {
             assert(paramnames[expr->data.intval] != NULL);
-            SCIPmessageFPrintInfo(file, "%s", varnames[expr->data.intval]);
+            SCIPmessageFPrintInfo(file, "%s", paramnames[expr->data.intval]);
          }
          else
          {
