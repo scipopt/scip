@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_expr.h,v 1.5 2011/01/21 17:30:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_expr.h,v 1.6 2011/01/24 22:31:34 bzfviger Exp $"
 
 /**@file   struct_expr.h
  * @brief  data definitions for expressions and expression trees
@@ -43,48 +43,48 @@ union SCIP_ExprOpData {
 
 /** arithmetic expression node */
 struct SCIP_Expr {
-   SCIP_EXPROP           op;         /**< operator of the node */
-   int                   nchildren;  /**< number of children */
-   SCIP_EXPR**           children;   /**< children nodes */
-   SCIP_EXPROPDATA       data;       /**< operator data */
+   SCIP_EXPROP           op;                 /**< operator of the node */
+   int                   nchildren;          /**< number of children */
+   SCIP_EXPR**           children;           /**< children nodes */
+   SCIP_EXPROPDATA       data;               /**< operator data */
 };
 
 /** expression tree */
 struct SCIP_ExprTree {
-   BMS_BLKMEM*           blkmem;           /**< block memory data structure */
-   SCIP_EXPR*            root;             /**< root node expression of expression tree */
-   int                   nvars;            /**< number of variables */
-   void**                vars;             /**< mapping of variable indices to user variables, may be NULL */
-   int                   nparams;          /**< number of parameters (modifiable constants) in expression */
-   SCIP_Real*            params;           /**< current values for parameters, or NULL if no parameters */
-   SCIP_EXPRINTDATA*     interpreterdata;  /**< data of expression interpreter (evaluator) */
+   BMS_BLKMEM*           blkmem;             /**< block memory data structure */
+   SCIP_EXPR*            root;               /**< root node expression of expression tree */
+   int                   nvars;              /**< number of variables */
+   void**                vars;               /**< mapping of variable indices to user variables, may be NULL */
+   int                   nparams;            /**< number of parameters (modifiable constants) in expression */
+   SCIP_Real*            params;             /**< current values for parameters, or NULL if no parameters */
+   SCIP_EXPRINTDATA*     interpreterdata;    /**< data of expression interpreter (evaluator) */
 };
 
 /** data of quadratic expression: sum_i coef_i x_i y_i */
 struct SCIP_ExprData_Quadratic {
-   SCIP_QUADELEM*        quadelems;        /**< quadratic elements */
-   int                   nquadelems;       /**< number of quadratic elements */
-   SCIP_Bool             sorted;           /**< are the quadratic elements sorted? */
+   SCIP_QUADELEM*        quadelems;          /**< quadratic elements */
+   int                   nquadelems;         /**< number of quadratic elements */
+   SCIP_Bool             sorted;             /**< are the quadratic elements sorted? */
 };
 
 /** data of polynomial expression: constant + sum_i monom_i */
-struct SCIP_ExprData_Polynom {
-   SCIP_Real             constant;         /**< constant term of polynom */
-   SCIP_EXPRDATA_MONOM** monoms;           /**< monoms that constitute the polynom */
-   int                   monomssize;       /**< size of monoms array */
-   int                   nmonoms;          /**< number of monoms */
-   SCIP_Bool             sorted;           /**< are the monoms sorted? */
+struct SCIP_ExprData_Polynomial {
+   SCIP_Real             constant;           /**< constant term of polynomial */
+   SCIP_EXPRDATA_MONOMIAL** monomials;       /**< monomials that constitute the polynomial */
+   int                   monomialssize;      /**< size of monomials array */
+   int                   nmonomials;         /**< number of monomials */
+   SCIP_Bool             sorted;             /**< are the monomials sorted? */
 };
 
-/** data of monom in polynomial expression: coef * prod_i child_i^exponent_i
+/** data of monomial in polynomial expression: coef * prod_i child_i^exponent_i
  * we allow for real values exponents here */
-struct SCIP_ExprData_Monom {
-   SCIP_Real             coef;             /**< coefficient of monom */
-   int                   factorssize;      /**< size of factors arrays */
-   int                   nfactors;         /**< number of factors */
-   int*                  childidxs;        /**< children corresponding to factors */
-   SCIP_Real*            exponents;        /**< value of exponent for each factor */
-   SCIP_Bool             sorted;           /**< are the factors sorted (by childidx)? */
+struct SCIP_ExprData_Monomial {
+   SCIP_Real             coef;               /**< coefficient of monomial */
+   int                   factorssize;        /**< size of factors arrays */
+   int                   nfactors;           /**< number of factors */
+   int*                  childidxs;          /**< children corresponding to factors */
+   SCIP_Real*            exponents;          /**< value of exponent for each factor */
+   SCIP_Bool             sorted;             /**< are the factors sorted (by childidx)? */
 };
 
 #ifdef __cplusplus

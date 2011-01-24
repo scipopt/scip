@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.30 2011/01/17 14:16:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.31 2011/01/24 22:31:34 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -602,30 +602,30 @@ SCIP_RETCODE eval(
          break;
       }
 
-      case SCIP_EXPR_POLYNOM:
+      case SCIP_EXPR_POLYNOMIAL:
       {
-         SCIP_EXPRDATA_MONOM** monoms;
+         SCIP_EXPRDATA_MONOMIAL** monomials;
          Type childval;
-         Type monomval;
+         Type monomialval;
          SCIP_Real exponent;
-         int nmonoms;
+         int nmonomials;
          int nfactors;
          int* childidxs;
          SCIP_Real* exponents;
          int i;
          int j;
 
-         val = SCIPexprGetPolynomConstant(expr);
+         val = SCIPexprGetPolynomialConstant(expr);
 
-         nmonoms = SCIPexprGetPolynomNMonoms(expr);
-         monoms  = SCIPexprGetPolynomMonoms(expr);
+         nmonomials = SCIPexprGetNMonomials(expr);
+         monomials  = SCIPexprGetMonomials(expr);
 
-         for( i = 0; i < nmonoms; ++i )
+         for( i = 0; i < nmonomials; ++i )
          {
-            nfactors  = SCIPexprGetPolynomMonomNFactors(monoms[i]);
-            childidxs = SCIPexprGetPolynomMonomChildIndices(monoms[i]);
-            exponents = SCIPexprGetPolynomMonomExponents(monoms[i]);
-            monomval  = SCIPexprGetPolynomMonomCoef(monoms[i]);
+            nfactors  = SCIPexprGetMonomialNFactors(monomials[i]);
+            childidxs = SCIPexprGetMonomialChildIndices(monomials[i]);
+            exponents = SCIPexprGetMonomialExponents(monomials[i]);
+            monomialval  = SCIPexprGetMonomialCoef(monomials[i]);
 
             for( j = 0; j < nfactors; ++j )
             {
@@ -640,39 +640,39 @@ SCIP_RETCODE eval(
                   continue;
                if( exponent == 1.0 )
                {
-                  monomval *= childval;
+                  monomialval *= childval;
                   continue;
                }
                if( exponent == 2.0 )
                {
                   Type tmp;
                   evalSquare(tmp, childval);
-                  monomval *= tmp;
+                  monomialval *= tmp;
                   continue;
                }
                if( exponent == 0.5 )
                {
                   Type tmp;
                   evalSqrt(tmp, childval);
-                  monomval *= tmp;
+                  monomialval *= tmp;
                   continue;
                }
                if( exponent == -1.0 )
                {
-                  monomval /= childval;
+                  monomialval /= childval;
                   continue;
                }
                if( exponent == -2.0 )
                {
                   Type tmp;
                   evalSquare(tmp, childval);
-                  monomval /= tmp;
+                  monomialval /= tmp;
                   continue;
                }
-               monomval *= pow(childval, exponent);
+               monomialval *= pow(childval, exponent);
             }
 
-            val += monomval;
+            val += monomialval;
          }
 
          break;

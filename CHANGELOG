@@ -27,7 +27,7 @@ interface:
 - new methods SCIPvarGetBdchgInfoLb() and SCIPvarGetBdchgInfoUb() returning the bound change information at the given position
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
 - SCIP_DECL_PROBCOPY got a new parameter global
-- SCIPexprCreatePolynom() and SCIPexprAddPolynomMonoms() got a new parameter copymonoms 
+- using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -98,6 +98,7 @@ fixed bugs:
 - fixed memory leak in SoPlex LP interface when solving with LP scaling
 - fixed memory leaks in reader of TSP example 
 - fixed bug while after restarting possible the aggregted variables were not removed in setppc constraints
+- fixed various small bugs in nonlinear expressions code
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.16 2011/01/17 13:11:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.17 2011/01/24 22:31:34 bzfviger Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -48,11 +48,11 @@
 /*
  * Data structures
  */
-#define PIP_MAX_LINELEN       65536
-#define PIP_MAX_PUSHEDTOKENS  2
-#define PIP_INIT_VARSSIZE     256
-#define PIP_INIT_MONOMSSIZE   128
-#define PIP_INIT_FACTORSSIZE  16
+#define PIP_MAX_LINELEN        65536
+#define PIP_MAX_PUSHEDTOKENS   2
+#define PIP_INIT_VARSSIZE      256
+#define PIP_INIT_MONOMIALSSIZE 128
+#define PIP_INIT_FACTORSSIZE   16
 
 /** Section in PIP File */
 enum PipSection
@@ -683,36 +683,36 @@ SCIP_RETCODE readStart(
    return SCIP_OKAY;
 }
 
-/** ensure that an array of monoms can hold a minimum number of entries */
+/** ensure that an array of monomials can hold a minimum number of entries */
 static
-SCIP_RETCODE ensureMonomsSize(
+SCIP_RETCODE ensureMonomialsSize(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRDATA_MONOM*** monoms,            /**< pointer to current array of monoms */
-   int*                  monomssize,         /**< current size of monoms array at input; new size at exit */
-   int                   minnmonoms          /**< required minimal size of monoms array */
+   SCIP_EXPRDATA_MONOMIAL*** monomials,      /**< pointer to current array of monomials */
+   int*                  monomialssize,      /**< current size of monomials array at input; new size at exit */
+   int                   minnmonomials       /**< required minimal size of monomials array */
    )
 {
    int newsize;
    
    assert(scip != NULL);
-   assert(monoms != NULL);
-   assert(monomssize != NULL);
-   assert(*monoms != NULL || *monomssize == 0);
+   assert(monomials != NULL);
+   assert(monomialssize != NULL);
+   assert(*monomials != NULL || *monomialssize == 0);
    
-   if( minnmonoms <= *monomssize )
+   if( minnmonomials <= *monomialssize )
       return SCIP_OKAY;
    
-   newsize = SCIPcalcMemGrowSize(scip, minnmonoms);
+   newsize = SCIPcalcMemGrowSize(scip, minnmonomials);
    
-   if( *monoms != NULL )
+   if( *monomials != NULL )
    {
-      SCIP_CALL( SCIPreallocBufferArray(scip, monoms, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, monomials, newsize) );
    }
    else
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, monoms, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, monomials, newsize) );
    }
-   *monomssize = newsize;
+   *monomialssize = newsize;
    
    return SCIP_OKAY;
 }
@@ -816,7 +816,7 @@ SCIP_RETCODE getVariableIndex(
 
 /** reads an objective or constraint with name and coefficients */
 static
-SCIP_RETCODE readPolynom(
+SCIP_RETCODE readPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    PIPINPUT*             pipinput,           /**< PIP reading data */
    char*                 name,               /**< pointer to store the name of the line; must be at least of size
@@ -832,7 +832,7 @@ SCIP_RETCODE readPolynom(
    SCIP_Real coef;
    int coefsign;
    int nextcoefsign;
-   int monomdegree;
+   int monomialdegree;
    SCIP_EXPR** varexprs;
    int i;
    
@@ -841,9 +841,9 @@ SCIP_RETCODE readPolynom(
    int nvars;
    SCIP_HASHMAP* varhash;
    
-   SCIP_EXPRDATA_MONOM** monoms;
-   int monomssize;
-   int nmonoms;
+   SCIP_EXPRDATA_MONOMIAL** monomials;
+   int monomialssize;
+   int nmonomials;
    
    int nfactors;
    int factorssize;
@@ -904,11 +904,11 @@ SCIP_RETCODE readPolynom(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
    SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(PIP_INIT_VARSSIZE)) );
    
-   /* initialize buffer for storing the monoms */
-   monomssize = PIP_INIT_MONOMSSIZE;
-   SCIP_CALL( SCIPallocBufferArray(scip, &monoms, monomssize) );
+   /* initialize buffer for storing the monomials */
+   monomialssize = PIP_INIT_MONOMIALSSIZE;
+   SCIP_CALL( SCIPallocBufferArray(scip, &monomials, monomialssize) );
    
-   /* initialize buffer for storing the factors in a monom */
+   /* initialize buffer for storing the factors in a monomial */
    factorssize = PIP_INIT_FACTORSSIZE;
    SCIP_CALL( SCIPallocBufferArray(scip, &exponents, factorssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varidxs,   factorssize) );
@@ -919,10 +919,10 @@ SCIP_RETCODE readPolynom(
    coef = 1.0;
    havesign = FALSE;
    havevalue = FALSE;
-   nmonoms = 0;
+   nmonomials = 0;
    nvars = 0;
    nfactors = 0;
-   monomdegree = 0;
+   monomialdegree = 0;
    while( getNextToken(pipinput) )
    {
       SCIP_VAR* var;
@@ -938,14 +938,14 @@ SCIP_RETCODE readPolynom(
           (issense = isSense(pipinput, NULL))     ||  /*lint !e820*/
           (nfactors > 0 && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
       {
-         /* finish the current monom */
-         SCIP_CALL( ensureMonomsSize(scip, &monoms, &monomssize, nmonoms + 1) );
-         SCIP_CALL( SCIPexprCreatePolynomMonom(SCIPblkmem(scip),
-            &monoms[nmonoms], coefsign * coef, nfactors, varidxs, exponents) );
-         ++nmonoms;
+         /* finish the current monomial */
+         SCIP_CALL( ensureMonomialsSize(scip, &monomials, &monomialssize, nmonomials + 1) );
+         SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip),
+            &monomials[nmonomials], coefsign * coef, nfactors, varidxs, exponents) );
+         ++nmonomials;
          
-         if( monomdegree > *degree )
-            *degree = monomdegree;
+         if( monomialdegree > *degree )
+            *degree = monomialdegree;
 
          /* reset variables */
          nfactors = 0;
@@ -953,7 +953,7 @@ SCIP_RETCODE readPolynom(
          coefsign = +1;
          havesign = FALSE;
          havevalue = FALSE;
-         monomdegree = 0;
+         monomialdegree = 0;
          
          if( isnewsection )
          {
@@ -985,31 +985,31 @@ SCIP_RETCODE readPolynom(
 
          if( nfactors > 0 || havevalue )
          {
-            syntaxError(scip, pipinput, "sign can only be at beginning of monom");
-            goto TERMINATE_READPOLYNOM;
+            syntaxError(scip, pipinput, "sign can only be at beginning of monomial");
+            goto TERMINATE_READPOLYNOMIAL;
          }
          
          havesign = TRUE;
          continue;
       }
       
-      /* check if we are in between factors of a monom */
+      /* check if we are in between factors of a monomial */
       if( strcmp(pipinput->token, "*") == 0 )
       {
          if( nfactors == 0 )
          {
-            syntaxError(scip, pipinput, "cannot have '*' before first variable in monom");
-            goto TERMINATE_READPOLYNOM;
+            syntaxError(scip, pipinput, "cannot have '*' before first variable in monomial");
+            goto TERMINATE_READPOLYNOMIAL;
          }
          
          continue;
       }
       
-      /* all but the first monom need a sign */
-      if( nmonoms > 0 && !havesign )
+      /* all but the first monomial need a sign */
+      if( nmonomials > 0 && !havesign )
       {
          syntaxError(scip, pipinput, "expected sign ('+' or '-') or sense ('<' or '>')");
-         goto TERMINATE_READPOLYNOM;
+         goto TERMINATE_READPOLYNOMIAL;
       }
 
       /* check if we are at an exponent for the last variable */
@@ -1018,18 +1018,18 @@ SCIP_RETCODE readPolynom(
          if( !getNextToken(pipinput) || !isValue(scip, pipinput, &exponent) )
          {
             syntaxError(scip, pipinput, "expected exponent value after '^'");
-            goto TERMINATE_READPOLYNOM;
+            goto TERMINATE_READPOLYNOMIAL;
          }
          if( nfactors == 0 )
          {
-            syntaxError(scip, pipinput, "cannot have '^' before first variable in monom");
-            goto TERMINATE_READPOLYNOM;
+            syntaxError(scip, pipinput, "cannot have '^' before first variable in monomial");
+            goto TERMINATE_READPOLYNOMIAL;
          }
          exponents[nfactors-1] = exponent;
          if( SCIPisIntegral(scip, exponent) && exponent > 0.0 )
-            monomdegree += (int)exponent - 1; /* -1, because we added +1 when we put the variable into varidxs */
+            monomialdegree += (int)exponent - 1; /* -1, because we added +1 when we put the variable into varidxs */
          else
-            monomdegree = SCIP_EXPR_DEGREEINFINITY;
+            monomialdegree = SCIP_EXPR_DEGREEINFINITY;
 
          SCIPdebugMessage("(line %d) read exponent value %g for variable %s\n", pipinput->linenumber, exponent,
             SCIPvarGetName(vars[varidxs[nfactors-1]]));
@@ -1044,13 +1044,13 @@ SCIP_RETCODE readPolynom(
          if( havevalue )
          {
             syntaxError(scip, pipinput, "two consecutive values");
-            goto TERMINATE_READPOLYNOM;
+            goto TERMINATE_READPOLYNOMIAL;
          }
          
          if( nfactors > 0 )
          {
-            syntaxError(scip, pipinput, "coefficients can only be at the beginning of a monom");
-            goto TERMINATE_READPOLYNOM;
+            syntaxError(scip, pipinput, "coefficients can only be at the beginning of a monomial");
+            goto TERMINATE_READPOLYNOMIAL;
          }
          
          havevalue = TRUE;
@@ -1068,13 +1068,13 @@ SCIP_RETCODE readPolynom(
       exponents[nfactors] = 1.0;
       varidxs[nfactors]   = varidx;
       ++nfactors;
-      ++monomdegree;
+      ++monomialdegree;
    }
    
    if( nfactors > 0 )
    {
-      syntaxError(scip, pipinput, "string ended before monom has finished");
-      goto TERMINATE_READPOLYNOM;
+      syntaxError(scip, pipinput, "string ended before monomial has finished");
+      goto TERMINATE_READPOLYNOMIAL;
    }
    
    /* create variable expressions */
@@ -1084,22 +1084,22 @@ SCIP_RETCODE readPolynom(
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &varexprs[i], SCIP_EXPR_VARIDX, i) );
    }
    
-   /* create polynomial expression, let polynom take over ownership of monoms */
-   SCIP_CALL( SCIPexprCreatePolynom(SCIPblkmem(scip), &expression, nvars, varexprs,
-      nmonoms, monoms, 0.0, FALSE) );
+   /* create polynomial expression, let polynomial take over ownership of monomials */
+   SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &expression, nvars, varexprs,
+      nmonomials, monomials, 0.0, FALSE) );
    
    SCIPfreeBufferArray(scip, &varexprs);
    
    SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), exprtree, expression, 0, 0, NULL) );
    SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvars, vars) );
    
-   SCIPdebugMessage("read polynom of degree %d: ", *degree);
+   SCIPdebugMessage("read polynomial of degree %d: ", *degree);
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(*exprtree, NULL) ) );
    SCIPdebugPrintf("\n");
    
-TERMINATE_READPOLYNOM:   
+TERMINATE_READPOLYNOMIAL:
    SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &monoms);
+   SCIPfreeBufferArray(scip, &monomials);
    SCIPfreeBufferArray(scip, &exponents);
    SCIPfreeBufferArray(scip, &varidxs);
    SCIPhashmapFree(&varhash);
@@ -1114,7 +1114,7 @@ static
 void getLinearAndQuadraticCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        exprtree,           /**< expression tree holding polynomial expression */
-   SCIP_Real*            constant,           /**< buffer to store constant monoms */
+   SCIP_Real*            constant,           /**< buffer to store constant monomials */
    int*                  nlinvars,           /**< buffer to store number of linear coefficients */
    SCIP_VAR**            linvars,            /**< array to fill with linear variables */
    SCIP_Real*            lincoefs,           /**< array to fill with coefficients of linear variables */
@@ -1125,79 +1125,79 @@ void getLinearAndQuadraticCoefs(
    )
 {
    SCIP_EXPR* expr;
-   SCIP_EXPRDATA_MONOM** monoms;
-   int nmonoms;
+   SCIP_EXPRDATA_MONOMIAL** monomials;
+   int nmonomials;
    int varidx;
    int i;
 
    expr = SCIPexprtreeGetRoot(exprtree);
    assert(expr != NULL);
-   assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOM);
+   assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
    assert(SCIPexprGetNChildren(expr) == SCIPexprtreeGetNVars(exprtree));
 
-   nmonoms = SCIPexprGetPolynomNMonoms(expr);
-   monoms  = SCIPexprGetPolynomMonoms(expr);
+   nmonomials = SCIPexprGetNMonomials(expr);
+   monomials  = SCIPexprGetMonomials(expr);
 
    *constant = 0.0;
    *nlinvars = 0;
    *nquadterms = 0;
-   for( i = 0; i < nmonoms; ++i )
+   for( i = 0; i < nmonomials; ++i )
    {
-      assert(SCIPexprGetPolynomMonomNFactors(monoms[i]) >= 0);
-      assert(SCIPexprGetPolynomMonomNFactors(monoms[i]) <= 2);
-      assert(SCIPexprGetPolynomMonomExponents(monoms[i]) != NULL    || SCIPexprGetPolynomMonomNFactors(monoms[i]) == 0);
-      assert(SCIPexprGetPolynomMonomChildIndices(monoms[i]) != NULL || SCIPexprGetPolynomMonomNFactors(monoms[i]) == 0);
+      assert(SCIPexprGetMonomialNFactors(monomials[i]) >= 0);
+      assert(SCIPexprGetMonomialNFactors(monomials[i]) <= 2);
+      assert(SCIPexprGetMonomialExponents(monomials[i]) != NULL    || SCIPexprGetMonomialNFactors(monomials[i]) == 0);
+      assert(SCIPexprGetMonomialChildIndices(monomials[i]) != NULL || SCIPexprGetMonomialNFactors(monomials[i]) == 0);
       
-      if( SCIPexprGetPolynomMonomNFactors(monoms[i]) == 0 )
+      if( SCIPexprGetMonomialNFactors(monomials[i]) == 0 )
       {
-         /* constant monom */
-         *constant += SCIPexprGetPolynomMonomCoef(monoms[i]);
+         /* constant monomial */
+         *constant += SCIPexprGetMonomialCoef(monomials[i]);
       }
-      else if( SCIPexprGetPolynomMonomNFactors(monoms[i]) == 1 && SCIPexprGetPolynomMonomExponents(monoms[i])[0] == 1.0 )
+      else if( SCIPexprGetMonomialNFactors(monomials[i]) == 1 && SCIPexprGetMonomialExponents(monomials[i])[0] == 1.0 )
       {
-         /* linear monom */
-         varidx = SCIPexprGetPolynomMonomChildIndices(monoms[i])[0];
+         /* linear monomial */
+         varidx = SCIPexprGetMonomialChildIndices(monomials[i])[0];
          assert(varidx >= 0);
          assert(varidx < SCIPexprtreeGetNVars(exprtree));
          assert(SCIPexprGetOperator(SCIPexprGetChildren(expr)[varidx]) == SCIP_EXPR_VARIDX);
          assert(SCIPexprGetOpIndex(SCIPexprGetChildren(expr)[varidx]) == varidx); /* assume that child varidx corresponds to variable varidx */
 
-         lincoefs[*nlinvars] = SCIPexprGetPolynomMonomCoef(monoms[i]);
+         lincoefs[*nlinvars] = SCIPexprGetMonomialCoef(monomials[i]);
          linvars[*nlinvars]  = SCIPexprtreeGetVars(exprtree)[varidx];
          ++*nlinvars;
       }
-      else if( SCIPexprGetPolynomMonomNFactors(monoms[i]) == 1 )
+      else if( SCIPexprGetMonomialNFactors(monomials[i]) == 1 )
       {
-         /* square monom */
-         assert(SCIPexprGetPolynomMonomExponents(monoms[i])[0] == 2.0);
+         /* square monomial */
+         assert(SCIPexprGetMonomialExponents(monomials[i])[0] == 2.0);
 
-         varidx = SCIPexprGetPolynomMonomChildIndices(monoms[i])[0];
+         varidx = SCIPexprGetMonomialChildIndices(monomials[i])[0];
          assert(varidx >= 0);
          assert(varidx < SCIPexprtreeGetNVars(exprtree));
          assert(SCIPexprGetOperator(SCIPexprGetChildren(expr)[varidx]) == SCIP_EXPR_VARIDX);
          assert(SCIPexprGetOpIndex(SCIPexprGetChildren(expr)[varidx]) == varidx); /* assume that child varidx corresponds to variable varidx */
 
-         quadcoefs[*nquadterms] = SCIPexprGetPolynomMonomCoef(monoms[i]);
+         quadcoefs[*nquadterms] = SCIPexprGetMonomialCoef(monomials[i]);
          quadvars1[*nquadterms] = SCIPexprtreeGetVars(exprtree)[varidx];
          quadvars2[*nquadterms] = quadvars1[*nquadterms];
          ++*nquadterms;
       }
       else
       {
-         /* bilinear monom */
-         assert(SCIPexprGetPolynomMonomExponents(monoms[i])[0] == 1.0);
-         assert(SCIPexprGetPolynomMonomExponents(monoms[i])[1] == 1.0);
+         /* bilinear monomial */
+         assert(SCIPexprGetMonomialExponents(monomials[i])[0] == 1.0);
+         assert(SCIPexprGetMonomialExponents(monomials[i])[1] == 1.0);
 
-         quadcoefs[*nquadterms] = SCIPexprGetPolynomMonomCoef(monoms[i]);
+         quadcoefs[*nquadterms] = SCIPexprGetMonomialCoef(monomials[i]);
 
-         varidx = SCIPexprGetPolynomMonomChildIndices(monoms[i])[0];
+         varidx = SCIPexprGetMonomialChildIndices(monomials[i])[0];
          assert(varidx >= 0);
          assert(varidx < SCIPexprtreeGetNVars(exprtree));
          assert(SCIPexprGetOperator(SCIPexprGetChildren(expr)[varidx]) == SCIP_EXPR_VARIDX);
          assert(SCIPexprGetOpIndex(SCIPexprGetChildren(expr)[varidx]) == varidx); /* assume that child varidx corresponds to variable varidx */
          quadvars1[*nquadterms] = SCIPexprtreeGetVars(exprtree)[varidx];
          
-         varidx = SCIPexprGetPolynomMonomChildIndices(monoms[i])[1];
+         varidx = SCIPexprGetMonomialChildIndices(monomials[i])[1];
          assert(varidx >= 0);
          assert(varidx < SCIPexprtreeGetNVars(exprtree));
          assert(SCIPexprGetOperator(SCIPexprGetChildren(expr)[varidx]) == SCIP_EXPR_VARIDX);
@@ -1222,49 +1222,49 @@ SCIP_RETCODE readObjective(
    int degree;
    SCIP_Bool newsection;
    int varidx;
-   int nmonoms;
+   int nmonomials;
 
    assert(pipinput != NULL);
 
    /* read the objective coefficients */
-   SCIP_CALL( readPolynom(scip, pipinput, name, &exprtree, &degree, &newsection) );
+   SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
    if( !hasError(pipinput) )
    {
       int i;
 
       expr = SCIPexprtreeGetRoot(exprtree);
       assert(expr != NULL);
-      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOM);
+      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
 
-      nmonoms = SCIPexprGetPolynomNMonoms(expr);
+      nmonomials = SCIPexprGetNMonomials(expr);
 
       assert(degree >= 0);
       if( degree == 1 )
       {
          SCIP_Real coef;
          SCIP_VAR* var;
-         SCIP_EXPRDATA_MONOM** monoms;
+         SCIP_EXPRDATA_MONOMIAL** monomials;
          
          assert(SCIPexprtreeGetVars(exprtree) != NULL);
          assert(SCIPexprGetNChildren(expr) == SCIPexprtreeGetNVars(exprtree));
-         assert(SCIPexprGetPolynomConstant(expr) == 0.0);
+         assert(SCIPexprGetPolynomialConstant(expr) == 0.0);
          
-         monoms  = SCIPexprGetPolynomMonoms(expr);
+         monomials  = SCIPexprGetMonomials(expr);
          
-         for( i = 0; i < nmonoms; ++i )
+         for( i = 0; i < nmonomials; ++i )
          {
-            assert(SCIPexprGetPolynomMonomNFactors(monoms[i]) == 1);
-            assert(SCIPexprGetPolynomMonomExponents(monoms[i]) != NULL);
-            assert(SCIPexprGetPolynomMonomExponents(monoms[i])[0] == 1.0);
-            assert(SCIPexprGetPolynomMonomChildIndices(monoms[i]) != NULL);
+            assert(SCIPexprGetMonomialNFactors(monomials[i]) == 1);
+            assert(SCIPexprGetMonomialExponents(monomials[i]) != NULL);
+            assert(SCIPexprGetMonomialExponents(monomials[i])[0] == 1.0);
+            assert(SCIPexprGetMonomialChildIndices(monomials[i]) != NULL);
             
-            varidx = SCIPexprGetPolynomMonomChildIndices(monoms[i])[0];
+            varidx = SCIPexprGetMonomialChildIndices(monomials[i])[0];
             assert(varidx >= 0);
             assert(varidx < SCIPexprGetNChildren(expr));
             assert(SCIPexprGetOperator(SCIPexprGetChildren(expr)[varidx]) == SCIP_EXPR_VARIDX);
             assert(SCIPexprGetOpIndex(SCIPexprGetChildren(expr)[varidx]) == varidx); /* assume that child varidx corresponds to variable varidx */
             
-            coef = SCIPexprGetPolynomMonomCoef(monoms[i]);
+            coef = SCIPexprGetMonomialCoef(monomials[i]);
             var = SCIPexprtreeGetVars(exprtree)[varidx];
             
             SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + coef) );
@@ -1288,11 +1288,11 @@ SCIP_RETCODE readObjective(
          SCIP_VAR** quadvars2;
          SCIP_Real* quadcoefs;
          
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonoms) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs,  nmonoms) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nmonoms) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonoms) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonoms) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonomials) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs,  nmonomials) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nmonomials) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonomials) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonomials) );
 
          getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadterms, quadvars1, quadvars2, quadcoefs);
 
@@ -1388,12 +1388,12 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool dynamic;
    SCIP_Bool removable;
    int sidesign;
-   int nmonoms;
+   int nmonomials;
 
    assert(pipinput != NULL);
 
-   /* read polynom */
-   SCIP_CALL( readPolynom(scip, pipinput, name, &exprtree, &degree, &newsection) );
+   /* read polynomial */
+   SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
    if ( hasError(pipinput) )
       goto TERMINATE;
    if ( newsection )
@@ -1454,14 +1454,14 @@ SCIP_RETCODE readConstraints(
    {
       expr = SCIPexprtreeGetRoot(exprtree);
       assert(expr != NULL);
-      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOM);
-      nmonoms = SCIPexprGetPolynomNMonoms(expr);
+      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_POLYNOMIAL);
+      nmonomials = SCIPexprGetNMonomials(expr);
       
-      SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonoms) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs,  nmonoms) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nmonoms) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonoms) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonoms) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &linvars,   nmonomials) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs,  nmonomials) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, nmonomials) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadvars2, nmonomials) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nmonomials) );
 
       getLinearAndQuadraticCoefs(scip, exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
 

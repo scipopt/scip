@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_expr.h,v 1.6 2011/01/21 17:30:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_expr.h,v 1.7 2011/01/24 22:31:34 bzfviger Exp $"
 
 /**@file   nlpi/pub_expr.h
  * @brief  methods for expressions and expression trees
@@ -177,115 +177,115 @@ void SCIPexprSortQuadElems(
    SCIP_EXPR*            expr                /**< quadratic expression */
 );
 
-/** creates a SCIP_EXPR_POLYNOM expression from an array of monoms: constant + sum_i monom_i */
+/** creates a SCIP_EXPR_POLYNOMIAL expression from an array of monomials: constant + sum_i monomial_i */
 extern
-SCIP_RETCODE SCIPexprCreatePolynom(
+SCIP_RETCODE SCIPexprCreatePolynomial(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
-   int                   nmonoms,            /**< number of monoms */
-   SCIP_EXPRDATA_MONOM** monoms,             /**< monoms */
+   int                   nmonomials,         /**< number of monomials */
+   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< monomials */
    SCIP_Real             constant,           /**< constant part */
-   SCIP_Bool             copymonoms          /**< should monoms by copied or ownership be assumed? */
+   SCIP_Bool             copymonomials       /**< should monomials by copied or ownership be assumed? */
 );
 
-/** gives the monoms belonging to a SCIP_EXPR_POLYNOM expression */
+/** gives the monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
 extern
-SCIP_EXPRDATA_MONOM** SCIPexprGetPolynomMonoms(
+SCIP_EXPRDATA_MONOMIAL** SCIPexprGetMonomials(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** gives the number of monoms belonging to a SCIP_EXPR_POLYNOM expression */
+/** gives the number of monomials belonging to a SCIP_EXPR_POLYNOMIAL expression */
 extern
-int SCIPexprGetPolynomNMonoms(
+int SCIPexprGetNMonomials(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** gives the constant belonging to a SCIP_EXPR_POLYNOM expression */
+/** gives the constant belonging to a SCIP_EXPR_POLYNOMIAL expression */
 extern
-SCIP_Real SCIPexprGetPolynomConstant(
+SCIP_Real SCIPexprGetPolynomialConstant(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** adds an array of monoms to a SCIP_EXPR_POLYNOM expression */
+/** adds an array of monomials to a SCIP_EXPR_POLYNOMIAL expression */
 extern
-SCIP_RETCODE SCIPexprAddPolynomMonoms(
+SCIP_RETCODE SCIPexprAddMonomials(
    BMS_BLKMEM*           blkmem,             /**< block memory of expression */
    SCIP_EXPR*            expr,               /**< expression */
-   int                   nmonoms,            /**< number of monoms to add */
-   SCIP_EXPRDATA_MONOM** monoms,             /**< the monoms to add */
-   SCIP_Bool             copymonoms          /**< should monoms by copied or ownership be assumed? */
+   int                   nmonomials,         /**< number of monomials to add */
+   SCIP_EXPRDATA_MONOMIAL** monomials,       /**< the monomials to add */
+   SCIP_Bool             copymonomials       /**< should monomials by copied or ownership be assumed? */
 );
 
-/** changes the constant in a SCIP_EXPR_POLYNOM expression */
+/** changes the constant in a SCIP_EXPR_POLYNOMIAL expression */
 extern
-void SCIPexprChgPolynomConstant(
+void SCIPexprChgPolynomialConstant(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             constant            /**< new value for constant */
 );
 
-/** ensures that monoms of a polynom are sorted */
+/** ensures that monomials of a polynomial are sorted */
 extern
-void SCIPexprSortPolynomMonoms(
-   SCIP_EXPR*            expr                /**< polynom expression */
+void SCIPexprSortMonomials(
+   SCIP_EXPR*            expr                /**< polynomial expression */
 );
 
-/** creates a monom */
+/** creates a monomial */
 extern
-SCIP_RETCODE SCIPexprCreatePolynomMonom(
+SCIP_RETCODE SCIPexprCreateMonomial(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPRDATA_MONOM** monom,              /**< buffer where to store pointer to new monom */
-   SCIP_Real             coef,               /**< coefficient of monom */
-   int                   nfactors,           /**< number of factors in monom */
+   SCIP_EXPRDATA_MONOMIAL** monomial,        /**< buffer where to store pointer to new monomial */
+   SCIP_Real             coef,               /**< coefficient of monomial */
+   int                   nfactors,           /**< number of factors in monomial */
    int*                  childidxs,          /**< indices of children corresponding to factors */
    SCIP_Real*            exponents           /**< exponent in each factor */
 );
 
-/** frees a monom */
+/** frees a monomial */
 extern
-void SCIPexprFreePolynomMonom(
+void SCIPexprFreeMonomial(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPRDATA_MONOM** monom               /**< pointer to monom that should be freed */
+   SCIP_EXPRDATA_MONOMIAL** monomial         /**< pointer to monomial that should be freed */
 );
 
-/** gets coefficient of a monom */
+/** gets coefficient of a monomial */
 extern
-SCIP_Real SCIPexprGetPolynomMonomCoef(
-   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+SCIP_Real SCIPexprGetMonomialCoef(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
 );
 
-/** gets number of factors of a monom */
+/** gets number of factors of a monomial */
 extern
-int SCIPexprGetPolynomMonomNFactors(
-   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+int SCIPexprGetMonomialNFactors(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
 );
 
-/** gets indices of children corresponding to factors of a monom */
+/** gets indices of children corresponding to factors of a monomial */
 extern
-int* SCIPexprGetPolynomMonomChildIndices(
-   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+int* SCIPexprGetMonomialChildIndices(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
 );
 
-/** gets exponents in factors of a monom */
+/** gets exponents in factors of a monomial */
 extern
-SCIP_Real* SCIPexprGetPolynomMonomExponents(
-   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+SCIP_Real* SCIPexprGetMonomialExponents(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
 );
 
-/** ensures that factors in a monom are sorted */
+/** ensures that factors in a monomial are sorted */
 extern
-void SCIPexprSortPolynomMonomFactors(
-   SCIP_EXPRDATA_MONOM*  monom               /**< monom */
+void SCIPexprSortMonomialFactors(
+   SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
    );
 
-/** finds a factor corresponding to a given child index in a monom
+/** finds a factor corresponding to a given child index in a monomial
  * note that if the factors have not been merged, the position of some factor corresponding to a given child is given
  * returns TRUE if a factor is found, FALSE if not
  */
 extern
-SCIP_Bool SCIPexprFindPolynomMonomFactor(
-   SCIP_EXPRDATA_MONOM*  monom,              /**< monom */
+SCIP_Bool SCIPexprFindMonomialFactor(
+   SCIP_EXPRDATA_MONOMIAL* monomial,         /**< monomial */
    int                   childidx,           /**< index of the child which factor to search for */
    int*                  pos                 /**< buffer to store position of factor */
    );
@@ -296,7 +296,7 @@ SCIP_Bool SCIPexprHasParam(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** gets maximal degree of expression, or SCIP_EXPR_DEGREEINFINITY if not a polynom */
+/** gets maximal degree of expression, or SCIP_EXPR_DEGREEINFINITY if not a polynomial */
 extern
 SCIP_RETCODE SCIPexprGetMaxDegree(
    SCIP_EXPR*            expr,               /**< expression */

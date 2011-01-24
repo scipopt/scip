@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expr.h,v 1.2 2010/10/29 02:28:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_expr.h,v 1.3 2011/01/24 22:31:34 bzfviger Exp $"
 
 /**@file   type_expr.h
  * @brief  type definitions for expressions and expression trees
@@ -71,7 +71,7 @@ enum SCIP_ExprOp {
    SCIP_EXPR_PRODUCT   = 65,  /**< product prod_{i=1}^n op_i (n operands) */
    SCIP_EXPR_LINEAR    = 66,  /**< linear term sum_{i=1}^n a_i op_i (n operands) */
    SCIP_EXPR_QUADRATIC = 67,  /**< quadratic term sum_{i,j=1}^n a_{i,j} op_i op_j (n operands) */
-   SCIP_EXPR_POLYNOM   = 68,  /**< polynomial term sum_{I} a_{I}ops^I (I a multiindex, n operands) */
+   SCIP_EXPR_POLYNOMIAL= 68,  /**< polynomial term sum_{I} a_{I}ops^I (I a multiindex, n operands) */
    /**@} */
 
    SCIP_EXPR_LAST      = 69   /**< no expression, used for counting reasons */
@@ -93,11 +93,11 @@ struct SCIP_QuadElement
 };
 /* We have defined struct SCIP_QuadElement here (instead of type_expression.h) to allow fast access, allocation, and copying. (similar to SCIP_INTERVAL) */
 
-typedef struct SCIP_QuadElement SCIP_QUADELEM;   /**< element of a quadratic term */
+typedef struct SCIP_QuadElement        SCIP_QUADELEM;           /**< element of a quadratic term */
 typedef struct SCIP_ExprData_Quadratic SCIP_EXPRDATA_QUADRATIC; /**< the data of a quadratic expression (SCIP_EXPR_QUADRATIC) */
 
-typedef struct SCIP_ExprData_Monom   SCIP_EXPRDATA_MONOM;   /**< a monom as part of the data in a polynom expression */
-typedef struct SCIP_ExprData_Polynom SCIP_EXPRDATA_POLYNOM; /**< the data of a polynom expression (SCIP_EXPR_POLYNOM) */
+typedef struct SCIP_ExprData_Monomial   SCIP_EXPRDATA_MONOMIAL;   /**< a monomial as part of the data in a polynomial expression */
+typedef struct SCIP_ExprData_Polynomial SCIP_EXPRDATA_POLYNOMIAL; /**< the data of a polynomial expression (SCIP_EXPR_POLYNOMIAL) */
 
 #ifdef __cplusplus
 }
