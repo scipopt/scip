@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.9 2011/01/24 14:20:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.10 2011/01/24 17:06:47 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -2374,7 +2374,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
                /* if the exponent of the factor is not a natural number and the child is not constant (degree 0),
                 * then we report that we are not really a polynom */
-               if( child1 != 0 && (int)monomdata->exponents[j] != monomdata->exponents[j] )
+               if( child1 != 0 && (monomdata->exponents[j] < 0.0 || (int)monomdata->exponents[j] != monomdata->exponents[j]) )
                {
                   *maxdegree = SCIP_EXPR_DEGREEINFINITY;
                   break;
