@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.8 2011/01/21 20:38:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.9 2011/01/24 14:20:43 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -3106,6 +3106,9 @@ SCIP_RETCODE SCIPexprtreeSubstituteVars(
       /* check children (and grandchildren and so on...) of root expression */
       SCIP_CALL( SCIPexprSubstituteVars(tree->blkmem, tree->root, substexprs) );
    }
+
+   /* substitution of variables should invalidate interpreter data */
+   SCIP_CALL( SCIPexprtreeFreeInterpreterData(tree) );
 
    return SCIP_OKAY;
 }
