@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.153 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.154 2011/01/24 16:48:15 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -8663,6 +8663,35 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    return SCIP_OKAY;
 }
 
+/** Adds a constant to the constraint function, that is, substracts a constant from both sides */
+void SCIPaddConstantQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real             constant            /**< constant to substract from both sides */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(constant)));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->lhs <= consdata->rhs);
+
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+      consdata->lhs -= constant;
+   if( !SCIPisInfinity(scip,  consdata->rhs) )
+      consdata->rhs -= constant;
+
+   if( consdata->lhs > consdata->rhs )
+   {
+      assert(SCIPisEQ(scip, consdata->lhs, consdata->rhs));
+      consdata->lhs = consdata->rhs;
+   }
+}
+
 /** Adds a linear variable with coefficient to a quadratic constraint.
  */
 SCIP_RETCODE SCIPaddLinearVarQuadratic(
@@ -8703,6 +8732,105 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
    return SCIP_OKAY;
 }
 
+/** Adds a linear coefficient for a quadratic variable.
+ * variable need to have been added as quadratic variable before
+ * @see SCIPaddQuadVarQuadratic
+ */
+SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< value to add to linear coefficient of variable */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int pos;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var  != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(coef)));
+
+   if( SCIPisZero(scip, coef) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var, &pos) );
+   if( pos < 0 )
+   {
+      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot change linear coefficient.\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
+   assert(pos < consdata->nquadvars);
+   assert(consdata->quadvarterms[pos].var == var);
+
+   consdata->quadvarterms[pos].lincoef += coef;
+
+   /* update flags and invalid activities */
+   consdata->ispropagated  = FALSE;
+   consdata->ispresolved   = consdata->ispresolved && !SCIPisZero(scip, consdata->quadvarterms[pos].lincoef);
+
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+   consdata->activity = SCIP_INVALID;
+   consdata->lhsviol  = SCIP_INVALID;
+   consdata->rhsviol  = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** Adds a square coefficient for a quadratic variable.
+ * variable need to have been added as quadratic variable before
+ * @see SCIPaddQuadVarQuadratic
+ */
+SCIP_RETCODE SCIPaddSquareCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< value to add to square coefficient of variable */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int pos;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var  != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(coef)));
+
+   if( SCIPisZero(scip, coef) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var, &pos) );
+   if( pos < 0 )
+   {
+      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot change square coefficient.\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
+   assert(pos < consdata->nquadvars);
+   assert(consdata->quadvarterms[pos].var == var);
+
+   consdata->quadvarterms[pos].sqrcoef += coef;
+
+   /* update flags and invalid activities */
+   consdata->isconvex      = FALSE;
+   consdata->isconcave     = FALSE;
+   consdata->iscurvchecked = FALSE;
+   consdata->ispropagated  = FALSE;
+   consdata->ispresolved   = consdata->ispresolved && !SCIPisZero(scip, consdata->quadvarterms[pos].sqrcoef);
+
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+   consdata->activity = SCIP_INVALID;
+   consdata->lhsviol  = SCIP_INVALID;
+   consdata->rhsviol  = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
 /** Adds a bilinear term to a quadratic constraint.
  * The variables of the bilinear term must have been added before.
  * The variables need to be different.
@@ -8732,14 +8860,14 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var1, &var1pos) );
    if( var1pos < 0 )
    {
-      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n");
+      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n", SCIPvarGetName(var1));
       return SCIP_INVALIDDATA;
    }
    
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var2, &var2pos) );
    if( var2pos < 0 )
    {
-      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n");
+      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n", SCIPvarGetName(var2));
       return SCIP_INVALIDDATA;
    }
    

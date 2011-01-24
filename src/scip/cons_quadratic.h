@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.27 2011/01/02 14:44:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.28 2011/01/24 16:48:15 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @brief  constraint handler for quadratic constraints
@@ -187,6 +187,14 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
+/** Adds a constant to the constraint function, that is, substracts a constant from both sides */
+extern
+void SCIPaddConstantQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real             constant            /**< constant to substract from both sides */
+   );
+
 /** Adds a linear variable with coefficient to a quadratic constraint.
  */
 extern
@@ -206,6 +214,30 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
    SCIP_VAR*             var,                /**< variable */
    SCIP_Real             lincoef,            /**< linear coefficient of variable */
    SCIP_Real             sqrcoef             /**< square coefficient of variable */
+   );
+
+/** Adds a linear coefficient for a quadratic variable.
+ * variable need to have been added as quadratic variable before
+ * @see SCIPaddQuadVarQuadratic
+ */
+extern
+SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< value to add to linear coefficient of variable */
+   );
+
+/** Adds a square coefficient for a quadratic variable.
+ * variable need to have been added as quadratic variable before
+ * @see SCIPaddQuadVarQuadratic
+ */
+extern
+SCIP_RETCODE SCIPaddSquareCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< value to add to square coefficient of variable */
    );
 
 /** Adds a bilinear term to a quadratic constraint.
