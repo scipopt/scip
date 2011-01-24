@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.25.2.1 2010/12/29 20:22:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.25.2.2 2011/01/24 21:32:04 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
@@ -621,28 +621,7 @@ SCIP_RETCODE eval(
                assert(childidxs[j] <  SCIPexprGetNChildren(expr));
 
                childval = buf[childidxs[j]];
-               if( childval == 1.0 )  /* 1^anything == 1 */
-                  continue;
-
                exponent = exponents[j];
-
-               if( childval == 0.0 )
-               {
-                  if( exponent > 0.0 )
-                  {
-                     /* 0^positive == 0 */
-                     monomval = 0.0;
-                     break;
-                  }
-                  else if( exponent < 0.0 )
-                  {
-                     /* 0^negative = nan */
-                     setToNaN(val);
-                     return SCIP_OKAY;
-                  }
-                  /* 0^0 == 1 */
-                  continue;
-               }
 
                /* cover some special exponents separately to avoid calling expensive pow function */
                if( exponent == 0.0 )
@@ -1017,7 +996,7 @@ SCIP_RETCODE SCIPexprintGrad(
       gradient[i] = jac[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("GradDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
+   SCIPdebugMessage("Grad for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t %g", gradient[i]); printf("\n");
 #endif
@@ -1058,7 +1037,7 @@ SCIP_RETCODE SCIPexprintGradInt(
       gradient[i] = jac[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("IntGradDense for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
+   SCIPdebugMessage("GradInt for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(data->int_x[i]), SCIPintervalGetSup(data->int_x[i])); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(gradient[i]), SCIPintervalGetSup(gradient[i])); printf("\n");
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.28 2010/09/27 18:34:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: expression.c,v 1.28.2.1 2011/01/24 21:32:04 bzfviger Exp $"
 
 /**@file   nlpi/expression.c
  * @brief  methods for expressions and expression trees
@@ -547,37 +547,30 @@ SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
 static
 SCIP_DECL_EVAL( SCIPexprevalIntPower )
 {
-   int       n;
-
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   n = opdata.intval;
-
-   if( n == 0 )
+   switch( opdata.intval )
    {
-      *result = 1.0;
-      return SCIP_OKAY;
-   }
+      case -1:
+         *result = 1.0 / argvals[0];
+         return SCIP_OKAY;
 
-   if( n > 0 )
-   {
-      if( n == 1 )
-      {
+      case 0:
          *result = 1.0;
          return SCIP_OKAY;
-      }
 
-      *result = SIGN(argvals[0]) * pow(ABS(argvals[0]), (SCIP_Real)n);
-      return SCIP_OKAY;
-   }
+      case 1:
+         *result = argvals[0];
+         return SCIP_OKAY;
 
-   if( n == -1 )
-   {
-      *result = 1.0 / argvals[0];
-      return SCIP_OKAY;
+      case 2:
+         *result = argvals[0] * argvals[0];
+         return SCIP_OKAY;
+
+      default:
+         *result = pow(argvals[0], (SCIP_Real)opdata.intval);
    }
-   *result = SIGN(argvals[0]) / pow(ABS(argvals[0]), (SCIP_Real)-n);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -1237,15 +1230,15 @@ SCIP_RETCODE polynomdataCreate(
    {
       int i;
 
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomdata)->monoms, nmonoms) );
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*polynomdata)->monoms, nmonoms) );
 
-      for( i = 0; i < nmonoms; ++i )
-      {
-         assert(monoms[i] != NULL);  /*lint !e613*/
-         SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &(*polynomdata)->monoms[i],
-            monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
+         for( i = 0; i < nmonoms; ++i )
+         {
+            assert(monoms[i] != NULL);  /*lint !e613*/
+            SCIP_CALL( SCIPexprCreatePolynomMonom(blkmem, &(*polynomdata)->monoms[i],
+               monoms[i]->coef, monoms[i]->nfactors, monoms[i]->childidxs, monoms[i]->exponents) );  /*lint !e613*/
+         }
       }
-   }
 
    return SCIP_OKAY;
 }
@@ -1869,7 +1862,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
    assert(expr      != NULL);
    assert(maxdegree != NULL);
 
-   switch (expr->op)
+   switch( expr->op )
    {
       case SCIP_EXPR_VARIDX:
          *maxdegree = 1;
@@ -2131,7 +2124,7 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
                /* if the exponent of the factor is not a natural number and the child is not constant (degree 0),
                 * then we report that we are not really a polynom */
-               if( child1 != 0 && (int)monomdata->exponents[j] != monomdata->exponents[j] )
+               if( child1 != 0 && (monomdata->exponents[j] < 0.0 || (int)monomdata->exponents[j] != monomdata->exponents[j]) )
                {
                   *maxdegree = SCIP_EXPR_DEGREEINFINITY;
                   break;
@@ -2325,7 +2318,7 @@ void SCIPexprPrint(
          if( paramnames != NULL )
          {
             assert(paramnames[expr->data.intval] != NULL);
-            SCIPmessageFPrintInfo(file, "%s", varnames[expr->data.intval]);
+            SCIPmessageFPrintInfo(file, "%s", paramnames[expr->data.intval]);
          }
          else
          {
@@ -2520,7 +2513,7 @@ void SCIPexprPrint(
          polynomdata = (SCIP_EXPRDATA_POLYNOM*)expr->data.data;
          assert(polynomdata != NULL);
 
-         if( polynomdata->constant != 0.0 )
+         if( polynomdata->constant != 0.0 || polynomdata->nmonoms == 0 )
          {
             SCIPmessageFPrintInfo(file, "%.20g", polynomdata->constant);
          }
@@ -2528,7 +2521,7 @@ void SCIPexprPrint(
          for( i = 0; i < polynomdata->nmonoms; ++i )
          {
             monomdata = polynomdata->monoms[i];
-            SCIPmessageFPrintInfo(file, " %+.20g ", monomdata->coef);
+            SCIPmessageFPrintInfo(file, " %+.20g", monomdata->coef);
 
             for( j = 0; j < monomdata->nfactors; ++j )
             {
