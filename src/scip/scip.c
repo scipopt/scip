@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.725 2011/01/20 20:06:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.726 2011/01/25 18:51:53 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8298,7 +8298,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
 
    assert(lperror != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchFrac", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( downvalid != NULL )
       *downvalid = FALSE;
