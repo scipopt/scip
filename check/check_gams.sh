@@ -13,12 +13,12 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.sh,v 1.1 2011/01/25 18:14:10 bzfviger Exp $
+# $Id: check_gams.sh,v 1.2 2011/01/25 19:31:48 bzfviger Exp $
 TSTNAME=$1
 GAMSBIN=$2
-SOLVER=$3
+SOLVER=${3^^}
 SETNAME=$4
-BINNAME=$GAMSBIN.$5
+BINNAME=gams.$5
 TIMELIMIT=$6
 NODELIMIT=$7
 GAPLIMIT=${8:-0}

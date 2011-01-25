@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.awk,v 1.1 2011/01/25 18:14:10 bzfviger Exp $
+# $Id: check_gams.awk,v 1.2 2011/01/25 19:31:48 bzfviger Exp $
 #
 #@file    check_gams.awk
 #@brief   GAMS Tracefile Check Report Generator
@@ -120,8 +120,8 @@ BEGIN  {
     vars[nprobs] = $7;
     modstat[nprobs] = $11;
     solstat[nprobs] = $12;
-    dualbnd[nprobs] = ( $14 == "NA" ? +infty : $14 );
-    primalbnd[nprobs] = ( $13 == "NA" ? +infty : $13 );
+    dualbnd[nprobs] = $14;
+    primalbnd[nprobs] = $13;
     time[nprobs] = $16;
     iters[nprobs] = $17;
     nodes[nprobs] = $18;
@@ -138,11 +138,12 @@ END {
      else
        shortprob = prob;
 
-     if (dualbnd[m] == "NA")
-       dualbnd[m] = ( maxobj[m] ? +infty : -infty );
-
      if (primalbnd[m] == "NA")
        primalbnd[m] = ( maxobj[m] ? -infty : +infty );
+
+     # if dual bounds is not given but solver claimed model status "optimal", then we set dual bound to primal bound
+     if (dualbnd[m] == "NA")
+       dualbnd[m] = ( modstat[m] == 1 ? primalbnd[m] : ( maxobj[m] ? +infty : -infty ) );
 
      db = dualbnd[m];
      pb = primalbnd[m];
@@ -154,6 +155,8 @@ END {
 
      # TODO consider gaplimit
      gapreached = 0
+     
+     timeout = 0
 
      if( !onlyinsolufile || solstatus[prob] != "" )  {
 
