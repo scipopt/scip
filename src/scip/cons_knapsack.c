@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.221 2011/01/21 01:20:44 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.222 2011/01/25 13:11:14 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -2996,7 +2996,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
             &nnoncovervars, &coverweight, &coverfound, modtransused, &ntightened, &fractional) );
    assert(fractional);
    assert(!coverfound || ncovervars + nnoncovervars == nvars - ntightened);
-   
+
    /* if no cover was found we stop the separation routine */
    if( !coverfound )
       goto TERMINATE;
@@ -3007,7 +3007,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
     */
    SCIP_CALL( getFeasibleSet(scip, cons, vars, nvars, ntightened, weights, capacity, solvals, covervars, noncovervars, 
          &ncovervars, &nnoncovervars, &coverweight, modtransused, sol, ncuts) );
-   
+
  TERMINATE:
    /* frees temporary memory */
    SCIPfreeBufferArray(scip, &noncovervars);
@@ -6864,7 +6864,7 @@ SCIP_RETCODE createNormalizedKnapsack(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -8022,7 +8022,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
