@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.400 2011/01/13 17:45:47 bzfgamra Exp $
+# $Id: Makefile,v 1.401 2011/01/25 18:14:10 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -102,6 +102,7 @@ GUROBI          =       gurobi.sh
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
+GAMS            =       gams
 
 
 SHELL		= 	bash
@@ -793,6 +794,11 @@ testsymphony:
 testblis:		
 		cd check; \
 		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
+.PHONY: testgams
+testgams:
+		cd check; \
+		$(SHELL) ./check_gams.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(SCRDIR)" "$(CONVERTSCIP)";
 
 .PHONY: tags
 tags:

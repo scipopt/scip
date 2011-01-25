@@ -4873,12 +4873,23 @@
  *  \code
  *  make testblis
  *  \endcode
+ *  \arg for <a href="http://www.gams.com/">gams</a>
+ *  \code
+ *  make testgams GAMSSOLVER=xxx
+ *  \endcode
+ *  For this target, the option GAMSSOLVER has to be given to specify the name of a GAMS solver to run, e.g. GAMSSOLVER=SCIP.
+ *  Additional advanced options specific to this target are:
+ *    GAMS to specify the GAMS executable (default: gams),
+ *    GAP to specify a gap limit (default: 0.0),
+ *    SCRDIR to specify a directory where GAMS should put its scratch files (default: gams decides),
+ *    CONVERTSCIP to specify a SCIP which can be used to convert non-gams files into gams format (default: bin/scip, if existing; set to "no" to disable conversion).
+ *  The following options are NOT supported (and ignored): MEM, DISPFREQ, FEASTOL, LOCK.
  *  
  *  Note: This works only if the referred programs are installed globally on your machine.
  *  
  *  The above options like <code>TIME</code> are also available for the other solvers.
  *  
- *  For cplex, gurobi and cbc another advanced option is available:
+ *  For cbc, cplex, gams, and gurobi another advanced option is available:
  *  \arg <code>THREADS</code> - number of threads used in the solution process
  *  
  *  After the testrun there should be an <code>.out</code>, an <code>.err</code> and a <code>.res</code> file 
