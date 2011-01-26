@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.404 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.405 2011/01/26 17:00:41 bzfhende Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -87,7 +87,7 @@
 #define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presol comparisons */
 #define DEFAULT_MINGAINPERNMINCOMP  1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
                                            *   comparison round */
-#define DEFAULT_SORTVARS            FALSE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
+#define DEFAULT_SORTVARS             TRUE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
                                            *  propagation? */
 #define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                            *   (0.0: disable constraint aggregation) */
