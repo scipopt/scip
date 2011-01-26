@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.sh,v 1.2 2011/01/25 19:31:48 bzfviger Exp $
+# $Id: check_gams.sh,v 1.3 2011/01/26 14:40:29 bzfviger Exp $
 TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}
@@ -31,6 +31,12 @@ CONVERTSCIP=${12}
 # - optionally keep solutions via gdx=... option
 # - enforce hard timelimit (see schulz.gms from ptools)
 # - enable solvelink=5
+
+if ! which $GAMSBIN > /dev/null 2>&1
+then
+  echo "No GAMS system available: $GAMSBIN does not work. Abort."
+  exit 1
+fi
 
 if test -z "$SOLVER"
 then
