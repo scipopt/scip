@@ -147,10 +147,8 @@ SCIP_RETCODE createSubproblem(
       SCIPdebugMessage("solving nlp relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
 
       /* reset nlp verblevel to the value it had before */
-      SCIPdebug( SCIP_CALL( SCIPnlpSetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );
-      
+      SCIPdebug( SCIP_CALL( SCIPnlpSetIntPar(SCIPgetNLP(scip), SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );      
    }
-
 
    /* change bounds of variables of the subproblem */
    for( i = 0; i < nbinvars + nintvars; i++ )
@@ -160,7 +158,6 @@ SCIP_RETCODE createSubproblem(
       SCIP_Real ub;
       
       /* get the current LP solution for each variable */
-
       if( startsol == 'l')
          solval = SCIPvarGetLPSol(vars[i]);
       else
@@ -171,7 +168,7 @@ SCIP_RETCODE createSubproblem(
       if( SCIPisFeasIntegral(scip, solval) )
       {
          /* fix variables to current LP solution if it is integral,
-          *  use exact integral value, if the variable is only integral within numerical tolerances
+          * use exact integral value, if the variable is only integral within numerical tolerances
           */
          lb = SCIPfloor(scip, solval+0.5);
          ub = lb;
