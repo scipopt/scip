@@ -127,7 +127,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
    /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), MAX(nvars, 5)) );
 
    /* create subSCIP copy of CIP */
    
@@ -177,7 +177,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, TRUE) );
 
    /* copy as many constraints as possible */
-   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );   
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), MAX(5, SCIPgetNConss(scip))) );
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
    SCIPhashmapFree(&conssmap);
    if( !heurdata->subscipisvalid )
