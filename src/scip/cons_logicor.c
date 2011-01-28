@@ -12,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.163 2011/01/28 16:30:32 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.164 2011/01/28 16:51:09 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
  * @brief  constraint handler for logic or constraints
  *         (equivalent to set covering, but algorithms are suited for depth first search)
  * @author Tobias Achterberg
+ * @author Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
