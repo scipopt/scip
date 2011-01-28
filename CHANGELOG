@@ -43,6 +43,7 @@ fixed bugs:
 - fixed bug in reader_fzn.c w.r.t. cumulative constraints
 - fixed bug in copying if the target SCIP already is in solving stage: it might be that the copy of a variable cannot be found/created
 - fixed memory leak in reader_pip.c
+- fixed not correct merging of variable in logicor constraint handler and changed the name of the method to a common name used by other constraint handlers too(findPairsAndSets->mergeMultiples)
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})

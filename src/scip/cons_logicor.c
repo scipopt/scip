@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.162 2011/01/20 19:04:45 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.163 2011/01/28 16:30:32 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -708,19 +708,21 @@ SCIP_RETCODE disableCons(
 
 /**find pairs of negated variables in constraint: constraint is redundant */
 /**find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
-/**@todo expand following method for finding equal/pairs of negated and aggregated vars */
 static
-SCIP_RETCODE findpairsandsets(
+SCIP_RETCODE mergeMultiples(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    unsigned char**       entries,            /**< array to store whether two positions in constraints represent the same variable */
    int*                  nentries,           /**< pointer for array size, if array will be to small it's corrected */
-   SCIP_Bool*            correct,            /**< pointer to store if array size was correct */
    SCIP_Bool*            redundant           /**< returns whether a variable fixed to one exists in the constraint */
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Bool* negarray;
+   SCIP_VAR* var;
    int v;
    int nbinvars;
 
@@ -733,49 +735,56 @@ SCIP_RETCODE findpairsandsets(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(consdata->nvars >= 0);
+
+   nvars = consdata->nvars;
 
    *redundant = FALSE;
-   *correct = FALSE;
+   
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &negarray, nvars) );
+
+   assert(consdata->vars != NULL && nvars > 0);
+
    nbinvars = SCIPgetNBinVars(scip);
 
-   /** check size of array entries and in case of return necessary size */
-   if( *nentries < nbinvars )
-   {
-      *nentries = nbinvars;
-      return SCIP_OKAY;
-   }
+   assert(*nentries >= nbinvars);
 
-   *correct = TRUE;
+   /* get active or negation of active variables */
+   SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, consdata->vars, vars, negarray) );
 
    /** initialize entries array */
-   for( v = consdata->nvars - 1; v >= 0; --v )
+   for( v = nvars - 1; v >= 0; --v )
    {
-      assert(SCIPvarGetProbindex(consdata->vars[v]) >= -1);
-      assert(SCIPvarGetProbindex(consdata->vars[v]) < nbinvars);
+      assert(negarray[v] ? SCIPvarIsNegated(vars[v]) : TRUE);
+      var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
+      
+      assert(SCIPvarIsActive(var));
+      assert(SCIPvarGetProbindex(var) >= 0);
+      assert(SCIPvarGetProbindex(var) < nbinvars);
+
       /** var is not active yet */
-      if( SCIPvarGetProbindex(consdata->vars[v]) >= 0 )
-         (*entries)[SCIPvarGetProbindex(consdata->vars[v])] = 0;
+      (*entries)[SCIPvarGetProbindex(var)] = 0;
    }
 
    /** check all vars for multiple entries */
-   for( v = consdata->nvars - 1; v >= 0; --v )
+   for( v = nvars - 1; v >= 0; --v )
    {
-      /** var is not active yet */
-      if( SCIPvarGetProbindex(consdata->vars[v]) == -1 )
-         continue;
+      var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
 
       /** if var occurs first time in constraint init entries array */
-      if( (*entries)[SCIPvarGetProbindex(consdata->vars[v])] == 0 )
-         (*entries)[SCIPvarGetProbindex(consdata->vars[v])] = SCIPvarIsNegated(consdata->vars[v]) ? 2 : 1;
+      if( (*entries)[SCIPvarGetProbindex(var)] == 0 )
+         (*entries)[SCIPvarGetProbindex(var)] = negarray[v] ? 2 : 1;
       /** if var occurs second time in constraint, first time it was not negated */
-      else if( (*entries)[SCIPvarGetProbindex(consdata->vars[v])] == 1 )
+      else if( (*entries)[SCIPvarGetProbindex(var)] == 1 )
       {
-         if( SCIPvarIsNegated(consdata->vars[v]) )
+         if( negarray[v] )
          {
             *redundant = TRUE;
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
          else 
          {
@@ -785,10 +794,10 @@ SCIP_RETCODE findpairsandsets(
       /** if var occurs second time in constraint, first time it was negated */
       else
       {
-         if( !SCIPvarIsNegated(consdata->vars[v]) )
+         if( !negarray[v] )
          {
             *redundant = TRUE;
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
          else 
          {
@@ -796,6 +805,11 @@ SCIP_RETCODE findpairsandsets(
          }
       }
    }
+
+ TERMINATE:
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &negarray);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -2423,11 +2437,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       /* find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
       if( !redundant )
       {
-         SCIP_Bool correct = FALSE;
-         
-         SCIP_CALL( findpairsandsets(scip, cons, conshdlrdata->eventhdlr, &entries, &nentries, &correct, &redundant) );
-                  
-         assert(correct);
+         SCIP_CALL( mergeMultiples(scip, cons, conshdlrdata->eventhdlr, &entries, &nentries, &redundant) );
       }
       
       if( redundant )
