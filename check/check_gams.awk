@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.awk,v 1.2 2011/01/25 19:31:48 bzfviger Exp $
+# $Id: check_gams.awk,v 1.3 2011/01/28 16:17:33 bzfviger Exp $
 #
 #@file    check_gams.awk
 #@brief   GAMS Tracefile Check Report Generator
@@ -140,8 +140,12 @@ END {
 
      if (primalbnd[m] == "NA")
        primalbnd[m] = ( maxobj[m] ? -infty : +infty );
+       
+     # do not trust primal bound in trace file if model status indicates that no feasible solution was found
+     if( modstat[m] != 1 && modstat[m] != 2 && modstat[m] != 3 && modstat[m] != 7 && modstat[m] != 8 )
+       primalbnd[m] = ( maxobj[m] ? -infty : +infty );
 
-     # if dual bounds is not given but solver claimed model status "optimal", then we set dual bound to primal bound
+     # if dual bound is not given, but solver claimed model status "optimal", then we set dual bound to primal bound
      if (dualbnd[m] == "NA")
        dualbnd[m] = ( modstat[m] == 1 ? primalbnd[m] : ( maxobj[m] ? +infty : -infty ) );
 
