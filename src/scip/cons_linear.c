@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.405 2011/01/26 17:00:41 bzfhende Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.406 2011/01/28 01:29:56 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -2886,6 +2886,7 @@ SCIP_RETCODE consdataSort(
       SCIPfreeBufferArray(scip, &perm);
 
       consdata->sorted = TRUE;
+      consdata->binvarssorted = FALSE;
    }
    else if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
    {
@@ -2895,9 +2896,6 @@ SCIP_RETCODE consdataSort(
       int nvars;
       int v;
       int lastbin;
-
-      /* we assume that we only have to sort the binaries one time, afterwards the sorting won't change */
-      assert(consdata->nbinvars == -1);
 
       nvars = consdata->nvars;
       vars = consdata->vars;
@@ -2986,7 +2984,7 @@ SCIP_RETCODE consdataSort(
       consdata->binvarssorted = TRUE;
 	 
       /* presolve sortation cannot be garanteed after binary sortation */
-      consdata->sorted = (consdata->nbinvars <= 1);
+      consdata->sorted = (consdata->sorted && consdata->nbinvars == 0);
    }
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE || consdata->binvarssorted);
    assert(SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE || consdata->sorted);
