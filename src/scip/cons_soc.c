@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.65 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.66 2011/01/29 14:49:36 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -1438,6 +1438,21 @@ SCIP_RETCODE presolveRemoveFixedVariables(
             SCIPdebugMessage("found problem infeasible after fixing all variables in <%s>\n", SCIPconsGetName(cons));
             *iscutoff = TRUE;
          }
+         ++*ndelconss;
+      }
+      else if( !SCIPvarIsActive(consdata->rhsvar) )
+      { /* remaining constraint is sqrt(gamma) - rhscoeff * rhsoffset <= rhscoeff * rhsvar, and rhsvar is probably multiaggregated */
+         SCIP_CONS* lincons;
+
+         SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons), 1, &consdata->rhsvar, &consdata->rhscoeff,
+            sqrt(consdata->constant) - consdata->rhscoeff * consdata->rhsoffset, SCIPinfinity(scip),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
+         SCIP_CALL( SCIPaddCons(scip, lincons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+         ++*nupgdconss;
       }
       else if( consdata->rhscoeff > 0.0 )
       { /* remaining constraint is sqrt(gamma) / rhscoeff - rhsoffset <= rhsvar */
@@ -1456,6 +1471,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
          {
             SCIPdebugMessage("remove redundant constraint <%s> after fixing all lhs variables\n", SCIPconsGetName(cons));
          }
+         ++*ndelconss;
       }
       else
       { /* remaining constraint is sqrt(gamma) / rhscoeff - rhsoffset >= rhsvar */
@@ -1474,9 +1490,9 @@ SCIP_RETCODE presolveRemoveFixedVariables(
          {
             SCIPdebugMessage("remove redundant constraint <%s> after fixing all lhs variables\n", SCIPconsGetName(cons));
          }
+         ++*ndelconss;
       }
       SCIP_CALL( SCIPdelCons(scip, cons) );
-      ++*ndelconss;
       *isdeleted = TRUE;
       return SCIP_OKAY;
    }
@@ -1519,6 +1535,24 @@ SCIP_RETCODE presolveRemoveFixedVariables(
          
          SCIPfreeBufferArray(scip, &quadvarterms);
          
+         ++*nupgdconss;
+      }
+      else if( !SCIPvarIsActive(consdata->vars[0]) )
+      { /* constraint is |alpha*(x+beta)| <= sqrt((rhscoeff*rhsoffset)^2 - gamma), but x is probably multaggr. -> turn into ranged linear constraint */
+         SCIP_CONS* lincons;
+
+         /* create constraint alpha*x <=  sqrt((rhscoeff*rhsoffset)^2 - gamma) - alpha*beta
+          *                   alpha*x >= -sqrt((rhscoeff*rhsoffset)^2 - gamma) - alpha*beta */
+         SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons), 1, &consdata->vars[0], &consdata->coefs[0],
+            -sqrt(consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset * consdata->rhsoffset - consdata->constant) - consdata->coefs[0] * consdata->offsets[0],
+             sqrt(consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset * consdata->rhsoffset - consdata->constant) - consdata->coefs[0] * consdata->offsets[0],
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
+         SCIP_CALL( SCIPaddCons(scip, lincons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
          ++*nupgdconss;
       }
       else
@@ -1581,7 +1615,6 @@ SCIP_RETCODE presolveRemoveFixedVariables(
                }
             }
          }
-         
          ++*ndelconss;
       }
       *isdeleted = TRUE;
@@ -2285,6 +2318,7 @@ SCIP_RETCODE propagateBounds(
    SCIP_ROUNDMODE roundmode;
    SCIP_Bool      infeas, tightened;
    int            i;
+   SCIP_Real      lb, ub;
    
    assert(scip   != NULL);
    assert(cons   != NULL);
@@ -2314,9 +2348,9 @@ SCIP_RETCODE propagateBounds(
    SCIP_CALL( SCIPallocBufferArray(scip, &lhsranges, consdata->nvars) );
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIPintervalSetBounds(&lhsranges[i],
-         MIN(SCIPvarGetLbLocal(consdata->vars[i]), SCIPvarGetUbLocal(consdata->vars[i])),    /*lint !e666*/
-         MAX(SCIPvarGetLbLocal(consdata->vars[i]), SCIPvarGetUbLocal(consdata->vars[i])) );  /*lint !e666*/
+      lb = SCIPcomputeVarLbLocal(scip, consdata->vars[i]);
+      ub = SCIPcomputeVarUbLocal(scip, consdata->vars[i]);
+      SCIPintervalSetBounds(&lhsranges[i], MIN(lb, ub), MAX(lb, ub));
       if( consdata->offsets[i] != 0.0 )
          SCIPintervalAddScalar(SCIPinfinity(scip), &lhsranges[i], lhsranges[i], consdata->offsets[i]);
       if( consdata->coefs[i]   != 1.0 )
@@ -2349,9 +2383,9 @@ SCIP_RETCODE propagateBounds(
 
    if( *result != SCIP_CUTOFF )
    {
-      SCIPintervalSetBounds(&rhsrange,
-         MIN(SCIPvarGetLbLocal(consdata->rhsvar), SCIPvarGetUbLocal(consdata->rhsvar)),    /*lint !e666*/
-         MAX(SCIPvarGetLbLocal(consdata->rhsvar), SCIPvarGetUbLocal(consdata->rhsvar)) );  /*lint !e666*/
+      lb = SCIPcomputeVarLbLocal(scip, consdata->rhsvar);
+      ub = SCIPcomputeVarUbLocal(scip, consdata->rhsvar);
+      SCIPintervalSetBounds(&rhsrange, MIN(lb, ub), MAX(lb, ub));
       if( consdata->rhsoffset != 0.0 )
          SCIPintervalAddScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhsoffset);
       if( consdata->rhscoeff  != 1.0 )
@@ -2618,7 +2652,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
             ++lhscount;
          }
-         else if( rhsvar != NULL || SCIPisLT(scip, SCIPvarGetLbGlobal(term->var), term->lincoef / (2*term->sqrcoef)) )
+         else if( rhsvar != NULL || SCIPisLT(scip, SCIPcomputeVarLbGlobal(scip, term->var), term->lincoef / (2*term->sqrcoef)) )
          { /* second variable with negative coefficient -> cannot be SOC */
             /* or lower bound of variable does not ensure positivity of right hand side */
             rhsvar = NULL;
@@ -2705,7 +2739,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
             ++lhscount;
          }
-         else if( rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(term->var), term->lincoef / (2*term->sqrcoef)) )
+         else if( rhsvar || SCIPisLT(scip, SCIPcomputeVarLbGlobal(scip, term->var), term->lincoef / (2*term->sqrcoef)) )
          { /* second variable with positive coefficient -> cannot be SOC */
             /* or lower bound of variable does not ensure positivity of right hand side */
             rhsvar = NULL;
@@ -3091,8 +3125,6 @@ SCIP_DECL_CONSTRANS(consTransSOC)
    for( i = 0; i < consdata->nvars; ++i )
    {
       SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[i]) );
-      if( SCIPvarIsActive(consdata->vars[i]) )
-         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->vars[i]) );
    }
 
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->coefs,   sourcedata->coefs,   consdata->nvars) );
@@ -3104,8 +3136,6 @@ SCIP_DECL_CONSTRANS(consTransSOC)
    consdata->rhscoeff  = sourcedata->rhscoeff;
    
    SCIP_CALL( SCIPcaptureVar(scip, consdata->rhsvar) );
-   if( SCIPvarIsActive(consdata->rhsvar) )
-      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->rhsvar) );
 
    consdata->nlrow = NULL;
    consdata->lhsbndchgeventdatas = NULL;
@@ -3904,8 +3934,8 @@ SCIP_RETCODE SCIPcreateConsSOC(
    assert(constant >= 0.0);
    assert(!SCIPisInfinity(scip, ABS(rhsoffset)));
    assert(!SCIPisInfinity(scip, constant));
-   assert(rhscoeff <= 0.0 || SCIPisGE(scip, local ? SCIPvarGetLbLocal(rhsvar) : SCIPvarGetLbGlobal(rhsvar), -rhsoffset));
-   assert(rhscoeff >= 0.0 || SCIPisLE(scip, local ? SCIPvarGetUbLocal(rhsvar) : SCIPvarGetUbGlobal(rhsvar), -rhsoffset));
+   assert(rhscoeff <= 0.0 || SCIPisGE(scip, local ? SCIPcomputeVarLbLocal(scip, rhsvar) : SCIPcomputeVarLbGlobal(scip, rhsvar), -rhsoffset));
+   assert(rhscoeff >= 0.0 || SCIPisLE(scip, local ? SCIPcomputeVarUbLocal(scip, rhsvar) : SCIPcomputeVarUbGlobal(scip, rhsvar), -rhsoffset));
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
@@ -3915,8 +3945,6 @@ SCIP_RETCODE SCIPcreateConsSOC(
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CALL( SCIPcaptureVar(scip, vars[i]) );
-      if( SCIPvarIsActive(vars[i]) )
-         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, vars[i]) );
    }
    
    if( coefs != NULL )
@@ -3949,8 +3977,6 @@ SCIP_RETCODE SCIPcreateConsSOC(
    consdata->rhsoffset = rhsoffset;
 
    SCIP_CALL( SCIPcaptureVar(scip, rhsvar) );
-   if( SCIPvarIsActive(rhsvar) )
-      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, rhsvar) );
 
    consdata->nlrow = NULL;
 
