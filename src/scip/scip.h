@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.463 2011/01/20 08:21:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.464 2011/01/30 19:37:40 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4491,6 +4491,13 @@ extern
 SCIP_RETCODE SCIPprintLPSolutionQuality(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** Compute relative interior point to current LP */
+extern
+SCIP_RETCODE SCIPcomputeLPRelIntPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            point               /**< relative interior point on exit */
    );
 
 /**@} */
