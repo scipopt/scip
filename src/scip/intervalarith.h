@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.34 2011/01/07 17:59:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.35 2011/01/30 20:02:46 bzfviger Exp $"
 
 /**@file   scip/intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -76,6 +76,18 @@ void SCIPintervalSetRoundingModeDownwards(
 /** sets rounding mode of floating point operations to upwards rounding */
 extern
 void SCIPintervalSetRoundingModeUpwards(
+   void
+   );
+
+/** sets rounding mode of floating point operations to nearest rounding */
+extern
+void SCIPintervalSetRoundingModeToNearest(
+   void
+   );
+
+/** sets rounding mode of floating point operations to towards zero rounding */
+extern
+void SCIPintervalSetRoundingModeTowardsZero(
    void
    );
 
@@ -387,7 +399,9 @@ void SCIPintervalSquare(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
-/** stores (positive part of) square root of operand in resultant */
+/** stores (positive part of) square root of operand in resultant
+ * @caution we assume a correctly rounded sqrt(double) function when rounding is to nearest
+ */
 extern
 void SCIPintervalSquareRoot(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -415,9 +429,54 @@ void SCIPintervalPowerScalar(
    SCIP_Real             operand2            /**< second operand of operation */
    );
 
+/** stores bounds on the power of a scalar operand1 to a scalar operand2 in resultant
+ * both operands need to be finite numbers
+ * need to have operand1 >= 0 or operand2 integer and need to have operand2 >= 0 if operand1 == 0
+ * @caution we assume a correctly rounded pow(double) function when rounding is to nearest
+ */
+extern
+void SCIPintervalPowerScalarScalar(
+   SCIP_INTERVAL*        resultant,          /**< resultant of operation */
+   SCIP_Real             operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** computes lower bound on power of a scalar operand1 to an integer operand2
+ * both operands need to be finite numbers
+ * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
+ */
+extern
+SCIP_Real SCIPintervalPowerScalarIntegerInf(
+   SCIP_Real             operand1,           /**< first operand of operation */
+   int                   operand2            /**< second operand of operation */
+   );
+
+/** computes upper bound on power of a scalar operand1 to an integer operand2
+ * both operands need to be finite numbers
+ * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
+ */
+extern
+SCIP_Real SCIPintervalPowerScalarIntegerSup(
+   SCIP_Real             operand1,           /**< first operand of operation */
+   int                   operand2            /**< second operand of operation */
+   );
+
+/** computes bounds on power of a scalar operand1 to an integer operand2
+ * both operands need to be finite numbers
+ * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
+ */
+extern
+void SCIPintervalPowerScalarInteger(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_Real             operand1,           /**< first operand of operation */
+   int                   operand2            /**< second operand of operation */
+   );
+
 /** stores operand1 to the signed power of the scalar positive operand2 in resultant 
  * 
  * the signed power of x w.r.t. an exponent n >= 0 is given as sign(x) * abs(x)^n
+ *
+ * @caution we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
  */
 extern
 void SCIPintervalSignPowerScalar(
@@ -436,7 +495,9 @@ void SCIPintervalReciprocal(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
-/** stores exponential of operand in resultant */
+/** stores exponential of operand in resultant
+ * @caution we assume a correctly rounded exp(double) function when rounding is to nearest
+ */
 extern
 void SCIPintervalExp(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -444,7 +505,9 @@ void SCIPintervalExp(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
-/** stores natural logarithm of operand in resultant */
+/** stores natural logarithm of operand in resultant
+ * @caution we assume a correctly rounded log(double) function when rounding is to nearest
+ */
 extern
 void SCIPintervalLog(
    SCIP_Real             infinity,           /**< value for infinity */
