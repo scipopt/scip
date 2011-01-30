@@ -28,6 +28,7 @@ interface:
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage
 - SCIP_DECL_PROBCOPY got a new parameter global
 - using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
+- added function SCIPcomputeLPRelIntPoint() to compute a relative interior point of the current LP
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -88,6 +89,8 @@ features:
 - moved code of scip.c:SCIPreadSol() to reader_sol.c; call solution reading via SCIPreadProb()
 - new presolving step "removeConstraintsDueToNegCliques" in locigor constraint handler which updates logicor constraints to setppc constraints if a negated clique inside this constraint exist, by default is off
 - added scripts check_gams.sh, evalcheck_gams.sh and check_gams.awk and target "testgams" in Makefile
+- can now compute the relative interior point of the current LP
+
 
 SCIP version 2.0.2
 ==================
