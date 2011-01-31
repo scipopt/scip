@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.727 2011/01/30 19:37:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.728 2011/01/31 18:46:22 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -19541,6 +19541,7 @@ void printPresolverStatistics(
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 }
 
+/** print constraint statistics to output file */
 static
 void printConstraintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19553,7 +19554,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
 
    /**@todo add constraint statistics: how many constraints (instead of cuts) have been added? */
-   SCIPmessageFPrintInfo(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #Resprop    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -19567,7 +19568,7 @@ void printConstraintStatistics(
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(file, " %10d%c%10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(file, " %10d%c%10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
             startnactiveconss,
             maxnactiveconss > startnactiveconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr),
@@ -19575,6 +19576,7 @@ void printConstraintStatistics(
             SCIPconshdlrGetNEnfoLPCalls(conshdlr),
             SCIPconshdlrGetNEnfoPSCalls(conshdlr),
             SCIPconshdlrGetNCheckCalls(conshdlr),
+            SCIPconshdlrGetNRespropCalls(conshdlr),
             SCIPconshdlrGetNCutoffs(conshdlr),
             SCIPconshdlrGetNDomredsFound(conshdlr),
             SCIPconshdlrGetNCutsFound(conshdlr),
@@ -19584,6 +19586,7 @@ void printConstraintStatistics(
    }
 }
 
+/** print constraint timing statistics to output file */
 static
 void printConstraintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19595,7 +19598,7 @@ void printConstraintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS      Check\n");
+   SCIPmessageFPrintInfo(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS      Check    Resprop\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -19611,20 +19614,23 @@ void printConstraintTimingStatistics(
          totaltime = SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr) 
             + SCIPconshdlrGetEnfoLPTime(conshdlr) 
             + SCIPconshdlrGetEnfoPSTime(conshdlr) 
-            + SCIPconshdlrGetCheckTime(conshdlr);
+            + SCIPconshdlrGetCheckTime(conshdlr)
+            + SCIPconshdlrGetRespropTime(conshdlr);
          
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             totaltime,
             SCIPconshdlrGetSepaTime(conshdlr),
             SCIPconshdlrGetPropTime(conshdlr),
             SCIPconshdlrGetEnfoLPTime(conshdlr),
             SCIPconshdlrGetEnfoPSTime(conshdlr),
-            SCIPconshdlrGetCheckTime(conshdlr));
+            SCIPconshdlrGetCheckTime(conshdlr),
+            SCIPconshdlrGetRespropTime(conshdlr));
       }
    }
 }
 
+/** print propagator statistics to output file */
 static
 void printPropagatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19636,17 +19642,38 @@ void printPropagatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Propagators        :       Time      Calls    Cutoffs    DomReds\n");
+   SCIPmessageFPrintInfo(file, "Propagators        : #Propagate   #Resprop    Cutoffs    DomReds\n");
 
    for( i = 0; i < scip->set->nprops; ++i )
-      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
-         SCIPpropGetName(scip->set->props[i]),
-         SCIPpropGetTime(scip->set->props[i]),
-         SCIPpropGetNCalls(scip->set->props[i]),
-         SCIPpropGetNCutoffs(scip->set->props[i]),
-         SCIPpropGetNDomredsFound(scip->set->props[i]));
+   {
+      SCIP_PROP* prop;
+      prop = scip->set->props[i];
+
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+         SCIPpropGetName(prop),
+         SCIPpropGetNCalls(prop),
+         SCIPpropGetNRespropCalls(prop),
+         SCIPpropGetNCutoffs(prop),
+         SCIPpropGetNDomredsFound(prop));
+   }
+   
+   SCIPmessageFPrintInfo(file, "Propagator Timings :  TotalTime  Propagate    Resprop\n");
+
+   for( i = 0; i < scip->set->nprops; ++i )
+   {
+      SCIP_PROP* prop;
+      SCIP_Real totaltime;
+         
+      prop = scip->set->props[i];
+      totaltime = SCIPpropGetTime(prop) + SCIPpropGetRespropTime(prop);
+      
+      SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPpropGetName(prop));
+      SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f\n",
+         totaltime, SCIPpropGetTime(prop), SCIPpropGetRespropTime(prop));
+   }
 }
 
+/** print conflict statistic to given output stream */
 static
 void printConflictStatistics(
    SCIP*                 scip,               /**< SCIP data structure */

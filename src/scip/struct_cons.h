@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.56 2011/01/02 11:10:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.57 2011/01/31 18:46:22 bzfheinz Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -115,6 +115,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
    SCIP_Longint          ncheckcalls;        /**< number of times, the feasibility check was called */
+   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagtion was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
@@ -172,6 +173,7 @@ struct SCIP_Conshdlr
    SCIP_CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
    SCIP_CLOCK*           checktime;          /**< time used for feasibility check of this constraint handler */
+   SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
    int                   sepapriority;       /**< priority of the constraint handler for separation */
    int                   enfopriority;       /**< priority of the constraint handler for constraint enforcing */
    int                   checkpriority;      /**< priority of the constraint handler for checking infeasibility */

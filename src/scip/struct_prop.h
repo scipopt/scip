@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.18 2011/01/02 11:10:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_prop.h,v 1.19 2011/01/31 18:46:23 bzfheinz Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators
@@ -37,6 +37,7 @@ extern "C" {
 struct SCIP_Prop
 {
    SCIP_Longint          ncalls;             /**< number of times, this propagator was called */
+   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagtion was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    char*                 name;               /**< name of propagator */
@@ -50,7 +51,8 @@ struct SCIP_Prop
    SCIP_DECL_PROPEXEC    ((*propexec));      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop));   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata;           /**< propagators local data */
-   SCIP_CLOCK*           propclock;          /**< propagation time */
+   SCIP_CLOCK*           proptime;           /**< propagation time */
+   SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
    int                   priority;           /**< priority of the propagator */
    int                   freq;               /**< frequency for calling propagator */
    SCIP_Bool             delay;              /**< should propagator be delayed, if other propagators found reductions? */

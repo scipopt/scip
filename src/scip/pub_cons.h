@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.46 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.47 2011/01/31 18:46:22 bzfheinz Exp $"
 
 /**@file   pub_cons.h
  * @ingroup PUBLICMETHODS
@@ -169,6 +169,12 @@ SCIP_Real SCIPconshdlrGetCheckTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for resolving propagation in this constraint handler */
+extern
+SCIP_Real SCIPconshdlrGetRespropTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets number of calls to the constraint handler's separation method */
 extern
 SCIP_Longint SCIPconshdlrGetNSepaCalls(
@@ -196,6 +202,12 @@ SCIP_Longint SCIPconshdlrGetNPropCalls(
 /** gets number of calls to the constraint handler's checking method */
 extern
 SCIP_Longint SCIPconshdlrGetNCheckCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's resolve propagation method */
+extern
+SCIP_Longint SCIPconshdlrGetNRespropCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

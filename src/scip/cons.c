@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.222 2011/01/02 11:10:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.223 2011/01/31 18:46:22 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1865,12 +1865,14 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->checktime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conshdlr)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
 
    (*conshdlr)->nsepacalls = 0;
    (*conshdlr)->nenfolpcalls = 0;
    (*conshdlr)->nenfopscalls = 0;
    (*conshdlr)->npropcalls = 0;
    (*conshdlr)->ncheckcalls = 0;
+   (*conshdlr)->nrespropcalls = 0;
    (*conshdlr)->ncutoffs = 0;
    (*conshdlr)->ncutsfound = 0;
    (*conshdlr)->nconssfound = 0;
@@ -1973,6 +1975,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    SCIPclockFree(&(*conshdlr)->enfopstime);
    SCIPclockFree(&(*conshdlr)->proptime);
    SCIPclockFree(&(*conshdlr)->checktime);
+   SCIPclockFree(&(*conshdlr)->resproptime);
 
    BMSfreeMemoryArray(&(*conshdlr)->name);
    BMSfreeMemoryArray(&(*conshdlr)->desc);
@@ -2013,12 +2016,14 @@ SCIP_RETCODE SCIPconshdlrInit(
       SCIPclockReset(conshdlr->enfopstime);
       SCIPclockReset(conshdlr->proptime);
       SCIPclockReset(conshdlr->checktime);
+      SCIPclockReset(conshdlr->resproptime);
       
       conshdlr->nsepacalls = 0;
       conshdlr->nenfolpcalls = 0;
       conshdlr->nenfopscalls = 0;
       conshdlr->npropcalls = 0;
       conshdlr->ncheckcalls = 0;
+      conshdlr->nrespropcalls = 0;
       conshdlr->ncutoffs = 0;
       conshdlr->ncutsfound = 0;
       conshdlr->nconssfound = 0;
@@ -3517,6 +3522,16 @@ SCIP_Real SCIPconshdlrGetCheckTime(
    return SCIPclockGetTime(conshdlr->checktime);
 }
 
+/** gets time in seconds used for resolving propagation in this constraint handler */
+SCIP_Real SCIPconshdlrGetRespropTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->resproptime);
+}
+
 /** gets number of calls to the constraint handler's separation method */
 SCIP_Longint SCIPconshdlrGetNSepaCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -3565,6 +3580,16 @@ SCIP_Longint SCIPconshdlrGetNCheckCalls(
    assert(conshdlr != NULL);
 
    return conshdlr->ncheckcalls;
+}
+
+/** gets number of calls to the constraint handler's resolve propagation method */
+SCIP_Longint SCIPconshdlrGetNRespropCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nrespropcalls;
 }
 
 /** gets total number of times, this constraint handler detected a cutoff */
@@ -5597,9 +5622,18 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 
    if( conshdlr->consresprop != NULL )
    {
+      /* start timing */
+      SCIPclockStart(conshdlr->resproptime, set);
+
       SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, inferboundtype, bdchgidx,
             result) );
-      
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->resproptime, set);
+
+      /* update statistics */
+      conshdlr->nrespropcalls++;
+
       /* check result code */
       if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
       {

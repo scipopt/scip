@@ -91,7 +91,11 @@ features:
 - added scripts check_gams.sh, evalcheck_gams.sh and check_gams.awk and target "testgams" in Makefile
 - can now compute the relative interior point of the current LP
 - interval arithmetics for power, log, and exp should be rounding safe now
-
+- added counter for number calls and timing for resolve propagation calls for constraint handler and propagators
+- new methods SCIPpropGetNRespropCalls() and SCIPconshdlrGetNRespropCalls() which return the number of times a propagator
+  or a constraint handler was called for resolving a propagation
+- new method SCIPpropGetRespropTime() and SCIPconshdlrGetRespropTime() which return time spent for resolving a propagation
+  within a propagator  or a constraint handler
 
 SCIP version 2.0.2
 ==================

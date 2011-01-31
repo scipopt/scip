@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_prop.h,v 1.17 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_prop.h,v 1.18 2011/01/31 18:46:22 bzfheinz Exp $"
 
 /**@file   pub_prop.h
  * @ingroup PUBLICMETHODS
@@ -81,9 +81,21 @@ SCIP_Real SCIPpropGetTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+/** gets time in seconds used in this propagator for resolve propagation */
+extern
+SCIP_Real SCIPpropGetRespropTime(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
 /** gets the total number of times, the propagator was called */
 extern
 SCIP_Longint SCIPpropGetNCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** gets the total number of times, the propagator was called for resolving a propagation */
+extern
+SCIP_Longint SCIPpropGetNRespropCalls(
    SCIP_PROP*            prop                /**< propagator */
    );
 

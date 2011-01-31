@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.31 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.32 2011/01/31 18:46:22 bzfheinz Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -123,8 +123,10 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->propexec = propexec;
    (*prop)->propresprop = propresprop;
    (*prop)->propdata = propdata;
-   SCIP_CALL( SCIPclockCreate(&(*prop)->propclock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*prop)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*prop)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
    (*prop)->ncalls = 0;
+   (*prop)->nrespropcalls = 0;
    (*prop)->ncutoffs = 0;
    (*prop)->ndomredsfound = 0;
    (*prop)->wasdelayed = FALSE;
@@ -167,7 +169,8 @@ SCIP_RETCODE SCIPpropFree(
       SCIP_CALL( (*prop)->propfree(set->scip, *prop) );
    }
 
-   SCIPclockFree(&(*prop)->propclock);
+   SCIPclockFree(&(*prop)->proptime);
+   SCIPclockFree(&(*prop)->resproptime);
    BMSfreeMemoryArray(&(*prop)->name);
    BMSfreeMemoryArray(&(*prop)->desc);
    BMSfreeMemory(prop);
@@ -192,9 +195,11 @@ SCIP_RETCODE SCIPpropInit(
 
    if( set->misc_resetstat )
    {
-      SCIPclockReset(prop->propclock);
+      SCIPclockReset(prop->proptime);
+      SCIPclockReset(prop->resproptime);
 
       prop->ncalls = 0;
+      prop->nrespropcalls = 0;
       prop->ncutoffs = 0;
       prop->ndomredsfound = 0;
    }
@@ -300,13 +305,13 @@ SCIP_RETCODE SCIPpropExec(
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          
          /* start timing */
-         SCIPclockStart(prop->propclock, set);
+         SCIPclockStart(prop->proptime, set);
          
          /* call external propagation method */
          SCIP_CALL( prop->propexec(set->scip, prop, result) );
          
          /* stop timing */
-         SCIPclockStop(prop->propclock, set);
+         SCIPclockStop(prop->proptime, set);
          
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
@@ -370,8 +375,18 @@ SCIP_RETCODE SCIPpropResolvePropagation(
 
    if( prop->propresprop != NULL )
    {
+
+      /* start timing */
+      SCIPclockStart(prop->resproptime, set);
+
       SCIP_CALL( prop->propresprop(set->scip, prop, infervar, inferinfo, inferboundtype, bdchgidx,
             result) );
+      
+      /* stop timing */
+      SCIPclockStop(prop->resproptime, set);
+
+      /* update statistic */
+      prop->nrespropcalls++;
       
       /* check result code */
       if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
@@ -465,14 +480,24 @@ int SCIPpropGetFreq(
    return prop->freq;
 }
 
-/** gets time in seconds used in this propagator */
+/** gets time in seconds used in this propagator for propagation */
 SCIP_Real SCIPpropGetTime(
    SCIP_PROP*            prop                /**< propagator */
    )
 {
    assert(prop != NULL);
 
-   return SCIPclockGetTime(prop->propclock);
+   return SCIPclockGetTime(prop->proptime);
+}
+
+/** gets time in seconds used in this propagator for resolve propagation */
+SCIP_Real SCIPpropGetRespropTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return SCIPclockGetTime(prop->resproptime);
 }
 
 /** gets the total number of times, the propagator was called */
@@ -483,6 +508,16 @@ SCIP_Longint SCIPpropGetNCalls(
    assert(prop != NULL);
 
    return prop->ncalls;
+}
+
+/** gets the total number of times, the propagator was called for resolving a propagation */
+SCIP_Longint SCIPpropGetNRespropCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->nrespropcalls;
 }
 
 /** gets total number of times, this propagator detected a cutoff */
