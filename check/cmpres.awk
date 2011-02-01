@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.61 2011/02/01 15:58:06 bzfviger Exp $
+# $Id: cmpres.awk,v 1.62 2011/02/01 16:04:48 bzfviger Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -175,6 +175,7 @@ BEGIN {
    printsoltimes = 0; # for reference solver, absolute time to first and best solution are printed, for other solvers the corresponding ratios
                       #! please NOTE that this additional output is currently only available for SCIP .res-files created with the evalcheck.sh script and
                       #  the flag printsoltimes = 1 set in check.awk. If other solvers are involved, leave this flag set to 0.
+   printgap = 0; # if timeout, then print absolute gap at termination in time column
    printsoltimes = !short && printsoltimes; # short deactivates the detailed solution times output
    infinity = 1e+20;
    timegeomshift = 10.0;
@@ -819,7 +820,10 @@ END {
             line = sprintf("%s           -        -", line);
          else
          {
-            line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
+            if( printgap && status[s,pidx] == "timeout" )
+              line = sprintf("%s %s%10d %7.2f%%", line, feasmark, nodes[s,pidx], gap[s,pidx]);
+            else
+              line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
             if( printsoltimes && o == 0 )
                line = sprintf("%s  %8.1f %8.1f", line, timetofirst[s,pidx], timetobest[s, pidx] );
          }
