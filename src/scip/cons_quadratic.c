@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.154 2011/01/24 16:48:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.155 2011/02/01 19:49:32 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7499,7 +7499,33 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
          if( !fail && candidate != NULL )
          {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+
             SCIPdebugMessage("make variable <%s> implicit integer due to constraint <%s>\n", SCIPvarGetName(candidate), SCIPconsGetName(conss[c]));
+            /* we adjust variable bounds to integers first, since otherwise a later bound tightening with a fractional old bound may give an assert because SCIP expects non-continuous variables to have non-fractional bounds */
+            if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(candidate)) )
+            {
+               SCIP_CALL( SCIPtightenVarLbGlobal(scip, candidate, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(candidate)), TRUE, &infeas, &tightened) );
+               if( infeas )
+               {
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
+               if( tightened )
+                  ++*nchgbds;
+            }
+            if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(candidate)) )
+            {
+               SCIP_CALL( SCIPtightenVarUbGlobal(scip, candidate, SCIPfeasFloor(scip, SCIPvarGetUbGlobal(candidate)), TRUE, &infeas, &tightened) );
+               if( infeas )
+               {
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
+               if( tightened )
+                  ++*nchgbds;
+            }
             SCIP_CALL( SCIPchgVarType(scip, candidate, SCIP_VARTYPE_IMPLINT) );
             ++*nchgvartypes;
             *result = SCIP_SUCCESS;
