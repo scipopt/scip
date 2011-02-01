@@ -12,18 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.h,v 1.15 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event_xyz.h,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   prop_xxx.h
- * @brief  xxx propagator
- * @author Tobias Achterberg
+/**@file   event_xyz.h
+ * @brief  eventhdlr for xyz event
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROP_XXX_H__
-#define __SCIP_PROP_XXX_H__
-
+#ifndef __SCIP_EVENT_XYZ_H__
+#define __SCIP_EVENT_XYZ_H__
 
 #include "scip/scip.h"
 
@@ -31,9 +30,9 @@
 extern "C" {
 #endif
 
-/** creates the xxx propagator and includes it in SCIP */
+/** creates event handler for xyz event */
 extern
-SCIP_RETCODE SCIPincludePropXxx(
+SCIP_RETCODE SCIPincludeEventHdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

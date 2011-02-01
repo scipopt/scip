@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.28 2011/01/02 11:10:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_xyz.c,v 1.1 2011/02/01 11:55:33 bzfberth Exp $"
 
-/**@file   branch_xxx.c
+/**@file   branch_xyz.c
  * @ingroup BRANCHINGRULES
- * @brief  xxx branching rule
+ * @brief  xyz branching rule
  * @author Tobias Achterberg
  */
 
@@ -24,10 +24,10 @@
 
 #include <assert.h>
 
-#include "scip/branch_xxx.h"
+#include "scip/branch_xyz.h"
 
 
-#define BRANCHRULE_NAME            "xxx"
+#define BRANCHRULE_NAME            "xyz"
 #define BRANCHRULE_DESC            "branching rule template"
 #define BRANCHRULE_PRIORITY        0
 #define BRANCHRULE_MAXDEPTH        -1
@@ -69,134 +69,134 @@ struct SCIP_BranchruleData
 /** copy method for branchrule plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_BRANCHCOPY(branchCopyXxx)
+SCIP_DECL_BRANCHCOPY(branchCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchCopyXxx NULL
+#define branchCopyXyz NULL
 #endif
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 #if 0
 static
-SCIP_DECL_BRANCHFREE(branchFreeXxx)
+SCIP_DECL_BRANCHFREE(branchFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchFreeXxx NULL
+#define branchFreeXyz NULL
 #endif
 
 
 /** initialization method of branching rule (called after problem was transformed) */
 #if 0
 static
-SCIP_DECL_BRANCHINIT(branchInitXxx)
+SCIP_DECL_BRANCHINIT(branchInitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchInitXxx NULL
+#define branchInitXyz NULL
 #endif
 
 
 /** deinitialization method of branching rule (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_BRANCHEXIT(branchExitXxx)
+SCIP_DECL_BRANCHEXIT(branchExitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchExitXxx NULL
+#define branchExitXyz NULL
 #endif
 
 
 /** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
 #if 0
 static
-SCIP_DECL_BRANCHINITSOL(branchInitsolXxx)
+SCIP_DECL_BRANCHINITSOL(branchInitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchInitsolXxx NULL
+#define branchInitsolXyz NULL
 #endif
 
 
 /** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
 #if 0
 static
-SCIP_DECL_BRANCHEXITSOL(branchExitsolXxx)
+SCIP_DECL_BRANCHEXITSOL(branchExitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchExitsolXxx NULL
+#define branchExitsolXyz NULL
 #endif
 
 
 /** branching execution method for fractional LP solutions */
 #if 0
 static
-SCIP_DECL_BRANCHEXECLP(branchExeclpXxx)
+SCIP_DECL_BRANCHEXECLP(branchExeclpXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchExeclpXxx NULL
+#define branchExeclpXyz NULL
 #endif
 
 
 /** branching execution method for external candidates */
 #if 0
 static
-SCIP_DECL_BRANCHEXECEXT(branchExecextXxx)
+SCIP_DECL_BRANCHEXECEXT(branchExecextXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchExecextXxx NULL
+#define branchExecextXyz NULL
 #endif
 
 
 /** branching execution method for not completely fixed pseudo solutions */
 #if 0
 static
-SCIP_DECL_BRANCHEXECPS(branchExecpsXxx)
+SCIP_DECL_BRANCHEXECPS(branchExecpsXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPerrorMessage("method of xyz branching rule not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define branchExecpsXxx NULL
+#define branchExecpsXyz NULL
 #endif
 
 
@@ -207,27 +207,27 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsXxx)
  * branching rule specific interface methods
  */
 
-/** creates the xxx branching rule and includes it in SCIP */
-SCIP_RETCODE SCIPincludeBranchruleXxx(
+/** creates the xyz branching rule and includes it in SCIP */
+SCIP_RETCODE SCIPincludeBranchruleXyz(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   /* create xxx branching rule data */
+   /* create xyz branching rule data */
    branchruledata = NULL;
    /* TODO: (optional) create branching rule specific data here */
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
 	 BRANCHRULE_MAXBOUNDDIST,
-         branchCopyXxx,
-         branchFreeXxx, branchInitXxx, branchExitXxx,
-         branchInitsolXxx, branchExitsolXxx,
-         branchExeclpXxx, branchExecextXxx, branchExecpsXxx,
+         branchCopyXyz,
+         branchFreeXyz, branchInitXyz, branchExitXyz,
+         branchInitsolXyz, branchExitsolXyz,
+         branchExeclpXyz, branchExecextXyz, branchExecpsXyz,
          branchruledata) );
 
-   /* add xxx branching rule parameters */
+   /* add xyz branching rule parameters */
    /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;

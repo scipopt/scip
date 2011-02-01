@@ -502,11 +502,11 @@
  * type_cons.h.
  *
  * Here is what you have to do (assuming your constraint handler should be named "subtour"):
- * -# Copy the template files src/scip/cons_xxx.c and src/scip/cons_xxx.h into files "cons_subtour.c"
+ * -# Copy the template files src/scip/cons_xyz.c and src/scip/cons_xyz.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "subtour".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
  * -# Implement the \ref CONS_INTERFACE "interface methods".
@@ -1294,11 +1294,11 @@
  * strengthening by setting propagating/rootredcost/freq to -1.
  *
  * Here is what you have to do to implement a pricer:
- * -# Copy the template files src/scip/pricer_xxx.c and src/scip/pricer_xxx.h into files "pricer_mypricer.c"
+ * -# Copy the template files src/scip/pricer_xyz.c and src/scip/pricer_xyz.h into files "pricer_mypricer.c"
  *    and "pricer_mypricer.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypricer".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
  * -# Implement the interface methods (see \ref PRICER_INTERFACE).
@@ -1561,11 +1561,11 @@
  * can be found in the file type_presol.h.
  *
  * Here is what you have to do to implement a presolver:
- * -# Copy the template files src/scip/presol_xxx.c and src/scip/presol_xxx.h into files named "presol_mypresolver.c"
+ * -# Copy the template files src/scip/presol_xyz.c and src/scip/presol_xyz.h into files named "presol_mypresolver.c"
  *    and "presol_mypresolver.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypresolver".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
  * -# Implement the interface methods (see \ref PRESOL_INTERFACE).
@@ -1757,11 +1757,11 @@
  * can be found in the file type_sepa.h.
  *
  * Here is what you have to do to implement a separator:
- * -# Copy the template files src/scip/sepa_xxx.c and src/scip/sepa_xxx.h into files "sepa_myseparator.c"
+ * -# Copy the template files src/scip/sepa_xyz.c and src/scip/sepa_xyz.h into files "sepa_myseparator.c"
  *    and "sepa_myseparator.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myseparator".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
  * -# Implement the interface methods (see \ref SEPA_INTERFACE).
@@ -2013,11 +2013,11 @@
  * Additional documentation for the callback methods of a propagator can be found in the file type_prop.h.
  *
  * Here is what you have to do to implement a propagator:
- * -# Copy the template files src/scip/prop_xxx.c and src/scip/prop_xxx.h into files named "prop_mypropagator.c"
+ * -# Copy the template files src/scip/prop_xyz.c and src/scip/prop_xyz.h into files named "prop_mypropagator.c"
  *    and "prop_mypropagator.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypropagator".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
  * -# Implement the interface methods (see \ref PROP_INTERFACE).
@@ -2242,11 +2242,11 @@
  * Additional documentation for the callback methods of a branching rule can be found in the file type_branch.h.
  *
  * Here is what you have to do to implement a branching rule:
- * -# Copy the template files src/scip/branch_xxx.c and src/scip/branch_xxx.h into files named 
+ * -# Copy the template files src/scip/branch_xyz.c and src/scip/branch_xyz.h into files named 
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mybranchingrule".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
  * -# Implement the interface methods (see \ref BRANCHRULE_INTERFACE).
@@ -2533,11 +2533,11 @@
  * Additional documentation for the callback methods of a node selector can be found in the file type_nodesel.h.
  *
  * Here is what you have to do to implement a node selector:
- * -# Copy the template files src/scip/nodesel_xxx.c and src/scip/nodesel_xxx.h into files named "nodesel_mynodeselector.c"
+ * -# Copy the template files src/scip/nodesel_xyz.c and src/scip/nodesel_xyz.h into files named "nodesel_mynodeselector.c"
  *    and "nodesel_mynodeselector.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynodeselector".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
  * -# Implement the interface methods (see \ref NODESEL_INTERFACE).
@@ -2762,11 +2762,11 @@
  * Additional documentation for the callback methods of a primal heuristic can be found in the file type_heur.h.
  *
  * Here is what you have to do to implement a primal heuristic:
- * -# Copy the template files src/scip/heur_xxx.c and src/scip/heur_xxx.h into files named "heur_myheuristic.c"
+ * -# Copy the template files src/scip/heur_xyz.c and src/scip/heur_xyz.h into files named "heur_myheuristic.c"
  *    and "heur_myheuristic.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myheuristic".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
  * -# Implement the interface methods (see \ref HEUR_INTERFACE).
@@ -3031,11 +3031,11 @@
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
  * Here is what you have to do to implement a relaxation handler:
- * -# Copy the template files src/scip/relax_xxx.c and src/scip/relax_xxx.h into files named "relax_myrelaxator.c"
+ * -# Copy the template files src/scip/relax_xyz.c and src/scip/relax_xyz.h into files named "relax_myrelaxator.c"
  *    and "relax_myrelaxator.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myrelaxator".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
  * -# Implement the interface methods (see \ref RELAX_INTERFACE).
@@ -3254,11 +3254,11 @@
  * Additional documentation for the callback methods of a file reader can be found in the file type_reader.h.
  *
  * Here is what you have to do to implement a file reader named "myreader" in C:
- * -# Copy the template files src/scip/reader_xxx.c and src/scip/reader_xxx.h into files named 
+ * -# Copy the template files src/scip/reader_xyz.c and src/scip/reader_xyz.h into files named 
  *    "reader_myreader.c" and "reader_myreader.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myreader".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
  * -# Implement the \ref READER_INTERFACE "interface methods".
@@ -3460,11 +3460,11 @@
  * Additional documentation for the callback methods of a dialog can be found in the file type_dialog.h.
  *
  * Here is what you have to do to add a dialog (assuming your dialog is named "mydialog"):
- * -# Copy the template files src/scip/dialog_xxx.c and src/scip/dialog_xxx.h into files named "dialog_mydialog.c"
+ * -# Copy the template files src/scip/dialog_xyz.c and src/scip/dialog_xyz.h into files named "dialog_mydialog.c"
  *    and "dialog_mydialog.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydialog".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
  * -# Implement the \ref DIALOG_INTERFACE "interface methods".
@@ -3556,7 +3556,7 @@
  * You also have to initialize the fields in struct SCIP_DialogData afterwards.
  *
  * Consider the following example. The user wants to add a "drawgraph" command to the root menu of SCIP.
- * He copies the "dialog_xxx.c" and "dialog_xxx.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
+ * He copies the "dialog_xyz.c" and "dialog_xyz.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
  * Then, he puts the following code into the SCIPincludeDialogDrawgraph() method, compare SCIPincludeDialogDefault() in
  * src/scip/dialog_default.c:
  * \code
@@ -3682,11 +3682,11 @@
  * Additional documentation for the callback methods of a display column can be found in the file type_disp.h.
  *
  * Here is what you have to do to implement a display column (assuming your display column is named "mydisplaycolumn"):
- * -# Copy the template files src/scip/disp_xxx.c and src/scip/disp_xxx.h into files named "disp_mydisplaycolumn.c"
+ * -# Copy the template files src/scip/disp_xyz.c and src/scip/disp_xyz.h into files named "disp_mydisplaycolumn.c"
  *    and "disp_mydisplaycolumn.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydisplaycolumn".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
  * -# Implement the \ref DISP_INTERFACE "interface methods".
@@ -3869,11 +3869,11 @@
  * "examples/Eventhdlr/". An C++ example can be found within the TSP project (examples/TSP/src/EventhdlrNewSol.cpp).
  *
  * Here is what you have to do to implement an event handler (assuming your event handler is named "bestsol"):
- * -# Copy the template files src/scip/event_xxx.c and src/scip/event_xxx.h into files named "event_bestsol.c"
+ * -# Copy the template files src/scip/event_xyz.c and src/scip/event_xyz.h into files named "event_bestsol.c"
  *    and "event_bestsol.h".
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "bestsol".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
  * -# Implement the \ref EVENT_INTERFACE "interface methods".
  * -# Implement the \ref EVENT_FUNDAMENTALCALLBACKS "fundamental callback methods".
@@ -4103,11 +4103,11 @@
  * can be found in the file type_nlpi.h.
  *
  * Here is what you have to do to implement an NLPI:
- * -# Copy the template files src/nlpi/nlpi_xxx.c and src/nlpi/nlpi_xxx.h into files named "nlpi_mynlpi.c"
+ * -# Copy the template files src/nlpi/nlpi_xyz.c and src/nlpi/nlpi_xyz.h into files named "nlpi_mynlpi.c"
  *    and "nlpi_mynlpi.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynlpi".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynlpi".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
  * -# Implement the interface methods (see \ref NLPI_INTERFACE).
@@ -4144,13 +4144,13 @@
  *
  * @section NLPI_INTERFACE Interface Methods
  *
- * At the bottom of "nlpi_mynlpi.c", you can find the interface method SCIPcreateNlpSolverXxx(), 
+ * At the bottom of "nlpi_mynlpi.c", you can find the interface method SCIPcreateNlpSolverXyz(), 
  * which also appears in "nlpi_mynlpi.h".
  * \n
  * This method has only to be adjusted slightly.
  * It is responsible for creating an NLPI that contains all properties and callback methods of your
  * solver interface by calling the method SCIPnlpiCreate().
- * SCIPcreateNlpSolverXxx() is called by the user (e.g., SCIP), if he wants to use this solver interface in his application.
+ * SCIPcreateNlpSolverXyz() is called by the user (e.g., SCIP), if he wants to use this solver interface in his application.
  *
  * If you are using NLPI data, you have to allocate the memory for the data at this point.
  * You can do this by calling
@@ -4447,11 +4447,11 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PARAM Adding additional user parameters
  *
- *  The user may add own parameters to SCIP with a call to SCIPaddXxxParam(). Using
+ *  The user may add own parameters to SCIP with a call to SCIPaddXyzParam(). Using
  *  these methods, he has two possibilities where to store the actual parameter value:
  *   - If the given valueptr is NULL, SCIP stores the parameter value internally, and
- *     the user can only access the value with the SCIPgetXxxParam() and
- *     SCIPsetXxxParam() calls.
+ *     the user can only access the value with the SCIPgetXyzParam() and
+ *     SCIPsetXyzParam() calls.
  *   - If the given valueptr is not NULL, SCIP stores the parameter value at the given
  *     address, and the user can directly manipulate the value at this address.
  *     He has to be careful with memory management in string parameters: when the
@@ -4467,7 +4467,7 @@
  *
  *  In some cases, it is necessary to keep track of changes in a parameter. 
  *  If this is the case, the user can define a method by the PARAMCHGD callback and use this method as
- *  the @c paramchgd parameter of the @c SCIPaddXxxParam() method, also giving a pointer to the data, which is
+ *  the @c paramchgd parameter of the @c SCIPaddXyzParam() method, also giving a pointer to the data, which is
  *  needed in this method, as @c paramdata. If this method is not NULL, it is called every time 
  *  the value of the parameter is changed.
  */
@@ -4875,7 +4875,7 @@
  *  \endcode
  *  \arg for <a href="http://www.gams.com/">gams</a>
  *  \code
- *  make testgams GAMSSOLVER=xxx
+ *  make testgams GAMSSOLVER=xyz
  *  \endcode
  *  For this target, the option GAMSSOLVER has to be given to specify the name of a GAMS solver to run, e.g. GAMSSOLVER=SCIP.
  *  Additional advanced options specific to this target are:

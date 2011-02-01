@@ -12,17 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.h,v 1.28 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xyz.h,v 1.1 2011/02/01 11:55:33 bzfberth Exp $"
 
-/**@file   cons_xxx.h
- * @brief  constraint handler for xxx constraints
+/**@file   cons_xyz.h
+ * @brief  constraint handler for xyz constraints
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_XXX_H__
-#define __SCIP_CONS_XXX_H__
+#ifndef __SCIP_CONS_XYZ_H__
+#define __SCIP_CONS_XYZ_H__
 
 
 #include "scip/scip.h"
@@ -31,15 +31,15 @@
 extern "C" {
 #endif
 
-/** creates the handler for xxx constraints and includes it in SCIP */
+/** creates the handler for xyz constraints and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeConshdlrXxx(
+SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a xxx constraint */
+/** creates and captures a xyz constraint */
 extern
-SCIP_RETCODE SCIPcreateConsXxx(
+SCIP_RETCODE SCIPcreateConsXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */

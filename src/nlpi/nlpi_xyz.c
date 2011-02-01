@@ -12,20 +12,20 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.8 2010/09/15 14:57:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_xyz.c,v 1.1 2011/02/01 11:55:33 bzfberth Exp $"
 
-/**@file    nlpi_xxx.c
+/**@file    nlpi_xyz.c
  * @ingroup NLPIS
- * @brief   XXX NLP interface
+ * @brief   XYZ NLP interface
  * @author  you
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/nlpi_xxx.h"
+#include "nlpi/nlpi_xyz.h"
 #include "nlpi/nlpi.h"
 
-#define NLPI_NAME              "xxx"                       /* short concise name of solver */
+#define NLPI_NAME              "xyz"                       /* short concise name of solver */
 #define NLPI_DESC              "solver interface template" /* description of solver */
 #define NLPI_PRIORITY          0                           /* priority of NLP solver */
 
@@ -67,9 +67,9 @@ struct SCIP_NlpiProblem
  *  - targetnlpi buffer to store pointer to copy of NLP interface
  */
 static
-SCIP_DECL_NLPICOPY( nlpiCopyXxx )
+SCIP_DECL_NLPICOPY( nlpiCopyXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
 
    return SCIP_OKAY;
@@ -81,9 +81,9 @@ SCIP_DECL_NLPICOPY( nlpiCopyXxx )
  *  - nlpi datastructure for solver interface
  */
 static
-SCIP_DECL_NLPIFREE( nlpiFreeXxx )
+SCIP_DECL_NLPIFREE( nlpiFreeXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -99,9 +99,9 @@ SCIP_DECL_NLPIFREE( nlpiFreeXxx )
  * return: void pointer to solver
  */
 static
-SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXxx)
+SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -115,9 +115,9 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXxx)
  *  - name name of problem, can be NULL
  */
 static
-SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemXxx)
+SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemXyz)
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -130,9 +130,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemXxx)
  *  - problem pointer where problem data is stored 
  */
 static
-SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXxx)
+SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXyz)
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -149,9 +149,9 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXxx)
  * return: void pointer to problem instance
  */
 static
-SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXxx)
+SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return NULL;
@@ -168,9 +168,9 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXxx)
  *  - varnames names of variables, can be NULL
  */
 static 
-SCIP_DECL_NLPIADDVARS( nlpiAddVarsXxx )
+SCIP_DECL_NLPIADDVARS( nlpiAddVarsXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -216,9 +216,9 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsXxx )
  *  - names of constraints, may be NULL or entries may be NULL
  */
 static
-SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsXxx )
+SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -252,9 +252,9 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsXxx )
  *  - constant objective value offset
  */
 static
-SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveXxx )
+SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -271,9 +271,9 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveXxx )
  *  - ubs new upper bounds
  */
 static
-SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsXxx )
+SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -290,9 +290,9 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsXxx )
  *  - rhss new right hand sides
  */
 static
-SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesXxx )
+SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -309,9 +309,9 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesXxx )
  *  - dstats new position of var, -1 if var was deleted
  */
 static
-SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetXxx )
+SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -328,9 +328,9 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetXxx )
  *  - dstats new position of row, -1 if row was deleted
  */
 static
-SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetXxx )
+SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -347,9 +347,9 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetXxx )
  *  - vals new values for coefficients
  */
 static
-SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsXxx )
+SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -367,9 +367,9 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsXxx )
  *  - values new values for entries in quadratic matrix
  */
 static
-SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsXxx )
+SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -385,9 +385,9 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsXxx )
  *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
  */
 static
-SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeXxx )
+SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
 
    return SCIP_OKAY;
@@ -405,9 +405,9 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeXxx )
  * return: Error if parameter does not exist
  */
 static
-SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefXxx )
+SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -421,9 +421,9 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefXxx )
  *  - objconstant new value for objective constant
  */
 static
-SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantXxx )
+SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -437,9 +437,9 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantXxx )
  *  - values initial starting solution, or NULL to clear previous starting solution
  */
 static
-SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessXxx )
+SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -452,9 +452,9 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessXxx )
  *  - problem datastructure for problem instance
  */
 static
-SCIP_DECL_NLPISOLVE( nlpiSolveXxx )
+SCIP_DECL_NLPISOLVE( nlpiSolveXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -469,9 +469,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveXxx )
  * return: Solution Status
  */
 static
-SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatXxx )
+SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_NLPSOLSTAT_UNKNOWN;
@@ -486,9 +486,9 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatXxx )
  * return: Termination Status
  */
 static
-SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatXxx )
+SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_NLPITERMSTAT_OTHER;
@@ -505,9 +505,9 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatXxx )
  *  - primalvalues primal values of solution
  */
 static
-SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionXxx )
+SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -524,9 +524,9 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionXxx )
  *  - statistics solve statistics
  */
 static
-SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsXxx )
+SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -543,9 +543,9 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsXxx )
  *  - size required size for warmstart buffer
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstartSizeXxx )
+SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstartSizeXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -564,9 +564,9 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstartSizeXxx )
  *  - buffer warmstart information in solver specific data structure
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstartMemoXxx )
+SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstartMemoXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -582,9 +582,9 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstartMemoXxx )
  *  - buffer warmstart information
  */
 static
-SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoXxx )
+SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -602,9 +602,9 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoXxx )
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParXxx )
+SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -619,9 +619,9 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParXxx )
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPISETINTPAR( nlpiSetIntParXxx )
+SCIP_DECL_NLPISETINTPAR( nlpiSetIntParXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -639,9 +639,9 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParXxx )
  *  - dval parameter value
  */
 static
-SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParXxx )
+SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -656,9 +656,9 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParXxx )
  *  - dval parameter value
  */
 static
-SCIP_DECL_NLPISETREALPAR( nlpiSetRealParXxx )
+SCIP_DECL_NLPISETREALPAR( nlpiSetRealParXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -676,9 +676,9 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParXxx )
  *  - sval parameter value
  */
 static
-SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParXxx )
+SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -693,9 +693,9 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParXxx )
  *  - sval parameter value
  */
 static
-SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXxx )
+SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXyz )
 {
-   SCIPerrorMessage("method of xxx nonlinear solver is not implemented\n");
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
    SCIPABORT();
    
    return SCIP_OKAY;
@@ -705,8 +705,8 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXxx )
  * NLP solver interface specific interface methods
  */
 
-/** create solver interface for Xxx solver */
-SCIP_RETCODE SCIPcreateNlpSolverXxx(
+/** create solver interface for Xyz solver */
+SCIP_RETCODE SCIPcreateNlpSolverXyz(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
 )
@@ -716,22 +716,22 @@ SCIP_RETCODE SCIPcreateNlpSolverXxx(
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
   
-   /* create xxx solver interface data */
+   /* create xyz solver interface data */
    nlpidata = NULL;
    /* TODO: (optional) create solver interface specific data here */
 
    /* create solver interface */
    SCIP_CALL( SCIPnlpiCreate(nlpi,
       NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-      nlpiCopyXxx, nlpiFreeXxx, nlpiGetSolverPointerXxx,
-      nlpiCreateProblemXxx, nlpiFreeProblemXxx, nlpiGetProblemPointerXxx,
-      nlpiAddVarsXxx, nlpiAddConstraintsXxx, nlpiSetObjectiveXxx, 
-      nlpiChgVarBoundsXxx, nlpiChgConsSidesXxx, nlpiDelVarSetXxx, nlpiDelConstraintSetXxx,
-      nlpiChgLinearCoefsXxx, nlpiChgQuadraticCoefsXxx, nlpiChgExprtreeXxx, nlpiChgNonlinCoefXxx,
-      nlpiChgObjConstantXxx, nlpiSetInitialGuessXxx, nlpiSolveXxx, nlpiGetSolstatXxx, nlpiGetTermstatXxx,
-      nlpiGetSolutionXxx, nlpiGetStatisticsXxx,
-      nlpiGetWarmstartSizeXxx, nlpiGetWarmstartMemoXxx, nlpiSetWarmstartMemoXxx,
-      nlpiGetIntParXxx, nlpiSetIntParXxx, nlpiGetRealParXxx, nlpiSetRealParXxx, nlpiGetStringParXxx, nlpiSetStringParXxx,
+      nlpiCopyXyz, nlpiFreeXyz, nlpiGetSolverPointerXyz,
+      nlpiCreateProblemXyz, nlpiFreeProblemXyz, nlpiGetProblemPointerXyz,
+      nlpiAddVarsXyz, nlpiAddConstraintsXyz, nlpiSetObjectiveXyz, 
+      nlpiChgVarBoundsXyz, nlpiChgConsSidesXyz, nlpiDelVarSetXyz, nlpiDelConstraintSetXyz,
+      nlpiChgLinearCoefsXyz, nlpiChgQuadraticCoefsXyz, nlpiChgExprtreeXyz, nlpiChgNonlinCoefXyz,
+      nlpiChgObjConstantXyz, nlpiSetInitialGuessXyz, nlpiSolveXyz, nlpiGetSolstatXyz, nlpiGetTermstatXyz,
+      nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
+      nlpiGetWarmstartSizeXyz, nlpiGetWarmstartMemoXyz, nlpiSetWarmstartMemoXyz,
+      nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz, nlpiGetStringParXyz, nlpiSetStringParXyz,
       nlpidata) );
 
    return SCIP_OKAY;

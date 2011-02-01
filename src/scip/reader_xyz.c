@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.23 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_xyz.c,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   reader_xxx.c
+/**@file   reader_xyz.c
  * @ingroup FILEREADERS 
- * @brief  XXX file reader
+ * @brief  XYZ file reader
  * @author Tobias Achterberg
  */
 
@@ -24,12 +24,12 @@
 
 #include <assert.h>
 
-#include "scip/reader_xxx.h"
+#include "scip/reader_xyz.h"
 
 
-#define READER_NAME             "xxxreader"
-#define READER_DESC             "xxx file reader"
-#define READER_EXTENSION        "xxx"
+#define READER_NAME             "xyzreader"
+#define READER_DESC             "xyz file reader"
+#define READER_EXTENSION        "xyz"
 
 
 
@@ -40,7 +40,7 @@
 
 /* TODO: (optional) fill in the necessary reader data */
 
-/** data for xxx reader */
+/** data for xyz reader */
 struct SCIP_ReaderData
 {
 };
@@ -66,59 +66,59 @@ struct SCIP_ReaderData
 /** copy method for reader plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_READERCOPY(readerCopyXxx)
+SCIP_DECL_READERCOPY(readerCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx reader not implemented yet\n");
+   SCIPerrorMessage("method of xyz reader not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
  
    return SCIP_OKAY;
 }
 #else
-#define readerCopyXxx NULL
+#define readerCopyXyz NULL
 #endif
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #if 0
 static
-SCIP_DECL_READERFREE(readerFreeXxx)
+SCIP_DECL_READERFREE(readerFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx reader not implemented yet\n");
+   SCIPerrorMessage("method of xyz reader not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define readerFreeXxx NULL
+#define readerFreeXyz NULL
 #endif
 
 
 /** problem reading method of reader */
 #if 0
 static
-SCIP_DECL_READERREAD(readerReadXxx)
+SCIP_DECL_READERREAD(readerReadXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx reader not implemented yet\n");
+   SCIPerrorMessage("method of xyz reader not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define readerReadXxx NULL
+#define readerReadXyz NULL
 #endif
 
 
 #if 0
 /** problem writing method of reader */
 static
-SCIP_DECL_READERWRITE(readerWriteXxx)
+SCIP_DECL_READERWRITE(readerWriteXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx reader not implemented yet\n");
+   SCIPerrorMessage("method of xyz reader not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define readerWriteXxx NULL
+#define readerWriteXyz NULL
 #endif
 
 
@@ -126,24 +126,24 @@ SCIP_DECL_READERWRITE(readerWriteXxx)
  * reader specific interface methods
  */
 
-/** includes the xxx file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderXxx(
+/** includes the xyz file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_READERDATA* readerdata;
 
-   /* create xxx reader data */
+   /* create xyz reader data */
    readerdata = NULL;
    /* TODO: (optional) create reader specific data here */
    
-   /* include xxx reader */
+   /* include xyz reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyXxx,
-         readerFreeXxx, readerReadXxx, readerWriteXxx,
+         readerCopyXyz,
+         readerFreeXyz, readerReadXyz, readerWriteXyz,
          readerdata) );
 
-   /* add xxx reader parameters */
+   /* add xyz reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */
    
    return SCIP_OKAY;

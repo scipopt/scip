@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.28 2011/01/02 11:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_xyz.c,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   heur_xxx.c
+/**@file   heur_xyz.c
  * @ingroup PRIMALHEURISTICS
- * @brief  xxx primal heuristic
+ * @brief  xyz primal heuristic
  * @author Tobias Achterberg
  */
 
@@ -24,10 +24,10 @@
 
 #include <assert.h>
 
-#include "scip/heur_xxx.h"
+#include "scip/heur_xyz.h"
 
 
-#define HEUR_NAME             "xxx"
+#define HEUR_NAME             "xyz"
 #define HEUR_DESC             "primal heuristic template"
 #define HEUR_DISPCHAR         '?'
 #define HEUR_PRIORITY         0
@@ -72,97 +72,97 @@ struct SCIP_HeurData
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_HEURCOPY(heurCopyXxx)
+SCIP_DECL_HEURCOPY(heurCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define heurCopyXxx NULL
+#define heurCopyXyz NULL
 #endif
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 #if 0
 static
-SCIP_DECL_HEURFREE(heurFreeXxx)
+SCIP_DECL_HEURFREE(heurFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define heurFreeXxx NULL
+#define heurFreeXyz NULL
 #endif
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 #if 0
 static
-SCIP_DECL_HEURINIT(heurInitXxx)
+SCIP_DECL_HEURINIT(heurInitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define heurInitXxx NULL
+#define heurInitXyz NULL
 #endif
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_HEUREXIT(heurExitXxx)
+SCIP_DECL_HEUREXIT(heurExitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define heurExitXxx NULL
+#define heurExitXyz NULL
 #endif
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 #if 0
 static
-SCIP_DECL_HEURINITSOL(heurInitsolXxx)
+SCIP_DECL_HEURINITSOL(heurInitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define heurInitsolXxx NULL
+#define heurInitsolXyz NULL
 #endif
 
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 #if 0
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolXxx)
+SCIP_DECL_HEUREXITSOL(heurExitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define heurExitsolXxx NULL
+#define heurExitsolXyz NULL
 #endif
 
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecXxx)
+SCIP_DECL_HEUREXEC(heurExecXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -176,26 +176,26 @@ SCIP_DECL_HEUREXEC(heurExecXxx)
  * primal heuristic specific interface methods
  */
 
-/** creates the xxx primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurXxx(
+/** creates the xyz primal heuristic and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_HEURDATA* heurdata;
 
-   /* create xxx primal heuristic data */
+   /* create xyz primal heuristic data */
    heurdata = NULL;
    /* TODO: (optional) create primal heuristic specific data here */
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyXxx,
-         heurFreeXxx, heurInitXxx, heurExitXxx, 
-         heurInitsolXxx, heurExitsolXxx, heurExecXxx,
+         heurCopyXyz,
+         heurFreeXyz, heurInitXyz, heurExitXyz, 
+         heurInitsolXyz, heurExitsolXyz, heurExecXyz,
          heurdata) );
 
-   /* add xxx primal heuristic parameters */
+   /* add xyz primal heuristic parameters */
    /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;

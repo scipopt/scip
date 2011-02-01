@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_xxx.c,v 1.8 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_xyz.c,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   disp_xxx.c
+/**@file   disp_xyz.c
  * @ingroup DISPLAYS
- * @brief  xxx display column
+ * @brief  xyz display column
  * @author Kati Wolter
  */
 
@@ -24,12 +24,12 @@
 
 #include <assert.h>
 
-#include "scip/disp_xxx.h"
+#include "scip/disp_xyz.h"
 
 
-#define DISP_NAME               "xxx"                
-#define DISP_DESC               "xxx display column"
-#define DISP_HEADER             "xxx" 
+#define DISP_NAME               "xyz"                
+#define DISP_DESC               "xyz display column"
+#define DISP_HEADER             "xyz" 
 #define DISP_WIDTH              14      /**< the width of the display column */
 #define DISP_PRIORITY           110000  /**< the priority of the display column */
 #define DISP_POSITION           30100   /**< the relative position of the display column */
@@ -71,89 +71,89 @@ struct SCIP_DispData
 /** copy method for dialog plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_DISPCOPY(dispCopyXxx)
+SCIP_DECL_DISPCOPY(dispCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
  
    return SCIP_OKAY;
 }
 #else
-#define dispCopyXxx NULL
+#define dispCopyXyz NULL
 #endif
 
 /** destructor of display column to free user data (called when SCIP is exiting) */
 #if 0
 static
-SCIP_DECL_DISPFREE(dispFreeXxx)
+SCIP_DECL_DISPFREE(dispFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dispFreeXxx NULL
+#define dispFreeXyz NULL
 #endif
 
 
 /** initialization method of display column (called after problem was transformed) */
 #if 0
 static
-SCIP_DECL_DISPINIT(dispInitXxx)
+SCIP_DECL_DISPINIT(dispInitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dispInitXxx NULL
+#define dispInitXyz NULL
 #endif
 
 
 /** deinitialization method of display column (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_DISPEXIT(dispExitXxx)
+SCIP_DECL_DISPEXIT(dispExitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dispExitXxx NULL
+#define dispExitXyz NULL
 #endif
 
 
 /** solving process initialization method of display column (called when branch and bound process is about to begin) */
 #if 0
 static
-SCIP_DECL_DISPINITSOL(dispInitsolXxx)
+SCIP_DECL_DISPINITSOL(dispInitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dispInitsolXxx NULL
+#define dispInitsolXyz NULL
 #endif
 
 
 /** solving process deinitialization method of display column (called before branch and bound process data is freed) */
 #if 0
 static
-SCIP_DECL_DISPEXITSOL(dispExitsolXxx)
+SCIP_DECL_DISPEXITSOL(dispExitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dispExitsolXxx NULL
+#define dispExitsolXyz NULL
 #endif
 
 
@@ -161,9 +161,9 @@ SCIP_DECL_DISPEXITSOL(dispExitsolXxx)
 
 /** output method of display column to output file stream 'file' */
 static
-SCIP_DECL_DISPOUTPUT(dispOutputXxx)
+SCIP_DECL_DISPOUTPUT(dispOutputXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPerrorMessage("method of xyz display column not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -177,25 +177,25 @@ SCIP_DECL_DISPOUTPUT(dispOutputXxx)
  * display column specific interface methods
  */
 
-/** creates the xxx display column and includes it in SCIP */
-SCIP_RETCODE SCIPincludeDispXxx(
+/** creates the xyz display column and includes it in SCIP */
+SCIP_RETCODE SCIPincludeDispXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_DISPDATA* dispdata;
 
-   /* create xxx display column data */
+   /* create xyz display column data */
    dispdata = NULL;
    /* TODO: (optional) create display column specific data here */
 
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO, 
-         dispCopyXxx,
-         dispFreeXxx, dispInitXxx, dispExitXxx, 
-         dispInitsolXxx, dispExitsolXxx, dispOutputXxx, 
+         dispCopyXyz,
+         dispFreeXyz, dispInitXyz, dispExitXyz, 
+         dispInitsolXyz, dispExitsolXyz, dispOutputXyz, 
          dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
-   /* add xxx display column parameters */
+   /* add xyz display column parameters */
    /* TODO: (optional) add display column specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;

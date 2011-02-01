@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.22 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_xyz.c,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   pricer_xxx.c
+/**@file   pricer_xyz.c
  * @ingroup PRICERS
- * @brief  xxx variable pricer
+ * @brief  xyz variable pricer
  * @author Tobias Achterberg
  */
 
@@ -24,10 +24,10 @@
 
 #include <assert.h>
 
-#include "scip/pricer_xxx.h"
+#include "scip/pricer_xyz.h"
 
 
-#define PRICER_NAME            "xxx"
+#define PRICER_NAME            "xyz"
 #define PRICER_DESC            "variable pricer template"
 #define PRICER_PRIORITY        0
 #define PRICER_DELAY           TRUE     /* only call pricer if all problem variables have non-negative reduced costs */
@@ -67,97 +67,97 @@ struct SCIP_PricerData
 /** copy method for pricer plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_PRICERCOPY(pricerCopyXxx)
+SCIP_DECL_PRICERCOPY(pricerCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
  
    return SCIP_OKAY;
 }
 #else
-#define pricerCopyXxx NULL
+#define pricerCopyXyz NULL
 #endif
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 #if 0
 static
-SCIP_DECL_PRICERFREE(pricerFreeXxx)
+SCIP_DECL_PRICERFREE(pricerFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define pricerFreeXxx NULL
+#define pricerFreeXyz NULL
 #endif
 
 
 /** initialization method of variable pricer (called after problem was transformed) */
 #if 0
 static
-SCIP_DECL_PRICERINIT(pricerInitXxx)
+SCIP_DECL_PRICERINIT(pricerInitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define pricerInitXxx NULL
+#define pricerInitXyz NULL
 #endif
 
 
 /** deinitialization method of variable pricer (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_PRICEREXIT(pricerExitXxx)
+SCIP_DECL_PRICEREXIT(pricerExitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define pricerExitXxx NULL
+#define pricerExitXyz NULL
 #endif
 
 
 /** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
 #if 0
 static
-SCIP_DECL_PRICERINITSOL(pricerInitsolXxx)
+SCIP_DECL_PRICERINITSOL(pricerInitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define pricerInitsolXxx NULL
+#define pricerInitsolXyz NULL
 #endif
 
 
 /** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
 #if 0
 static
-SCIP_DECL_PRICEREXITSOL(pricerExitsolXxx)
+SCIP_DECL_PRICEREXITSOL(pricerExitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define pricerExitsolXxx NULL
+#define pricerExitsolXyz NULL
 #endif
 
 
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
-SCIP_DECL_PRICERREDCOST(pricerRedcostXxx)
+SCIP_DECL_PRICERREDCOST(pricerRedcostXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -167,15 +167,15 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostXxx)
 #if 0
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
-SCIP_DECL_PRICERFARKAS(pricerFarkasXxx)
+SCIP_DECL_PRICERFARKAS(pricerFarkasXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define pricerFarkasXxx NULL
+#define pricerFarkasXyz NULL
 #endif
 
 
@@ -185,25 +185,25 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasXxx)
  * variable pricer specific interface methods
  */
 
-/** creates the xxx variable pricer and includes it in SCIP */
-SCIP_RETCODE SCIPincludePricerXxx(
+/** creates the xyz variable pricer and includes it in SCIP */
+SCIP_RETCODE SCIPincludePricerXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_PRICERDATA* pricerdata;
 
-   /* create xxx variable pricer data */
+   /* create xyz variable pricer data */
    pricerdata = NULL;
    /* TODO: (optional) create variable pricer specific data here */
 
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerCopyXxx,
-         pricerFreeXxx, pricerInitXxx, pricerExitXxx, 
-         pricerInitsolXxx, pricerExitsolXxx, pricerRedcostXxx, pricerFarkasXxx,
+         pricerCopyXyz,
+         pricerFreeXyz, pricerInitXyz, pricerExitXyz, 
+         pricerInitsolXyz, pricerExitsolXyz, pricerRedcostXyz, pricerFarkasXyz,
          pricerdata) );
 
-   /* add xxx variable pricer parameters */
+   /* add xyz variable pricer parameters */
    /* TODO: (optional) add variable pricer specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;

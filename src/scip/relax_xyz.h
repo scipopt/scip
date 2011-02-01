@@ -12,17 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.h,v 1.16 2011/01/02 11:10:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: relax_xyz.h,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   heur_xxx.h
- * @brief  xxx primal heuristic
+/**@file   relax_xyz.h
+ * @brief  xyz relaxator
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_HEUR_XXX_H__
-#define __SCIP_HEUR_XXX_H__
+#ifndef __SCIP_RELAX_XYZ_H__
+#define __SCIP_RELAX_XYZ_H__
 
 
 #include "scip/scip.h"
@@ -31,9 +31,9 @@
 extern "C" {
 #endif
 
-/** creates the xxx primal heuristic and includes it in SCIP */
+/** creates the xyz relaxator and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeHeurXxx(
+SCIP_RETCODE SCIPincludeRelaxXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

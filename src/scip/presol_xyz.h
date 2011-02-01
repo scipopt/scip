@@ -12,17 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xxx.h,v 1.6 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_xyz.h,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   dialog_xxx.h
- * @brief  xxx user interface dialog
- * @author Kati Wolter
+/**@file   presol_xyz.h
+ * @brief  xyz presolver
+ * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_DIALOG_XXX_H__
-#define __SCIP_DIALOG_XXX_H__
+#ifndef __SCIP_PRESOL_XYZ_H__
+#define __SCIP_PRESOL_XYZ_H__
 
 
 #include "scip/scip.h"
@@ -31,8 +31,9 @@
 extern "C" {
 #endif
 
-/** creates the xxx dialog and includes it in SCIP */
-SCIP_RETCODE SCIPincludeDialogXxx(
+/** creates the xyz presolver and includes it in SCIP */
+extern
+SCIP_RETCODE SCIPincludePresolXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

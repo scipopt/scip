@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,33 +12,34 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_xxx.h,v 1.6 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nlpi_xyz.h,v 1.1 2011/02/01 11:55:33 bzfberth Exp $"
 
-/**@file   disp_xxx.h
- * @brief  xxx display column
- * @author Kati Wolter
+/**@file    nlpi_xyz.h
+ * @brief   XYZ NLP interface
+ * @ingroup NLPIS
+ * @author  you
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_DISP_XXX_H__
-#define __SCIP_DISP_XXX_H__
+#ifndef __SCIP_NLPI_XYZ_H__
+#define __SCIP_NLPI_XYZ_H__
 
-
-#include "scip/scip.h"
+#include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the xxx display column and includes it in SCIP */
+/** create solver interface for Xyz solver */
 extern
-SCIP_RETCODE SCIPincludeDispXxx(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+SCIP_RETCODE SCIPcreateNlpSolverXyz(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* __SCIP_NLPI_XYZ_H__ */

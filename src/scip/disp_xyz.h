@@ -12,17 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.h,v 1.18 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_xyz.h,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   reader_xxx.h
- * @brief  XXX file reader
- * @author Tobias Achterberg
+/**@file   disp_xyz.h
+ * @brief  xyz display column
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_READER_XXX_H__
-#define __SCIP_READER_XXX_H__
+#ifndef __SCIP_DISP_XYZ_H__
+#define __SCIP_DISP_XYZ_H__
 
 
 #include "scip/scip.h"
@@ -31,9 +31,9 @@
 extern "C" {
 #endif
 
-/** includes the xxx file reader into SCIP */
+/** creates the xyz display column and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeReaderXxx(
+SCIP_RETCODE SCIPincludeDispXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

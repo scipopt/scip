@@ -12,20 +12,20 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event_xxx.c,v 1.4 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event_xyz.c,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   event_xxx.c
+/**@file   event_xyz.c
  * @ingroup EVENTS 
- * @brief  eventhdlr for xxx event
+ * @brief  eventhdlr for xyz event
  * @author Stefan Heinz
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/event_xxx.h"
+#include "scip/event_xyz.h"
 
-#define EVENTHDLR_NAME         "xxx"
-#define EVENTHDLR_DESC         "event handler for xxx event"
+#define EVENTHDLR_NAME         "xyz"
+#define EVENTHDLR_DESC         "event handler for xyz event"
 
 
 /*
@@ -54,130 +54,130 @@ struct SCIP_EventhdlrData
 /** copy method for event handler plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_EVENTCOPY(eventCopyXxx)
+SCIP_DECL_EVENTCOPY(eventCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx dialog not implemented yet\n");
+   SCIPerrorMessage("method of xyz dialog not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define eventCopyXxx NULL
+#define eventCopyXyz NULL
 #endif
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 #if 0
 static
-SCIP_DECL_EVENTFREE(eventFreeXxx)
+SCIP_DECL_EVENTFREE(eventFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx event handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz event handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define eventFreeXxx NULL
+#define eventFreeXyz NULL
 #endif
 
 /** initialization method of event handler (called after problem was transformed) */
 #if 0
 static
-SCIP_DECL_EVENTINIT(eventInitXxx)
+SCIP_DECL_EVENTINIT(eventInitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx event handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz event handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define eventInitXxx NULL
+#define eventInitXyz NULL
 #endif
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_EVENTEXIT(eventExitXxx)
+SCIP_DECL_EVENTEXIT(eventExitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx event handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz event handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define eventExitXxx NULL
+#define eventExitXyz NULL
 #endif
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
 #if 0
 static
-SCIP_DECL_EVENTINITSOL(eventInitsolXxx)
+SCIP_DECL_EVENTINITSOL(eventInitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx event handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz event handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define eventInitsolXxx NULL
+#define eventInitsolXyz NULL
 #endif
 
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
 #if 0
 static
-SCIP_DECL_EVENTEXITSOL(eventExitsolXxx)
+SCIP_DECL_EVENTEXITSOL(eventExitsolXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx event handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz event handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define eventExitsolXxx NULL
+#define eventExitsolXyz NULL
 #endif
 
 /** frees specific event data */
 #if 0
 static
-SCIP_DECL_EVENTDELETE(eventDeleteXxx)
+SCIP_DECL_EVENTDELETE(eventDeleteXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx event handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz event handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define eventDeleteXxx NULL
+#define eventDeleteXyz NULL
 #endif
 
 /** execution method of event handler */
 static
-SCIP_DECL_EVENTEXEC(eventExecXxx)
+SCIP_DECL_EVENTEXEC(eventExecXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx event handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz event handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 
-/** creates event handler for xxx event */
-SCIP_RETCODE SCIPincludeEventHdlrXxx(
+/** creates event handler for xyz event */
+SCIP_RETCODE SCIPincludeEventHdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   /* create xxx event handler data */
+   /* create xyz event handler data */
    eventhdlrdata = NULL;
    /* TODO: (optional) create event handler specific data here */
 
    /* imclude event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventCopyXxx,
-         eventFreeXxx, eventInitXxx, eventExitXxx, 
-         eventInitsolXxx, eventExitsolXxx, eventDeleteXxx, eventExecXxx,
+         eventCopyXyz,
+         eventFreeXyz, eventInitXyz, eventExitXyz, 
+         eventInitsolXyz, eventExitsolXyz, eventDeleteXyz, eventExecXyz,
          eventhdlrdata) );
 
-   /* add xxx event handler parameters */
+   /* add xyz event handler parameters */
    /* TODO: (optional) add event handler specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;

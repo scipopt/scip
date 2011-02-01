@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.68 2011/01/03 19:35:06 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.69 2011/02/01 11:55:34 bzfberth Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1484,7 +1484,7 @@ SCIP_RETCODE getMaxAndConsDim(
          /* found a commentline */
          if( commentstart != NULL )
          { 
-	    /* search for "#product= xxx" in commentline, where xxx represents the number of and constraints */
+	    /* search for "#product= xyz" in commentline, where xyz represents the number of and constraints */
             nproducts = strstr(opbinput->linebuf, "#product= ");
             if( nproducts != NULL )
             {

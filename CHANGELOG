@@ -50,7 +50,8 @@ plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
 - added clique heuristic (heur_clique.{c,h})
 - added pseudoboolean constraint handler (cons_pseudoboolean.{c,h})
- 
+- all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
+
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint
 - added parameter <constraints/indicator/removeIndicators> to remove indicator constraints if corresponding vub has been added

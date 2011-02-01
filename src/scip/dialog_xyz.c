@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xxx.c,v 1.10 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_xyz.c,v 1.1 2011/02/01 11:55:33 bzfberth Exp $"
 
-/**@file   dialog_xxx.c
+/**@file   dialog_xyz.c
  * @ingroup DIALOGS
- * @brief  xxx user interface dialog
+ * @brief  xyz user interface dialog
  * @author Kati Wolter
  */
 
@@ -24,11 +24,11 @@
 
 #include <assert.h>
 
-#include "scip/dialog_xxx.h"
+#include "scip/dialog_xyz.h"
 
 
-#define DIALOG_NAME            "xxx"
-#define DIALOG_DESC            "xxx user interface dialog"
+#define DIALOG_NAME            "xyz"
+#define DIALOG_DESC            "xyz user interface dialog"
 #define DIALOG_ISSUBMENU          FALSE 
 
 
@@ -67,51 +67,51 @@ struct SCIP_DialogData
 /** copy method for dialog plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_DIALOGCOPY(dialogCopyXxx)
+SCIP_DECL_DIALOGCOPY(dialogCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx dialog not implemented yet\n");
+   SCIPerrorMessage("method of xyz dialog not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dialogCopyXxx NULL
+#define dialogCopyXyz NULL
 #endif
 
 /** destructor of dialog to free user data (called when the dialog is not captured anymore) */
 #if 0
 static
-SCIP_DECL_DIALOGFREE(dialogFreeXxx)
+SCIP_DECL_DIALOGFREE(dialogFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx dialog not implemented yet\n");
+   SCIPerrorMessage("method of xyz dialog not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dialogFreeXxx NULL
+#define dialogFreeXyz NULL
 #endif
 
 /** description output method of dialog */
 #if 0
 static
-SCIP_DECL_DIALOGDESC(dialogDescXxx)
+SCIP_DECL_DIALOGDESC(dialogDescXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx dialog not implemented yet\n");
+   SCIPerrorMessage("method of xyz dialog not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define dialogDescXxx NULL
+#define dialogDescXyz NULL
 #endif
 
 
 /** execution method of dialog */
 static
-SCIP_DECL_DIALOGEXEC(dialogExecXxx)
+SCIP_DECL_DIALOGEXEC(dialogExecXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx dialog not implemented yet\n");
+   SCIPerrorMessage("method of xyz dialog not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    /* add your dialog to history of dialogs that have been executed */
@@ -133,8 +133,8 @@ SCIP_DECL_DIALOGEXEC(dialogExecXxx)
  * dialog specific interface methods
  */
 
-/** creates the xxx dialog and includes it in SCIP */
-SCIP_RETCODE SCIPincludeDialogXxx(
+/** creates the xyz dialog and includes it in SCIP */
+SCIP_RETCODE SCIPincludeDialogXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPincludeDialogXxx(
    SCIP_DIALOG* dialog;
    SCIP_DIALOG* parentdialog;
 
-   /* create xxx dialog data */
+   /* create xyz dialog data */
    dialogdata = NULL;
    /* TODO: (optional) create dialog specific data here */
 
@@ -155,7 +155,7 @@ SCIP_RETCODE SCIPincludeDialogXxx(
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
-            dialogCopyXxx, dialogExecXxx, dialogDescXxx, dialogFreeXxx,
+            dialogCopyXyz, dialogExecXyz, dialogDescXyz, dialogFreeXyz,
             DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );

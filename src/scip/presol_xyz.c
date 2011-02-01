@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.26 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_xyz.c,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
-/**@file   presol_xxx.c
+/**@file   presol_xyz.c
  * @ingroup PRESOLVERS
- * @brief  xxx presolver
+ * @brief  xyz presolver
  * @author Tobias Achterberg
  */
 
@@ -24,10 +24,10 @@
 
 #include <assert.h>
 
-#include "scip/presol_xxx.h"
+#include "scip/presol_xyz.h"
 
 
-#define PRESOL_NAME            "xxx"
+#define PRESOL_NAME            "xyz"
 #define PRESOL_DESC            "presolver template"
 #define PRESOL_PRIORITY               0 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
@@ -69,98 +69,98 @@ struct SCIP_PresolData
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_PRESOLCOPY(presolCopyXxx)
+SCIP_DECL_PRESOLCOPY(presolCopyXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
  
    return SCIP_OKAY;
 }
 #else
-#define presolCopyXxx NULL
+#define presolCopyXyz NULL
 #endif
 
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #if 0
 static
-SCIP_DECL_PRESOLFREE(presolFreeXxx)
+SCIP_DECL_PRESOLFREE(presolFreeXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolFreeXxx NULL
+#define presolFreeXyz NULL
 #endif
 
 
 /** initialization method of presolver (called after problem was transformed) */
 #if 0
 static
-SCIP_DECL_PRESOLINIT(presolInitXxx)
+SCIP_DECL_PRESOLINIT(presolInitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolInitXxx NULL
+#define presolInitXyz NULL
 #endif
 
 
 /** deinitialization method of presolver (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_PRESOLEXIT(presolExitXxx)
+SCIP_DECL_PRESOLEXIT(presolExitXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolExitXxx NULL
+#define presolExitXyz NULL
 #endif
 
 
 /** presolving initialization method of presolver (called when presolving is about to begin) */
 #if 0
 static
-SCIP_DECL_PRESOLINITPRE(presolInitpreXxx)
+SCIP_DECL_PRESOLINITPRE(presolInitpreXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolInitpreXxx NULL
+#define presolInitpreXyz NULL
 #endif
 
 
 /** presolving deinitialization method of presolver (called after presolving has been finished) */
 #if 0
 static
-SCIP_DECL_PRESOLEXITPRE(presolExitpreXxx)
+SCIP_DECL_PRESOLEXITPRE(presolExitpreXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define presolExitpreXxx NULL
+#define presolExitpreXyz NULL
 #endif
 
 
 /** execution method of presolver */
 static
-SCIP_DECL_PRESOLEXEC(presolExecXxx)
+SCIP_DECL_PRESOLEXEC(presolExecXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -174,25 +174,25 @@ SCIP_DECL_PRESOLEXEC(presolExecXxx)
  * presolver specific interface methods
  */
 
-/** creates the xxx presolver and includes it in SCIP */
-SCIP_RETCODE SCIPincludePresolXxx(
+/** creates the xyz presolver and includes it in SCIP */
+SCIP_RETCODE SCIPincludePresolXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_PRESOLDATA* presoldata;
 
-   /* create xxx presolver data */
+   /* create xyz presolver data */
    presoldata = NULL;
    /* TODO: (optional) create presolver specific data here */
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyXxx,
-         presolFreeXxx, presolInitXxx, presolExitXxx, 
-         presolInitpreXxx, presolExitpreXxx, presolExecXxx,
+         presolCopyXyz,
+         presolFreeXyz, presolInitXyz, presolExitXyz, 
+         presolInitpreXyz, presolExitpreXyz, presolExecXyz,
          presoldata) );
 
-   /* add xxx presolver parameters */
+   /* add xyz presolver parameters */
    /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
