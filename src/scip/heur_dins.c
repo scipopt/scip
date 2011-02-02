@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: heur_dins.c,v 1.40 2011/02/02 14:07:36 bzfberth Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -120,6 +121,7 @@ SCIP_RETCODE createSubproblem(
    /* create the rebounded general integer variables of the subproblem */
    for( i = nbinvars; i < nbinvars + nintvars; i++ )
    {
+      assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER);
       /* get the current LP solution for each variable */
       lpsol = SCIPvarGetLPSol(vars[i]);
       /* get the current MIP solution for each variable */
@@ -159,16 +161,23 @@ SCIP_RETCODE createSubproblem(
                lb = mipsol;
          }
 
+         /* the global domain of variables might have been reduced since incumbent was found: adjust lb and ub accordingly */
+         lb = MAX(lb, SCIPvarGetLbGlobal(vars[i]));
+         ub = MIN(ub, SCIPvarGetUbGlobal(vars[i]));
+         
          /* perform the bound change */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
          SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
       }
       else
       {
+         /* the global domain of variables might have been reduced since incumbent was found: adjust it accordingly */
+         mipsol = MAX(mipsol, SCIPvarGetLbGlobal(vars[i]));
+         mipsol = MIN(mipsol, SCIPvarGetUbGlobal(vars[i]));
+         
          /* hard fixing for general integer variables with abs(mipsol-lpsol) < 0.5 */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], mipsol) );
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], mipsol) );
-         
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], mipsol) );         
       }
    }
    

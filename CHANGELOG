@@ -110,6 +110,7 @@ fixed bugs:
 - fixed memory leaks in reader of TSP example 
 - fixed bug while after restarting possible the aggregted variables were not removed in setppc constraints
 - fixed various small bugs in nonlinear expressions code
+- fixed bug in DINS heuristic that occured when the incumbent solution value is outside the variable's current domain 
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
