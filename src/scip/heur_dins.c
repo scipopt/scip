@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.36.2.5 2011/02/02 14:50:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.36.2.6 2011/02/02 20:28:31 bzfwinkm Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -667,7 +667,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &delta, heurdata->deltalength, newsize) );
 
       /* initialize new part of delta array */
-      for( i = deltalength; i < newsize; i++ )
+      for( i = heurdata->deltalength; i < newsize; i++ )
          delta[i] = TRUE;
       
       heurdata->deltalength = newsize;
