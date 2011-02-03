@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.58 2011/01/30 20:02:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.59 2011/02/03 11:23:25 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -2545,7 +2545,7 @@ void SCIPintervalExp(
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      resultant->inf = nextafter(exp(operand.sup), SCIP_REAL_MAX);
+      resultant->sup = nextafter(exp(operand.sup), SCIP_REAL_MAX);
    }
 }
 
