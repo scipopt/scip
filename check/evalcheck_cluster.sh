@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.17 2011/01/02 11:10:54 bzfheinz Exp $
+# $Id: evalcheck_cluster.sh,v 1.18 2011/02/04 17:38:18 bzfpfets Exp $
 
 export LANG=C
 
@@ -122,16 +122,11 @@ do
       QUEUE=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
       # detect test set
-      if test "$QUEUE" = "gbe"
+      if test "$QUEUE" = ""
       then
-	  TSTNAME=`echo $EVALFILE | sed 's/check.gbe.\([a-zA-Z0-9_-]*\).*/\1/g'`
-      else 
-	  if test "$QUEUE" = "ib"
-	  then
-	      TSTNAME=`echo $EVALFILE | sed 's/check.ib.\([a-zA-Z0-9_-]*\).*/\1/g'`
-	  else
-	      TSTNAME=$QUEUE
-	  fi
+          TSTNAME=$QUEUE
+      else
+          TSTNAME=`echo $EVALFILE | sed 's/check.'$QUEUE'.\([a-zA-Z0-9_-]*\).*/\1/g'`
       fi
 
       # detect test used solver
