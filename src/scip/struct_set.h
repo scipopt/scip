@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.107 2011/01/02 11:10:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.108 2011/02/04 22:03:13 bzfviger Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -133,6 +133,8 @@ struct SCIP_Set
                                               *   in sum score function */
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
+   char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
+   SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */

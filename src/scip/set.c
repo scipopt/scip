@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.264 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.265 2011/02/04 22:03:13 bzfviger Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -64,6 +64,8 @@
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 #define SCIP_DEFAULT_BRANCH_CLAMP           0.2 /**< minimal fractional distance of branching point to a continuous variable'
                                                      bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
+#define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
+#define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 
 
 /* Conflict Analysis */
@@ -706,6 +708,16 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/clamp",
          "minimal relative distance of branching point to bounds when branching on a continuous variable",
          &(*set)->branch_clamp, FALSE, SCIP_DEFAULT_BRANCH_CLAMP, 0.0, 0.5,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
+         "branching/lpgainnormalize",
+         "strategy for normalization of LP gain when updating pseudocosts of continuous variables (divide by movement of 'l'p value, reduction in 'd'omain width, or reduction in domain width of 's'ibling)",
+         &(*set)->branch_lpgainnorm, FALSE, SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE, "dls",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "branching/delaypscostupdate",
+         "should updating pseudo costs for continuous variables be delayed to the time after separation?",
+         &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
          NULL, NULL) );
 
    /* conflict analysis parameters */

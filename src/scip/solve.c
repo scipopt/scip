@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.324 2011/01/12 14:27:06 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.325 2011/02/04 22:03:13 bzfviger Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -440,12 +440,34 @@ static
 SCIP_Bool isPseudocostUpdateValid(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             oldlpsolval         /**< solution value of variable in old LP */
+   SCIP_Real             oldlpsolval,        /**< solution value of variable in old LP */
+   SCIP_Bool             updateintegers,     /**< whether to update pseudo costs for integer variables */
+   SCIP_Bool             updatecontinuous    /**< whether to update pseudo costs for continuous variables */
    )
 {
    SCIP_Real newlpsolval;
 
    assert(var != NULL);
+
+   if( !updatecontinuous && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      return FALSE;
+
+   if( !updateintegers && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      return FALSE;
+
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && set->branch_lpgainnorm != 'l' )
+   {
+      /* if the variable is fixed at +/- infinity or it has an unbounded domain, then the domain-based update strategies will not work */
+      if( SCIPsetIsInfinity(set, REALABS(SCIPvarGetLbLocal(var))) || SCIPsetIsInfinity(set, REALABS(SCIPvarGetUbLocal(var))) )
+         return FALSE;
+
+      /* @todo if set->branch_lpgainnorm == 's', then we would need to know then domain before branching
+       * since this is difficult to get, we don't check for unboundedness here and let the pscost update fail later
+       * however, this makes the weights used to spread a pseudo cost update over all domain changes inaccurate
+       */
+
+      return TRUE;
+   }
 
    /* if the old LP solution value is unknown, the pseudo cost update cannot be performed */
    if( oldlpsolval >= SCIP_INVALID )
@@ -486,7 +508,9 @@ SCIP_RETCODE updatePseudocost(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< LP data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             updateintegers,     /**< whether to update pseudo costs for integer variables */
+   SCIP_Bool             updatecontinuous    /**< whether to update pseudo costs for continuous variables */
    )
 {
    SCIP_NODE* focusnode;
@@ -502,7 +526,7 @@ SCIP_RETCODE updatePseudocost(
    actdepth = SCIPnodeGetDepth(focusnode);
    assert(tree->path[actdepth] == focusnode);
 
-   if( lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && tree->focuslpstatefork != NULL )
+   if( (updateintegers || updatecontinuous) && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && tree->focuslpstatefork != NULL )
    {
       SCIP_BOUNDCHG** updates;
       SCIP_NODE* node;
@@ -542,29 +566,36 @@ SCIP_RETCODE updatePseudocost(
             nboundchgs = node->domchg->domchgbound.nboundchgs;
             for( i = 0; i < nboundchgs; ++i )
             {
+               var = boundchgs[i].var;
+               assert(var != NULL);
+
                /* we even collect redundant bound changes, since they were not redundant in the LP branching decision
                 * and therefore should be regarded in the pseudocost updates
+                *
+                * however, if the variable is continuous and we normalize the pseudo costs by the domain reduction,
+                * then getting the variable bound before the branching is not possible by looking at the variables branching infos (since redundant branchings are not applied)
+                * thus, in this case we ignore the boundchange
                 */
-               if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+               if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING &&
+                   (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_NONE
+                 )
                {
-                  var = boundchgs[i].var;
-                  assert(var != NULL);
-                  if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_NONE )
-                  {
-                     /* remember the bound change and mark the variable */
-                     SCIP_CALL( SCIPsetReallocBufferArray(set, &updates, nupdates+1) );
-                     updates[nupdates] = &boundchgs[i];
-                     nupdates++;
+                  /* remember the bound change and mark the variable */
+                  SCIP_CALL( SCIPsetReallocBufferArray(set, &updates, nupdates+1) );
+                  updates[nupdates] = &boundchgs[i];
+                  nupdates++;
 
-                     /* check, if the bound change would lead to a valid pseudo cost update */
-                     if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval) )
-                     {
-                        var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
-                        nvalidupdates++;
-                     }
-                     else
-                        var->pseudocostflag = PSEUDOCOST_IGNORE; /*lint !e641*/
+                  /* check, if the bound change would lead to a valid pseudo cost update
+                   * and see comment above (however, ...) */
+                  if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous) &&
+                      (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || !boundchgs[i].redundant || set->branch_lpgainnorm != 'd')
+                    )
+                  {
+                     var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
+                     nvalidupdates++;
                   }
+                  else
+                     var->pseudocostflag = PSEUDOCOST_IGNORE; /*lint !e641*/
                }
             }
          }
@@ -573,7 +604,7 @@ SCIP_RETCODE updatePseudocost(
       /* update the pseudo cost values and reset the variables' flags; assume, that the responsibility for the dual gain
        * is equally spread on all bound changes that lead to valid pseudo cost updates
        */
-      weight = nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0;
+      weight = (nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0);
       lpgain = (SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound) * weight;
       lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
@@ -584,11 +615,191 @@ SCIP_RETCODE updatePseudocost(
          assert((PSEUDOCOSTFLAG)var->pseudocostflag != PSEUDOCOST_NONE);
          if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
-            SCIPdebugMessage("updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => gain=%g, weight: %g\n",
-               SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
-               tree->focuslpstatefork->lowerbound, SCIPlpGetObjval(lp, set), lpgain, weight);
-            SCIP_CALL( SCIPvarUpdatePseudocost(var, set, stat,
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || set->branch_lpgainnorm == 'l' )
+            {
+               SCIPdebugMessage("updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => solvaldelta = %g, gain=%g, weight: %g\n",
+                  SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
+                  tree->focuslpstatefork->lowerbound, SCIPlpGetObjval(lp, set),
+                  SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight);
+               SCIP_CALL( SCIPvarUpdatePseudocost(var, set, stat,
                   SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
+            }
+            else
+            {
+               assert(set->branch_lpgainnorm == 'd' || set->branch_lpgainnorm == 's');
+               /* set->branch_lpgainnorm == 'd':
+                * For continuous variables, we want to pseudocosts to be the average of the gain in the LP value
+                * if the domain is reduced from x% of its original width to y% of its original (e.g., global) width, i.e.,
+                * to be the average of LPgain / (oldwidth/origwidth - newwidth/origwidth) = LPgain * origwidth / (oldwidth - newwidth).
+                * Then an expected improvement in the LP value by a reduction of the domain width
+                * from x% to y% of its original width can be computed by pseudocost * (oldwidth - newwidth) / origwidth.
+                * Since the original width cancels out, we can also define the pseudocosts as average of LPgain / (oldwidth - newwidth)
+                * and compute the expected improvement as pseudocost * (oldwidth - newwidth).
+                *
+                * Let var have bounds [a,c] before the branching and assume we branched on some value b.
+                * b is given by updates[i]->newbound.
+                *
+                * If updates[i]->boundtype = upper, then node corresponds to the child [a,b].
+                * Thus, we have oldwidth = c-a, newwidth = b-a, and oldwidth - newwidth = c-b.
+                * To get c (the previous upper bound), we look into the var->ubchginfos array.
+                *
+                * If updates[i]->boundtype = lower, then node corresponds to the child [b,c].
+                * Thus, we have oldwidth = c-a, newwidth = c-b, and oldwidth - newwidth = b-a.
+                * To get c (the previous lower bound), we look into the var->lbchginfos array.
+                */
+               int j;
+               int nbdchginfos;
+               SCIP_BDCHGINFO* bdchginfo;
+               SCIP_Real oldbound;
+               SCIP_Real delta;
+               if( set->branch_lpgainnorm == 'd' )
+               {
+                  assert(!updates[i]->redundant);
+                  if( updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
+                  {
+                     nbdchginfos = SCIPvarGetNBdchgInfosUb(var);
+                     oldbound = SCIP_INVALID;
+                     /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
+                      * usually it will be the first one we look at */
+                     for( j = nbdchginfos-1; j >= 0; --j )
+                     {
+                        bdchginfo = SCIPvarGetBdchgInfoUb(var, j);
+                        if( bdchginfo->oldbound > updates[i]->newbound )
+                        {
+                           /* first boundchange which upper bound is above the upper bound set by the branching in updates[i]
+                            * if bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING, then this should be exactly the bound change that we are looking for
+                            * if bdchginfo->boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING, then this should be because the branching domain change has not been applied to the variable due to redundancy
+                            * in this case, i.e., if there was another boundchange coming from somewhere else, I am not sure whether oldbound is an accurate value to compute the old domain size, so we skip the pseudocosts update
+                            */
+                           if( bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+                           {
+                              assert(bdchginfo->newbound == updates[i]->newbound);
+                              oldbound = bdchginfo->oldbound;
+                           }
+                           else
+                           {
+                              assert(updates[i]->redundant);
+                           }
+                           break;
+                        }
+                     }
+                     /* if the bound change was redundant (e.g., due to a change in the global bound), then it was not applied, so there exists no corresponding bound change info
+                      * if it is not redundant, then we should have found at least one corresponding boundchange */
+                     assert(j >= 0 || updates[i]->redundant);
+                     if( oldbound != SCIP_INVALID )
+                     {
+                        assert(!SCIPsetIsInfinity(set, -oldbound)); /* branching on a variable fixed to -infinity does not make sense */
+                        assert(!SCIPsetIsInfinity(set, updates[i]->newbound)); /* branching to infinity does not make sense */
+
+                        /* if the old upper bound is at infinity or the new upper bound is at -infinity, then we say the delta (c-b) is infinity */
+                        if( SCIPsetIsInfinity(set, oldbound) || SCIPsetIsInfinity(set, -updates[i]->newbound) )
+                           delta = SCIP_INVALID;
+                        else
+                           delta = updates[i]->newbound - oldbound;
+                     }
+                     else
+                     {
+                        delta = SCIP_INVALID;
+                     }
+                  }
+                  else
+                  {
+                     assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
+                     nbdchginfos = SCIPvarGetNBdchgInfosLb(var);
+                     oldbound = SCIP_INVALID;
+                     /* walk backwards through bound change infos array to find the bound change corresponding to branching in updates[i]
+                      * usually it will be the first one we look at */
+                     for( j = nbdchginfos-1; j >= 0; --j )
+                     {
+                        bdchginfo = SCIPvarGetBdchgInfoLb(var, j);
+                        if( bdchginfo->oldbound < updates[i]->newbound )
+                        {
+                           /* first boundchange which lower bound is below the lower bound set by the branching in updates[i]
+                            * if bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING, then this should be exactly the bound change that we are looking for
+                            * if bdchginfo->boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING, then this should be because the branching domain change has not been applied to the variable due to redundancy
+                            * in this case, i.e., if there was another boundchange coming from somewhere else, I am not sure whether oldbound is an accurate value to compute the old domain size, so we skip the pseudocosts update
+                            */
+                           if( bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+                           {
+                              assert(bdchginfo->newbound == updates[i]->newbound);
+                              oldbound = bdchginfo->oldbound;
+                           }
+                           else
+                           {
+                              assert(updates[i]->redundant);
+                           }
+                           break;
+                        }
+                     }
+                     /* if the bound change was redundant (e.g., due to a change in the global bound), then it was not applied, so there exists no corresponding bound change info
+                      * if it is not redundant, then we should have found at least one corresponding boundchange */
+                     assert(j >= 0 || updates[i]->redundant);
+                     if( oldbound != SCIP_INVALID )
+                     {
+                        assert(!SCIPsetIsInfinity(set, oldbound)); /* branching on a variable fixed to +infinity does not make sense */
+                        assert(!SCIPsetIsInfinity(set, -updates[i]->newbound)); /* branching to infinity does not make sense */
+
+                        /* if the old lower bound is at -infinity or the new lower bound is at +infinity, then we say the delta (b-a) is infinity */
+                        if( SCIPsetIsInfinity(set, -oldbound) || SCIPsetIsInfinity(set, updates[i]->newbound) )
+                           delta = SCIP_INVALID;
+                        else
+                           delta = updates[i]->newbound - oldbound;
+                     }
+                     else
+                     {
+                        delta = SCIP_INVALID;
+                     }
+                  }
+               }
+               else
+               {
+                  /* set->branch_lpgainnorm == 's':
+                   * Here, we divide the LPgain by the reduction in the sibling node.
+                   *
+                   * If updates[i]->boundtype = upper, then node corresponds to the child [a,b].
+                   * Thus, we have oldwidth = c-a, newwidth = c-b, and oldwidth - newwidth = b-a.
+                   * Conveniently, we just use the current lower bound for a (it may have been tightened, though).
+                   *
+                   * If updates[i]->boundtype = lower, then node corresponds to the child [b,a].
+                   * Thus, we have oldwidth = c-a, newwidth = b-a, and oldwidth - newwidth = c-b.
+                   * Conveniently, we just use the current upper bound for c (it may have been tightened, though).
+                   */
+                  if( updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER )
+                  {
+                     assert(!SCIPsetIsInfinity(set, updates[i]->newbound)); /* branching on a variable fixed to +infinity does not make sense */
+                     assert(!SCIPsetIsInfinity(set, SCIPvarGetLbLocal(var))); /* branching to infinity does not make sense */
+                     if( SCIPsetIsInfinity(set, -updates[i]->newbound) || SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) )
+                        delta = SCIP_INVALID;
+                     else
+                        delta = updates[i]->newbound - SCIPvarGetLbLocal(var);
+                  }
+                  else
+                  {
+                     assert(updates[i]->boundtype == SCIP_BOUNDTYPE_LOWER);
+                     assert(!SCIPsetIsInfinity(set, -updates[i]->newbound)); /* branching on a variable fixed to -infinity does not make sense */
+                     assert(!SCIPsetIsInfinity(set, -SCIPvarGetUbLocal(var))); /* branching to -infinity does not make sense */
+                     if( SCIPsetIsInfinity(set, updates[i]->newbound) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)) )
+                        delta = SCIP_INVALID;
+                     else
+                        delta = -(SCIPvarGetUbLocal(var) - updates[i]->newbound);
+                  }
+               }
+
+               if( delta != SCIP_INVALID )
+               {
+                  SCIPdebugMessage("updating pseudocosts of <%s> with strategy %c: domain: [%g,%g] -> [%g,%g], LP: %e -> %e => "
+                     "delta = %g, gain=%g, weight: %g\n",
+                     SCIPvarGetName(var), set->branch_lpgainnorm,
+                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : oldbound,
+                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? oldbound : SCIPvarGetUbLocal(var),
+                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPvarGetLbLocal(var) : updates[i]->newbound,
+                     updates[i]->boundtype == SCIP_BOUNDTYPE_UPPER ? updates[i]->newbound : SCIPvarGetUbLocal(var),
+                     tree->focuslpstatefork->lowerbound, SCIPlpGetObjval(lp, set),
+                     delta, lpgain, weight);
+
+                  SCIP_CALL( SCIPvarUpdatePseudocost(var, set, stat, delta, lpgain, weight) );
+               }
+            }
          }
          var->pseudocostflag = PSEUDOCOST_NONE; /*lint !e641*/
       }
@@ -843,8 +1054,8 @@ SCIP_RETCODE solveNodeInitialLP(
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
       }
       
-      /* update pseudo cost values */
-      SCIP_CALL( updatePseudocost(set, stat, tree, lp) );
+      /* update pseudo cost values for integer variables (always) and for continuous variables (if not delayed) */
+      SCIP_CALL( updatePseudocost(set, stat, tree, lp, TRUE, !set->branch_delaypscost) );
    }
 
    return SCIP_OKAY;
@@ -1818,6 +2029,12 @@ SCIP_RETCODE priceAndCutLoop(
          /* increase separation round counter */
          stat->nseparounds++;
       }
+   }
+   
+   if( !*lperror )
+   {
+      /* update pseudo cost values for continuous variables, if it should be delayed */
+      SCIP_CALL( updatePseudocost(set, stat, tree, lp, FALSE, set->branch_delaypscost) );
    }
 
    /* update lower bound w.r.t. the LP solution */

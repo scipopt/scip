@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.42 2011/01/03 15:14:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.43 2011/02/04 22:03:13 bzfviger Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -34,8 +34,8 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define BRANCHRULE_STRATEGIES    "bri"       /**< possible variable selection strategies for branching on external candidates */
-#define BRANCHRULE_STRATEGY_DEFAULT 'r'      /**< default variable selection strategy */
+#define BRANCHRULE_STRATEGIES    "cdsu"      /**< possible pseudo cost multiplication strategies for branching on external candidates */
+#define BRANCHRULE_STRATEGY_DEFAULT 'u'      /**< default pseudo cost multiplication strategy */
 #define BRANCHRULE_SCOREMINWEIGHT_DEFAULT 0.8 /**< default weight for minimum of scores of a branching candidate */
 #define BRANCHRULE_SCOREMAXWEIGHT_DEFAULT 1.3 /**< default weight for maximum of scores of a branching candidate */
 #define BRANCHRULE_SCORESUMWEIGHT_DEFAULT 0.1 /**< default weight for sum of scores of a branching candidate */
@@ -50,6 +50,8 @@ struct SCIP_BranchruleData
    SCIP_Real             scoreminweight;     /**< weight for minimum of scores of a branching candidate */
    SCIP_Real             scoremaxweight;     /**< weight for maximum of scores of a branching candidate */
    SCIP_Real             scoresumweight;     /**< weight for sum of scores of a branching candidate */
+
+   char                  updatestrategy;     /**< strategy used to update pseudo costs of continuous variables */
 };
 
 /*
@@ -80,6 +82,8 @@ SCIP_RETCODE updateBestCandidate(
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
    
+   char strategy;
+
    assert(scip != NULL);
    assert(branchruledata != NULL);
    assert(bestvar != NULL);
@@ -220,9 +224,25 @@ SCIP_RETCODE updateBestCandidate(
    assert(SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS || candbrpoint <= SCIPvarGetUbLocal(cand));
    assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
 
-   switch( branchruledata->strategy )
+   if( SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS )
+      strategy = (branchruledata->strategy == 'u' ? branchruledata->updatestrategy : branchruledata->strategy);
+   else
+      strategy = (branchruledata->strategy == 'u' ? 'l' : branchruledata->strategy);
+
+   switch( strategy )
    {
-   case 'b':
+   case 'l':
+      if( SCIPisInfinity(scip,  SCIPgetSolVal(scip, NULL, cand)) || SCIPgetSolVal(scip, NULL, cand) <= SCIPadjustedVarUb(scip, cand, candbrpoint) )
+         deltaminus = 0.0;
+      else
+         deltaminus = SCIPgetSolVal(scip, NULL, cand) - SCIPadjustedVarUb(scip, cand, candbrpoint);
+      if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, NULL, cand)) || SCIPgetSolVal(scip, NULL, cand) >= SCIPadjustedVarLb(scip, cand, candbrpoint) )
+         deltaplus = 0.0;
+      else
+         deltaplus = SCIPadjustedVarLb(scip, cand, candbrpoint) - SCIPgetSolVal(scip, NULL, cand);
+      break;
+
+   case 'd':
       if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) )
          deltaminus = SCIPisInfinity(scip, candscoremax) ? SCIPinfinity(scip) : WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum);
       else
@@ -232,10 +252,9 @@ SCIP_RETCODE updateBestCandidate(
          deltaplus = SCIPisInfinity(scip, candscoremax) ? SCIPinfinity(scip) : WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum);
       else
          deltaplus = SCIPvarGetUbLocal(cand) - SCIPadjustedVarLb(scip, cand, candbrpoint);
-      
       break;
       
-   case 'r':
+   case 's':
       if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) )
          deltaplus = SCIPisInfinity(scip, candscoremax) ? SCIPinfinity(scip) : WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum);
       else
@@ -245,16 +264,15 @@ SCIP_RETCODE updateBestCandidate(
          deltaminus = SCIPisInfinity(scip, candscoremax) ? SCIPinfinity(scip) : WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum);
       else
          deltaminus = SCIPvarGetUbLocal(cand) - SCIPadjustedVarLb(scip, cand, candbrpoint);
-      
       break;
 
-   case 'i':
+   case 'v':
       deltaplus = SCIPisInfinity(scip, candscoremax) ? SCIPinfinity(scip) : WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum);
       deltaminus = deltaplus;
       break;
 
    default :
-      SCIPerrorMessage("branching strategy %c unknown\n", branchruledata->strategy);
+      SCIPerrorMessage("branching strategy %c unknown\n", strategy);
       SCIPABORT();
       return SCIP_INVALIDDATA;  /*lint !e527*/
    }
@@ -517,6 +535,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 static
 SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 {  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** externcands;
    SCIP_Real* externcandssol;
    SCIP_Real* externcandsscore;
@@ -532,12 +551,21 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    assert(scip != NULL);
    assert(result != NULL);
    
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
    SCIPdebugMessage("Execext method of pscost branching\n");
    
    /* get branching candidates */
    SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nprioexterncands, NULL, NULL, NULL) );
    assert(nprioexterncands > 0);
    
+   /* get current update strategy for pseudo costs, if our multiplier rule is 'u' */
+   if( branchruledata->strategy == 'u' )
+   {
+      SCIP_CALL( SCIPgetCharParam(scip, "branching/lpgainnormalize", &branchruledata->updatestrategy) );
+   }
+
    /* select braching variable */
    SCIP_CALL( selectBranchVar(scip, branchrule, externcands, externcandssol, externcandsscore, nprioexterncands, &brvar, &brpoint) );
    
@@ -598,7 +626,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
          branchruledata) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/strategy",
-         "strategy for computing score of external branching candidates (b: rb-int-br, r: rb-int-br-rev, i: rb-inf)",
+         "strategy for utilizing pseudo-costs of external branching candidates (multiply as in pseudo costs 'u'pdate rule, or by 'd'omain reduction, or by domain reduction of 's'ibling, or by 'v'ariable score)",
          &branchruledata->strategy, FALSE, BRANCHRULE_STRATEGY_DEFAULT, BRANCHRULE_STRATEGIES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/minscoreweight",
