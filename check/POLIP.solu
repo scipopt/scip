@@ -87,31 +87,31 @@
 =unkn= bip_cross_min.22.22.96.1
 =unkn= bip_cross_min.24.24.115.1
 =unkn= bip_cross_min.24.24.57.1
-=best= data_2g_1010_824.dimacs -7024864 
+=opt= data_2g_1010_824.dimacs -7024864 
 =opt=  data_2g_44_1601.dimacs  -954077
 =opt=  data_2g_55_62.dimacs    -1484348
 =opt=  data_2g_66_66.dimacs    -2865560
 =opt=  data_2g_77_77.dimacs    -3282435
 =opt=  data_2g_88_88.dimacs    -5935341
-=best= data_2g_99_9211.dimacs  -5064081
+=opt=  data_2g_99_9211.dimacs  -5070020
 =opt=  data_2pm_44_44.dimacs   -13
 =opt=  data_2pm_55_55.dimacs   -20
 =opt=  data_2pm_66_66.dimacs   -29
 =opt=  data_2pm_77_777.dimacs  -40
 =opt=  data_2pm_88_888.dimacs  -55
-=opt=  data_2pm_99_999.dimacs  -65
-=best= data_3g_234_234.dimacs  -1952753
+=opt=  data_2pm_99_999.dimacs  -64
+=opt=  data_3g_234_234.dimacs  -1952753
 =opt=  data_3g_244_244.dimacs  -2725383
 =opt=  data_3g_333_333.dimacs  -1882389
 =opt=  data_3g_334_334.dimacs  -3410696
-=best= data_3g_344_344.dimacs  -5301516
-=best= data_3g_444_444.dimacs  -7582886
+=opt=  data_3g_344_344.dimacs  -5301516
+=opt=  data_3g_444_444.dimacs  -7603756
 =opt=  data_3pm_234_234.dimacs   -20
 =opt=  data_3pm_244_244.dimacs   -28
 =opt=  data_3pm_333_333.dimacs   -26
 =opt=  data_3pm_334_334.dimacs   -36
 =opt=  data_3pm_344_344.dimacs   -48
-=opt=  data_3pm_444_444.dimacs   -65
+=best= data_3pm_444_444.dimacs   -65
 =opt=  data_clique_20.dimacs   147
 =opt=  data_clique_30.dimacs   495
 =opt=  data_clique_40.dimacs   1183
