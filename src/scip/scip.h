@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.464 2011/01/30 19:37:40 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.465 2011/02/05 21:28:51 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4497,6 +4497,7 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
 extern
 SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_SOL**            point               /**< relative interior point on exit */
    );
 
