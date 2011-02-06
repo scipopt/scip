@@ -1,0 +1,6 @@
+MEM		=	7110
+QUEUE		=	extra
+PPN		=	2
+
+# include cluster targets
+-include make/local/make.clustertargets

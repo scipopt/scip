@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.401 2011/01/25 18:14:10 bzfviger Exp $
+# $Id: Makefile,v 1.402 2011/02/06 12:41:37 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -759,21 +759,6 @@ testcbc:
 testcbcparallel:                
 		cd check; \
                 $(SHELL) ./check_cbc.sh $(TEST) $(CBCPARALLEL) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
-
-.PHONY: testcluster
-testcluster:		
-		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(VERSION) $(LPS);
-
-.PHONY: testclustercpx
-testclustercpx:		
-		cd check; \
-		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
-
-.PHONY: testclustercbc
-testclustercbc:		
-		cd check; \
-		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
 
 .PHONY: testgurobi
 testgurobi:		
