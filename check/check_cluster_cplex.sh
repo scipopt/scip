@@ -13,36 +13,23 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cplex.sh,v 1.6 2011/01/14 16:35:37 bzfgamra Exp $
+# $Id: check_cluster_cplex.sh,v 1.7 2011/02/06 12:53:07 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
-# The cluster consists of 80 nodes. These are divided into two sets of 40
-# node. Each set has a different hardware configuration. Both sets can be reached
-# over different queues.
-# - queue "ib":  PowerEdgeTM 1950 Xeon E5420 with 2 CPUS each with 4 Cores  and 16 GB RAM
-#                This gives a total of 40 * 2 * 4 = 320 cores
-# - queue "gbe": PowerEdgeTM 1955 Xeon 5150 with 2 CPUS each with 2 Cores  and 8 GB RAM
-#                This gives a total of 40 * 2 * 2 = 160 cores
+# The queue is passed via $QUEUE (possibly defined in a local makefile in scip/make/local).
 #
-# In case of time measuring you should order 1 node and 8 core (ib) or 4
-# cores (gbe) depending on the used queue.  If no time is measured, change
-# to PPN=1 (see below) in order to allow parallel runs on one node.  For
-# more information, see "http://www.zib.de/cluster-user/view/Main/Hardware"
+# For each run, we can specify the number of nodes reserved for a run via $PPN. If tests runs
+# with valid time measurements should be executed, this number should be chosen in such a way 
+# that a job is run on a single computer, i.e., in general, $PPN should equal the number of cores
+# of each computer. If course, the value depends on the specific computer/queue.
 #
 # To get the result files call "./evalcheck_cluster.sh
-# results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
+# results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
 # This leads to result files 
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
-#
-# number of needed core at a certain cluster node
-#  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
-#  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
-#  - PPN=1 means we need one core, therefore time measuring is not possible
-PPN=4
-QUEUE=gbe
 
 TSTNAME=$1
 BINNAME=$2
@@ -55,6 +42,8 @@ THREADS=$8
 FEASTOL=$9
 DISPFREQ=${10}
 CONTINUE=${11}
+QUEUE=${12}
+PPN=${13}
 
 # get current SCIP path
 SCIPPATH=`pwd`
