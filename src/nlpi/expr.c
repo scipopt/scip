@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.12 2011/01/24 22:31:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.13 2011/02/06 13:04:48 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -1354,6 +1354,7 @@ SCIP_RETCODE polynomialdataCopy(
          assert(sourcepolynomialdata->monomials[i] != NULL);  /*lint !e613*/
          SCIP_CALL( SCIPexprCreateMonomial(blkmem, &(*polynomialdata)->monomials[i], sourcepolynomialdata->monomials[i]->coef,
             sourcepolynomialdata->monomials[i]->nfactors, sourcepolynomialdata->monomials[i]->childidxs, sourcepolynomialdata->monomials[i]->exponents) );
+         (*polynomialdata)->monomials[i]->sorted = sourcepolynomialdata->monomials[i]->sorted;
       }
    }
    else
