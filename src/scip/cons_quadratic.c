@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.155 2011/02/01 19:49:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.156 2011/02/06 18:56:17 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -108,7 +108,7 @@ struct SCIP_ConsData
 
    unsigned int          isconvex:1;         /**< is quadratic function is convex ? */
    unsigned int          isconcave:1;        /**< is quadratic function is concave ? */
-   unsigned int          iscurvchecked:1;    /**< is quadratic function checken on convexity or concavity ? */
+   unsigned int          iscurvchecked:1;    /**< is quadratic function checked on convexity or concavity ? */
    unsigned int          isremovedfixings:1; /**< did we removed fixed/aggr/multiaggr variables ? */
    unsigned int          ispropagated:1;     /**< was the constraint propagated with respect to the current bounds ? */
    unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
