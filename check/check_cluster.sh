@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.46 2011/02/06 12:53:07 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.47 2011/02/07 21:15:04 bzfpfets Exp $
 #
 # Call with "make testcluster"
 #
@@ -22,7 +22,7 @@
 # For each run, we can specify the number of nodes reserved for a run via $PPN. If tests runs
 # with valid time measurements should be executed, this number should be chosen in such a way 
 # that a job is run on a single computer, i.e., in general, $PPN should equal the number of cores
-# of each computer. If course, the value depends on the specific computer/queue.
+# of each computer. Of course, the value depends on the specific computer/queue.
 #
 # To get the result files call "./evalcheck_cluster.sh
 # results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
@@ -46,6 +46,7 @@ VERSION=${12}
 LPS=${13}
 QUEUE=${14}
 PPN=${15}
+CLIENTTMPDIR=${16}
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -62,7 +63,7 @@ if test $SETNAME != "default"
 then
     if test ! -e $SETTINGS
     then
-        echo skipping test since the settings file $SETTINGS does not exist
+        echo Skipping test since the settings file $SETTINGS does not exist.
         exit
     fi
 fi
@@ -70,9 +71,31 @@ fi
 # check if binary exists 
 if test ! -e $SCIPPATH/../$BINNAME
 then
-    echo skipping test since the binary $BINNAME does not exist
+    echo Skipping test since the binary $BINNAME does not exist.
     exit
 fi
+
+# check if queue has been defined
+if test "$QUEUE" = ""
+then
+    echo Skipping test since the queue name has not been defined.
+    exit
+fi
+
+# check if number of nodes has been defined
+if test "$PPN" = ""
+then
+    echo Skipping test since the number of nodes has not been defined.
+    exit
+fi
+
+# check if client tmp-dir has been defined
+if test "$CLIENTTMPDIR" = ""
+then
+    echo Skipping test since the path for the tmp-dir on the clients has not been defined.
+    exit
+fi
+
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
@@ -111,17 +134,17 @@ do
       SHORTFILENAME=`basename $SHORTFILENAME .mps`
       SHORTFILENAME=`basename $SHORTFILENAME .lp`
       SHORTFILENAME=`basename $SHORTFILENAME .opb`
-      
+
       FILENAME=$USER.$QUEUE.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
       BASENAME=$SCIPPATH/results/$FILENAME
-      
+
       TMPFILE=$BASENAME.tmp
       SETFILE=$BASENAME.set
-      
+
       echo $BASENAME >> $EVALFILE
-      
+
       COUNT=`expr $COUNT + 1`
-      
+
       # in case we want to continue we check if the job was already performed 
       if test "$CONTINUE" != "false"
       then
@@ -131,7 +154,7 @@ do
 	      continue
 	  fi
       fi
-      
+
       echo > $TMPFILE
       if test $SETNAME != "default"
       then
@@ -158,7 +181,8 @@ do
       echo checksol                          >> $TMPFILE
       echo quit                              >> $TMPFILE
       
-      qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+      qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME,CLIENTTMPDIR=$CLIENTTMPDIR -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+  else
+      echo "input file "$SCIPPATH/$i" not found!"
   fi
 done
-
