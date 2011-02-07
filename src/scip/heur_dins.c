@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.36.2.7 2011/02/07 16:09:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.36.2.8 2011/02/07 16:11:47 bzfheinz Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -573,8 +573,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* get name of the original problem and add the string "_renssub" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
+      /* get name of the original problem and add the string "_dinssub" */
+      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip));
       
       /* create the subproblem */
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -584,7 +584,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "dins", TRUE, FALSE, &success) );
       SCIPdebugMessage("Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
    }
    
