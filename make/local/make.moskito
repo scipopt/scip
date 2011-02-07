@@ -1,6 +1,4 @@
+#--- $Id: make.moskito,v 1.2 2011/02/07 10:54:23 bzfheinz Exp $
 MEM		=	7110
 QUEUE		=	extra
 PPN		=	2
-
-# include cluster targets
--include make/local/make.clustertargets

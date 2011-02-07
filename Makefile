@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.402 2011/02/06 12:41:37 bzfheinz Exp $
+# $Id: Makefile,v 1.403 2011/02/07 10:54:23 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -788,6 +788,9 @@ testgams:
 .PHONY: tags
 tags:
 		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; 
+
+# include local targets 
+-include make/local/make.targets
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@

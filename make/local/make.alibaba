@@ -1,3 +1,4 @@
+#--- $Id: make.alibaba,v 1.2 2011/02/07 10:54:23 bzfheinz Exp $
 # Call with "make testcluster"
 #
 # The cluster consists of 80 nodes. These are divided into two sets of 40
@@ -26,6 +27,3 @@
 #  - PPN=1 means we need one core, therefore time measuring is not possible
 QUEUE		 =	 gbe
 PPN		 =	 4
-
-# include cluster targets
--include make/local/make.clustertargets
