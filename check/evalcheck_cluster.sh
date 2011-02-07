@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.18 2011/02/04 17:38:18 bzfpfets Exp $
+# $Id: evalcheck_cluster.sh,v 1.19 2011/02/07 21:14:29 bzfpfets Exp $
 
 export LANG=C
 
@@ -160,6 +160,6 @@ do
 	  awk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
       else
 	  awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
-      fi	  
+      fi
   fi
 done
