@@ -13,9 +13,17 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: runcluster.sh,v 1.12 2011/01/02 11:10:54 bzfheinz Exp $
-OUTFILE=/scratch/$BASENAME.out
-ERRFILE=/scratch/$BASENAME.err
+# $Id: runcluster.sh,v 1.13 2011/02/07 21:13:27 bzfpfets Exp $
+
+# check if tmp-path exists 
+if test ! -d $CLIENTTMPDIR
+then
+    echo Skipping test since the path for the tmp-dir does not exist.
+    exit
+fi
+
+OUTFILE=$CLIENTTMPDIR/$BASENAME.out
+ERRFILE=$CLIENTTMPDIR/$BASENAME.err
 TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
@@ -43,4 +51,3 @@ rm -f $TMPFILE
 #chmod g+r $ERRFILE
 #chmod g+r $SCIPPATH/results/$BASENAME.out
 #chmod g+r $SCIPPATH/results/$BASENAME.set
-

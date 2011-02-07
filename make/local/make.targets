@@ -1,4 +1,4 @@
-#--- $Id: make.targets,v 1.1 2011/02/07 10:54:23 bzfheinz Exp $
+#--- $Id: make.targets,v 1.2 2011/02/07 21:13:27 bzfpfets Exp $
 # this local Makefile includes the cluster targets 
 
 .PHONY: testcluster
@@ -7,18 +7,19 @@ testcluster:
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
 		$(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(VERSION) \
-		$(LPS) $(QUEUE) $(PPN);
+		$(LPS) $(QUEUE) $(PPN) $(CLIENTTMPDIR);
 
 .PHONY: testclustercpx
 testclustercpx:		
 		cd check; \
 		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) \
 		$(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUE) $(PPN);
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR);
 
 .PHONY: testclustercbc
 testclustercbc:		
 		cd check; \
 		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) \
 		$(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUE) $(PPN);
+		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUE) $(PPN) $(CLIENTTMPDIR);
