@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.66 2011/01/29 14:49:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.67 2011/02/08 10:40:22 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -532,7 +532,7 @@ SCIP_RETCODE createNlRow(
             NULL, -SCIPinfinity(scip), 0.0) );
          SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, consdata->rhsvar) );
 
-         /* add sum_{i=1}^{n} (alpha_i x_i)^2 + 2 alpha_i beta_i x_i + beta_i^2 */
+         /* add gamma + sum_{i=1}^{n} (alpha_i x_i)^2 + 2 alpha_i beta_i x_i + beta_i^2 */
          rhs = -consdata->constant;
          for( i = 0; i < consdata->nvars; ++i )
          {
@@ -565,6 +565,75 @@ SCIP_RETCODE createNlRow(
          break;
       }
       
+      case 'd':
+      {
+         /* construct division form (gamma + sum_{i=1}^n (alpha_i(x_i+beta_i))^2)/(alpha_{n+1}(x_{n+1}+beta_{n+1})) <= alpha_{n+1}(x_{n+1}+beta_{n+1})
+          */
+         SCIP_EXPRTREE* exprtree;
+         SCIP_EXPR* expr;
+         SCIP_EXPR* nominator;
+         SCIP_EXPR* denominator;
+         SCIP_EXPR** exprs;
+         SCIP_EXPRDATA_MONOMIAL** monomials;
+         SCIP_Real lincoef;
+         SCIP_Real one;
+         SCIP_Real two;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprs,     consdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &monomials, consdata->nvars) );
+         one = 1.0;
+         two = 2.0;
+
+         for( i = 0; i < consdata->nvars; ++i )
+         {
+            /* put x_i + beta_i into exprs[i] */
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &exprs[i], SCIP_EXPR_VARIDX, i) );
+            if( consdata->offsets[i] != 0.0 )
+            {
+               SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &exprs[i], 1, &exprs[i], &one, consdata->offsets[i]) );
+            }
+
+            /* create monomial alpha_i^2 y_i^2, where y_i will be x_i + beta_i */
+            SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomials[i], consdata->coefs[i] * consdata->coefs[i], 1, &i, &two) );
+         }
+
+         /* setup polynomial expression for gamma + sum_{i=1}^n alpha_i^2 (x_i+beta_i)^2 */
+         SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), &nominator, consdata->nvars, exprs, consdata->nvars, monomials, consdata->constant, FALSE) );
+
+         SCIPfreeBufferArray(scip, &monomials);
+         SCIPfreeBufferArray(scip, &exprs);
+
+         /* setup alpha_{n+1}(x_{n+1}+beta_{n+1})
+          * assert that this term is >= 0.0 (otherwise constraint is infeasible anyway) */
+         assert(consdata->rhsvar != NULL);
+         assert((consdata->rhscoeff >= 0.0 && !SCIPisNegative(scip, SCIPvarGetLbGlobal(consdata->rhsvar) + consdata->rhsoffset)) ||
+                (consdata->rhscoeff <= 0.0 && !SCIPisPositive(scip, SCIPvarGetUbGlobal(consdata->rhsvar) + consdata->rhsoffset)));
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &denominator, SCIP_EXPR_VARIDX, consdata->nvars) );
+         if( consdata->rhscoeff != 1.0 || consdata->rhsoffset != 0.0 )
+         {
+            SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &denominator, 1, &denominator, &consdata->rhscoeff, consdata->rhscoeff * consdata->rhsoffset) );
+         }
+
+         /* setup nominator/denominator */
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_DIV, nominator, denominator) );
+
+         SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, 0, 0, NULL) );
+         SCIP_CALL( SCIPexprtreeSetVars(exprtree, consdata->nvars, consdata->vars) );
+         SCIP_CALL( SCIPexprtreeAddVars(exprtree, 1, &consdata->rhsvar) );
+
+         /* linear and constant part is -\alpha_{n+1} (x_{n+1}+\beta_{n+1}) */
+         lincoef = -consdata->rhscoeff;
+         SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+            -consdata->rhscoeff * consdata->rhsoffset,
+            1, &consdata->rhsvar, &lincoef,
+            0, NULL, 0, NULL,
+            exprtree, -SCIPinfinity(scip), 0.0) );
+
+         SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+         break;
+      }
+
       default:
          SCIPerrorMessage("unknown value for nlp formulation parameter\n");
          return SCIP_ERROR;
@@ -3871,8 +3940,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
       &conshdlrdata->linfeasshift,     FALSE, TRUE,          NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/nlpform",
-      "which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form)",
-      &conshdlrdata->nlpform,          FALSE, 'a', "aqse", NULL, NULL) );
+      "which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form, d: convex division form)",
+      &conshdlrdata->nlpform,          FALSE, 'a', "aqsed", NULL, NULL) );
 
    return SCIP_OKAY;
 }

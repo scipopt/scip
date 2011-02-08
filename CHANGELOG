@@ -75,6 +75,7 @@ parameters:
 - added parameter <branching/delaypscostupdate> to delay the update of pseudo costs for continuous variables behind the separation round: default is TRUE
 - changed possible parameter values of <branching/pscost/strategy> from "bri" to "cdsu": default is now 'u', i.e., to estimate the LP gain by a branching for
   external branching candidates (esp. continuous variables) the same way as their pseudo costs are updated
+- added possible value 'd' for <constraints/soc/nlpform> to choose a convex division form for SOC constraint representation in NLP
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
