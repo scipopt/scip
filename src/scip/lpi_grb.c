@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_grb.c,v 1.13 2011/01/02 11:10:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_grb.c,v 1.14 2011/02/08 18:32:50 bzfpfets Exp $"
 
 /**@file   lpi_grb.c
  * @ingroup LPIS
@@ -267,18 +267,7 @@ SCIP_RETCODE getBase(
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
    /* get unpacked basis information from Gurobi */
-   /*
-   CHECK_ZERO( GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols, lpi->cstat) );
-   CHECK_ZERO( GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, lpi->rstat) );
-   */
-
    res = GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols, lpi->cstat);
-
-   /*
-   if ( res == GRB_ERROR_DATA_NOT_AVAILABLE )
-      SCIPwarningMessage("VBasis not available.\n");
-   */
-
    if ( res != 0 && res != GRB_ERROR_DATA_NOT_AVAILABLE )
    {
       SCIPerrorMessage("Gurobi error %d: %s\n", res, GRBgeterrormsg(grbenv));
@@ -286,12 +275,6 @@ SCIP_RETCODE getBase(
    }
 
    res = GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, lpi->rstat);
-
-   /*
-   if ( res == GRB_ERROR_DATA_NOT_AVAILABLE )
-      SCIPwarningMessage("CBasis not available.\n");
-   */
-
    if ( res != 0 && res != GRB_ERROR_DATA_NOT_AVAILABLE )
    {
       SCIPerrorMessage("Gurobi error %d: %s\n", res, GRBgeterrormsg(grbenv));
@@ -1150,7 +1133,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    /* calculate column lengths */
    SCIP_ALLOC( BMSallocMemoryArray(&cnt, ncols) );
-   for ( c = 0; c < ncols-1; ++c )
+   for (c = 0; c < ncols-1; ++c)
    {
       cnt[c] = beg[c+1] - beg[c];
       assert(cnt[c] >= 0);
@@ -2015,7 +1998,10 @@ SCIP_RETCODE SCIPlpiGetCoef(
 /**@name Solving Methods */
 /**@{ */
 
-/** calls primal simplex to solve the LP */
+/** calls primal simplex to solve the LP 
+ *
+ *  @todo Check concurrent (GRB_METHOD_CONCURRENT or GRB_METHOD_DETERMINISTIC_CONCURRENT) 
+ */
 SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2043,7 +2029,11 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    /* set primal simplex */
    SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+#if ( GRB_VERSION_MAJOR >= 4 )
+   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_METHOD_PRIMAL) );
+#else
    CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_LPMETHOD_PRIMAL) );
+#endif
 
    retval = GRBoptimize(lpi->grbmodel);
    switch ( retval  )
@@ -2113,7 +2103,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    return SCIP_OKAY;
 }
 
-/** calls dual simplex to solve the LP */
+/** calls dual simplex to solve the LP 
+ *
+ *  @todo Check concurrent (GRB_METHOD_CONCURRENT or GRB_METHOD_DETERMINISTIC_CONCURRENT)
+ */
 SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2141,7 +2134,11 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* set dual simplex */
    SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
 
+#if ( GRB_VERSION_MAJOR >= 4 )
+   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_METHOD_DUAL) );
+#else
    CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_LPMETHOD_DUAL) );
+#endif
    retval = GRBoptimize(lpi->grbmodel);
    switch ( retval  )
    {
@@ -2214,9 +2211,107 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover            /**< perform crossover */
    )
 {
-   /* calling the dual simplex */
-   SCIPwarningMessage("Barrier not implemented in Gurobi - calling dual simplex.\n");
-   SCIP_CALL( SCIPlpiSolveDual(lpi) );
+   int retval;
+   double cnt;
+
+   assert(grbenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->grbmodel != NULL);
+
+#ifdef SCIP_DEBUG
+   {
+      int ncols, nrows;
+      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      SCIPdebugMessage("calling Gurobi barrier: %d cols, %d rows\n", ncols, nrows);
+   }
+#endif
+
+   invalidateSolution(lpi);
+
+   SCIPdebugMessage("calling GRBoptimize() - barrier\n");
+
+   /* set barrier */
+   SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+
+   if ( crossover )
+   {
+      /* turn on crossover to automatic setting (-1) */
+      CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_CROSSOVER, -1) );
+   }
+   else
+   {
+      /* turn off crossover */
+      CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_CROSSOVER, 0) );
+   }
+
+#if ( GRB_VERSION_MAJOR >= 4 )
+   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_METHOD_BARRIER) );
+#else
+   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_LPMETHOD, GRB_LPMETHOD_BARRIER) );
+#endif
+   retval = GRBoptimize(lpi->grbmodel);
+   switch ( retval  )
+   {
+   case 0:
+      break;
+   case GRB_ERROR_OUT_OF_MEMORY:
+      return SCIP_NOMEMORY;
+   default:
+      return SCIP_LPERROR;
+   }
+
+   CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+   lpi->iterations = (int) cnt;
+
+   lpi->solisbasic = crossover;
+   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+
+   /*
+   SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
+      lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
+   */
+
+   if ( lpi->solstat == GRB_INF_OR_UNBD )
+   {
+      int presolve;
+      CHECK_ZERO( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &presolve) );
+
+      if ( presolve != GRB_PRESOLVE_OFF )
+      {
+         /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+         SCIPdebugMessage("presolver may have solved the problem -> calling Gurobi barrier again without presolve\n");
+
+         /* switch off preprocessing */
+         CHECK_ZERO( setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
+         SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+
+	 retval = GRBoptimize(lpi->grbmodel);
+	 switch ( retval  )
+	 {
+	 case 0:
+	    break;
+	 case GRB_ERROR_OUT_OF_MEMORY:
+	    return SCIP_NOMEMORY;
+	 default:
+	    return SCIP_LPERROR;
+	 }
+
+	 CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         lpi->iterations += (int) cnt;
+	 CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+         SCIPdebugMessage(" -> Gurobi returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
+
+         /* switch on preprocessing again */
+         CHECK_ZERO( setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
+      }
+
+      if ( lpi->solstat == GRB_INF_OR_UNBD )
+      {
+         /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
+         SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
+      }
+   }
    return SCIP_OKAY;
 }
 
@@ -2672,7 +2767,11 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
 
+#if ( GRB_VERSION_MAJOR >= 4 )
+   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+#else
    return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_LPMETHOD_PRIMAL));
+#endif
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -2729,7 +2828,11 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 
    CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
 
+#if ( GRB_VERSION_MAJOR >= 4 )
+   return (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL);
+#else
    return (lpi->solstat == GRB_INFEASIBLE && algo == GRB_LPMETHOD_DUAL);
+#endif
 }
 
 /** returns TRUE iff LP is proven to be dual infeasible */
@@ -2763,7 +2866,11 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 
    CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
 
+#if ( GRB_VERSION_MAJOR >= 4 )
+   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL));
+#else
    return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_INFEASIBLE && algo == GRB_LPMETHOD_DUAL));
+#endif
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -3009,8 +3116,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for quality, if the requested quantity is not available. 
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3021,7 +3130,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   *quality = SCIP_INVALID;
+   CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_KAPPA, quality) );
 
    return SCIP_OKAY;
 }
