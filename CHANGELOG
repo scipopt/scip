@@ -2,6 +2,9 @@ SCIP version 2.0.2
 ===============
 
 fixed bugs:
+- fixed bug in heur_twoopt.c: segmentation fault in sortation of columns fixed.
+- fixed bug in heur_twoopt.c: issue of determined bound getting feasibly negative fixed.
+- fixed bug in heur_twoopt.c: parameter maxnslaves can be set to -1 
 - fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the subproblem
 - fixed bug and wrong assert in heur_shiftandpropagate.c when relaxing continuous variables from the problem
 - fixed wrong assert in plugins that use SCIPcopy()
@@ -15,6 +18,7 @@ fixed bugs:
 - fixed bug in DINS w.r.t. columns generation
 
 performance improvements:
+- larger search domain for twoopt-heuristic
 - fasten propagation in cons_knapsack.c due to negated clique partitions
 - recalculating only needed partitions in cons_knapsack.c, not always both
 - calculation of node priority now also works when variable's relaxation value is equal to a bound
