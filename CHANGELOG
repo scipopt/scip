@@ -2,6 +2,7 @@ SCIP version 2.0.2
 ===============
 
 fixed bugs:
+- fixed bugs in heur_shiftandpropagate.c w.r.t. to column generation
 - fixed bug in heur_twoopt.c: segmentation fault in sortation of columns fixed.
 - fixed bug in heur_twoopt.c: issue of determined bound getting feasibly negative fixed.
 - fixed bug in heur_twoopt.c: parameter maxnslaves can be set to -1 
@@ -18,6 +19,7 @@ fixed bugs:
 - fixed bug in DINS w.r.t. columns generation
 
 performance improvements:
+- shiftandpropagate-heuristic uses optimized data structures and produces no memory overhead anymore
 - larger search domain for twoopt-heuristic
 - fasten propagation in cons_knapsack.c due to negated clique partitions
 - recalculating only needed partitions in cons_knapsack.c, not always both
