@@ -12,12 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.22 2011/01/13 18:06:00 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.23 2011/02/09 14:34:11 bzfhende Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
  * @brief  shiftandpropagate primal heuristic
- * @author Tobias Achterberg 
+ * @author Tobias Achterberg
  * @author Gregor Hendel
  */
 
@@ -41,14 +41,15 @@
 
 #define DEFAULT_WEIGHT_INEQUALITY   1   /**< the heuristic row weight for inequalities */
 #define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equalitities */
-#define DEFAULT_RELAXATE         TRUE   /**< Should continuous variables be relaxed from the problem? */
+#define DEFAULT_RELAX            TRUE   /**< Should continuous variables be relaxed from the problem? */
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
-#define DEFAULT_PROP_BREAKER     2000   /**< fixed maximum number of propagations */
-#define DEFAULT_CUTOFF_BREAKER     15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
+#define DEFAULT_NPROPROUNDS         1   /**< The default number of propagation rounds for each propagation used */
+#define DEFAULT_PROPBREAKER      2000   /**< fixed maximum number of propagations */
+#define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x 
+#define STATISTIC(x)                x
 #else
 #define STATISTIC(x)             /**/
 #endif
@@ -60,11 +61,11 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Bool             relaxate;           /**< should continuous variables be relaxated from the problem */
+   SCIP_Bool             relax;              /**< should continuous variables be relaxed from the problem */
    SCIP_Bool             probing;            /**< should probing be executed? */
-
+   int                   nproprounds;        /**< The default number of propagation rounds for each propagation used */
    STATISTIC(
-      SCIP_LPSOLSTAT     lpstatus;           /**< the probing status after probing */
+      SCIP_LPSOLSTAT     lpsolstat;           /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
       SCIP_Longint       nlpiters;           /**< number of LP iterations which the heuristic needed */
       int                nremainingviols;    /**< the number of remaining violations */
@@ -93,7 +94,7 @@ struct ConstraintMatrix
    SCIP_Real*            colmatvals;         /**< matrix coefficients column by column */
    int*                  colmatind;          /**< the indices of the corresponding rows for each coefficient */
    int*                  colmatbegin;        /**< the starting indices of each column */
-   TRANSFORMSTATUS*      transformstatus;    /**< information about transform status of every discrete variable */ 
+   TRANSFORMSTATUS*      transformstatus;    /**< information about transform status of every discrete variable */
    SCIP_Real*            lhs;                /**< left hand side vector after normalization */
    SCIP_Real*            rhs;                /**< right hand side vector after normalization */
    SCIP_Real*            colnorms;           /**< vector norms of all discrete problem variables after normalization */
@@ -102,7 +103,8 @@ struct ConstraintMatrix
    int                   nnonzs;             /**< number of nonzero column entries */
    int                   nrows;              /**< number of rows of matrix */
    int                   ncols;              /**< the number of columns in matrix (including continuous vars) */
-   int                   ndiscvars;          /**< number of discrete problem variables */       
+   int                   ndiscvars;          /**< number of discrete problem variables */
+   SCIP_Bool             normalized;         /**< indicates if the matrix data has already been normalized */
 };
 typedef struct ConstraintMatrix CONSTRAINTMATRIX;
 
@@ -110,7 +112,7 @@ typedef struct ConstraintMatrix CONSTRAINTMATRIX;
  * Local methods
  */
 
-/* returns nonzero values and corresponding columns of given row */
+/** returns nonzero values and corresponding columns of given row */
 static
 void getRowData(
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
@@ -126,7 +128,7 @@ void getRowData(
 
    assert(matrix != NULL);
    assert(0 <= rowindex && rowindex < matrix->nrows);
-   
+
    arrayposition = matrix->rowmatbegin[rowindex];
 
    if( nrowvals != NULL && rowindex == matrix->nrows - 1 )
@@ -146,7 +148,7 @@ void getRowData(
       *rhs = matrix->rhs[rowindex];
 }
 
-/* returns nonzero values and corresponding rows of given column */
+/** returns nonzero values and corresponding rows of given column */
 static
 void getColumnData(
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
@@ -160,7 +162,7 @@ void getColumnData(
 
    assert(matrix != NULL);
    assert(0 <= colindex && colindex < matrix->ncols);
-   
+
    arrayposition = matrix->colmatbegin[colindex];
 
    if( ncolvals != NULL )
@@ -172,106 +174,112 @@ void getColumnData(
    }
    if( valpointer != NULL )
       *valpointer = &(matrix->colmatvals[arrayposition]);
-   
+
    if( indexpointer != NULL )
       *indexpointer = &(matrix->colmatind[arrayposition]);
 }
 
-/** relaxes a continuous variable from all its rows.
- *  @todo separate relaxation from matrix data, i.e., continuous variable data
- *  is not saved in the matrix anymore.
+/** relaxes a continuous variable from all its rows, which has influence
+ *  on both the left and right hand side of the constraint.
  */
 static
 void relaxVar(
    SCIP*                 scip,               /**< current scip instance */
-   SCIP_VAR*             var,                /**< variable which is relaxated from the problem */
+   SCIP_VAR*             var,                /**< variable which is relaxed from the problem */
    CONSTRAINTMATRIX*     matrix              /**< constraint matrix object */
    )
 {
+   SCIP_ROW** colrows;
+   SCIP_COL* varcol;
    SCIP_Real* colvals;
-   int* colmatind;
    SCIP_Real ub;
    SCIP_Real lb;
    int ncolvals;
    int r;
-   int colpos;
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
-   colpos = SCIPcolGetLPPos(SCIPvarGetCol(var));
-   assert(0 <= colpos && colpos < matrix->ncols);
+   varcol = SCIPvarGetCol(var);
+   assert(varcol != NULL);
 
    /* get nonzero values and corresponding rows of variable */
-   getColumnData(matrix, colpos, &colvals, &colmatind, &ncolvals);
+   colvals = SCIPcolGetVals(varcol);
+   ncolvals = SCIPcolGetNLPNonz(varcol);
+   colrows = SCIPcolGetRows(varcol);
 
    ub = SCIPvarGetUbGlobal(var);
    lb = SCIPvarGetLbGlobal(var);
-   
-   SCIPdebugMessage("Relaxing variable <%s> with lb <%g> and ub <%g>\n",
-		    SCIPvarGetName(var), lb, ub);
 
+   assert(colvals != NULL || ncolvals == 0);
+
+   SCIPdebugMessage("Relaxing variable <%s> with lb <%g> and ub <%g>\n",
+      SCIPvarGetName(var), lb, ub);
+
+   assert(matrix->normalized);
    /* relax variable from all its constraints */
    for( r = 0; r < ncolvals; ++r )
    {
+      SCIP_ROW* colrow;
       SCIP_Real lhs;
       SCIP_Real rhs;
       SCIP_Real lhsvarbound;
       SCIP_Real rhsvarbound;
+      SCIP_Real rowabs;
+      SCIP_Real colval;
       int rowindex;
 
-      assert(colvals != NULL);
+      colrow = colrows[r];
+      rowindex = SCIProwGetLPPos(colrow);
 
-      rowindex = colmatind[r];
-      
       if( rowindex == -1 )
-         continue;
+         break;
+
+      rowabs = SCIPgetRowMaxCoef(scip, colrow);
+      assert(SCIPisFeasGT(scip, rowabs, 0.0));
+      colval = colvals[r]/rowabs;
 
       assert(0 <= rowindex && rowindex < matrix->nrows);
-      
-      /* get nonzero values and corresponding columns of given row */
       getRowData(matrix, rowindex, NULL, &lhs, &rhs, NULL, NULL);
-
-      /* variables bound influence the lhs and rhs of current row depending on the sign 
-       * of the variables coefficient. 
+      /* variables bound influence the lhs and rhs of current row depending on the sign
+       * of the variables coefficient.
        */
-      if( SCIPisFeasGT(scip, colvals[r], 0.0) )
+      if( SCIPisFeasPositive(scip, colval) )
       {
          lhsvarbound = ub;
          rhsvarbound = lb;
-      }
-      else if( SCIPisFeasLT(scip, colvals[r], 0.0) )
+      } 
+      else if( SCIPisFeasNegative(scip, colval) )
       {
          lhsvarbound = lb;
          rhsvarbound = ub;
-      }
-      else 
+      } 
+      else
          continue;
-      
-      /* relaxate variable from the current row */
-      if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, ABS(lhsvarbound)) )
-         matrix->lhs[rowindex] -= colvals[r]*lhsvarbound;
-      else 
+
+      /* relax variable from the current row */
+      if( !SCIPisInfinity(scip, -matrix->lhs[rowindex]) && !SCIPisInfinity(scip, ABS(lhsvarbound)) )
+         matrix->lhs[rowindex] -= colval * lhsvarbound;
+      else
          matrix->lhs[rowindex] = -SCIPinfinity(scip);
-            
-      if( !SCIPisInfinity(scip, rhs) && !SCIPisInfinity(scip, ABS(rhsvarbound)) )
-         matrix->rhs[rowindex] -= colvals[r]*rhsvarbound;
+
+      if( !SCIPisInfinity(scip, matrix->rhs[rowindex]) && !SCIPisInfinity(scip, ABS(rhsvarbound)) )
+         matrix->rhs[rowindex] -= colval * rhsvarbound;
       else
          matrix->rhs[rowindex] = SCIPinfinity(scip);
-     
+
       SCIPdebugMessage("Row <%d> changed:Coefficient <%g>, LHS <%g> --> <%g>, RHS <%g> --> <%g>\n",
-         rowindex, colvals[r], lhs, matrix->lhs[rowindex], rhs, matrix->rhs[rowindex]);
+         rowindex, colval, lhs, matrix->lhs[rowindex], rhs, matrix->rhs[rowindex]);
    }
 }
-   
+
 /** transforms bounds of a given variable s.t. its lower bound equals zero afterwards.
  *  If the variable already has lower bound zero, the variable is not transformed,
- *  if not, the variable's bounds are changed w.r.t. the smaller absolute value of its 
- *  bounds in order to avoid numerical inaccuracies. If both lower and upper bound 
+ *  if not, the variable's bounds are changed w.r.t. the smaller absolute value of its
+ *  bounds in order to avoid numerical inaccuracies. If both lower and upper bound
  *  of the variable differ from infinity, there are two cases. If |lb| <= |ub|,
  *  the bounds are shifted by -lb, else a new variable ub - x replaces x.
- * 
  *  The transformation is memorized by the transform status of the variable s.t.
  *  retransformation is possible.
  */
@@ -289,7 +297,7 @@ void transformVariable(
 
    assert(SCIPvarIsIntegral(var));
    assert(matrix != NULL);
-         
+
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    col = SCIPvarGetCol(var);
@@ -302,8 +310,8 @@ void transformVariable(
    assert(0 <= colpos && colpos < matrix->ncols);
    assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE);
 
-   /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status. 
-    * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the 
+   /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status.
+    * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
     * corresponding rows needs to be modified.
     */
    if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
@@ -317,7 +325,7 @@ void transformVariable(
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
       matrix->upperbounds[colpos] = ub;
       matrix->transformshiftvals[colpos] = 0.0;
-   }
+   } 
    else
    {
       SCIP_Real* vals;
@@ -328,13 +336,13 @@ void transformVariable(
       int i;
 
       /* a real transformation is necessary. The variable x is either shifted by -lb or
-       * replaced by ub - x, depending on the smaller absolute of lb,ub. 
+       * replaced by ub - x, depending on the smaller absolute of lb and ub.
        */
       if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
       {
          matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
          bound = lb;
-      }
+      } 
       else
       {
          matrix->transformstatus[colpos] = TRANSFORMSTATUS_NEG;
@@ -345,14 +353,14 @@ void transformVariable(
 
       /* get nonzero values and corresponding rows of column */
       getColumnData(matrix, colpos, &vals, &rows, &nrows);
-      assert(nrows == 0 || (vals != NULL && rows != NULL));
+      assert(nrows == 0 ||(vals != NULL && rows != NULL));
 
       /* go through rows and modify its lhs, rhs and the variable coefficient, if necessary */
       for( i = 0; i < nrows; ++i )
       {
          assert(rows[i] >= 0);
          assert(rows[i] < matrix->nrows);
-         
+
          if( !SCIPisInfinity(scip, -(matrix->lhs[rows[i]])) )
             matrix->lhs[rows[i]] -= (vals[i]) * bound;
 
@@ -360,33 +368,32 @@ void transformVariable(
             matrix->rhs[rows[i]] -= (vals[i]) * bound;
 
          if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
-            (vals[i]) = -(vals[i]);
+           (vals[i]) = -(vals[i]);
 
          assert(SCIPisFeasLE(scip, matrix->lhs[rows[i]], matrix->rhs[rows[i]]));
       }
 
       if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
          matrix->upperbounds[colpos] = ub - lb;
-      else       
+      else
          matrix->upperbounds[colpos] = SCIPinfinity(scip);
-      
-      matrix->transformshiftvals[colpos] = bound;
 
-      SCIPdebugMessage("Variable <%s> (colpos %d) transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
-		       SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);
+      matrix->transformshiftvals[colpos] = bound;
    }
+   SCIPdebugMessage("Variable <%s> at colpos %d transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
+      SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);  
 }
 
-/** initializes copy of the original coefficient matrix and applies heuristic specific adjustments: normalizing row 
- *  vectors, transforming variable domains such that lower bound is zero, and relaxing continuous variables. 
+/** initializes copy of the original coefficient matrix and applies heuristic specific adjustments: normalizing row
+ *  vectors, transforming variable domains such that lower bound is zero, and relaxing continuous variables.
  */
 static
 SCIP_RETCODE initMatrix(
    SCIP*                 scip,               /**< current scip instance */
-   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object to be initialized */      
-   SCIP_Bool             relaxate,           /**< should continuous variables be relaxated from the problem? */
+   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object to be initialized */
+   SCIP_Bool             relax,              /**< should continuous variables be relaxed from the problem? */
    int*                  nvarsleftinrow,     /**< numbers of shiftable discrete variables left of all rows */
-   SCIP_Bool*            initialized,        /**< was the initialization successful? */  
+   SCIP_Bool*            initialized,        /**< was the initialization successful? */
    SCIP_Bool*            infeasible          /**< is the problem infeasible? */
    )
 {
@@ -410,25 +417,33 @@ SCIP_RETCODE initMatrix(
    /* get LP row data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &lpcols, &ncols) );
-   
-   matrix->nrows = nrows;
-   matrix->ncols = ncols;
 
+   matrix->nrows = nrows;
    matrix->nnonzs = 0;
-   matrix->ndiscvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   matrix->normalized = FALSE;
+   matrix->ndiscvars = 0;
 
    /* count the number of nonzeroes of the LP constraint matrix */
    for( j = 0; j < ncols; ++j )
    {
       assert(lpcols[j] != NULL);
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
-
-      matrix->nnonzs += SCIPcolGetNLPNonz(lpcols[j]);
+      
+      if( SCIPcolIsIntegral(lpcols[j]) )
+      {
+         matrix->nnonzs += SCIPcolGetNLPNonz(lpcols[j]);
+         ++matrix->ndiscvars;
+      }
    }
+   
+   matrix->ncols = matrix->ndiscvars;
 
    if( matrix->nnonzs == 0 )
    {
+      SCIPdebugMessage("No matrix entries - Terminating initialization of matrix.\n");
+
       *initialized = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -438,14 +453,14 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatvals, matrix->nnonzs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatind, matrix->nnonzs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatbegin, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatbegin, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatbegin, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, matrix->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, matrix->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colnorms, matrix->ndiscvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colnorms, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->transformstatus, matrix->ndiscvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->upperbounds, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->upperbounds, matrix->ndiscvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->transformshiftvals, matrix->ndiscvars) );
-   
+
    /* set transform status of variables */
    for( j = 0; j < matrix->ndiscvars; ++j )
       matrix->transformstatus[j] = TRANSFORMSTATUS_NONE;
@@ -454,7 +469,7 @@ SCIP_RETCODE initMatrix(
    *infeasible = FALSE;
 
    /* initialize the rows vector of the heuristic matrix together with its corresponding
-    * lhs, rhs. 
+    * lhs, rhs.
     */
    for( i = 0; i < nrows; ++i )
    {
@@ -469,7 +484,7 @@ SCIP_RETCODE initMatrix(
       row = lprows[i];
       rowvals = SCIProwGetVals(row);
       nrowlpnonz = SCIProwGetNLPNonz(row);
-      maxval = SCIProwGetMaxval(row, scip->set);
+      maxval = SCIPgetRowMaxCoef(scip, row);
       cols = SCIProwGetCols(row);
       constant = SCIProwGetConstant(row);
 
@@ -478,33 +493,35 @@ SCIP_RETCODE initMatrix(
 
       matrix->rowmatbegin[i] = currentpointer;
 
-      /* modify the lhs and rhs w.r.t to the rows constant and normalize by 1-norm, i.e divide the lhs and rhs by the 
-       * maximum absolute value of the row 
+      /* modify the lhs and rhs w.r.t to the rows constant and normalize by 1-norm, i.e divide the lhs and rhs by the
+       * maximum absolute value of the row
        */
       if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
-         matrix->lhs[i] = (SCIProwGetLhs(row) - constant)/ maxval;
+         matrix->lhs[i] = (SCIProwGetLhs(row) - constant) / maxval;
       else
          matrix->lhs[i] = -SCIPinfinity(scip);
-     
+
       if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) )
          matrix->rhs[i] = (SCIProwGetRhs(row) - constant) / maxval;
-      else 
+      else
          matrix->rhs[i] = SCIPinfinity(scip);
 
       if( nrowlpnonz == 0 && (SCIPisFeasLT(scip, 0.0, matrix->lhs[i]) || SCIPisFeasGT(scip, 0.0, matrix->rhs[i])) )
       {
-	 *infeasible = TRUE;
-	 SCIPdebugMessage("  Matrix initialization stopped because of row infeasibility! \n");
-	 SCIPdebug( SCIPprintRow(scip, row, NULL) );
-	 break;
+         *infeasible = TRUE;
+         SCIPdebugMessage("  Matrix initialization stopped because of row infeasibility! \n");
+         SCIPdebug( SCIPprintRow(scip, row, NULL) );
+         break;
       }
 
       /* row coefficients are normalized and copied to heuristic matrix */
       for( j = 0; j < nrowlpnonz; ++j )
-      { 
-	 assert(SCIPcolGetLPPos(cols[j]) >= 0);
+      {
+         if( !SCIPcolIsIntegral(cols[j]) )
+            continue;
+         assert(SCIPcolGetLPPos(cols[j]) >= 0);
          assert(currentpointer < matrix->nnonzs);
-	 
+
          matrix->rowmatvals[currentpointer] = rowvals[j]/maxval;
          matrix->rowmatind[currentpointer] = SCIPcolGetLPPos(cols[j]);
 
@@ -514,34 +531,33 @@ SCIP_RETCODE initMatrix(
       }
    }
 
+   matrix->normalized = TRUE;
+
    if( *infeasible )
       return SCIP_OKAY;
 
    assert(currentpointer == matrix->nnonzs);
-   
+
    currentpointer = 0;
-   
+
    /* copy the nonzero coefficient data column by column to heuristic matrix */
-   for( j = 0; j < ncols; ++j )
+   for( j = 0; j < matrix->ncols; ++j )
    {
       SCIP_COL* currentcol;
       SCIP_ROW** rows;
       SCIP_Real* colvals;
-     
       int ncolnonz;
-      SCIP_Bool colisintegral;
+
 
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
-     
+
       currentcol = lpcols[j];
 
       colvals = SCIPcolGetVals(currentcol);
       rows = SCIPcolGetRows(currentcol);
       ncolnonz = SCIPcolGetNLPNonz(currentcol);
-      colisintegral = SCIPcolIsIntegral(currentcol);
-      
-      if( colisintegral )
-         matrix->colnorms[j] = ncolnonz;
+      assert(SCIPcolIsIntegral(currentcol));
+      matrix->colnorms[j] = ncolnonz;
 
       /* loop over all rows with nonzero coefficients in the column, transform them and add them to the heuristic matrix */
       matrix->colmatbegin[j] = currentpointer;
@@ -561,18 +577,17 @@ SCIP_RETCODE initMatrix(
 
          matrix->colmatvals[currentpointer] = colvals[i]/maxval;
          matrix->colmatind[currentpointer] = SCIProwGetLPPos(rows[i]);
-         
+
          /* update the column norm */
-         if( colisintegral )
-            matrix->colnorms[j] += ABS(matrix->colmatvals[currentpointer]);
-         
+         matrix->colnorms[j] += ABS(matrix->colmatvals[currentpointer]);
+
          ++currentpointer;
       }
    }
    assert(currentpointer == matrix->nnonzs);
 
    /* each variable is either transformed, if it supposed to be integral, or relaxed */
-   for( j = 0; j < (relaxate ? ncols : matrix->ndiscvars); ++j )
+   for( j = 0; j < (relax ? ncols : matrix->ndiscvars); ++j )
    {
       SCIP_VAR* var;
       SCIP_COL* col;
@@ -590,6 +605,9 @@ SCIP_RETCODE initMatrix(
       }
    }
    *initialized = TRUE;
+   
+   SCIPdebugMessage("Matrix initialized for %d discrete variables with %d cols, %d rows and %d nonzero entries\n",
+      matrix->ndiscvars, matrix->ncols, matrix->nrows, matrix->nnonzs);
 
    return SCIP_OKAY;
 }
@@ -609,7 +627,7 @@ void freeMatrix(
    {
       assert((*matrix) != NULL);
       assert((*matrix)->rowmatbegin != NULL);
-      assert((*matrix)->rowmatvals != NULL );
+      assert((*matrix)->rowmatvals != NULL);
       assert((*matrix)->rowmatind != NULL);
       assert((*matrix)->colmatbegin != NULL);
       assert((*matrix)->colmatvals!= NULL);
@@ -623,21 +641,18 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
-      
       SCIPfreeBufferArray(scip, &((*matrix)->colmatvals));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatbegin));
-      
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->colnorms));
-      
       SCIPfreeBufferArray(scip, &((*matrix)->transformstatus));
       SCIPfreeBufferArray(scip, &((*matrix)->upperbounds));
       SCIPfreeBufferArray(scip, &((*matrix)->transformshiftvals));
 
-      (*matrix)->nrows = 0;
-      (*matrix)->ncols = 0;
+     (*matrix)->nrows = 0;
+     (*matrix)->ncols = 0;
    }
 
    /* free matrix */
@@ -645,7 +660,7 @@ void freeMatrix(
 }
 
 /** collects the necessary information about row violations for the zero-solution. That is,
- *  all solution values in heuristic transformation are zero. 
+ *  all solution values in heuristic transformation are zero.
  */
 static
 void checkViolations(
@@ -684,15 +699,15 @@ void checkViolations(
       if( SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasLT(scip, -lhs[i], 0.0) )
       {
          violatedrows[*nviolatedrows] = i;
-         (violatedrowpos)[i] = *nviolatedrows;
+        (violatedrowpos)[i] = *nviolatedrows;
          ++(*nviolatedrows);
-      }
+      } 
       else
          violatedrowpos[i] = -1;
 
       assert((violatedrowpos[i] == -1 && SCIPisFeasGE(scip, rhs[i], 0.0) && SCIPisFeasGE(scip, -lhs[i], 0.0))
-         || (violatedrowpos[i] >= 0 && (SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasLT(scip, -lhs[i], 0.0))));
-      
+         || (violatedrowpos[i] >= 0 &&(SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasLT(scip, -lhs[i], 0.0))));
+
       if( SCIPisInfinity(scip, rhs[i]) && SCIPisInfinity(scip, -lhs[i]) )
          ++(*nredundantrows);
    }
@@ -714,22 +729,23 @@ SCIP_Real retransformVariable(
 
    assert(matrix != NULL);
    assert(var != NULL);
-   
+
    status = matrix->transformstatus[varindex];
 
    /* get variables position and status */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
-   
-   assert(status != TRANSFORMSTATUS_NONE); 
+
+   assert(status != TRANSFORMSTATUS_NONE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
-   
+
    /* check if original variable has different bounds and transform solution value correspondingly */
    if( status == TRANSFORMSTATUS_LB )
    {
       assert(!SCIPisInfinity(scip, -lb));
+
       return solvalue += matrix->transformshiftvals[varindex];
-   }
+   } 
    else if( status == TRANSFORMSTATUS_NEG )
    {
       assert(!SCIPisInfinity(scip, ub));
@@ -777,7 +793,7 @@ SCIP_RETCODE getOptimalShiftingValue(
    SCIP_CALL( SCIPallocBufferArray(scip, &violationchange, nrows) );
 
    /* loop over rows and calculate, which is the minimum shift to make this row feasible
-    * or the minimum shift to violate this row  
+    * or the minimum shift to violate this row
     */
    allzero = TRUE;
    slacksurplus = 0.0;
@@ -795,14 +811,14 @@ SCIP_RETCODE getOptimalShiftingValue(
       lhs = matrix->lhs[rowpos];
       rhs = matrix->rhs[rowpos];
       rowweight = rowweights[rowpos];
-      assert(rowweight == DEFAULT_WEIGHT_INEQUALITY || 
-         (!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs)));
+      assert(rowweight == DEFAULT_WEIGHT_INEQUALITY ||
+        (!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs)));
 
       /* determine if current row is violated or not */
-      rowisviolated = (SCIPisFeasLT(scip, rhs, 0.0) || SCIPisFeasLT(scip, -lhs, 0.0));
-      
+      rowisviolated =(SCIPisFeasLT(scip, rhs, 0.0) || SCIPisFeasLT(scip, -lhs, 0.0));
+
       /* for a feasible row, determine the minimum integral value within the bounds of the variable by which it has to be
-       * shifted to make row infeasible. 
+       * shifted to make row infeasible.
        */
       if( !rowisviolated )
       {
@@ -810,37 +826,37 @@ SCIP_RETCODE getOptimalShiftingValue(
 
          maxfeasshift = SCIPinfinity(scip);
 
-	 /* feasibility can only be violated if the variable has a lock in the corresponding direction,
-	  * i.e. a positive coefficient for a "<="-constraint, a negative coefficient for a ">="-constraint.  
+         /* feasibility can only be violated if the variable has a lock in the corresponding direction,
+          * i.e. a positive coefficient for a "<="-constraint, a negative coefficient for a ">="-constraint.
           */
          if( SCIPisFeasGT(scip, vals[i], 0.0) && !SCIPisInfinity(scip, rhs) )
             maxfeasshift = SCIPfeasFloor(scip, rhs/vals[i]);
          else if( SCIPisFeasLT(scip, vals[i], 0.0) && !SCIPisInfinity(scip, -lhs) )
- 	    maxfeasshift = SCIPfeasFloor(scip, lhs/vals[i]);
+            maxfeasshift = SCIPfeasFloor(scip, lhs/vals[i]);
 
-	 /* if the variable has no lock in the current row, it can still help to increase the slack of this row;
-          * we measure slack increase for shifting by one 
+         /* if the variable has no lock in the current row, it can still help to increase the slack of this row;
+          * we measure slack increase for shifting by one
           */
          if( SCIPisFeasGT(scip, vals[i], 0.0) && SCIPisInfinity(scip, rhs) )
             slacksurplus += vals[i];
-	 if( SCIPisFeasLT(scip, vals[i], 0.0) && SCIPisInfinity(scip, -lhs) )
+         if( SCIPisFeasLT(scip, vals[i], 0.0) && SCIPisInfinity(scip, -lhs) )
             slacksurplus -= vals[i];
 
-	 /* check if the least violating shift lies within variable bounds and set corresponding array values */
+         /* check if the least violating shift lies within variable bounds and set corresponding array values */
          if( SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
          {
             steps[i] = maxfeasshift + 1.0;
             violationchange[i] = rowweight;
             allzero = FALSE;
          } 
-         else 
+         else
          {
             steps[i] = upperbound;
             violationchange[i] = 0;
          }
-      } 
+      }
       /* for a violated row, determine the minimum integral value within the bounds of the variable by which it has to be
-       * shifted to make row feasible. 
+       * shifted to make row feasible.
        */
       else
       {
@@ -848,24 +864,24 @@ SCIP_RETCODE getOptimalShiftingValue(
 
          minfeasshift = SCIPinfinity(scip);
 
-	 /* if coefficient has the right sign to make row feasible, determine the minimum integer to shift variable
-          * to obtain feasibility 
+         /* if coefficient has the right sign to make row feasible, determine the minimum integer to shift variable
+          * to obtain feasibility
           */
          if( SCIPisFeasLT(scip, -lhs, 0.0) && SCIPisFeasGT(scip, vals[i], 0.0) )
             minfeasshift = SCIPfeasCeil(scip, lhs/vals[i]);
          else if( SCIPisFeasLT(scip, rhs,0.0) && SCIPisFeasLT(scip, vals[i], 0.0) )
             minfeasshift = SCIPfeasCeil(scip, rhs/vals[i]);
 
-	 /* check if the minimum feasibility recovery shift lies within variable bounds and set corresponding array 
-          * values 
+         /* check if the minimum feasibility recovery shift lies within variable bounds and set corresponding array
+          * values
           */
-         if( SCIPisFeasLE(scip, minfeasshift, upperbound) ) 
+         if( SCIPisFeasLE(scip, minfeasshift, upperbound) )
          {
             steps[i] = minfeasshift;
             violationchange[i] = -rowweight;
             allzero = FALSE;
-         }
-         else 
+         } 
+         else
          {
             steps[i] = upperbound;
             violationchange[i] = 0;
@@ -873,7 +889,7 @@ SCIP_RETCODE getOptimalShiftingValue(
       }
    }
 
-   /* in case that the variable cannot affect the feasibility of any row, in particular it cannot violate 
+   /* in case that the variable cannot affect the feasibility of any row, in particular it cannot violate
     * a single row, but we can add slack to already feasible rows, we will do this
     */
    if( allzero )
@@ -889,20 +905,20 @@ SCIP_RETCODE getOptimalShiftingValue(
    *rowviolations = 0;
    sum = 0;
 
-   /* best shifting step is calculated by summing up the violation changes for each relevant step and 
-    * taking the one which leads to the minimum sum. This sum measures the balance of feasibility recovering and 
-    * violating changes which will be obtained by shifting the variable by this step 
-    * note, the sums for smaller steps have to be taken into account for all bigger steps, i.e., the sums can be 
+   /* best shifting step is calculated by summing up the violation changes for each relevant step and
+    * taking the one which leads to the minimum sum. This sum measures the balance of feasibility recovering and
+    * violating changes which will be obtained by shifting the variable by this step
+    * note, the sums for smaller steps have to be taken into account for all bigger steps, i.e., the sums can be
     * computed iteratively
-    */ 
+    */
    for( i = 0; i < nrows && !SCIPisInfinity(scip, steps[i]); ++i )
    {
       sum += violationchange[i];
 
       /* if we reached the last entry for the current step value, we have finished computing its sum and
-       * update the step defining the minimum sum 
-       */  
-      if( (i == nrows-1 || steps[i+1] > steps[i] ) && sum < *rowviolations )
+       * update the step defining the minimum sum
+       */
+      if( (i == nrows-1 || steps[i+1] > steps[i]) && sum < *rowviolations )
       {
          *rowviolations = sum;
          *beststep = steps[i];
@@ -910,12 +926,12 @@ SCIP_RETCODE getOptimalShiftingValue(
    }
    assert(*rowviolations <= 0);
    assert(!SCIPisInfinity(scip, *beststep));
-   
+
    /* free temporary arrays */
  TERMINATE:
    SCIPfreeBufferArray(scip, &violationchange);
    SCIPfreeBufferArray(scip, &steps);
-   
+
    return SCIP_OKAY;
 }
 
@@ -996,7 +1012,7 @@ void updateTransformation(
    deltashift = 0.0;
    status = matrix->transformstatus[varindex];
 
-   SCIPdebugMessage("  Variable <%d> [%g,%g], status %d (%g), ub %g \n", varindex, lb, ub, status, 
+   SCIPdebugMessage("  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
       matrix->transformshiftvals[varindex], matrix->upperbounds[varindex]);
 
    /* depending on the variable status, deltashift is calculated differently. */
@@ -1008,10 +1024,10 @@ void updateTransformation(
          matrix->upperbounds[varindex] = ub - lb;
    }
 
-   if( status == TRANSFORMSTATUS_NEG )
+   if( status == TRANSFORMSTATUS_NEG ) 
    {
       assert(!SCIPisInfinity(scip, ub));
-      deltashift = (*transformshiftval) - ub; 
+      deltashift = (*transformshiftval) - ub;
       *transformshiftval = ub;
 
       if( !SCIPisInfinity(scip, -lb) )
@@ -1041,9 +1057,9 @@ void updateTransformation(
          SCIP_Bool rightviolation;
 
          SCIPdebugMessage("  update slacks of row<%d>:  coefficient <%g>, %g <= 0 <= %g \n",
-            rows[i], vals[i], matrix->lhs[rows[i]], matrix->rhs[rows[i]] );
+            rows[i], vals[i], matrix->lhs[rows[i]], matrix->rhs[rows[i]]);
 
-	 /* the row has to be updated if either lhs or rhs changes its sign. */
+         /* the row has to be updated if either lhs or rhs changes its sign. */
          leftviolation = SCIPisFeasLT(scip, -(matrix->lhs[rows[i]]), 0.0);
 
          if( !SCIPisInfinity(scip, -(matrix->lhs[rows[i]])) )
@@ -1051,16 +1067,16 @@ void updateTransformation(
 
          updaterow = leftviolation != SCIPisFeasLT(scip, -(matrix->lhs[rows[i]]), 0.0);
 
-         rightviolation = SCIPisFeasLT(scip, (matrix->rhs[rows[i]]), 0.0);
+         rightviolation = SCIPisFeasLT(scip,(matrix->rhs[rows[i]]), 0.0);
          if( !SCIPisInfinity(scip, matrix->rhs[rows[i]]) )
             matrix->rhs[rows[i]] -= (vals[i]) * deltashift;
-        
-         updaterow = updaterow != (rightviolation != SCIPisFeasLT(scip, (matrix->rhs[rows[i]]), 0.0));
-         
+
+         updaterow = updaterow != (rightviolation != SCIPisFeasLT(scip,(matrix->rhs[rows[i]]), 0.0));
+
          /* update the row violation */
          if( updaterow )
             updateViolations(scip, matrix, rows[i], violatedrows, violatedrowpos, nviolatedrows);
-         
+
          SCIPdebugMessage("             -->                           %g <= 0 <= %g %s\n",
             matrix->lhs[rows[i]], matrix->rhs[rows[i]], updaterow ? ": row violation updated " : "");
 
@@ -1069,13 +1085,13 @@ void updateTransformation(
 
          if( nvarsleftinrow[rows[i]] == 0 && violatedrowpos[rows[i]] != -1 )
             *infeasible = TRUE;
-         SCIPdebugMessage("    %d variables left in %s row <%d>\n", nvarsleftinrow[rows[i]], 
+         SCIPdebugMessage("    %d variables left in %s row <%d>\n", nvarsleftinrow[rows[i]],
             violatedrowpos[rows[i]] >= 0 ? "infeasible":"feasible",
             rows[i]);
       }
    }
 
-   SCIPdebugMessage("  Variable <%d> [%g,%g], status %d (%g), ub %g \n", varindex, lb, ub, status, 
+   SCIPdebugMessage("  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
       matrix->transformshiftvals[varindex], matrix->upperbounds[varindex]);
 }
 
@@ -1105,7 +1121,7 @@ void shiftVariable(
    getColumnData(matrix, varindex, &vals, &rows, &nrows);
 
    /* go through nonzero rows, update their lhs and rhs and the position in the array of violated rows, if necessary;
-    * a row is violated if the zero solution is not feasible 
+    * a row is violated if the zero solution is not feasible
     */
    for( i = 0; i < nrows && !(*infeasible); ++i )
    {
@@ -1119,7 +1135,7 @@ void shiftVariable(
 
       oldlhs = matrix->lhs[rows[i]];
       oldrhs = matrix->rhs[rows[i]];
-      
+
       /* store if row is violated by solution before shift */
       lhsviolated = SCIPisFeasLT(scip, -oldlhs, 0.0);
       rhsviolated = SCIPisFeasLT(scip, oldrhs, 0.0);
@@ -1128,12 +1144,12 @@ void shiftVariable(
       if( !SCIPisInfinity(scip, -oldlhs) )
       {
          matrix->lhs[rows[i]] -= vals[i] * shiftvalue;
-	 update = (SCIPisFeasLT(scip, -matrix->lhs[rows[i]], 0.0) != lhsviolated);
-      }  
+         update = (SCIPisFeasLT(scip, -matrix->lhs[rows[i]], 0.0) != lhsviolated);
+      }
       if( !SCIPisInfinity(scip, oldrhs) )
       {
          matrix->rhs[rows[i]] -= vals[i] * shiftvalue;
-	 update = update != (SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != rhsviolated);
+         update = update !=(SCIPisFeasLT(scip, matrix->rhs[rows[i]], 0.0) != rhsviolated);
       }
 
       /* update violated row information */
@@ -1148,7 +1164,7 @@ void shiftVariable(
       if( nvarsleftinrow[rows[i]] == 0 && violatedrowpos[rows[i]] >= 0 )
          *infeasible = TRUE;
 
-      SCIPdebugMessage("    %d variables left in %s row <%d>\n", nvarsleftinrow[rows[i]], 
+      SCIPdebugMessage("    %d variables left in %s row <%d>\n", nvarsleftinrow[rows[i]],
          violatedrowpos[rows[i]] >= 0 ? "infeasible":"feasible",
          rows[i]);
    }
@@ -1158,7 +1174,7 @@ void shiftVariable(
  * Callback methods of primal heuristic
  */
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+/** deinitialization method of primal heuristic(called before transformed problem is freed) */
 static
 SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1177,23 +1193,21 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
          heurdata->nremainingviols,
-         heurdata->lpstatus,
-         heurdata->nredundantrows
-         );
+         heurdata->lpsolstat,
+         heurdata->nredundantrows);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "  SHIFTANDPROPAGATE PROBING  :  %d probings, %lld domain reductions,  ncutoffs: %d ,  LP iterations: %lld \n ",
          heurdata->nprobings,
          heurdata->ntotaldomredsfound,
          heurdata->ncutoffs,
-         heurdata->nlpiters
-         );
+         heurdata->nlpiters);
       )
 
    return SCIP_OKAY;
 }
 
-/** initialization method of primal heuristic (called after problem was transformed). We only need this method for 
- *  statistic mode of heuristic. 
+/** initialization method of primal heuristic(called after problem was transformed). We only need this method for
+ *  statistic mode of heuristic.
  */
 #ifdef STATISTIC_INFORMATION
 static
@@ -1206,7 +1220,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    assert(heurdata != NULL);
 
-   heurdata->lpstatus = SCIP_LPSOLSTAT_NOTSOLVED;
+   heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    heurdata->nremainingviols = 0;
    heurdata->nprobings = 0;
    heurdata->ntotaldomredsfound = 0;
@@ -1220,7 +1234,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 #define heurInitShiftandpropagate NULL
 #endif
 
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+/** destructor of primal heuristic to free user data(called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1231,19 +1245,19 @@ SCIP_DECL_HEURFREE(heurFreeShiftandpropagate)
    /* free heuristic data */
    if( heurdata != NULL )
       SCIPfreeMemory(scip, &heurdata);
-   
+
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+/** solving process initialization method of primal heuristic(called when branch and bound process is about to begin) */
 #define heurInitsolShiftandpropagate NULL
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+/** solving process deinitialization method of primal heuristic(called before branch and bound process data is freed) */
 #define heurExitsolShiftandpropagate NULL
 
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+/** copy method for primal heuristic plugins(called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1253,14 +1267,14 @@ SCIP_DECL_HEURCOPY(heurCopyShiftandpropagate)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurShiftandpropagate(scip) );
- 
+
    return SCIP_OKAY;
 }
 
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
-{  /*lint --e{715}*/ 
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;       /* the heuristic data */
 
    CONSTRAINTMATRIX* matrix;      /* constraint matrix object */
@@ -1289,7 +1303,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    int nlprows;                   /* the number LP rows */
 
    SCIP_Bool stored;              /* has the solution been stored? */
-   SCIP_Bool initialized;         /* has the matrix been initialized? */ 
+   SCIP_Bool initialized;         /* has the matrix been initialized? */
    SCIP_Bool cutoff;              /* has current probing node been cutoff? */
    SCIP_Bool probing;             /* should probing be applied or not? */
    SCIP_Bool infeasible;          /* FALSE as long as currently infeasible rows have variables left */
@@ -1301,8 +1315,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIPdebugMessage("entering execution method of shift and propagate heuristic\n");
 
    /* we have to collect the number of different variable types before we start probing since during probing variable
-    * can be created (e.g., cons_xor.c)
-    */ 
+    * can be created(e.g., cons_xor.c)
+    */
    ndiscvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    nbinvars = SCIPgetNBinVars(scip);
    nintvars = SCIPgetNIntVars(scip);
@@ -1313,7 +1327,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    /* stop execution method if there is already a primarily feasible solution at hand */
    if( SCIPgetBestSol(scip) != NULL )
-     return SCIP_OKAY;
+      return SCIP_OKAY;
 
    if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
    {
@@ -1321,7 +1335,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       nodecutoff = FALSE;
       SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );       
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    STATISTIC(
@@ -1333,7 +1347,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    /* we need an LP */
    if( nlprows == 0 )
       return SCIP_OKAY;
-      
+
    *result = SCIP_DIDNOTFIND;
    initialized = FALSE;
 
@@ -1348,17 +1362,28 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nvarsleftinrow, nlprows) );
    BMSclearMemoryArray(nvarsleftinrow, nlprows);
-   SCIP_CALL( initMatrix(scip, matrix, heurdata->relaxate, nvarsleftinrow, &initialized, &infeasible) );
-   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-   SCIPsolSetHeur(sol, heur);
-
+   SCIP_CALL( initMatrix(scip, matrix, heurdata->relax, nvarsleftinrow, &initialized, &infeasible) );
+   
    /* could not initialize matrix */
    if( !initialized || infeasible )
    {
       SCIPdebugMessage(" MATRIX not initialized -> Execution of heuristic stopped! \n");
       goto TERMINATE;
    }
-
+   
+   /* the number of discrete LP column variables can be less than the actual number of variables, if, e.g., there
+    * are nonlinearities in the problem. The heuristic execution can be terminated in that case.
+    */
+   if( matrix->ndiscvars < ndiscvars )
+   {
+      SCIPdebugMessage(" Not all discrete variables are in the current LP. Shiftandpropagate execution terminated\n");
+      goto TERMINATE;
+   }
+   
+   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+   SCIPsolSetHeur(sol, heur);
+     
+   
    /* allocate arrays for execution method */
    SCIP_CALL( SCIPallocBufferArray(scip, &permutation, ndiscvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, matrix->nrows) );
@@ -1366,7 +1391,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    /* initialize arrays. Before sorting, permutation is the identity permutation */
    for( i = 0; i < ndiscvars; ++i )
       permutation[i] = i;
-
+   
    /* initialize row weights */
    for( r = 0; r < matrix->nrows; ++r )
    {
@@ -1374,17 +1399,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          rowweights[r] = DEFAULT_WEIGHT_EQUALITY;
       else
          rowweights[r] = DEFAULT_WEIGHT_INEQUALITY;
-
+      
    }
    colnorms = matrix->colnorms;
-
+   
    nimplvars = ndiscvars - (nbinvars + nintvars);
    assert(nbinvars >= 0);
    assert(nintvars >= 0);
    assert(nimplvars >= 0);
-
-   /* sort variables w.r.t variable type and the column norms. Sortation is indirect, all matrix information about the 
-    * columns stays in place, but permutation array gives access to the sorted order of variables 
+   
+   /* sort variables w.r.t variable type and the column norms. Sortation is indirect, all matrix information about the
+    * columns stays in place, but permutation array gives access to the sorted order of variables
     */
    if( nbinvars > 0 )
       SCIPsortDownRealInt(colnorms, permutation, nbinvars);
@@ -1393,7 +1418,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( nimplvars > 0 )
       SCIPsortDownRealInt(&colnorms[nbinvars + nintvars], &permutation[nbinvars + nintvars], nimplvars);
 
-   SCIPdebugMessage("Variables sorted w.r.t their normalized columns!\n"); 
+   SCIPdebugMessage("Variables sorted w.r.t their normalized columns!\n");
 
    /* allocate arrays to store information about infeasible rows */
    SCIP_CALL( SCIPallocBufferArray(scip, &violatedrows, matrix->nrows) );
@@ -1414,6 +1439,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    SCIPdebugMessage("SHIFT_AND_PROPAGATE heuristic starts main loop with %d violations and %d remaining variables!\n",
       nviolatedrows, ndiscvars);
+      
+   assert(matrix->ndiscvars == ndiscvars);
 
    /* loop over variables, shift them according to shifting criteria and try to reduce the global infeasibility */
    for( c = 0; c < ndiscvars; ++c )
@@ -1428,18 +1455,18 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       TRANSFORMSTATUS status;
       int nviolations;
       int permutedvarindex;
-      
+
       permutedvarindex = permutation[c];
       optimalshiftvalue = 0.0;
       nviolations = 0;
       var = vars[permutedvarindex];
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
-
+      assert(SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0);
       assert(SCIPvarIsIntegral(var));
-      
+
       /* if propagation is enabled, check if propagation has changed the variables bounds
-       * and update the transformed upper bound correspondingly 
+       * and update the transformed upper bound correspondingly
        */
       if( heurdata->probing )
          updateTransformation(scip, matrix, permutedvarindex, &(matrix->transformshiftvals[permutedvarindex]),
@@ -1457,26 +1484,26 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIPdebugMessage("Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
          SCIPvarGetName(var), lb, ub, status, matrix->upperbounds[permutedvarindex]);
 
-      /* ignore variable if propagation fixed it (lb and ub will be zero) */
+      /* ignore variable if propagation fixed it(lb and ub will be zero) */
       if( SCIPisFeasZero(scip, matrix->upperbounds[permutedvarindex]) )
       {
          assert(!SCIPisInfinity(scip, ub));
          assert(SCIPisFeasEQ(scip, lb, ub));
 
          SCIP_CALL( SCIPsetSolVal(scip, sol, var, ub) );
-         
+
          continue;
-      } 
+      }
 
       /* compute optimal shift value for variable */
       SCIP_CALL( getOptimalShiftingValue(scip, matrix, permutedvarindex, rowweights, &optimalshiftvalue, &nviolations) );
       assert(SCIPisFeasGE(scip, optimalshiftvalue, 0.0));
       assert(!SCIPisInfinity(scip, optimalshiftvalue));
-         
+
       /* in case the problem is already feasible, do not shift in the direction which deteriorates current objective */
       if( nviolatedrows == 0 && SCIPisFeasGT(scip, obj, 0.0) )
          optimalshiftvalue = 0.0;
-         
+
       /* retransform the solution value from the heuristic transformation space */
       origsolval = retransformVariable(scip, matrix, var, permutedvarindex, optimalshiftvalue);
       assert(SCIPisFeasGE(scip, origsolval, lb) && SCIPisFeasLE(scip, origsolval, ub));
@@ -1484,18 +1511,20 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIPdebugMessage("  Shift %g(%g originally) is optimal, propagate solution\n", optimalshiftvalue, origsolval);
 
       /* check if propagation should still be performed */
-      if( nprobings > DEFAULT_PROP_BREAKER )
+      if( nprobings > DEFAULT_PROPBREAKER )
          probing = FALSE;
 
-      /* if propagation is enabled, fix the variable to the new solution value and propagate the fixation 
-       * (to fix other variables and to find out early whether solution is already infeasible)
+      /* if propagation is enabled, fix the variable to the new solution value and propagate the fixation
+       *(to fix other variables and to find out early whether solution is already infeasible)
        */
       if( probing )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
          SCIP_CALL( SCIPfixVarProbing(scip, var, origsolval) );
          ndomredsfound = 0;
-         SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, &ndomredsfound) );
+
+         SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
+
          ++nprobings;
          STATISTIC(
             heurdata->ntotaldomredsfound += ndomredsfound;
@@ -1504,8 +1533,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             SCIPgetProbingDepth(scip));
       }
       assert(!cutoff || probing);
-	 
-      /* propagation led to an empty domain, hence we backtrack and postpone the variable */  
+
+      /* propagation led to an empty domain, hence we backtrack and postpone the variable */
       if( cutoff )
       {
          assert(probing);
@@ -1515,12 +1544,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          assert(lastindexofsusp >= 0 && lastindexofsusp <= c);
 
          /* only continue heuristic if number of cutoffs occured so far is reasonably small */
-         if( ncutoffs >= DEFAULT_CUTOFF_BREAKER )
+         if( ncutoffs >= DEFAULT_CUTOFFBREAKER )
             break;
 
-         cutoff = FALSE;   
-         
+         cutoff = FALSE;
+
          assert(permutedvarindex == permutation[c]);
+
          permutation[c] = permutation[lastindexofsusp];
          permutation[lastindexofsusp] = permutedvarindex;
 
@@ -1529,7 +1559,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
          SCIPdebugMessage("  Suspicious variable! Postponed from pos <%d> to position <%d>\n", c, lastindexofsusp);
       } 
-      else 
+      else
       {
          /* update heuristic transformed problem according to shifted value of variable */
          shiftVariable(scip, matrix, permutedvarindex, optimalshiftvalue, violatedrows, violatedrowpos, &nviolatedrows,
@@ -1543,16 +1573,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             {
                if( nvarsleftinrow[i] == 0 && violatedrowpos[i] >= 0 )
                   SCIPdebugMessage(" <%d> \n", i);
-            }     
+            }
 #endif
             break;
-         }
+         } 
          else
-            SCIPdebugMessage("Variable <%d><%s> successfully shifted by value <%g>!\n", permutedvarindex, 
+         {
+            SCIPdebugMessage("Variable <%d><%s> successfully shifted by value <%g>!\n", permutedvarindex,
                SCIPvarGetName(var), optimalshiftvalue);
-
+         }
          /* update solution */
-         SCIP_CALL( SCIPsetSolVal(scip, sol, var, origsolval) );         
+         SCIP_CALL( SCIPsetSolVal(scip, sol, var, origsolval) );
 
          /* only to ensure that some assertions can be made later on */
          if( !probing )
@@ -1563,9 +1594,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
    SCIPdebugMessage("Heuristic finished with %d remaining violations and %d remaining variables!\n",
       nviolatedrows, lastindexofsusp + 1);
-      
-   /* if constructed solution might be feasible, go through the queue of suspicious variables and set the solution 
-    * values 
+
+   /* if constructed solution might be feasible, go through the queue of suspicious variables and set the solution
+    * values
     */
    if( nviolatedrows == 0 && !cutoff )
    {
@@ -1574,34 +1605,35 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_VAR* var;
          SCIP_Real origsolval;
          int permutedvarindex;
-          
+
          /* get the column position of the variable */
          permutedvarindex = permutation[v];
          var = vars[permutedvarindex];
-         
+
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
-         
+
          /* update the transformation of the variable, since the bound might have changed after the last update. */
          if( heurdata->probing )
             updateTransformation(scip, matrix, permutedvarindex, &(matrix->transformshiftvals[permutedvarindex]),
                SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), violatedrows, violatedrowpos, &nviolatedrows,
                nvarsleftinrow, &infeasible);
-         
+
          /* retransform the solution value from the heuristic transformed space, set the solution value accordingly */
          origsolval = retransformVariable(scip, matrix, var, permutedvarindex, 0.0);
-         assert(SCIPisFeasGE(scip, origsolval, SCIPvarGetLbLocal(var)) 
+         assert(SCIPisFeasGE(scip, origsolval, SCIPvarGetLbLocal(var))
             && SCIPisFeasLE(scip, origsolval, SCIPvarGetUbLocal(var)));
          SCIP_CALL( SCIPsetSolVal(scip, sol, var, origsolval) );
          SCIP_CALL( SCIPfixVarProbing(scip, var, origsolval) ); /* only to ensure that some assertions can be made later */
 
-         SCIPdebugMessage("  Remaining variable <%s> set to <%g>; %d Violations\n", SCIPvarGetName(var), origsolval, 
+         SCIPdebugMessage("  Remaining variable <%s> set to <%g>; %d Violations\n", SCIPvarGetName(var), origsolval,
             nviolatedrows);
       }
-   }
+   } 
    else
+   {
       SCIPdebugMessage("Solution constructed by heuristic is already known to be infeasible\n");
-
-   /* if the constructed solution might still be extendable to a feasible solution, try this by 
+   }
+   /* if the constructed solution might still be extendable to a feasible solution, try this by
     * solving the remaining LP
     */
    if( nviolatedrows == 0 && !cutoff && SCIPgetNVars(scip) == matrix->ndiscvars )
@@ -1612,7 +1644,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else
       /* in optimized mode, variable bounds, integrality and row feasibility are ensured by heuristic and
-       * do not need to be checked anymore 
+       * do not need to be checked anymore
        */
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, &stored) );
 #endif
@@ -1620,14 +1652,14 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       *result = SCIP_FOUNDSOL;
 
       SCIPdebugMessage("found feasible shifted solution:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
+      SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
 
       /* print the solution value to the console */
       STATISTIC(
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n", 
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n",
             SCIPgetSolOrigObj(scip, sol));
-      )
-   }
+         )
+   } 
    else if( nviolatedrows == 0 && !cutoff )
    {
       /* case that remaining LP has to be solved */
@@ -1641,16 +1673,16 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
 
-      /* solve LP; 
+      /* solve LP;
        * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
-      {   
+     {
          SCIP_Bool retstat;
          retstat = SCIPsolveProbingLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
-         { 
+         {
             SCIPwarningMessage("Error while solving LP in SHIFTANDPROPAGATE heuristic; LP solve terminated with code <%d>\n",
                retstat);
          }
@@ -1667,32 +1699,32 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       {
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-         
+
          /* check solution for feasibility, and add it to solution store if possible.
           * Neither integrality nor feasibility of LP rows have to be checked, because they
           * are guaranteed by the heuristic at this stage.
           */
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, &stored) );
-#else         
+#else
          /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );  
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
          if( stored )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
-            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
+            SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
             *result = SCIP_FOUNDSOL;
-	    STATISTIC(
-		SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n", 
-		   SCIPgetSolOrigObj(scip, sol));
-		)
+            STATISTIC(
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n",
+                  SCIPgetSolOrigObj(scip, sol));
+               )
          }
       }
- 
+
       STATISTIC(
-         heurdata->lpstatus = SCIPgetLPSolstat(scip);
-      )
+         heurdata->lpsolstat = SCIPgetLPSolstat(scip);
+         )
    }
 
    STATISTIC(
@@ -1701,6 +1733,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       )
 
    /* free all allocated memory */
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIPfreeBufferArray(scip, &violatedrows);
    SCIPfreeBufferArray(scip, &violatedrowpos);
    SCIPfreeBufferArray(scip, &rowweights);
@@ -1708,14 +1741,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
  TERMINATE:
    /* terminate probing mode and free the remaining memory */
-   STATISTIC( 
+   STATISTIC(
       heurdata->ncutoffs += ncutoffs;
       heurdata->nprobings += nprobings;
       heurdata->nlpiters = SCIPgetNLPIterations(scip) - heurdata->nlpiters;
       )
-   
+
    SCIP_CALL( SCIPendProbing(scip) );
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
    freeMatrix(scip, &matrix);
    SCIPfreeBufferArray(scip, &nvarsleftinrow);
 
@@ -1730,7 +1762,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP*                 scip                /**< SCIP data structure */
    )
-{
+{	
    SCIP_HEURDATA* heurdata;
 
    /* create shiftandpropagate primal heuristic data */
@@ -1740,13 +1772,15 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopyShiftandpropagate,
-         heurFreeShiftandpropagate, heurInitShiftandpropagate, heurExitShiftandpropagate, 
+         heurFreeShiftandpropagate, heurInitShiftandpropagate, heurExitShiftandpropagate,
          heurInitsolShiftandpropagate, heurExitsolShiftandpropagate, heurExecShiftandpropagate,
          heurdata) );
 
    /* add shiftandpropagate primal heuristic parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/relaxate", "Should continuous variables be relaxated?",
-         &heurdata->relaxate, TRUE, DEFAULT_RELAXATE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nproprounds", "The number of propagation rounds used for each propagation",
+         &heurdata->nproprounds, TRUE, DEFAULT_NPROPROUNDS, -1, 1000, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/relax", "Should continuous variables be relaxed?",
+         &heurdata->relax, TRUE, DEFAULT_RELAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/probing", "Should domains be reduced by probing?",
          &heurdata->probing, TRUE, DEFAULT_PROBING, NULL, NULL) );
 
