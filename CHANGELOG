@@ -120,6 +120,7 @@ fixed bugs:
 - fixed various small bugs in nonlinear expressions code
 - fixed bug in DINS heuristic that occured when the incumbent solution value is outside the variable's current domain 
 - fixed bug in DINS w.r.t. column generation
+- fixed bug in heur_subnlp.c where wrong constraints forbidding variable fixations where added in case of general integers
 
 
 performance improvements:

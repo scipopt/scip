@@ -1339,8 +1339,8 @@ SCIP_RETCODE forbidFixation(
          if( SCIPvarGetUbGlobal(var) > fixval )
          {
             /* literal x_i >= fixval+1 */
-            boundtypes[nconsvars] = SCIP_BOUNDTYPE_UPPER;
-            bounds[nconsvars]     = fixval - 1.0;
+            boundtypes[nconsvars] = SCIP_BOUNDTYPE_LOWER;
+            bounds[nconsvars]     = fixval + 1.0;
             consvars[nconsvars]   = var;
             ++nconsvars;
          }
