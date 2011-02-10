@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expr.c,v 1.13 2011/02/06 13:04:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: expr.c,v 1.14 2011/02/10 20:31:07 bzfviger Exp $"
 
 /**@file   nlpi/expr.c
  * @brief  methods for expressions and expression trees
@@ -1575,9 +1575,8 @@ void SCIPexprFreeDeep(
          SCIP_Real* freedata;
 
          freedata = (*expr)->data.data;
+         assert(freedata != NULL);
 
-         /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
-         assert((*expr)->data.data != NULL);
          BMSfreeBlockMemoryArray(blkmem, &freedata, (*expr)->nchildren + 1);  /*lint !e866*/
          break;
       }
