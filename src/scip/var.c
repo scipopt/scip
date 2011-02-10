@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.318 2011/01/12 11:59:40 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.319 2011/02/10 01:38:56 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4229,27 +4229,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
-
-   /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a none
-    *  empty hole list; this should be changed in the future  */
-   if( SCIPvarGetHolelistGlobal(var) != NULL )
-      return SCIP_OKAY;
-
-   /* check, if we are in one of the simple cases */
-   if( naggvars == 0 )
-   {
-      SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, 
-            infeasible, aggregated) );
-      return SCIP_OKAY;
-   }
-   else if( naggvars == 1 )
-   {
-      SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
-            aggvars[0], scalars[0], constant, infeasible, aggregated) );
-      return SCIP_OKAY;
-   }
-
-   SCIPdebugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
+   SCIPdebugMessage("trying multi-aggregating variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -4269,20 +4249,14 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    case SCIP_VARSTATUS_LOOSE:
       assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
 
-      /* if the variable is not allowed to be multi-aggregated */
-      if ( SCIPvarDoNotMultaggr(var) )
-      {
-	 SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
-	 break;
-      }
-
-      /* check if there would be created a self-reference */
+      /* check if we would create a self-reference */
       ntmpvars = naggvars;
       tmpvarssize = naggvars;
       tmpconstant = constant;
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpvars, aggvars, ntmpvars) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpscalars, scalars, ntmpvars) );
 
+      /* get all active variables for multiaggregation */
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize, FALSE) );
       if( tmprequiredsize > tmpvarssize )
       {
@@ -4293,9 +4267,16 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          assert( tmprequiredsize <= tmpvarssize );
       }
 
-      tmpscalar = 0;
+      tmpscalar = 0.0;
+      
+      /* iterate over all active variables of the multiaggregation and filter all variables which are equal to the
+       * possible multiaggregated variable 
+       */
       for( v = ntmpvars - 1; v >= 0; --v )
       {
+         assert(tmpvars[v] != NULL);
+         assert(SCIPvarGetStatus(tmpvars[v]) == SCIP_VARSTATUS_LOOSE);
+
          if( tmpvars[v]->index == var->index )
          {
             tmpscalar += tmpscalars[v];
@@ -4304,44 +4285,121 @@ SCIP_RETCODE SCIPvarMultiaggregate(
             --ntmpvars;
          }
       }
-      
+
       /* this means that x = x + a_1*y_1 + ... + a_n*y_n + c */
-      if( tmpscalar == 1 )
+      if( SCIPsetIsEQ(set, tmpscalar, 1.0) )
       {
          if( ntmpvars == 0 )
          {  
-            if( tmpconstant == 0 ) /* x = x */
-               return SCIP_OKAY;
+            if( SCIPsetIsZero(set, tmpconstant) ) /* x = x */
+            {
+               SCIPdebugMessage("Possible multi-aggregation was completly resolved and detected to be redundant.\n");
+               goto TERMINATE;
+            }
             else /* 0 = c and c != 0 */
             {
+               SCIPdebugMessage("Multi-aggregation was completly resolved and led to infeasibility.\n");
                *infeasible = TRUE;
-               return SCIP_OKAY;
+               goto TERMINATE;
             }
          }
-         else /* maybe here you can do more presolving */
-            return SCIP_OKAY;
+         else if( ntmpvars == 1 ) /* 0 = a*y + c => y = -c/a */
+         {
+            assert(tmpscalars[0] != 0.0);
+            assert(tmpvars[0] != NULL);
+
+            SCIPdebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(tmpvars[0]), -constant/tmpscalars[0]);
+            SCIP_CALL( SCIPvarFix(tmpvars[0], blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, -constant/tmpscalars[0], 
+                  infeasible, aggregated) );
+            goto TERMINATE;
+         }
+         else if( ntmpvars == 2 ) /* 0 = a_1*y_1 + a_2*y_2 + c => y_1 = -a_2/a_1 * y_2 - c/a_1 */
+         {
+            SCIP_VAR* aggvar;
+            SCIP_Real scalar;
+
+            /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
+            if( SCIPvarGetType(tmpvars[0]) > SCIPvarGetType(tmpvars[1]) )
+            {
+               var = tmpvars[0];
+               aggvar = tmpvars[1];
+               
+               scalar = -tmpscalars[1]/tmpscalars[0];
+               tmpconstant *= -tmpconstant/tmpscalars[0];
+            }
+            else
+            {
+               var = tmpvars[1];
+               aggvar = tmpvars[0];
+               
+               scalar = -tmpscalars[0]/tmpscalars[1];
+               tmpconstant *= -tmpconstant/tmpscalars[1];
+            }
+            assert(SCIPvarGetType(var) >= SCIPvarGetType(aggvar));
+            
+            SCIPdebugMessage("Possible multi-aggregation led to aggregating variable <%s> with variable <%s> with scalar %g and constant %g.\n", SCIPvarGetName(var), SCIPvarGetName(aggvar), scalar, tmpconstant);
+            SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
+                  aggvar, scalar, tmpconstant, infeasible, aggregated) );
+            goto TERMINATE;
+         }
+         else 
+            /* @todo: it is possible to multi-aggregate another variable, does it make sense?, 
+             *        rest looks like 0 = a_1*y_1 + ... + a_n*y_n + c and has at least three variables
+             */
+            goto TERMINATE;
       }
       /* this means that x = b*x + a_1*y_1 + ... + a_n*y_n + c */
-      else if( tmpscalar != 0 )
+      else if( !SCIPsetIsZero(set, tmpscalar) )
       {
 	 tmpscalar = 1 - tmpscalar;
 	 tmpconstant /= tmpscalar;
          for( v = ntmpvars - 1; v >= 0; --v )
             tmpscalars[v] /= tmpscalar;
+      }
 
-         /* check, if we are in one of the simple cases */
-         if( ntmpvars == 0 )
+      /* check, if we are in one of the simple cases */
+      if( ntmpvars == 0 )
+      {
+         SCIPdebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(var), tmpconstant);
+         SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, tmpconstant, 
+               infeasible, aggregated) );
+         goto TERMINATE;
+      }
+
+      /* if only one aggregation variable is left, we perform a normal aggregation instead of a multiaggregation */
+      if( ntmpvars == 1 )
+      {
+         /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
+         if( SCIPvarGetType(tmpvars[0]) > SCIPvarGetType(var) )
          {
-            SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, tmpconstant, 
-                  infeasible, aggregated) );
-            return SCIP_OKAY;
+            SCIP_VAR* tmpvar;
+            
+            /* switch the variables, such that var is the variable of more general type (cont > implint > int > bin) */
+            tmpvar = var;
+            var = tmpvars[0];
+            tmpvars[0] = tmpvar;
+            
+            tmpscalars[0] = 1/tmpscalars[0];
+            tmpconstant *= -tmpscalars[0];
          }
-         else if( ntmpvars == 1 )
-         {
-            SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
-                  tmpvars[0], tmpscalars[0], tmpconstant, infeasible, aggregated) );
-            return SCIP_OKAY;
-         }
+         assert(SCIPvarGetType(var) >= SCIPvarGetType(tmpvars[0]));
+         
+         SCIPdebugMessage("Possible multi-aggregation led to aggregating variable <%s> with variable <%s> with scalar %g and constant %g.\n", SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), tmpscalars[0], tmpconstant);
+         SCIP_CALL( SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
+               tmpvars[0], tmpscalars[0], tmpconstant, infeasible, aggregated) );
+         goto TERMINATE;
+      }
+
+      /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a none
+       *  empty hole list; this should be changed in the future  */
+      if( SCIPvarGetHolelistGlobal(var) != NULL )
+	 goto TERMINATE;
+
+      /* if the variable is not allowed to be multi-aggregated */
+      if( SCIPvarDoNotMultaggr(var) )
+      {
+	 SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
+	 goto TERMINATE;
       }
 
       /* if the variable to be multiaggregated has implications or variable bounds (i.e. is the implied variable or
@@ -4432,11 +4490,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
        * variables and the problem's objective offset
        */
       SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, prob, primal, tree, lp, eventqueue, obj) );
-      
-      BMSfreeBlockMemoryArray(blkmem, &tmpvars, tmpvarssize);
-      BMSfreeBlockMemoryArray(blkmem, &tmpscalars, tmpvarssize);
 
       *aggregated = TRUE;
+
+   TERMINATE:      
+      BMSfreeBlockMemoryArray(blkmem, &tmpscalars, tmpvarssize);
+      BMSfreeBlockMemoryArray(blkmem, &tmpvars, tmpvarssize);
+
       break;
 
    case SCIP_VARSTATUS_COLUMN:
