@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.21 2011/02/09 14:34:11 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.22 2011/02/11 16:43:43 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -555,8 +555,6 @@ SCIP_Real determineBound(
 	SCIPdebugMessage("  Row %s is local.\n", SCIProwGetName(row));
       }
       
-      assert(SCIPisFeasGE(scip, bound, 0.0));
-      
       /* increase the counters which belong to the corresponding row. Both counters are increased by 
        * 1 iff rowpos1 <= rowpos2 <= rowpos1 */
       if( slaveincrement )
@@ -564,6 +562,11 @@ SCIP_Real determineBound(
       if( masterincrement )
          ++j;
    }
+
+   /* due to numerical reasons, bound can be negative. A variable shift by a negative bound is not desired by
+    * by the heuristic -> Change the return value to zero */
+   if( !SCIPisPositive(scip, bound) )
+      bound = 0.0;
 
    return bound;
 }
