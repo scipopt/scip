@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.222 2011/01/25 13:11:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.223 2011/02/13 18:52:01 bzfpfets Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -6263,7 +6263,7 @@ SCIP_RETCODE addCliques(
       SCIPdebugMessage("Try to add cliques in knapsack constraint handler for constraint %s; capacity = %"SCIP_LONGINT_FORMAT", minactivity(due to neg. cliques) = %"SCIP_LONGINT_FORMAT", freecapacity = %"SCIP_LONGINT_FORMAT".\n", 
          SCIPconsGetName(cons), consdata->capacity, minactduetonegcliques, freecapacity);
 
-      /* create negated cliques out of negated cliques, if we doesn't take the smallest weight of a cliques ... */
+      /* create negated cliques out of negated cliques, if we do not take the smallest weight of a cliques ... */
       SCIP_CALL( addNegatedCliques(scip, cons, cutoff, nbdchgs ) );
 
       nposcliquevars = 0;
