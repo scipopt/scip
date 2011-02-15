@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.68 2011/01/02 11:10:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.69 2011/02/15 19:17:10 bzfpfets Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -868,6 +868,37 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
       BMSfreeMemoryArrayNull(&sepastore->cuts);
       sepastore->cutssize = 0;
    }
+
+   return SCIP_OKAY;
+}
+
+/** removes redudant cuts form the separation storage without adding the cuts to the LP */
+SCIP_RETCODE SCIPsepastoreRemoveRedundantCuts(
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   int cnt;
+   int c;
+
+   assert( sepastore != NULL );
+
+   /* check non-forced cuts */
+   cnt = 0;
+   for (c = sepastore->nforcedcuts; c < sepastore->ncuts; ++c)
+   {
+      if ( sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[c]) )
+      {
+         SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );
+         ++cnt;
+      }
+   }
+   SCIPdebugMessage("removed %d redudant cuts\n", cnt);
 
    return SCIP_OKAY;
 }
