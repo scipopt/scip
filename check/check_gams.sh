@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.sh,v 1.5 2011/02/16 16:03:17 bzfviger Exp $
+# $Id: check_gams.sh,v 1.6 2011/02/16 17:10:22 bzfviger Exp $
 TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}
@@ -122,7 +122,7 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-# we add 10% to the hard time limit and additional 10 seconds in case of small time limits
+# we add 10% to the time limit and additional 10 seconds in case of small time limits
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
@@ -227,13 +227,17 @@ then
   exit 1
 fi
 
-sleepsec=30
-if test $TIMELIMIT -lt $sleepsec
-then
-  sleepsec=10
-fi
+# run schulz to make sure solvers do not run forever
+# signal 2 (sigint, ^C) when 5 seconds above timelimit
+# signal 1 (sighup) when at hard timelimit
+# signal 9 (sigkill) when at hard timelimit + 60 seconds
+# set sleepseconds small enough so that we check at least once between $TIMELIMIT and $HARDTIMELIMIT, which have difference at least $TIMELIMIT/10,
+# and at least once between $HARDTIMELIMIT and $HARDTIMELIMIT + 60
+(( sleepsec = TIMELIMIT > 600 ? 60 : (TIMELIMIT / 10 - 2) ))
 ./schulz.sh "^$solverexe" "`expr $TIMELIMIT + 5`:$HARDTIMELIMIT:`expr $HARDTIMELIMIT + 60`" "2:1:9" $sleepsec > $SCHFILE 2>&1 &
 schulzpid=$!
+# kill schulz on exit, or if we are interrupted
+trap "kill $schulzpid" EXIT SIGHUP SIGINT SIGTERM
 
 for i in `cat $TSTNAME.test`
 do
@@ -345,5 +349,3 @@ date >>$OUTFILE
 date >>$ERRFILE
 
 ./evalcheck_gams.sh $OUTFILE
-
-kill $schulzpid
