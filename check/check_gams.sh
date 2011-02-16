@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.sh,v 1.3 2011/01/26 14:40:29 bzfviger Exp $
+# $Id: check_gams.sh,v 1.4 2011/02/16 14:52:24 bzfviger Exp $
 TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}
@@ -27,10 +27,11 @@ CONTINUE=${10}
 SCRDIR=${11}
 CONVERTSCIP=${12}
 
+# set this to true to keep solutions in .gdx files
+KEEPSOLS=false
+
 #TODOs:
-# - optionally keep solutions via gdx=... option
-# - enforce hard timelimit (see schulz.gms from ptools)
-# - enable solvelink=5
+# - enable solvelink=5 ?
 
 if ! which $GAMSBIN > /dev/null 2>&1
 then
@@ -63,8 +64,10 @@ RESFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.res
 TEXFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.tex
 SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.set
 PAVFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.pav
+SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sch
 GMSDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.gms
 OPTDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.opt
+SOLDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sol
 
 if test ! -e $OUTFILE
 then
@@ -94,6 +97,13 @@ fi
 if test -e $TRCFILE
 then
     $MVORCP $TRCFILE $TRCFILE.old-$DATEINT
+fi
+if test -e $SOLDIR
+then
+    if test "$CONTINUE" != "true"
+    then
+        mv $SOLDIR $SOLDIR.old-$DATEINT
+    fi
 fi
 
 if test "$CONTINUE" = "true"
@@ -140,6 +150,13 @@ then
     echo "Scratch directory $SCRDIR does not exists. Abort."
     exit 1
   fi
+fi
+
+# create directory for solutions, if KEEPSOLS is true
+if test "$KEEPSOLS" = "true"
+then
+  mkdir -p $SOLDIR
+  GAMSOPTS="$GAMSOPTS gdxcompress=1"
 fi
 
 # setup option file
@@ -199,6 +216,24 @@ else
     exit 1
   fi
 fi
+
+# get name of solver executable
+solverexe=`which $GAMSBIN`
+solverexe=`dirname $solverexe`
+solverexe=`grep -A 2 $SOLVER ${solverexe}/"gmscmpun.txt" | tail -1`
+if test -z "$solverexe"
+then
+  echo "$SOLVER does not seem to be a GAMS solver (does not appear in gmscmpun.txt). Abort."
+  exit 1
+fi
+
+sleepsec=60
+if test $TIMELIMIT -lt $sleepsec
+then
+  sleepsec=10
+fi
+./schulz.sh "^$solverexe" "$TIMELIMIT:$HARDTIMELIMIT" "2:9" $sleepsec > $SCHFILE 2>&1 &
+schulzpid=$!
 
 for i in `cat $TSTNAME.test`
 do
@@ -263,11 +298,16 @@ do
               continue
             fi
             
+            if test $KEEPSOLS = "true"
+            then
+              gdxfile="gdx=$SOLDIR/${gmsfile/%gms/gdx}"
+            fi
+
             echo -----------------------------
             date +"@03 %s"
             
             # run GAMS and check return code
-            $GAMSBIN $gmsfile $GAMSOPTS inputdir=$inputdir $modtype=$SOLVER 2>>$ERRFILE
+            $GAMSBIN $gmsfile $GAMSOPTS inputdir=$inputdir $modtype=$SOLVER $gdxfile 2>>$ERRFILE
             gamsrc=$?
             if test $gamsrc != 0
             then
@@ -305,3 +345,5 @@ date >>$OUTFILE
 date >>$ERRFILE
 
 ./evalcheck_gams.sh $OUTFILE
+
+kill $schulzpid
