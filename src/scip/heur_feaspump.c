@@ -655,7 +655,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       
       if( success )
       {
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump2/freq", -1) );
+         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
 
          /* do not abort subproblem on CTRL-C */
          SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
@@ -1007,6 +1007,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIPdebugMessage(" -> loop finished: %d fractional variables (stall: %d/%d, iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n", 
          nfracs, nstallloops, maxstallloops, heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops));
    }   
+
    /* try final solution, if no more fractional variables are left */
    if( nfracs == 0 && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
@@ -1259,15 +1260,15 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          "should the feasibility pump be called at root node before cut separation?",
          &heurdata->beforecuts, FALSE, DEFAULT_BEFORECUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/feaspump2/usefp20", 
+         "heuristics/feaspump/usefp20", 
          "should an iterative round-and-propagate scheme be used to find the integral points?",
          &heurdata->usefp20, FALSE, DEFAULT_USEFP20, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/feaspump2/pertsolfound", 
+         "heuristics/feaspump/pertsolfound", 
          "should a random perturbation be performed if a feasible solution was found?",
          &heurdata->pertsolfound, FALSE, DEFAULT_PERTSOLFOUND, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/feaspump2/stage3", 
+         "heuristics/feaspump/stage3", 
          "should we solve a local branching sub-MIP if no solution could be found?",
          &heurdata->stage3, FALSE, DEFAULT_STAGE3, NULL, NULL) );
 
