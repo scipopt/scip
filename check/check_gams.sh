@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.sh,v 1.4 2011/02/16 14:52:24 bzfviger Exp $
+# $Id: check_gams.sh,v 1.5 2011/02/16 16:03:17 bzfviger Exp $
 TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}
@@ -220,19 +220,19 @@ fi
 # get name of solver executable
 solverexe=`which $GAMSBIN`
 solverexe=`dirname $solverexe`
-solverexe=`grep -A 2 $SOLVER ${solverexe}/"gmscmpun.txt" | tail -1`
+solverexe=`grep -A 2 ^$SOLVER ${solverexe}/"gmscmpun.txt" | tail -1`
 if test -z "$solverexe"
 then
   echo "$SOLVER does not seem to be a GAMS solver (does not appear in gmscmpun.txt). Abort."
   exit 1
 fi
 
-sleepsec=60
+sleepsec=30
 if test $TIMELIMIT -lt $sleepsec
 then
   sleepsec=10
 fi
-./schulz.sh "^$solverexe" "$TIMELIMIT:$HARDTIMELIMIT" "2:9" $sleepsec > $SCHFILE 2>&1 &
+./schulz.sh "^$solverexe" "`expr $TIMELIMIT + 5`:$HARDTIMELIMIT:`expr $HARDTIMELIMIT + 60`" "2:1:9" $sleepsec > $SCHFILE 2>&1 &
 schulzpid=$!
 
 for i in `cat $TSTNAME.test`

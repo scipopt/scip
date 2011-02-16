@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: schulz.sh,v 1.1 2011/02/16 14:52:24 bzfviger Exp $
+# $Id: schulz.sh,v 1.2 2011/02/16 16:03:17 bzfviger Exp $
 
 # Bash-shell version of schulz script from GAMS performance tools (http://www.gamsworld.org/performance/schulz.htm)
 #
@@ -29,9 +29,9 @@
 #  the corresponding signal is send to that process.
 #
 #  That is, for the default values, for each process which command that starts with ^gms the following happens:
-#  If it is running for more than 240 seconds, signal 9 is send.
-#  If it is running for more than 280 seconds, but less-or-equal 240 seconds, signal 1 is send.
-#  If it is running for more than 120 seconds, but less-or-equal 180 seconds, signal 2 is send.
+#  If it is running for more than 240 seconds, signal 9 (SIGKILL) is send.
+#  If it is running for more than 280 seconds, but less-or-equal 240 seconds, signal 1 (SIGHUP) is send.
+#  If it is running for more than 120 seconds, but less-or-equal 180 seconds, signal 2 (SIGINT) is send.
 #  If it is running for less-or-equal 120 seconds, nothing happens.
 #
 #  The list of timelimits and signals need to have the same length.
@@ -74,17 +74,15 @@ done
 # - calculates corresponding number of seconds and stores them in $secs
 # - checks if one of the timelimits is exceeded and stores corresponding signal in $signal
 #   if no timelimit is exceeded, $signal is set to 0
-function getsignal() { # $1 has 
-  stime=$1
-  di=`echo $1 | sed -e 's/-.*//'`
-  rest=${1/$di-/}
-  secs=`echo $rest | sed -e 's/.*:\([0-9]*\)$/\1/'`
-  rest=${rest/%:${secs}/}
-  mins=`echo $rest | sed -e 's/.*:\([0-9]*\)$/\1/'`
-  rest=${rest/%:${mins}/}
+function getsignal() {
+  secs=${1: -2:2}
+  mins=${1: -5:2}
+  hours=${1: -8:2}
+  days=${1: -11:2}
   
   #remove 0's from beginning
-  hours=${rest##0}
+  days=${days##0}
+  hours=${hours##0}
   mins=${mins##0}
   secs=${secs##0}
   
