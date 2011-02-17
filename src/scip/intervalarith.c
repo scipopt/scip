@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.59 2011/02/03 11:23:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.60 2011/02/17 16:33:53 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -360,6 +360,14 @@ void SCIPintervalSetRoundingModeTowardsZero(
    )
 {
    SCIPintervalSetRoundingMode(SCIP_ROUND_ZERO);
+}
+
+/** negates a number in a way that the compiler does not optimize it away */
+SCIP_Real SCIPintervalNegateReal(
+   SCIP_Real             x                   /**< number to negate */
+   )
+{
+   return negate((double)x);
 }
 
 /*
@@ -2834,37 +2842,38 @@ void SCIPintervalQuad(
 #endif
 }
 
-/** solves a quadratic equation with interval linear and constant coefficients
+/** computes interval with positive solutions of a quadratic equation with interval coefficients
  * 
- * Given a scalar a and intervals b and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$. */
+ * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
+ */
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
 )
 {
    assert(resultant != NULL);
   
-   /* find x>=0 s.t. ax^2 + b.inf x <= c.sup  -> -ax^2 - b.inf x >= -c.sup */
-   if( lincoeff.inf <= -infinity || rhs.sup >= infinity )
+   /* find x>=0 s.t. a.inf x^2 + b.inf x <= c.sup  -> -a.inf x^2 - b.inf x >= -c.sup */
+   if( lincoeff.inf <= -infinity || rhs.sup >= infinity || sqrcoeff.inf <= -infinity )
    {
       resultant->inf = 0.0;
       resultant->sup = infinity;
    }
    else
    {
-      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, resultant, -sqrcoeff, -lincoeff.inf, -rhs.sup);
-      SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", -sqrcoeff, -lincoeff.inf, -rhs.sup, resultant->inf, resultant->sup);
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, resultant, -sqrcoeff.inf, -lincoeff.inf, -rhs.sup);
+      SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", -sqrcoeff.inf, -lincoeff.inf, -rhs.sup, resultant->inf, resultant->sup);
    }
    
-   /* find x>=0 s.t. ax^2 + b.sup x >= c.inf */
-   if( lincoeff.sup <  infinity && rhs.inf >  -infinity )
+   /* find x>=0 s.t. a.sup x^2 + b.sup x >= c.inf */
+   if( lincoeff.sup <  infinity && rhs.inf >  -infinity && sqrcoeff.sup <  infinity )
    {
       SCIP_INTERVAL res2;
-      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff, lincoeff.sup, rhs.inf);
-      SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf);
+      SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff.sup, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
       SCIPdebugMessage("intersect [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
       /* intersect both results */
       SCIPintervalIntersect(resultant, *resultant, res2);
@@ -2878,10 +2887,11 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    }
 }
 
-/** solves a quadratic equation with linear and constant coefficients
+/** computes positive solutions of a quadratic equation with scalar coefficients
  * 
  * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
- * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008). */
+ * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
+ */
 void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -2986,22 +2996,23 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIPintervalSetRoundingMode(roundmode);
 }
 
-/** solves a quadratic equation with interval linear and constant coefficients
- * 
- * Given a scalar a and intervals b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ */
+/** solves a quadratic equation with interval coefficients
+ *
+ * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$
+ */
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
 )
 {
    SCIP_Real tmp;
-   
+
    assert(resultant != NULL);
-   
-   if( sqrcoeff == 0.0 )
+
+   if( sqrcoeff.inf == 0.0 && sqrcoeff.sup == 0.0 )
    { /* relatively easy case: x \in rhs / lincoeff */
       if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 )
       { /* equation became 0.0 \in rhs */
@@ -3015,24 +3026,24 @@ void SCIPintervalSolveUnivariateQuadExpression(
       SCIPdebugMessage("  solving [%g,%g]*x in [%g,%g] gives [%g,%g]\n", SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
       return;
    }
-   
+
    if( lincoeff.inf == 0.0 && lincoeff.sup == 0.0 )
    { /* easy case: x \in +/- sqrt(rhs/a) */
-      SCIPintervalDivScalar(infinity, resultant, rhs, sqrcoeff);
+      SCIPintervalDiv(infinity, resultant, rhs, sqrcoeff);
       SCIPintervalSquareRoot(infinity, resultant, *resultant);
       resultant->inf = -resultant->sup;
       return;
    }
 
    SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, resultant, sqrcoeff, lincoeff, rhs);
-   SCIPdebugMessage("  positive solving %g*x^2 + [%g,%g]*x in [%g,%g] gives [%g,%g]\n", sqrcoeff, SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
+   SCIPdebugMessage("  positive solving [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] gives [%g,%g]\n", sqrcoeff.inf, sqrcoeff.sup, SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
 
    tmp = lincoeff.inf;
    lincoeff.inf = -lincoeff.sup;
    lincoeff.sup = -tmp;
-   
+
    /* use lincoeff to store result of negated expression */
-   SCIPdebugMessage("  positive solving %g*x^2 + [%g,%g]*x in [%g,%g] gives", sqrcoeff, SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs));
+   SCIPdebugMessage("  positive solving [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] gives", sqrcoeff.inf, sqrcoeff.sup, SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs));
    SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &lincoeff, sqrcoeff, lincoeff, rhs);
    SCIPdebugMessage(" [%g,%g]\n", SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff));
    if( !SCIPintervalIsEmpty(lincoeff) )

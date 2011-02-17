@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.156 2011/02/06 18:56:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.157 2011/02/17 16:33:53 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5598,15 +5598,20 @@ SCIP_RETCODE propagateBoundsQuadVar(
    }
    else if( SCIPvarGetLbLocal(var) >= 0.0 )
    { 
+      SCIP_INTERVAL a_;
+
       /* need only positive solutions */
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &newrange, a, b, rhs);
+      SCIPintervalSet(&a_, a);
+      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &newrange, a_, b, rhs);
    }
    else if( SCIPvarGetUbLocal(var) <= 0.0 )
    {
       /* need only negative solutions */
+      SCIP_INTERVAL a_;
       SCIP_INTERVAL tmp;
+      SCIPintervalSet(&a_, a);
       SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
-      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a, tmp, rhs);
+      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a_, tmp, rhs);
       if( SCIPintervalIsEmpty(tmp) )
       {
          SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
@@ -5619,7 +5624,9 @@ SCIP_RETCODE propagateBoundsQuadVar(
    else
    {
       /* need both positive and negative solution */
-      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a, b, rhs);
+      SCIP_INTERVAL a_;
+      SCIPintervalSet(&a_, a);
+      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a_, b, rhs);
    }
    
    /* SCIPdebugMessage("%g x^2 + [%g, %g] x in [%g, %g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, newrange.inf, newrange.sup); */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.35 2011/01/30 20:02:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.36 2011/02/17 16:33:53 bzfviger Exp $"
 
 /**@file   scip/intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -89,6 +89,12 @@ void SCIPintervalSetRoundingModeToNearest(
 extern
 void SCIPintervalSetRoundingModeTowardsZero(
    void
+   );
+
+/** negates a number in a way that the compiler does not optimize it away */
+extern
+SCIP_Real SCIPintervalNegateReal(
+   SCIP_Real             x                   /**< number to negate */
    );
 
 #ifndef NDEBUG
@@ -569,22 +575,24 @@ void SCIPintervalQuad(
    );
 
 
-/** solves a quadratic equation with interval linear and constant coefficients
+/** computes interval with positive solutions of a quadratic equation with interval coefficients
  * 
- * Given a scalar a and intervals b and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$. */
+ * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
+ */
 extern
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
 );
 
-/** solves a quadratic equation with linear and constant coefficients
+/** computes positive solutions of a quadratic equation with scalar coefficients
  * 
  * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
- * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008). */
+ * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
+ */
 extern
 void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -594,14 +602,15 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_Real             rhs                 /**< right hand side of equation */
 );
 
-/** solves a quadratic equation with interval linear and constant coefficients
- * 
- * Given a scalar a and intervals b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ */
+/** solves a quadratic equation with interval coefficients
+ *
+ * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$
+ */
 extern
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         sqrcoeff,           /**< coefficient of x^2 */
    SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
    SCIP_INTERVAL         rhs                 /**< right hand side of equation */
 );
