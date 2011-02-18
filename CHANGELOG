@@ -30,6 +30,7 @@ interface:
 - using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
 - added function SCIPcomputeLPRelIntPoint() to compute a relative interior point of the current LP
 - added function SCIPsepastoreRemoveRedundantCuts() to remove redundant cuts from the separation storage
+- added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
 
 performance improvements:
 - performance improvements in prop_vbounds
