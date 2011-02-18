@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.128 2011/01/12 19:55:37 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.129 2011/02/18 11:09:05 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -1174,6 +1174,11 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
+   int verbosity;
+
+   verbosity = Param::verbose();
+   Param::setVerbose(0);
+
    try
    {
       SPxSCIP spx("tmp");
@@ -1186,9 +1191,11 @@ const char* SCIPlpiGetSolverName(
    {
       std::string s = x.what();      
       SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      Param::setVerbose(verbosity);
       return NULL;
    }
 
+   Param::setVerbose(verbosity);
    return spxname;
 }
 
