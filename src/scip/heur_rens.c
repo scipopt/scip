@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.57.2.3 2011/01/11 10:32:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.57.2.4 2011/02/18 13:45:48 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -288,9 +288,7 @@ SCIP_RETCODE SCIPapplyRens(
    int nvars;                     
    int i;   
 
-#ifdef NDEBUG
-   SCIP_RETCODE retstat;
-#endif
+   SCIP_RETCODE retcode;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -417,21 +415,19 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
    }
 
-   /* solve the subproblem */
-   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+   /* presolve the subproblem */
+   retcode = SCIPpresolve(subscip);
+
+   /* Errors in solving the subproblem should not kill the overall solving process 
+    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
     */
-#ifdef NDEBUG
-   retstat = SCIPpresolve(subscip);
-   if( retstat != SCIP_OKAY )
+   if( retcode != SCIP_OKAY )
    { 
-      SCIPwarningMessage("Error while presolving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
-   }
-#else
-   SCIP_CALL( SCIPpresolve(subscip) );
+#ifndef NDEBUG
+      SCIP_CALL( retcode );     
 #endif
-
-
+      SCIPwarningMessage("Error while presolving subproblem in RENS heuristic; subSCIP terminated with code <%d>\n",retcode);
+   }
 
    SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
@@ -455,18 +451,20 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_SOL** subsols;
       int nsubsols;
 
+      /* solve the subproblem */
       SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, maxnodes);
-
-#ifdef NDEBUG
-      retstat = SCIPsolve(subscip);
-      if( retstat != SCIP_OKAY )
+      retcode = SCIPsolve(subscip);
+      
+      /* Errors in solving the subproblem should not kill the overall solving process 
+       * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+      if( retcode != SCIP_OKAY )
       { 
-         SCIPwarningMessage("Error while solving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
-      }
-#else
-      SCIP_CALL( SCIPsolve(subscip) );
+#ifndef NDEBUG
+         SCIP_CALL( retcode );     
 #endif
-
+         SCIPwarningMessage("Error while solving subproblem in RENS heuristic; subSCIP terminated with code <%d>\n",retcode);
+      }
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
