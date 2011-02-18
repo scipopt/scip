@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.117 2011/02/18 13:52:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.118 2011/02/18 19:20:11 bzfpfets Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1566,7 +1566,6 @@ SCIP_RETCODE solveSubproblem(
    SCIP_HASHMAP* varmap;
 
    SCIP_RETCODE retcode;
-   SCIP_Bool success;
 
    int nvars;
    int i;
