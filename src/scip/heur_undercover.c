@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.116 2011/02/18 13:49:40 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.117 2011/02/18 13:52:03 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1565,11 +1565,9 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
 
-<<<<<<< heur_undercover.c
-=======
    SCIP_RETCODE retcode;
    SCIP_Bool success;
->>>>>>> 1.107.2.4
+
    int nvars;
    int i;
 
@@ -1678,9 +1676,7 @@ SCIP_RETCODE solveSubproblem(
    }
       
    /* solve subproblem */
-<<<<<<< heur_undercover.c
    SCIPdebugMessage("solving subproblem started\n");
-=======
    retcode = SCIPsolve(subscip);
    
    /* Errors in solving the subproblem should not kill the overall solving process 
@@ -1688,7 +1684,6 @@ SCIP_RETCODE solveSubproblem(
     */
    if( retcode != SCIP_OKAY )
    { 
->>>>>>> 1.107.2.4
 #ifndef NDEBUG
       SCIP_CALL( retcode );     
 #endif

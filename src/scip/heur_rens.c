@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.63 2011/02/18 13:49:40 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.64 2011/02/18 13:52:03 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -340,15 +340,8 @@ SCIP_RETCODE SCIPapplyRens(
    int nvars;                     
    int i;   
 
-<<<<<<< heur_rens.c
    SCIP_Bool success;
-
-#ifdef NDEBUG
-   SCIP_RETCODE retstat;                     /* to catch the return value */
-#endif
-=======
    SCIP_RETCODE retcode;
->>>>>>> 1.57.2.4
 
    assert(scip != NULL);
    assert(heur != NULL);
