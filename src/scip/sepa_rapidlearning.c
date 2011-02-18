@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.42 2011/02/18 13:49:40 bzfberth Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -204,10 +205,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    int i;                                    /* counter                                                   */
 
    SCIP_Bool success;                        /* was problem creation / copying constraint successful? */
-
-#ifdef NDEBUG
-   SCIP_RETCODE retstat;                     /* used for catching subSCIP errors in debug mode */
-#endif
+   SCIP_RETCODE retcode;                     /* used for catching subSCIP errors in debug mode */
 
    int nconflicts;                          /* statistic: number of conflicts applied         */
    int nbdchgs;                             /* statistic: number of bound changes applied     */
@@ -388,21 +386,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    nfixedvars = SCIPgetNFixedVars(scip);
    
-   /* solve the subproblem.
-    * Errors in the sub problem solver should not kill the overall solving process.
-    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+   /* solve the subproblem */
+   retcode = SCIPsolve(subscip);
+   
+   /* Errors in solving the subproblem should not kill the overall solving process 
+    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
     */
-#ifdef NDEBUG
-   retstat = SCIPsolve(subscip);
-
-   if( retstat != SCIP_OKAY )
+   if( retcode != SCIP_OKAY )
    { 
-      SCIPwarningMessage("Error while solving subMIP in rapid learning separator; subSCIP terminated with code <%d>\n", retstat);
-   }
-#else
-   SCIP_CALL( SCIPsolve(subscip) );
+#ifndef NDEBUG
+      SCIP_CALL( retcode );     
 #endif
-
+      SCIPwarningMessage("Error while solving subproblem in rapid learning separator; subSCIP terminated with code <%d>\n",retcode);
+   }
  
    /* abort solving, if limit of applied conflicts is reached */
    if( SCIPgetNConflictConssApplied(subscip) >= restartnum && restarts == 0 )
@@ -432,17 +428,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       /* set node limit to 100% */
       SCIP_CALL( SCIPgetLongintParam(subscip, "limits/nodes", &nodelimit) );
 
-#ifdef NDEBUG
-      retstat = SCIPsolve(subscip);
-
-      if( retstat != SCIP_OKAY )
+      /* solve the subproblem */
+      retcode = SCIPsolve(subscip);
+   
+      /* Errors in solving the subproblem should not kill the overall solving process 
+       * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+      if( retcode != SCIP_OKAY )
       { 
-         SCIPwarningMessage("Error while solving subMIP in rapid learning separator; subSCIP terminated with code <%d>\n", retstat);
-      }
-#else
-  
-      SCIP_CALL( SCIPsolve(subscip) );
+#ifndef NDEBUG
+         SCIP_CALL( retcode );     
 #endif
+         SCIPwarningMessage("Error while solving subproblem in rapid learning separator; subSCIP terminated with code <%d>\n",retcode);
+      }
    }
    else
    {

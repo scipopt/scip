@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.115 2011/01/07 20:02:49 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.116 2011/02/18 13:49:40 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1062,6 +1062,7 @@ SCIP_RETCODE solveCoveringProblem(
 {
    SCIP_Real* solvals;
    SCIP_Real totalpenalty;
+   SCIP_RETCODE retcode;
    int i;
 
    assert(coveringscip != NULL);
@@ -1093,30 +1094,19 @@ SCIP_RETCODE solveCoveringProblem(
 #endif
  
    /* solve covering problem */
+   retcode = SCIPsolve(coveringscip);
+   
+   /* Errors in solving the covering problem should not kill the overall solving process 
+    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   if( retcode != SCIP_OKAY )
+   { 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPpresolve(coveringscip) );
-   SCIPdebugMessage("presolved covering problem: %d vars, %d cons\n", SCIPgetNVars(coveringscip), SCIPgetNConss(coveringscip));
-   SCIP_CALL( SCIPsolve(coveringscip) );
-#else
-   /* errors in a heuristic should not kill the overall solving process, hence in optimized mode, the return code is
-    * catched and a warning is printed; only in debug mode, SCIP will stop */
-   {
-      SCIP_RETCODE retstat;
-      retstat = SCIPpresolve(coveringscip);
-      if( retstat != SCIP_OKAY )
-      {
-         SCIPwarningMessage("error while presolving covering problem: terminated with code <%d>\n", retstat);
-         return SCIP_OKAY;
-      }
-
-      retstat = SCIPsolve(coveringscip);
-      if( retstat != SCIP_OKAY )
-      {
-         SCIPwarningMessage("error while solving covering problem: terminated with code <%d>\n", retstat);
-         return SCIP_OKAY;
-      }
-   }
+      SCIP_CALL( retcode );     
 #endif
+      SCIPwarningMessage("Error while solving covering problem in Undercover heuristic; subSCIP terminated with code <%d>\n",retcode);
+      return SCIP_OKAY;
+   }
 
    /* check, whether a feasible cover was found */
    if( SCIPgetNSols(coveringscip) == 0 )
@@ -1575,6 +1565,11 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
 
+<<<<<<< heur_undercover.c
+=======
+   SCIP_RETCODE retcode;
+   SCIP_Bool success;
+>>>>>>> 1.107.2.4
    int nvars;
    int i;
 
@@ -1683,31 +1678,23 @@ SCIP_RETCODE solveSubproblem(
    }
       
    /* solve subproblem */
+<<<<<<< heur_undercover.c
    SCIPdebugMessage("solving subproblem started\n");
+=======
+   retcode = SCIPsolve(subscip);
+   
+   /* Errors in solving the subproblem should not kill the overall solving process 
+    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   if( retcode != SCIP_OKAY )
+   { 
+>>>>>>> 1.107.2.4
 #ifndef NDEBUG
-   SCIP_CALL( SCIPpresolve(subscip) );
-   SCIPdebugMessage("presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
-   SCIP_CALL( SCIPsolve(subscip) );
-#else
-   /* errors in a heuristic should not kill the overall solving process, hence in optimized mode, the return code is
-    * catched and a warning is printed; only in debug mode, SCIP will stop */
-   {
-      SCIP_RETCODE retstat;
-      retstat = SCIPpresolve(subscip);
-      if( retstat != SCIP_OKAY )
-      {
-         SCIPwarningMessage("error while presolving subproblem: terminated with code <%d>\n", retstat);
-         return SCIP_OKAY;
-      }
-
-      retstat = SCIPsolve(subscip);
-      if( retstat != SCIP_OKAY )
-      {
-         SCIPwarningMessage("error while solving subproblem: terminated with code <%d>\n", retstat);
-         return SCIP_OKAY;
-      }
-   }
+      SCIP_CALL( retcode );     
 #endif
+      SCIPwarningMessage("Error while solving subproblem in Undercover heuristic; subSCIP terminated with code <%d>\n",retcode);
+      return SCIP_OKAY;
+   }
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );

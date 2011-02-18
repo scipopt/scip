@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_dins.c,v 1.43 2011/02/07 16:14:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_dins.c,v 1.44 2011/02/18 13:49:40 bzfberth Exp $"
 
 /**@file   heur_dins.c
  * @ingroup PRIMALHEURISTICS
@@ -492,9 +492,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_Bool success;                        /* used to store whether new solution was found or not          */
    SCIP_Bool infeasible;                     /* stores whether the hard fixing of a variables was feasible or not */
 
-#ifdef NDEBUG
-    SCIP_RETCODE retstat;
-#endif
+   SCIP_RETCODE retcode;
    
    assert( heur != NULL );
    assert( scip != NULL );
@@ -757,19 +755,19 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    
    /* solve the subproblem */
    SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n", heurdata->neighborhoodsize, nsubnodes );
+   retcode = SCIPsolve(subscip);
 
-   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+   /* Errors in solving the subproblem should not kill the overall solving process 
+    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
     */
-#ifdef NDEBUG
-   retstat = SCIPsolve(subscip);
-   if( retstat != SCIP_OKAY )
+   if( retcode != SCIP_OKAY )
    { 
-      SCIPwarningMessage("Error while solving subMIP in DINS heuristic; subSCIP terminated with code <%d>\n",retstat);
-   }
-#else
-   SCIP_CALL( SCIPsolve(subscip) );
+#ifndef NDEBUG
+      SCIP_CALL( retcode );     
 #endif
+      SCIPwarningMessage("Error while solving subproblem in DINS heuristic; subSCIP terminated with code <%d>\n",retcode);
+   }
+   
    heurdata->usednodes += SCIPgetNNodes(subscip);
    nsubsols = SCIPgetNSols(subscip);
    SCIPdebugMessage("DINS used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);

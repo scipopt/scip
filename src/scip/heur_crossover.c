@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.64 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.65 2011/02/18 13:49:40 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -686,9 +686,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    int nusedsols;
    int i;   
 
-#ifdef NDEBUG
-   SCIP_RETCODE retstat;
-#endif
+   SCIP_RETCODE retcode;
   
    assert(heur != NULL);
    assert(scip != NULL);
@@ -888,20 +886,18 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    
    /* solve the subproblem */
    SCIPdebugMessage("Solve Crossover subMIP\n");
- 
-   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+   retcode = SCIPsolve(subscip);
+   
+   /* Errors in solving the subproblem should not kill the overall solving process 
+    * Hence, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
     */
-#ifdef NDEBUG
-   retstat = SCIPsolve(subscip);
-   if( retstat != SCIP_OKAY )
+   if( retcode != SCIP_OKAY )
    { 
-      SCIPwarningMessage("Error while solving subMIP in crossover heuristic; subSCIP terminated with code <%d>\n",
-         retstat);
-   }
-#else
-   SCIP_CALL( SCIPsolve(subscip) );
+#ifndef NDEBUG
+      SCIP_CALL( retcode );     
 #endif
+      SCIPwarningMessage("Error while solving subproblem in Crossover heuristic; subSCIP terminated with code <%d>\n",retcode);
+   }
    
    heurdata->usednodes += SCIPgetNNodes(subscip);
 
