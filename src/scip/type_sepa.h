@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.28 2011/01/02 11:10:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.29 2011/02/18 19:22:43 bzfpfets Exp $"
 
 /**@file   type_sepa.h
  * @ingroup TYPEDEFINITIONS
@@ -108,6 +108,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_NEWROUND   : a cutting plane was generated and a new separation round should immediately start
  *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
@@ -130,6 +131,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_NEWROUND   : a cutting plane was generated and a new separation round should immediately start
  *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again

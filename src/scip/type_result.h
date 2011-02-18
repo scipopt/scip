@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_result.h,v 1.18 2011/01/02 11:10:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_result.h,v 1.19 2011/02/18 19:22:43 bzfpfets Exp $"
 
 /**@file   type_result.h
  * @brief  result codes for SCIP callback methods
@@ -39,14 +39,15 @@ enum SCIP_Result
    SCIP_UNBOUNDED   =   6,            /**< an unboundness was detected */
    SCIP_CUTOFF      =   7,            /**< the current node is infeasible and can be cut off */
    SCIP_SEPARATED   =   8,            /**< the method added a cutting plane */
-   SCIP_REDUCEDDOM  =   9,            /**< the method reduced the domain of a variable */
-   SCIP_CONSADDED   =  10,            /**< the method added a constraint */
-   SCIP_CONSCHANGED =  11,            /**< the method changed a constraint */
-   SCIP_BRANCHED    =  12,            /**< the method created a branching */
-   SCIP_SOLVELP     =  13,            /**< the current node's LP must be solved */
-   SCIP_FOUNDSOL    =  14,            /**< the method found a feasible primal solution */
-   SCIP_SUCCESS     =  15,            /**< the method was successfully executed */  
-   SCIP_SUSPENDED   =  16             /**< the method interrupted its execution, but can continue if needed */
+   SCIP_NEWROUND    =   9,            /**< the method added a cutting plane and a new separation round should immediately start */
+   SCIP_REDUCEDDOM  =  10,            /**< the method reduced the domain of a variable */
+   SCIP_CONSADDED   =  11,            /**< the method added a constraint */
+   SCIP_CONSCHANGED =  12,            /**< the method changed a constraint */
+   SCIP_BRANCHED    =  13,            /**< the method created a branching */
+   SCIP_SOLVELP     =  14,            /**< the current node's LP must be solved */
+   SCIP_FOUNDSOL    =  15,            /**< the method found a feasible primal solution */
+   SCIP_SUSPENDED   =  16,            /**< the method interrupted its execution, but can continue if needed */
+   SCIP_SUCCESS     =  17             /**< the method was successfully executed */  
 };
 typedef enum SCIP_Result SCIP_RESULT;           /**< result codes for SCIP callback methods */
 

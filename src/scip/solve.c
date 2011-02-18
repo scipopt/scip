@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.325 2011/02/04 22:03:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.326 2011/02/18 19:22:43 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1161,7 +1162,7 @@ SCIP_RETCODE separationRoundLP(
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1172,7 +1173,7 @@ SCIP_RETCODE separationRoundLP(
       SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, eventqueue, eventfilter, prob, lp, cutoff, lperror, mustsepa, mustprice) );
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
-      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
          SCIPdebugMessage(" -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
          *delayed = TRUE;
@@ -1194,7 +1195,7 @@ SCIP_RETCODE separationRoundLP(
             &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1206,7 +1207,7 @@ SCIP_RETCODE separationRoundLP(
       SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, eventqueue, eventfilter, prob, lp, cutoff, lperror, mustsepa, mustprice) );
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
-      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
          SCIPdebugMessage(" -> delayed constraint handler <%s> found a cut\n",
             SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
@@ -1231,7 +1232,7 @@ SCIP_RETCODE separationRoundLP(
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1242,7 +1243,7 @@ SCIP_RETCODE separationRoundLP(
       SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, eventqueue, eventfilter, prob, lp, cutoff, lperror, mustsepa, mustprice) );
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
-      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
          SCIPdebugMessage(" -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
          *delayed = TRUE;
@@ -1266,7 +1267,7 @@ SCIP_RETCODE separationRoundLP(
                &result) );
 	 *cutoff = *cutoff || (result == SCIP_CUTOFF);
 	 consadded = consadded || (result == SCIP_CONSADDED);
-	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
 	 *delayed = *delayed || (result == SCIP_DELAYED);
          if( *cutoff )
          {
@@ -1333,7 +1334,7 @@ SCIP_RETCODE separationRoundSol(
       SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1341,7 +1342,7 @@ SCIP_RETCODE separationRoundSol(
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
-      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
          *delayed = TRUE;
          return SCIP_OKAY;
@@ -1358,7 +1359,7 @@ SCIP_RETCODE separationRoundSol(
             &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1367,7 +1368,7 @@ SCIP_RETCODE separationRoundSol(
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
-      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
          *delayed = TRUE;
          return SCIP_OKAY;
@@ -1386,7 +1387,7 @@ SCIP_RETCODE separationRoundSol(
       SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1394,7 +1395,7 @@ SCIP_RETCODE separationRoundSol(
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
-      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
          *delayed = TRUE;
          return SCIP_OKAY;
@@ -1412,7 +1413,7 @@ SCIP_RETCODE separationRoundSol(
 	 SCIP_CALL( SCIPconshdlrSeparateSol(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, sol, actdepth, onlydelayed, &result) );
 	 *cutoff = *cutoff || (result == SCIP_CUTOFF);
 	 consadded = consadded || (result == SCIP_CONSADDED);
-	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
 	 *delayed = *delayed || (result == SCIP_DELAYED);
          if( *cutoff )
          {
@@ -1904,7 +1905,7 @@ SCIP_RETCODE priceAndCutLoop(
                assert(SCIPsepastoreGetNCuts(sepastore) == 0);
                SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, root, &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
+               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
                if( *cutoff )
                {
                   SCIPdebugMessage(" -> global cut pool detected cutoff\n");

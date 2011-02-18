@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.223 2011/01/31 18:46:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.224 2011/02/18 19:22:43 bzfpfets Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2501,6 +2501,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
                && *result != SCIP_CONSADDED
                && *result != SCIP_REDUCEDDOM
                && *result != SCIP_SEPARATED
+               && *result != SCIP_NEWROUND
                && *result != SCIP_DIDNOTFIND
                && *result != SCIP_DIDNOTRUN
                && *result != SCIP_DELAYED )
@@ -2625,6 +2626,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
                && *result != SCIP_CONSADDED
                && *result != SCIP_REDUCEDDOM
                && *result != SCIP_SEPARATED
+               && *result != SCIP_NEWROUND
                && *result != SCIP_DIDNOTFIND
                && *result != SCIP_DIDNOTRUN
                && *result != SCIP_DELAYED )
