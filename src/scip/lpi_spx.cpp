@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.129 2011/02/18 11:09:05 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.130 2011/02/19 14:18:52 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -458,7 +458,10 @@ public:
 
    virtual Status doSolve(bool printwarning = true)
    {
-      /* set verbosity */
+      int verbosity;
+
+      /* store and set verbosity */
+      verbosity = Param::verbose();
       Param::setVerbose(getLpInfo() ? 5 : 0);
 
 #ifdef WITH_LPSCHECK
@@ -606,6 +609,9 @@ public:
 
    ENDCHECK:
 #endif
+
+      /* restore verbosity */
+      Param::setVerbose(verbosity);
 
       return m_stat;
    }
