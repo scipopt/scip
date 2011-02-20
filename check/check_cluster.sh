@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.47 2011/02/07 21:15:04 bzfpfets Exp $
+# $Id: check_cluster.sh,v 1.48 2011/02/20 18:57:24 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -88,14 +88,6 @@ then
     echo Skipping test since the number of nodes has not been defined.
     exit
 fi
-
-# check if client tmp-dir has been defined
-if test "$CLIENTTMPDIR" = ""
-then
-    echo Skipping test since the path for the tmp-dir on the clients has not been defined.
-    exit
-fi
-
 
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
