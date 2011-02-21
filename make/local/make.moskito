@@ -1,6 +1,7 @@
-#--- $Id: make.moskito,v 1.4 2011/02/19 16:59:26 bzfpfets Exp $
+#--- $Id: make.moskito,v 1.5 2011/02/21 20:36:53 bzfpfets Exp $
 override MEM	=	7110
 QUEUE		=	extra
 PPN		=	2
 CLIENTTMPDIR	=	/tmp
+NOWAITCLUSTER   =       1
 

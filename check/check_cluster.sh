@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.48 2011/02/20 18:57:24 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.49 2011/02/21 20:36:53 bzfpfets Exp $
 #
 # Call with "make testcluster"
 #
@@ -47,6 +47,7 @@ LPS=${13}
 QUEUE=${14}
 PPN=${15}
 CLIENTTMPDIR=${16}
+NOWAITCLUSTER=${17}
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -120,7 +121,10 @@ do
       # reached the submitted jobs are dumped; to avoid that we check the total
       # load of the cluster and wait until it is save (total load not more than
       # 1900 jobs) to submit the next job.
-      ./waitcluster.sh 1500 $QUEUE 200
+      if test "$NOWAITCLUSTER" != "1"
+      then
+	  ./waitcluster.sh 1500 $QUEUE 200
+      fi
 
       SHORTFILENAME=`basename $i .gz`
       SHORTFILENAME=`basename $SHORTFILENAME .mps`
