@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.60 2011/02/17 16:33:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.61 2011/02/22 18:47:36 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -2007,20 +2007,24 @@ void SCIPintervalPowerScalar(
             /* inf^+ = inf */
             resultant->inf = infinity;
          }
-         else
+         else if( operand1.inf > 0.0 )
          {
             assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, noone should have changed rounding mode */
             resultant->inf = nextafter(pow(operand1.inf, operand2), SCIP_REAL_MIN);
          }
+         else
+            resultant->inf = 0.0;
          if( operand1.sup >= infinity )
          {
             resultant->sup = infinity;
          }
-         else
+         else if( operand1.sup > 0.0 )
          {
             assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, noone should have changed rounding mode */
             resultant->sup = nextafter(pow(operand1.sup, operand2), SCIP_REAL_MAX);
          }
+         else
+            resultant->sup = 0.0;
       }
       else
       {
@@ -2067,7 +2071,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->inf = SCIPintervalPowerScalarIntegerInf(operand1.sup, (int)operand2);
+            resultant->inf = SCIPintervalPowerScalarIntegerInf(-operand1.sup, (int)operand2);
          }
          if( operand1.inf <= -infinity )
          {
@@ -2075,7 +2079,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->sup = SCIPintervalPowerScalarIntegerSup(operand1.inf, (int)operand2);
+            resultant->sup = SCIPintervalPowerScalarIntegerSup(-operand1.inf, (int)operand2);
          }
       }
       else if( operand2 <= 0.0 && ceil(operand2/2) != operand2/2 )
@@ -2119,7 +2123,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->inf = SCIPintervalPowerScalarIntegerInf(operand1.inf, (int)operand2);
+            resultant->inf = -SCIPintervalPowerScalarIntegerSup(-operand1.inf, (int)operand2);
          }
          if( operand1.sup <= -infinity )
          {
@@ -2127,7 +2131,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->sup = SCIPintervalPowerScalarIntegerSup(operand1.sup, (int)operand2);
+            resultant->sup = -SCIPintervalPowerScalarIntegerInf(-operand1.sup, (int)operand2);
          }
       }
       else
@@ -2144,7 +2148,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->inf = SCIPintervalPowerScalarIntegerSup(operand1.inf, (int)operand2);
+            resultant->inf = SCIPintervalPowerScalarIntegerSup(-operand1.inf, (int)operand2);
          }
          if( operand1.sup <= -infinity )
          {
@@ -2157,7 +2161,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->sup = SCIPintervalPowerScalarIntegerSup(operand1.sup, (int)operand2);
+            resultant->sup = SCIPintervalPowerScalarIntegerSup(-operand1.sup, (int)operand2);
          }
       }
       assert(resultant->inf <= resultant->sup);
@@ -2201,7 +2205,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->inf = SCIPintervalPowerScalarIntegerInf(operand1.inf, (int)operand2);
+            resultant->inf = -SCIPintervalPowerScalarIntegerSup(-operand1.inf, (int)operand2);
          }
          if( operand1.sup == infinity )
          {
@@ -3009,6 +3013,8 @@ void SCIPintervalSolveUnivariateQuadExpression(
 )
 {
    SCIP_Real tmp;
+   SCIP_INTERVAL xpos;
+   SCIP_INTERVAL xneg;
 
    assert(resultant != NULL);
 
@@ -3035,31 +3041,23 @@ void SCIPintervalSolveUnivariateQuadExpression(
       return;
    }
 
-   SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, resultant, sqrcoeff, lincoeff, rhs);
-   SCIPdebugMessage("  positive solving [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] gives [%g,%g]\n", sqrcoeff.inf, sqrcoeff.sup, SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
+   /* find all x>=0 such that a*x^2+b*x = c */
+   SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xpos, sqrcoeff, lincoeff, rhs);
+   SCIPdebugMessage("  positive solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] are [%g,%g]\n",
+      sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xpos.inf, xpos.sup);
 
    tmp = lincoeff.inf;
    lincoeff.inf = -lincoeff.sup;
    lincoeff.sup = -tmp;
 
-   /* use lincoeff to store result of negated expression */
-   SCIPdebugMessage("  positive solving [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] gives", sqrcoeff.inf, sqrcoeff.sup, SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs));
-   SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &lincoeff, sqrcoeff, lincoeff, rhs);
-   SCIPdebugMessage(" [%g,%g]\n", SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff));
-   if( !SCIPintervalIsEmpty(lincoeff) )
-   {
-      if( !SCIPintervalIsEmpty(*resultant) )
-      {
-         tmp = lincoeff.sup;
-         lincoeff.inf = -lincoeff.sup;
-         lincoeff.sup = -tmp;
-         SCIPintervalUnify(resultant, lincoeff, *resultant);
-         SCIPdebugMessage("  unify gives [%g,%g]\n", SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
-      }
-      else
-      {
-         resultant->inf = -lincoeff.sup;
-         resultant->sup = -lincoeff.inf;
-      }
-   }
+   /* find all x>=0 such that a*x^2-b*x = c */
+   SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xneg, sqrcoeff, lincoeff, rhs);
+   tmp = xneg.inf;
+   xneg.inf = -xneg.sup;
+   xneg.sup = -tmp;
+   SCIPdebugMessage("  negative solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] are [%g,%g]\n",
+      sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, xneg.inf, xneg.sup);
+
+   SCIPintervalUnify(resultant, xpos, xneg);
+   SCIPdebugMessage("  unify gives [%g,%g]\n", SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
 }
