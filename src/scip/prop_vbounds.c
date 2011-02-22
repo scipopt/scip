@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.12.2.1 2011/01/02 11:19:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.12.2.2 2011/02/22 16:32:11 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -476,11 +476,24 @@ SCIP_RETCODE propagateVbounds(
          
             if( SCIPisPositive(scip, coef) )
             {
-               /* if b > 0 => x >= b*lb(y) + d */ 
-               if( SCIPisGT(scip, coef*SCIPvarGetLbLocal(vbvar) + constant, newbound) )
+               SCIP_Real candbound;
+               SCIP_Real lb;
+
+               lb =  SCIPvarGetLbLocal(vbvar);
+
+               /* ignore variable bound variables with a lower bound of minus infinity */
+               if( SCIPisInfinity(scip, -lb) )
+                  continue;
+
+               /* compute candidate bound; if b > 0 => x >= b*lb(y) + d */ 
+               candbound =  coef * lb + constant;
+
+               /* check if candidate bound is better */
+               if( SCIPisGT(scip, candbound, newbound) )
                {
                   assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef*SCIPvarGetLbLocal(vbvar) + constant;
+
+                  newbound = candbound;
                
                   SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
                      newbound, SCIPvarGetName(vbvar), n);
@@ -493,11 +506,24 @@ SCIP_RETCODE propagateVbounds(
             }
             else
             {
-               /* if b < 0 => x >= b*ub(y) + d */ 
-               if( SCIPisGT(scip, coef*SCIPvarGetUbLocal(vbvar) + constant, newbound) )
+               SCIP_Real candbound;
+               SCIP_Real ub;
+
+               ub =  SCIPvarGetUbLocal(vbvar);
+
+               /* ignore variable bound variables with an upper bound of infinity */
+               if( SCIPisInfinity(scip, ub) )
+                  continue;
+
+               /* compute candidate bound; if b < 0 => x >= b*ub(y) + d */ 
+               candbound =  coef * ub + constant;
+
+               /* check if candidate bound is better */
+               if( SCIPisGT(scip, candbound, newbound) )
                {
                   assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef*SCIPvarGetUbLocal(vbvar) + constant;
+
+                  newbound = candbound;
 
                   SCIPdebugMessage(" -> new lower bound candidate <%.15g> due to upper bound of variable <%s> (n=%d)\n",
                      newbound, SCIPvarGetName(vbvar), n);
@@ -593,11 +619,24 @@ SCIP_RETCODE propagateVbounds(
 
             if( SCIPisPositive(scip, coef) )
             {
-               if( SCIPisLT(scip, coef*SCIPvarGetUbLocal(vbvar) + constant, newbound) )
+               SCIP_Real candbound;
+               SCIP_Real ub;
+
+               ub = SCIPvarGetUbLocal(vbvar);
+
+               /* ignore variable bound variables with an upper bound of infinity */
+               if( SCIPisInfinity(scip, ub) )
+                  continue;
+               
+               /* compute candidate for new bound; if b > 0 => x <= b*ub(y) + d */ 
+               candbound = coef * ub + constant;
+               
+               /* check if the candidate is better */
+               if(  SCIPisLT(scip, candbound, newbound) )
                {
-                  /* if b > 0 => x <= b*ub(y) + d */ 
                   assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef*SCIPvarGetUbLocal(vbvar) + constant;
+
+                  newbound = candbound;
 
                   SCIPdebugMessage(" -> new upper bound candidate <%.15g> due to upper bound of variable <%s> (n=%d)\n",
                      newbound, SCIPvarGetName(vbvar), n);
@@ -610,12 +649,25 @@ SCIP_RETCODE propagateVbounds(
             }
             else
             {
-               if( SCIPisLT(scip, coef*SCIPvarGetLbLocal(vbvar) + constant, newbound) )
-               {
-                  /* if b < 0 => x <= b*lb(y) + d */ 
-                  assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef*SCIPvarGetLbLocal(vbvar) + constant;
+               SCIP_Real candbound;
+               SCIP_Real lb;
 
+               lb = SCIPvarGetLbLocal(vbvar);
+
+               /* ignore variable bound variables with a lower bound of minus infinity */
+               if( SCIPisInfinity(scip, -lb) )
+                  continue;
+               
+               /* compute candidate bound; if b < 0 => x <= b*lb(y) + d */ 
+               candbound = coef * lb + constant;
+
+               /* check if candidate bound is better */
+               if( SCIPisLT(scip, candbound, newbound) )
+               {
+                  assert(SCIPvarGetProbindex(vbvar) > -1);
+
+                  newbound = candbound;
+                  
                   SCIPdebugMessage(" -> new upper bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
                      newbound, SCIPvarGetName(vbvar), n);
                   SCIPdebugMessage("         newub <= %.15g * [%.15g,%.15g] + %.15g\n", 
