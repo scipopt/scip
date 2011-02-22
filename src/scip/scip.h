@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.465 2011/02/05 21:28:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.466 2011/02/22 14:50:46 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -324,16 +324,16 @@ SCIP_RETCODE SCIPcopyVars(
    );
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constrint; elsewise a new constraint will be created and added to the target
- *  SCIP; this created constraint is added to the constraint hash map and returned as target constraint; the variable
- *  map is used to map the variables of the source SCIP to the variables of the target SCIP;
+ *  map, it is just returned as target constrint; elsewise a new constraint will be created in the target SCIP; this
+ *  created constraint is added to the constraint hash map and returned as target constraint; the variable map is used
+ *  to map the variables of the source SCIP to the variables of the target SCIP;
  *
  *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
  *  be declared feasible even if it violates this particular constraint.  This constellation should only be used, if no
  *  LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due to the variable's
  *  local bounds.
  *
- *  @note the constraint is not captured in the target SCIP
+ *  @note the constraint is not added and not captured in the target SCIP
  */
 extern
 SCIP_RETCODE SCIPgetConsCopy(
