@@ -55,6 +55,7 @@ plugins:
 - added clique heuristic (heur_clique.{c,h})
 - added pseudoboolean constraint handler (cons_pseudoboolean.{c,h})
 - all C template files are now called <plugintype>_xyz.{c,h} instead of <plugintype>_xxx.{c,h}
+- added first version of cons_disjunction.{c,h} which allows a disjunctions of constraints
 
 parameters:
 - added parameter <constraints/quadratic/disaggregate> to split a block-separable quadratic constraint into several quadratic constraint

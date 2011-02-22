@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.55 2011/01/03 19:35:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.56 2011/02/22 15:07:24 bzfheinz Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -43,6 +43,7 @@
 #include "scip/cons_conjunction.h"
 #include "scip/cons_countsols.h"
 #include "scip/cons_cumulative.h"
+#include "scip/cons_disjunction.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"

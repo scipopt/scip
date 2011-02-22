@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.403 2011/02/07 10:54:23 bzfheinz Exp $
+# $Id: Makefile,v 1.404 2011/02/22 15:07:23 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -516,6 +516,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_conjunction.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
+			scip/cons_disjunction.o \
 			scip/cons_eqknapsack.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
