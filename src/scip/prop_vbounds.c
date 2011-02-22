@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.20 2011/01/18 18:20:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.21 2011/02/22 16:38:10 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -1056,12 +1056,24 @@ SCIP_RETCODE propagateVbounds(
          
             if( SCIPisPositive(scip, coef) )
             {
-               /* if b > 0 => x >= b*lb(y) + d */ 
-               if( SCIPisGT(scip, coef * SCIPvarGetLbLocal(vbvar) + constant, newbound) )
+               SCIP_Real candbound;
+               SCIP_Real lb;
+
+               lb =  SCIPvarGetLbLocal(vbvar);
+
+               /* ignore variable bound variables with a lower bound of minus infinity */
+               if( SCIPisInfinity(scip, -lb) )
+                  continue;
+
+               /* compute candidate bound; if b > 0 => x >= b*lb(y) + d */ 
+               candbound =  coef * lb + constant;
+
+               /* check if candidate bound is better */
+               if( SCIPisGT(scip, candbound, newbound) )
                {
                   assert(SCIPvarGetProbindex(vbvar) > -1);
 
-                  newbound = coef * SCIPvarGetLbLocal(vbvar) + constant;
+                  newbound = candbound;
                   bestcoef = coef;
                   bestconstant = constant;
                
@@ -1080,12 +1092,24 @@ SCIP_RETCODE propagateVbounds(
             }
             else
             {
-               /* if b < 0 => x >= b*ub(y) + d */ 
-               if( SCIPisGT(scip, coef * SCIPvarGetUbLocal(vbvar) + constant, newbound) )
+               SCIP_Real candbound;
+               SCIP_Real ub;
+
+               ub =  SCIPvarGetUbLocal(vbvar);
+
+               /* ignore variable bound variables with an upper bound of infinity */
+               if( SCIPisInfinity(scip, ub) )
+                  continue;
+
+               /* compute candidate bound; if b < 0 => x >= b*ub(y) + d */ 
+               candbound =  coef * ub + constant;
+
+               /* check if candidate bound is better */
+               if( SCIPisGT(scip, candbound, newbound) )
                {
                   assert(SCIPvarGetProbindex(vbvar) > -1);
 
-                  newbound = coef * SCIPvarGetUbLocal(vbvar) + constant;
+                  newbound = candbound;
                   bestcoef = coef;
                   bestconstant = constant;
 
@@ -1184,11 +1208,24 @@ SCIP_RETCODE propagateVbounds(
 
             if( SCIPisPositive(scip, coef) )
             {
-               if( SCIPisLT(scip, coef*SCIPvarGetUbLocal(vbvar) + constant, newbound) )
+               SCIP_Real candbound;
+               SCIP_Real ub;
+
+               ub = SCIPvarGetUbLocal(vbvar);
+
+               /* ignore variable bound variables with an upper bound of infinity */
+               if( SCIPisInfinity(scip, ub) )
+                  continue;
+               
+               /* compute candidate for new bound; if b > 0 => x <= b*ub(y) + d */ 
+               candbound = coef * ub + constant;
+               
+               /* check if the candidate is better */
+               if(  SCIPisLT(scip, candbound, newbound) )
                {
-                  /* if b > 0 => x <= b*ub(y) + d */ 
                   assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef * SCIPvarGetUbLocal(vbvar) + constant;
+
+                  newbound = candbound;
                   bestcoef = coef;
                   bestconstant = constant;
 
@@ -1196,34 +1233,47 @@ SCIP_RETCODE propagateVbounds(
                      newbound, SCIPvarGetName(vbvar), n);
                   SCIPdebugMessage("         newub <= %.15g * [%.15g,%.15g] + %.15g\n", 
                      coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
-
+                  
                   /* get position of vbvar in variable arrays */
                   assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
                   pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-
+                  
                   /* construct infer info */
                   inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_UPPER);
                }
             }
             else
             {
-               if( SCIPisLT(scip, coef*SCIPvarGetLbLocal(vbvar) + constant, newbound) )
+               SCIP_Real candbound;
+               SCIP_Real lb;
+
+               lb = SCIPvarGetLbLocal(vbvar);
+
+               /* ignore variable bound variables with a lower bound of minus infinity */
+               if( SCIPisInfinity(scip, -lb) )
+                  continue;
+               
+               /* compute candidate bound; if b < 0 => x <= b*lb(y) + d */ 
+               candbound = coef * lb + constant;
+
+               /* check if candidate bound is better */
+               if( SCIPisLT(scip, candbound, newbound) )
                {
-                  /* if b < 0 => x <= b*lb(y) + d */ 
                   assert(SCIPvarGetProbindex(vbvar) > -1);
-                  newbound = coef * SCIPvarGetLbLocal(vbvar) + constant;
+
+                  newbound = candbound;
                   bestcoef = coef;
                   bestconstant = constant;
-
+                  
                   SCIPdebugMessage(" -> new upper bound candidate <%.15g> due to lower bound of variable <%s> (n=%d)\n",
                      newbound, SCIPvarGetName(vbvar), n);
                   SCIPdebugMessage("         newub <= %.15g * [%.15g,%.15g] + %.15g\n", 
                      coef, SCIPvarGetLbLocal(vbvar), SCIPvarGetUbLocal(vbvar), constant);
-
+                  
                   /* get position of vbvar in variable arrays */
                   assert(SCIPhashmapExists(propdata->varHashmap, vbvar));
                   pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
-
+                  
                   /* construct infer info */
                   inferinfo = getInferInfo((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar), SCIP_BOUNDTYPE_LOWER);
                }
@@ -1548,6 +1598,9 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
       var = vars[v];
       assert(var != NULL);
       
+      if( !SCIPvarIsActive(var) )
+         continue;
+
       /* get variable bounds */
       getVariableBounds(var, &vbvars, &nvbvars, lowerbound);
       
@@ -1558,6 +1611,9 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
 
       for( i = 0; i < nvbvars; ++i )
       {
+         if( !SCIPvarIsActive(vbvars[i]) )
+            continue;
+
          /* there is a leaving arc, hence, the variable/node  is connected */  
          assert(vbvars[i] != NULL);
          if( !SCIPhashtableExists(connected, vbvars[i]) )
