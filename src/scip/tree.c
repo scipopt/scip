@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.258 2011/01/27 18:06:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.259 2011/02/23 08:33:23 bzfgamra Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -3425,7 +3425,7 @@ SCIP_RETCODE focusnodeToFork(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3533,7 +3533,7 @@ SCIP_RETCODE focusnodeToSubroot(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -5283,7 +5283,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
          /* resolve LP to reset solution */
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,

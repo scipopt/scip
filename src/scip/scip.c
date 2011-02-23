@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.730 2011/02/22 14:50:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.731 2011/02/23 08:33:22 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -16100,7 +16100,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
 
    /* solve diving LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob,
-         itlim, FALSE, FALSE, lperror) );
+         itlim, FALSE, FALSE, FALSE, lperror) );
 
    /* analyze an infeasible LP (not necessary in the root node)
     * the infeasibility in diving is only proven, if all columns are in the LP (and no external pricers exist)
@@ -16428,7 +16428,7 @@ SCIP_RETCODE solveProbingLP(
 
    /* solve probing LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob,
-         itlim, FALSE, FALSE, lperror) );
+         itlim, FALSE, FALSE, FALSE, lperror) );
 
    /* mark the probing node to have a solved LP */
    if( !(*lperror) )

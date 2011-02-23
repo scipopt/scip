@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.61 2011/01/02 11:10:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.62 2011/02/23 08:33:23 bzfgamra Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -115,6 +115,7 @@ struct SCIP_Stat
    int                   marked_nrowidx;     /**< number of used row indices before solving started */
    int                   lpcount;            /**< internal counter, where all simplex calls are counted */
    int                   nlps;               /**< total number of LPs solved with at least 1 iteration */
+   int                   nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
    int                   nprimallps;         /**< number of primal LPs solved */
    int                   nduallps;           /**< number of dual LPs solved */
    int                   nlexduallps;        /**< number of lexicographic dual LPs solved */

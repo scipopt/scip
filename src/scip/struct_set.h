@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.108 2011/02/04 22:03:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.109 2011/02/23 08:33:23 bzfgamra Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -232,6 +232,9 @@ struct SCIP_Set
    SCIP_Real             lp_rowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    int                   lp_threads;         /**< number of threads used for solving the LP (0: automatic) */
+   SCIP_Real             lp_resolveiterfac;  /**< factor of average LP iterations that is used as LP iteration limit
+                                              *   for LP resolve (-1: unlimited) */
+   int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled? */

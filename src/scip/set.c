@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.265 2011/02/04 22:03:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.266 2011/02/23 08:33:22 bzfgamra Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -174,6 +174,9 @@
 #define SCIP_DEFAULT_LP_ROWREPSWITCH      1e+20 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
+#define SCIP_DEFAULT_LP_RESOLVEITERFAC       -1 /**< factor of average LP iterations that is used as LP iteration limit             
+                                                 *   for LP resolve (-1: unlimited) */                                              
+#define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 
 /* NLP */
 
@@ -1060,6 +1063,16 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/threads",
          "number of threads used for solving the LP (0: automatic)",
          &(*set)->lp_threads, TRUE, SCIP_DEFAULT_LP_THREADS, 0, 64,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "lp/resolveiterfac",
+         "factor of average LP iterations that is used as LP iteration limit for LP resolve (-1: unlimited)",
+         &(*set)->lp_resolveiterfac, TRUE, SCIP_DEFAULT_LP_RESOLVEITERFAC, -1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "lp/resolveitermin",
+         "minimum number of iterations that are allowed for LP resolve",
+         &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
          NULL, NULL) );
 
    /* NLP parameters */

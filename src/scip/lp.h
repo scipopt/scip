@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.146 2011/01/02 11:10:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.147 2011/02/23 08:33:22 bzfgamra Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -982,6 +982,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool             limitresolveiters,  /**< should LP iterations for resolving calls be limited? 
+                                              *   (limit is computed within the method w.r.t. the average LP iterations) */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */

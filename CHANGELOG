@@ -79,6 +79,9 @@ parameters:
 - changed possible parameter values of <branching/pscost/strategy> from "bri" to "cdsu": default is now 'u', i.e., to estimate the LP gain by a branching for
   external branching candidates (esp. continuous variables) the same way as their pseudo costs are updated
 - added possible value 'd' for <constraints/soc/nlpform> to choose a convex division form for SOC constraint representation in NLP
+- added parameters <lp/resolveitermin> and <lp/resolveiterfac> to limit the number of LP iterations in resolving calls: resolveiterfac is a factor 
+  by which the average number of iterations per call is multiplied to get the limit, but the limit is at least resolveitermin; default is
+  -1 (no limit) for resolveiterfac and 1000 for resolveitermin
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -108,6 +111,8 @@ features:
   or a constraint handler was called for resolving a propagation
 - new method SCIPpropGetRespropTime() and SCIPconshdlrGetRespropTime() which return time spent for resolving a propagation
   within a propagator  or a constraint handler
+- LP iterations in resolving calls can now be limited w.r.t. the average number of LP iterations in previous calls (after the root node);
+  this is currently only done for the initial LP solve at a node and the corresponding parameter resolveiterfac is set to -1 (no limit) per default
 
 SCIP version 2.0.2
 ==================
