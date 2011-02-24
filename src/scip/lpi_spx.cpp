@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.130 2011/02/19 14:18:52 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.131 2011/02/24 14:11:50 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
- * @brief  LP interface for SoPlex 1.4
+ * @brief  LP interface for SoPlex version 1.4 and higher
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Ambros Gleixer
@@ -78,6 +78,10 @@
 #error "This interface is not compatible with SoPlex versions prior to 1.4"
 #endif
 
+/* define subversion for versions <= 1.5.0.1 */
+#ifndef SOPLEX_SUBVERSION
+#define SOPLEX_SUBVERSION 0
+#endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
@@ -1180,28 +1184,13 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   int verbosity;
+   SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
-   verbosity = Param::verbose();
-   Param::setVerbose(0);
-
-   try
-   {
-      SPxSCIP spx("tmp");
-      int version;
-      
-      version = spx.version();
-      snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
-   }
-   catch(SPxException x)
-   {
-      std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
-      Param::setVerbose(verbosity);
-      return NULL;
-   }
-
-   Param::setVerbose(verbosity);
+#if (SOPLEX_SUBVERSION > 0)
+   snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION);
+#else
+   snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10);
+#endif
    return spxname;
 }
 
