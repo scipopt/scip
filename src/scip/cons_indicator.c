@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.117 2011/01/12 11:59:39 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.118 2011/02/24 19:57:20 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3084,7 +3084,10 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
       /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
       if ( i == nvars && foundslackvar )
       {
-         SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT) );
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         /* don't assert feasibility here because the presolver will and should detect a infeasibility */
       }
    }
 
@@ -4753,7 +4756,10 @@ SCIP_RETCODE SCIPaddVarIndicator(
    /* possibly adapt variable type */
    if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_CONTINUOUS && (! SCIPvarIsIntegral(var) || ! SCIPisIntegral(scip, val) ) )
    {
-      SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+      assert(!infeasible);
    }
 
    return SCIP_OKAY;

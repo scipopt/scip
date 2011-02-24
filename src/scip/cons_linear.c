@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.406 2011/01/28 01:29:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.407 2011/02/24 19:57:20 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5626,6 +5626,7 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Bool varsintegral;
    SCIP_Bool supinf;                         /* might the supremum of the multiaggregation be infinite? */
    SCIP_Bool infinf;                         /* might the infimum of the multiaggregation be infinite? */
+   SCIP_Bool infeasible;
 
    int maxnlocksstay;
    int maxnlocksremove;
@@ -5892,7 +5893,6 @@ SCIP_RETCODE convertLongEquality(
       SCIP_Real aggrconst;
       SCIP_Real newlhs;
       SCIP_Real newrhs;
-      SCIP_Bool infeasible;
       SCIP_Bool aggregated;
 
       /* do not multi aggregate binary variables */
@@ -5976,7 +5976,14 @@ SCIP_RETCODE convertLongEquality(
          /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
          SCIPdebugMessage("linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
             SCIPconsGetName(cons), SCIPvarGetName(var));
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT) );
+         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         if( infeasible )
+         {
+            SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
+            *cutoff = TRUE;
+
+            return SCIP_OKAY;
+         }
       }
    }
    else if( ncontvars == 0 && nintvars == 1 && !coefszeroone )
@@ -5998,7 +6005,14 @@ SCIP_RETCODE convertLongEquality(
          /* convert the integer variable with coefficient 1.0 into an implicit integer variable */
          SCIPdebugMessage("linear constraint <%s>: converting integer variable <%s> to implicit integer variable\n",
             SCIPconsGetName(cons), SCIPvarGetName(var));
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT) );
+         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         if( infeasible )
+         {
+            SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
+            *cutoff = TRUE;
+
+            return SCIP_OKAY;
+         }
       }
    }
 
@@ -8174,6 +8188,7 @@ SCIP_RETCODE fullDualPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nchgbds             /**< pointer to count the number of bound changes */
    )
 {
@@ -8583,6 +8598,7 @@ SCIP_RETCODE fullDualPresolve(
    for( v = 0; v < nupgdvars; ++v )
    {
       SCIP_VAR* var;
+      SCIP_Bool infeasible;
 
       var = conscontvars[v];
 
@@ -8592,9 +8608,17 @@ SCIP_RETCODE fullDualPresolve(
 
       SCIPdebugMessage("dual presolve: converting continuous variable <%s>[%g,%g] to implicit integer\n",
          SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-      SCIP_CALL( SCIPchgVarType(scip, conscontvars[v], SCIP_VARTYPE_IMPLINT) );
+      SCIP_CALL( SCIPchgVarType(scip, conscontvars[v], SCIP_VARTYPE_IMPLINT, &infeasible) );
+      if( infeasible )
+      {
+         SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(conscontvars[v]));
+         *cutoff = TRUE;
+         
+         goto TERMINATE;
+      }
    }
 
+ TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &conscontvars);
    SCIPfreeBufferArray(scip, &isimplint);
@@ -9563,7 +9587,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    {
       if( conshdlrdata->dualpresolving )
       {
-         SCIP_CALL( fullDualPresolve(scip, conss, nconss, nchgbds) );
+         SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }
    }
 

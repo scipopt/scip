@@ -32,6 +32,7 @@ interface:
 - added function SCIPsepastoreRemoveRedundantCuts() to remove redundant cuts from the separation storage
 - added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
+- SCIPchgVarType got an extra boolean to store infeasibility while upgrading a variable from continuous type to an integer type
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -51,6 +52,7 @@ fixed bugs:
 - fixed bug in copying if the target SCIP already is in solving stage: it might be that the copy of a variable cannot be found/created
 - fixed memory leak in reader_pip.c
 - fixed not correct merging of variable in logicor constraint handler and changed the name of the method to a common name used by other constraint handlers too(findPairsAndSets->mergeMultiples)
+- fixed bug which occured when changing a bound in the solving stage when this variables got upgraded from continuous to a integer type, where the bounds of this variable were still not integral; due to that SCIPchgVarType has changed(see above)
 
 plugins:
 - added vbound heuristic (heur_vbounds.{c,h})
