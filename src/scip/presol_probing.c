@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.62 2011/01/02 11:10:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.63 2011/02/24 16:55:38 bzfpfets Exp $"
 
 /**@file   presol_probing.c
  * @ingroup PRESOLVERS
@@ -529,6 +529,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    for( i = presoldata->startidx; i < nbinvars && !cutoff; ++i )
    {
       SCIP_Bool localcutoff;
+      SCIP_Bool probingzero;
+      SCIP_Bool probingone;
       int j;
 
       /* check whether probing should be aborted */
@@ -597,53 +599,72 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
       presoldata->nuseless++;
       presoldata->ntotaluseless++;
 
-      /* apply probing for fixing the variable to zero */
-      SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
-            &localcutoff) );
+      /* determine whether zero probing should happen */
+      probingzero = TRUE;
+      if ( SCIPvarGetNLocksDown(vars[i]) == 0 )
+         probingzero = FALSE;
 
-      if( localcutoff )
+      if ( probingzero )
       {
-         SCIP_Bool fixed;
+         /* apply probing for fixing the variable to zero */
+         SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
+               &localcutoff) );
          
-         /* the variable can be fixed to TRUE */
-         SCIPdebugMessage("fixing probing variable <%s> to 1.0, nlocks=(%d/%d)\n",
-            SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-         SCIP_CALL( SCIPfixVar(scip, vars[i], 1.0, &cutoff, &fixed) );
-         assert(fixed);
-         (*nfixedvars)++;
-         presoldata->nfixings++;
-         presoldata->nuseless = 0;
-         presoldata->ntotaluseless = 0;
-         continue; /* don't try upwards direction, because the variable is already fixed */
+         if( localcutoff )
+         {
+            SCIP_Bool fixed;
+            
+            /* the variable can be fixed to TRUE */
+            SCIPdebugMessage("fixing probing variable <%s> to 1.0, nlocks=(%d/%d)\n",
+               SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+            SCIP_CALL( SCIPfixVar(scip, vars[i], 1.0, &cutoff, &fixed) );
+            assert(fixed);
+            (*nfixedvars)++;
+            presoldata->nfixings++;
+            presoldata->nuseless = 0;
+            presoldata->ntotaluseless = 0;
+            continue; /* don't try upwards direction, because the variable is already fixed */
+         }
+
+         /* ignore variables, that were fixed, aggregated, or deleted in prior probings
+          * (propagators in zero-probe might have found global fixings but did not trigger the localcutoff)
+          */
+         if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
+            || SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
+            continue;
       }
 
-      /* ignore variables, that were fixed, aggregated, or deleted in prior probings
-       * (propagators in zero-probe might have found global fixings but did not trigger the localcutoff)
-       */
-      if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
-         || SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
+      /* determine whether one probing should happen */
+      probingone = TRUE;
+      if ( SCIPvarGetNLocksUp(vars[i]) == 0 )
+         probingone = FALSE;
+
+      if ( probingone )
+      {
+         /* apply probing for fixing the variable to one */
+         SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
+               &localcutoff) );
+         
+         if( localcutoff )
+         {
+            SCIP_Bool fixed;
+            
+            /* the variable can be fixed to FALSE */
+            SCIPdebugMessage("fixing probing variable <%s> to 0.0, nlocks=(%d/%d)\n", 
+               SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+            SCIP_CALL( SCIPfixVar(scip, vars[i], 0.0, &cutoff, &fixed) );
+            assert(fixed);
+            (*nfixedvars)++;
+            presoldata->nfixings++;
+            presoldata->nuseless = 0;
+            presoldata->ntotaluseless = 0;
+            continue; /* don't analyze probing deductions, because the variable is already fixed */
+         }
+      }
+
+      /* not not have to check deductions if only one probing direction has been checked */
+      if ( ! probingzero || ! probingone )
          continue;
-
-      /* apply probing for fixing the variable to one */
-      SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
-            &localcutoff) );
-
-      if( localcutoff )
-      {
-         SCIP_Bool fixed;
-         
-         /* the variable can be fixed to FALSE */
-         SCIPdebugMessage("fixing probing variable <%s> to 0.0, nlocks=(%d/%d)\n", 
-            SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-         SCIP_CALL( SCIPfixVar(scip, vars[i], 0.0, &cutoff, &fixed) );
-         assert(fixed);
-         (*nfixedvars)++;
-         presoldata->nfixings++;
-         presoldata->nuseless = 0;
-         presoldata->ntotaluseless = 0;
-         continue; /* don't analyze probing deductions, because the variable is already fixed */
-      }
-
 
       /* analyze probing deductions */
       for( j = 0; j < nvars && !cutoff; ++j )
