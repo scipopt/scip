@@ -2813,7 +2813,11 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
+#else
    return FALSE;
+#endif
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
@@ -3106,9 +3110,24 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by SoPlex\n");
-   
+#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+   try
+   {
+      Vector tmp(lpi->spx->nCols(), ray);
+      (void)lpi->spx->getPrimalray(tmp);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+#else
+   SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by SoPlex versions <= 1.5.0\n");
    return SCIP_LPERROR;
+#endif
 }
 
 /** gets dual farkas proof for infeasibility */
