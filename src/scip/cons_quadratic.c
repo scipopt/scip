@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.157 2011/02/17 16:33:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.158 2011/02/24 19:57:43 bzfwinkm Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7506,35 +7506,20 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
          if( !fail && candidate != NULL )
          {
-            SCIP_Bool infeas;
-            SCIP_Bool tightened;
+            SCIP_Bool infeasible;
 
             SCIPdebugMessage("make variable <%s> implicit integer due to constraint <%s>\n", SCIPvarGetName(candidate), SCIPconsGetName(conss[c]));
-            /* we adjust variable bounds to integers first, since otherwise a later bound tightening with a fractional old bound may give an assert because SCIP expects non-continuous variables to have non-fractional bounds */
-            if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(candidate)) )
+
+            SCIP_CALL( SCIPchgVarType(scip, candidate, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            if( infeasible )
             {
-               SCIP_CALL( SCIPtightenVarLbGlobal(scip, candidate, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(candidate)), TRUE, &infeas, &tightened) );
-               if( infeas )
-               {
-                  *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
-               }
-               if( tightened )
-                  ++*nchgbds;
+               SCIPdebugMessage("infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(candidate));
+               *result = SCIP_CUTOFF;
+
+               return SCIP_OKAY;
             }
-            if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(candidate)) )
-            {
-               SCIP_CALL( SCIPtightenVarUbGlobal(scip, candidate, SCIPfeasFloor(scip, SCIPvarGetUbGlobal(candidate)), TRUE, &infeas, &tightened) );
-               if( infeas )
-               {
-                  *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
-               }
-               if( tightened )
-                  ++*nchgbds;
-            }
-            SCIP_CALL( SCIPchgVarType(scip, candidate, SCIP_VARTYPE_IMPLINT) );
-            ++*nchgvartypes;
+
+            ++(*nchgvartypes);
             *result = SCIP_SUCCESS;
          }
       }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.143 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.144 2011/02/24 19:57:43 bzfwinkm Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1340,6 +1340,8 @@ SCIP_RETCODE readBounds(
          }
          else
          {
+            SCIP_Bool infeasible;
+
             if( mpsinputField4(mpsi) == NULL )
                val = 0.0;
             else
@@ -1356,7 +1358,8 @@ SCIP_RETCODE readBounds(
                {
                   assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
                   assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+                  /* don't assert feasibility here because the presolver will and should detect a infeasibility */
                   SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
                }
             }
@@ -1366,14 +1369,16 @@ SCIP_RETCODE readBounds(
             case 'L':
                if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
                {
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+                  /* don't assert feasibility here because the presolver will and should detect a infeasibility */
                }
                SCIP_CALL( SCIPchgVarLb(scip, var, val) );
                break;
             case 'U':
                if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
                {
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+                  /* don't assert feasibility here because the presolver will and should detect a infeasibility */
                }
                SCIP_CALL( SCIPchgVarUb(scip, var, val) );
                break;
@@ -1419,7 +1424,8 @@ SCIP_RETCODE readBounds(
             case 'B' : /* CPLEX extension (Binary) */
                SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
                SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
-               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
                break;
             default:
                mpsinputSyntaxerror(mpsi);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.731 2011/02/23 08:33:22 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.732 2011/02/24 19:57:43 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10582,12 +10582,52 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
 SCIP_RETCODE SCIPchgVarType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_VARTYPE          vartype             /**< new type of variable */
+   SCIP_VARTYPE          vartype,            /**< new type of variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
+                                              *   integrality condition of the new variable type) */
    )
 {
    assert(var != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPchgVarType", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_CONTINUOUS )
+   {
+      SCIP_Bool tightened;
+
+      if( scip->set->stage < SCIP_STAGE_PROBLEM || scip->set->stage > SCIP_STAGE_PRESOLVING )
+      {
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         return SCIP_ERROR;
+      }
+      else if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPvarIsTransformed(var) )
+      {
+         SCIPerrorMessage("cannot change type of original variables while solving the problem\n");
+         return SCIP_INVALIDCALL;
+      }
+
+      /* we adjust variable bounds to integers first, since otherwise a later bound tightening with a fractional old
+       * bound may give an assert because SCIP expects non-continuous variables to have non-fractional bounds 
+       */
+      if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) )
+      {
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
+         if( *infeasible )
+            return SCIP_OKAY;
+
+         assert(tightened);
+      }
+      if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(var)) )
+      {
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)), TRUE, infeasible, &tightened) );
+         if( *infeasible )
+            return SCIP_OKAY;
+
+         assert(tightened);
+      }
+   }
 
    switch( scip->set->stage )
    {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_pip.c,v 1.17 2011/01/24 22:31:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_pip.c,v 1.18 2011/02/24 19:57:43 bzfwinkm Exp $"
 
 /**@file   reader_pip.c
  * @ingroup FILEREADERS 
@@ -1704,6 +1704,7 @@ SCIP_RETCODE readGenerals(
    {
       SCIP_VAR* var;
       SCIP_Bool created;
+      SCIP_Bool infeasible;
 
       /* check if we reached a new section */
       if( isNewSection(pipinput) )
@@ -1718,7 +1719,8 @@ SCIP_RETCODE readGenerals(
       }
 
       /* mark the variable to be integral */
-      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+      /* don't assert feasibility here because the presolver will and should detect a infeasibility */
    }
 
    return SCIP_OKAY;
@@ -1737,6 +1739,7 @@ SCIP_RETCODE readBinaries(
    {
       SCIP_VAR* var;
       SCIP_Bool created;
+      SCIP_Bool infeasible;
 
       /* check if we reached a new section */
       if( isNewSection(pipinput) )
@@ -1759,7 +1762,8 @@ SCIP_RETCODE readBinaries(
       {
          SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
       }
-      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
+      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+      /* don't assert feasibility here because the presolver will and should detect a infeasibility */
    }
 
    return SCIP_OKAY;

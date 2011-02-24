@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.466 2011/02/22 14:50:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.467 2011/02/24 19:57:44 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -3356,7 +3356,9 @@ extern
 SCIP_RETCODE SCIPchgVarType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_VARTYPE          vartype             /**< new type of variable */
+   SCIP_VARTYPE          vartype,            /**< new type of variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
+                                              *   integrality condition of the new variable type) */
    );
 
 /** in problem creation and solving stage, both bounds of the variable are set to the given value;

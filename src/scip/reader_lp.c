@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.111 2011/01/02 11:10:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.112 2011/02/24 19:57:43 bzfwinkm Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -1235,6 +1235,7 @@ SCIP_RETCODE createIndicatorConstraint(
    if ( SCIPisFeasEQ(scip, binvalue, 0.0) )
    {
       SCIP_VAR* negbinvar;
+      SCIP_Bool infeasible;
 
       /* At this point we force the variable binvar to be binary, since we need the negated
 	 variable. We have to check later whether the type of the variable specified in the file
@@ -1244,7 +1245,9 @@ SCIP_RETCODE createIndicatorConstraint(
          SCIP_CALL( SCIPchgVarLb(scip, binvar, 0.0) );
       if( SCIPvarGetUbGlobal(binvar) > 1.0 )
          SCIP_CALL( SCIPchgVarUb(scip, binvar, 1.0) );
-      SCIP_CALL( SCIPchgVarType(scip, binvar, SCIP_VARTYPE_BINARY) );
+      SCIP_CALL( SCIPchgVarType(scip, binvar, SCIP_VARTYPE_BINARY, &infeasible) );
+      /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &negbinvar) );
       binvar = negbinvar;
       assert( binvar != NULL );
@@ -1750,6 +1753,7 @@ SCIP_RETCODE readGenerals(
    {
       SCIP_VAR* var;
       SCIP_Bool created;
+      SCIP_Bool infeasible;
 
       /* check if we reached a new section */
       if( isNewSection(lpinput) )
@@ -1764,7 +1768,8 @@ SCIP_RETCODE readGenerals(
       }
 
       /* mark the variable to be integral */
-      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+      /* don't assert feasibility here because the presolver will and should detect a infeasibility */
    }
 
    return SCIP_OKAY;
@@ -1783,6 +1788,7 @@ SCIP_RETCODE readBinaries(
    {
       SCIP_VAR* var;
       SCIP_Bool created;
+      SCIP_Bool infeasible;
 
       /* check if we reached a new section */
       if( isNewSection(lpinput) )
@@ -1805,7 +1811,8 @@ SCIP_RETCODE readBinaries(
       {
          SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
       }
-      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
+      SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+      /* don't assert feasibility here because the presolver will and should detect a infeasibility */
    }
 
    return SCIP_OKAY;
