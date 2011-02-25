@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.26 2010/09/23 19:54:38 bzfviger Exp $
+# $Id: make.project,v 1.27 2011/02/25 10:32:33 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -114,7 +114,7 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique
+LIBOBJSUBDIRS	=       scip objscip blockmemshell tclique nlpi xml dijkstra
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
