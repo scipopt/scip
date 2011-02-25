@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.223 2011/02/13 18:52:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.224 2011/02/25 13:34:48 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -4465,7 +4465,8 @@ SCIP_RETCODE propagateCons(
          SCIPfreeBufferArray(scip, &myweights);
          SCIPfreeBufferArray(scip, &myvars);
       }
-   } while( FALSE );
+   }
+   while( FALSE );
 
    /* check, if weights of fixed variables already exceed knapsack capacity, this can only happen if 'usenegatedclique'
     * is FALSE, or 'nnegcliques == nvars', otherwise the stronger condition above should have led to a cutoff 
@@ -7681,7 +7682,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
  
-   /* check if we fixed a binary variable to one (due to nagated clique) */
+   /* check if we fixed a binary variable to one (due to negated clique) */
    if( inferinfo >= 0 && SCIPvarGetLbLocal(infervar) > 0.5 )
    {
       for( i = 0; i < consdata->nvars; ++i )
