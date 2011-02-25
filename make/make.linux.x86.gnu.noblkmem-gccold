@@ -1,10 +1,10 @@
-#--- $Id: make.linux.x86.gnu.noblkmem-gccold,v 1.1 2010/09/27 14:45:25 bzfwinkm Exp $
+#--- $Id: make.linux.x86.gnu.noblkmem-gccold,v 1.2 2011/02/25 10:19:47 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG -DBMS_NOBLOCKMEM -DROUNDING_FE
 OFLAGS		+=	-O3 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
-CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	-m32 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
+LDFLAGS		+=      -m32 -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

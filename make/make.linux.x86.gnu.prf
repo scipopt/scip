@@ -1,11 +1,11 @@
-#--- $Id: make.linux.x86.gnu.prf,v 1.19 2010/09/21 13:15:44 bzfwinkm Exp $
+#--- $Id: make.linux.x86.gnu.prf,v 1.20 2011/02/25 10:19:47 bzfheinz Exp $
 #analysis of performance file: gprof bin/scip.linux.x86.gnu.prf.static.cpx gmon.out
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
 OFLAGS		+=	-O2 -mtune=native -g -pg -fno-inline
-CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	-m32 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=	-pg -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
+LDFLAGS		+=	-m32 -pg -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

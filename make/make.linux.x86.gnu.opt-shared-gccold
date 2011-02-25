@@ -1,18 +1,18 @@
-#--- $Id: make.linux.x86.gnu.opt-shared-gccold,v 1.1 2010/09/27 14:45:25 bzfwinkm Exp $
+#--- $Id: make.linux.x86.gnu.opt-shared-gccold,v 1.2 2011/02/25 10:19:47 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG -FPIC -DROUNDING_FE
 OFLAGS		+=	-O3 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
-CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	-m32 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
-LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
+LDFLAGS		+=      -m32 -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 LIBEXT		=	so
 LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	=      -shared -FPIC
+LIBBUILDFLAGS	=      -shared -m32 -FPIC
 LIBBUILD_o	= 	-o # the trailing space is important
 ARFLAGS		=
 RANLIB		=

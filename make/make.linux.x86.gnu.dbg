@@ -1,10 +1,10 @@
-#--- $Id: make.linux.x86.gnu.dbg,v 1.16 2011/02/25 08:44:37 bzfheinz Exp $
+#--- $Id: make.linux.x86.gnu.dbg,v 1.17 2011/02/25 10:19:47 bzfheinz Exp $
 FLAGS		+=	-DROUNDING_FE -funit-at-a-time
-OFLAGS		+=	-O0 -g -m32
-CFLAGS		+=	$(GCCWARN)
-CXXFLAGS	+=	$(GXXWARN)
+OFLAGS		+=	-O0 -g
+CFLAGS		+=	-m32 $(GCCWARN)
+CXXFLAGS	+=	-m32 $(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
+LDFLAGS		+=      -m32 -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
