@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86.gnu.dbg,v 1.15 2009/07/27 19:03:21 bzfviger Exp $
+#--- $Id: make.linux.x86.gnu.dbg,v 1.16 2011/02/25 08:44:37 bzfheinz Exp $
 FLAGS		+=	-DROUNDING_FE -funit-at-a-time
-OFLAGS		+=	-O0 -g
+OFLAGS		+=	-O0 -g -m32
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
@@ -11,3 +11,4 @@ GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
+LIBBUILDFLAGS	=       -m32

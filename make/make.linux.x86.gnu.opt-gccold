@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86.gnu.opt-gccold,v 1.1 2010/09/27 14:45:25 bzfwinkm Exp $
+#--- $Id: make.linux.x86.gnu.opt-gccold,v 1.2 2011/02/25 08:44:37 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
-OFLAGS		+=	-O3 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+OFLAGS		+=	-O3 -m32 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
@@ -11,3 +11,4 @@ GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
+LIBBUILDFLAGS	=       -m32
