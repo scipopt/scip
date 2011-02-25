@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.awk,v 1.3 2011/01/28 16:17:33 bzfviger Exp $
+# $Id: check_gams.awk,v 1.4 2011/02/25 17:33:48 bzfviger Exp $
 #
 #@file    check_gams.awk
 #@brief   GAMS Tracefile Check Report Generator
@@ -47,7 +47,6 @@ function isEQ(a, b)
 BEGIN  { 
    timegeomshift = 10.0;
    nodegeomshift = 100.0;
-   pavshift = 1.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
    useshortnames = 1;        # should problem name be truncated to fit into column?
    writesolufile = 0;        # should a solution file be created from the results
@@ -80,7 +79,7 @@ BEGIN  {
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
-/=feas=/ { solstatus[$2] = "feas"; }                # no feasible solution known
+/=feas=/ { solstatus[$2] = "feas"; }                # known to be feasible
 /=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
 /^\*/    { FS="," }  # a start at the beginnnig of a line we take as start of tracefile, so change FS to ','
 /^\* SOLVER/     { solver=$2; }
@@ -122,7 +121,7 @@ BEGIN  {
     solstat[nprobs] = $12;
     dualbnd[nprobs] = $14;
     primalbnd[nprobs] = $13;
-    time[nprobs] = $16;
+    time[nprobs] = $16;  # we take wallclock time here, $15 would be cputime
     iters[nprobs] = $17;
     nodes[nprobs] = $18;
     nprobs++;
@@ -130,6 +129,11 @@ BEGIN  {
 }
 
 END {
+  #initialize paver input file
+  printf("* Trace Record Definition\n") > PAVFILE;
+  printf("* InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime\n") > PAVFILE;
+  printf("* NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables\n") > PAVFILE;
+
   for (m = 0; m < nprobs; m++)
   {
      prob = model[m];
@@ -152,9 +156,10 @@ END {
      db = dualbnd[m];
      pb = primalbnd[m];
      
-     # we consider everything from solver status 4 on as unusal interrupt, i.e., abort
+     # we consider every solver status between 4 and 7 and above 8 as unusal interrupt, i.e., abort
+     # (8 is user interrupt, which is likely to be due to schulz stopping a server on the hard timelimit)
      aborted = 0;
-     if( solstat[m] >= 4 )
+     if( solstat[m] >= 4 && solstat[m] != 8 )
        aborted = 1;
 
      # TODO consider gaplimit
@@ -219,18 +224,13 @@ END {
        shiftedtimegeom = shiftedtimegeom * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
 
        status = "";
-       if( readerror ) {
-         status = "readerror";
-         failtime += tottime;
-         fail++;
-       }
-       else if( aborted ) {
+       if( aborted ) {
          status = "abort";
          failtime += tottime;
          fail++;
        }
        else if( solstatus[prob] == "opt" ) {
-         reltol = 1e-5 * max(abs(pb),1.0);
+         reltol = 1e-4 * max(abs(pb),1.0);
          abstol = 1e-4;
 
          if( ( !maxobj[m] && (db-sol[prob] > reltol || sol[prob]-pb > reltol) ) || ( maxobj[m] && (sol[prob]-db > reltol || pb-sol[prob] > reltol) ) ) {
@@ -261,7 +261,7 @@ END {
          }
        }
        else if( solstatus[prob] == "best" ) {
-         reltol = 1e-5 * max(abs(pb),1.0);
+         reltol = 1e-4 * max(abs(pb),1.0);
          abstol = 1e-4;
 
          if( ( !maxobj[m] && db-sol[prob] > reltol) || ( maxobj[m] && sol[prob]-db > reltol) ) {
@@ -299,7 +299,7 @@ END {
          }
        }
        else if( solstatus[prob] == "unkn" ) {
-         reltol = 1e-5 * max(abs(pb),1.0);
+         reltol = 1e-4 * max(abs(pb),1.0);
          abstol = 1e-4;
          
          if( abs(pb - db) <= max(abstol, reltol) ) {
@@ -363,7 +363,7 @@ END {
          }
        }
        else {
-         reltol = 1e-5 * max(abs(pb),1.0);
+         reltol = 1e-4 * max(abs(pb),1.0);
          abstol = 1e-4;
 
          if( abs(pb - db) < max(abstol,reltol) ) {
@@ -398,31 +398,39 @@ END {
 
        #write output to both the tex file and the console depending on whether printsoltimes is activated or not
        printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
-              pprob, cons[m], vars[m], db, pb, gapstr, markersym, nodes[m], markersym, time[m])  >TEXFILE;
+              pprob, cons[m], vars[m], db, pb, gapstr, markersym, nodes[m], markersym, time[m]) > TEXFILE;
        printf("\\\\\n") > TEXFILE;
 
        printf("%-19s %-5s %7d %7d      ??      ?? %16.9g %16.9g %6s %8d %7d %7.1f %s (%2d - %2d)\n",
               shortprob, probtype, cons[m], vars[m], db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
 
        #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
-       if( solstatus[prob] == "opt" || solstatus[prob] == "feas" )
-         modelstat = 1;
-       else if( solstatus[prob] == "inf" )
-         modelstat = 1;
-       else if( solstatus[prob] == "best" )
-         modelstat = 8;
-       else
-         modelstat = 1;
-       if( status == "ok" || status == "unknown" )
+       if( status == "abort" ) {
+         modelstat = 13;
+         solverstat = 13;
+       } else if( status == "fail" || status == "unknown" ) {
+         modelstat = 7;
          solverstat = 1;
-       else if( status == "timeout" )
+       } else if( status == "timeout" ) {
+         modelstat = abs(pb) < infty ? 8 : 14;
          solverstat = 3;
-       else
-         solverstat = 10;
+       } else if( status == "gaplimit" || status == "better" ) {
+         modelstat = 8;
+         solverstat = 1;
+       } else if( status == "ok" || status == "solved" || status == "solved not verified" ) {
+         modelstat = 1;
+         solverstat = 1;
+       } else {
+         modelstat = 13;
+         solverstat = 13;
+       }
        pavprob = prob;
        if( length(pavprob) > 25 )
          pavprob = substr(pavprob, length(pavprob)-24,25);
-       printf("%s,MIP,%s_%s,0,%d,%d,%g,%g\n", pavprob, solver, settings, modelstat, solverstat, pb, tottime+pavshift) > PAVFILE;
+       #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
+       #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
+       printf("%s,MINLP,%s_%s,%d,%d,%d,%g,%g,%g,", pavprob, solver, settings, maxobj[m] ? 1 : 0, modelstat, solverstat, pb, db, time[m]) > PAVFILE;
+       printf("%d,%d,%d,%d\n", nodes[m], iters[m], cons[m], vars[m]) > PAVFILE;
      }
    }
    printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
@@ -435,6 +443,8 @@ END {
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f\n",
      nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
-   printf("@01 %s\n", solver);
+   if( timelimit > 0 )
+     printf("@02 timelimit: %g\n", timelimit);
+   printf("@01 %s(%s)\n", solver, settings);
    printf("\n");
 }
