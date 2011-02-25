@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.405 2011/02/25 13:33:05 bzfheinz Exp $
+# $Id: Makefile,v 1.406 2011/02/25 13:36:56 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -107,7 +107,7 @@ GAMS            =       gams
 
 SHELL		= 	bash
 READ		=	read -e
-LN_s		= ln -s
+LN_s		= 	ln -s
 
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF
 OFLAGS		=
