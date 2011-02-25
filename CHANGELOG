@@ -21,6 +21,7 @@ fixed bugs:
 - fixed bug in var.c where a possible multiaggregation was resolved to an aggregation but the variables types were not checked to prefer more general types for aggregating; possible memory loss removed
 - fixed behavior of LNS heuristics when the subproblem aborts: continue in optimized mode, stop in debug mode
 - fixed bug in prop_vbounds.c w.r.t. infinity lower and upper bound of variable bound variables
+- fixed make/make.project 
  
 performance improvements:
 - shiftandpropagate-heuristic uses optimized data structures and produces no memory overhead anymore
