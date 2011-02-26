@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cplex.sh,v 1.7 2011/02/06 12:53:07 bzfheinz Exp $
+# $Id: check_cluster_cplex.sh,v 1.8 2011/02/26 13:57:23 bzfgamra Exp $
 #
 # Call with "make testcluster"
 #
@@ -44,6 +44,9 @@ DISPFREQ=${10}
 CONTINUE=${11}
 QUEUE=${12}
 PPN=${13}
+CLIENTTMPDIR=${14}
+NOWAITCLUSTER=${15}
+
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -94,7 +97,10 @@ do
   # reached the submitted jobs are dumped; to avoid that we check the total
   # load of the cluster and wait until it is save (total load not more than
   # 1900 jobs) to submit the next job.
-  ./waitcluster.sh 1500 $QUEUE 200
+  if test "$NOWAITCLUSTER" != "1"
+  then
+      ./waitcluster.sh 1500 $QUEUE 200
+  fi
 
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
@@ -142,6 +148,7 @@ do
   echo set mip limits treememory $MEMLIMIT >> $TMPFILE
   echo set threads $THREADS               >> $TMPFILE
   echo set parallel 1                     >> $TMPFILE
+  echo set mip strategy kappastats 2      >> $TMPFILE
   echo write $SETFILE                     >> $TMPFILE
   echo read $SCIPPATH/$i                  >> $TMPFILE
   echo display problem stats              >> $TMPFILE
@@ -149,7 +156,7 @@ do
   echo display solution quality           >> $TMPFILE
   echo quit                               >> $TMPFILE
 
-  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -v SOLVERPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME,CLIENTTMPDIR=$CLIENTTMPDIR -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
 
 done
 
