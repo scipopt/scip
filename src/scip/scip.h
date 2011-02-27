@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.467 2011/02/24 19:57:44 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.468 2011/02/27 18:30:35 bzfpfets Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -5525,6 +5525,12 @@ int SCIPgetNCuts(
 /** clears the separation storage */
 extern
 SCIP_RETCODE SCIPclearCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** removes cuts that are inefficacious w.r.t. the current LP solution from separation storage without adding the cuts to the LP */
+extern
+SCIP_RETCODE SCIPremoveInefficaciousCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
