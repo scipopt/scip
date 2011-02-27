@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.112 2011/02/24 19:57:43 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.113 2011/02/27 17:23:13 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2397,7 +2397,9 @@ void printRow(
    assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
    assert( nlinvars == 0 || (linvars != NULL && linvals != NULL) );
    assert( nquadvarterms == 0 || quadvarterms != NULL );
-   assert( nbilinterms == 0 || (bilinterms != NULL && nquadvarterms >= 2) ); /* if there is a bilinear term, then there need to be at least two quadratic variables */
+
+   /* if there is a bilinear term, then there need to be at least two quadratic variables */
+   assert( nbilinterms == 0 || (bilinterms != NULL && nquadvarterms >= 2) );
 
    clearLine(linebuffer, &linecnt);
 
@@ -2418,7 +2420,7 @@ void printRow(
       assert( var != NULL );
 
       /* we start a new line; therefore we tab this line */
-      if (linecnt == 0 )
+      if ( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -2810,12 +2812,12 @@ SCIP_RETCODE printSOCCons(
 /** check whether given variables are aggregated and put them into an array without duplication */
 static
 SCIP_RETCODE collectAggregatedVars(
-   SCIP*              scip,               /**< SCIP data structure */
-   int                nvars,              /**< number of mutable variables in the problem */
-   SCIP_VAR**         vars,               /**< variable array */
-   int*               nAggregatedVars,    /**< number of aggregated variables on output */
-   SCIP_VAR***        aggregatedVars,     /**< array storing the aggregated variables on output */
-   SCIP_HASHTABLE**   varAggregated       /**< hashtable for checking duplicates */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   SCIP_VAR**            vars,               /**< variable array */
+   int*                  nAggregatedVars,    /**< number of aggregated variables on output */
+   SCIP_VAR***           aggregatedVars,     /**< array storing the aggregated variables on output */
+   SCIP_HASHTABLE**      varAggregated       /**< hashtable for checking duplicates */
    )
 {
    int j;
@@ -2851,12 +2853,12 @@ SCIP_RETCODE collectAggregatedVars(
 /** print aggregated variable-constraints */
 static
 SCIP_RETCODE printAggregatedCons(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file (or NULL for standard output) */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nAggregatedVars,    /**< number of aggregated variables */
-   SCIP_VAR**         aggregatedVars      /**< array storing the aggregated variables */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   int                   nAggregatedVars,    /**< number of aggregated variables */
+   SCIP_VAR**            aggregatedVars      /**< array storing the aggregated variables */
    )
 {
    int j;
@@ -2904,9 +2906,9 @@ SCIP_RETCODE printAggregatedCons(
 /** method check if the variable names are not longer than LP_MAX_NAMELEN */
 static
 void checkVarnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_VAR**         vars,               /**< array of variables */
-   int                nvars               /**< number of variables */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars               /**< number of variables */
    )
 {
    int v;
@@ -2929,10 +2931,10 @@ void checkVarnames(
 /** method check if the constraint names are not longer than LP_MAX_NAMELEN */
 static
 void checkConsnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONS**        conss,              /**< array of constraints */
-   int                nconss,             /**< number of constraints */
-   SCIP_Bool          transformed         /**< TRUE iff problem is the transformed problem */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool             transformed         /**< TRUE iff problem is the transformed problem */
    )
 {
    int c;
@@ -2948,7 +2950,7 @@ void checkConsnames(
       cons = conss[c];
       assert(cons != NULL );
 
-      /* in case the transformed is written only constraint are posted which are enabled in the current node */
+      /* in case the transformed is written only constraints are posted which are enabled in the current node */
       assert(!transformed || SCIPconsIsEnabled(cons));
 
       conshdlr = SCIPconsGetHdlr(cons);
@@ -3261,15 +3263,14 @@ SCIP_RETCODE SCIPwriteLp(
 #ifndef NDEBUG
       /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
       if ( !transformed )
-         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
-            SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
+         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
       
-      if (SCIPisZero(scip, SCIPvarGetObj(var)) )
+      if ( SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
 
       /* we start a new line; therefore we tab this line */
-      if (linecnt == 0 )
+      if ( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
@@ -3280,7 +3281,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    endLine(scip, file, linebuffer, &linecnt);
 
-   /* print "Subsect to" section */
+   /* print "Subject to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
 
    /* collect SOS, quadratic, and SOC constraints in array for later output */
@@ -3294,7 +3295,7 @@ SCIP_RETCODE SCIPwriteLp(
       cons = conss[c];
       assert( cons != NULL);
 
-      /* in case the transformed is written only constraint are posted which are enabled in the current node */
+      /* in case the transformed is written only constraints are posted which are enabled in the current node */
       assert(!transformed || SCIPconsIsEnabled(cons));
       
       /* skip marked constraints in connection with indicator constraints */
@@ -3315,8 +3316,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
                SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-               NULL, 0, NULL, 0,
-               SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
+               NULL, 0, NULL, 0, SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -3343,8 +3343,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-               NULL, 0, NULL, 0, 
-               1.0, SCIPinfinity(scip), transformed) );
+               NULL, 0, NULL, 0, 1.0, SCIPinfinity(scip), transformed) );
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -3360,8 +3359,7 @@ SCIP_RETCODE SCIPwriteLp(
             consvals[v] = weights[v];
 
          SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, nconsvars,
-            NULL, 0, NULL, 0, 
-				-SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
+            NULL, 0, NULL, 0, -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }
@@ -3376,9 +3374,7 @@ SCIP_RETCODE SCIPwriteLp(
          consvals[0] = 1.0;
          consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname,
-               consvars, consvals, 2,
-               NULL, 0, NULL, 0, 
+         SCIP_CALL( printQuadraticCons(scip, file, consname, consvars, consvals, 2, NULL, 0, NULL, 0, 
                SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvars);
@@ -3463,10 +3459,11 @@ SCIP_RETCODE SCIPwriteLp(
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
-               SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons), SCIPgetNLinearVarsQuadratic(scip, cons),
-               SCIPgetQuadVarTermsQuadratic(scip, cons), SCIPgetNQuadVarTermsQuadratic(scip, cons),
-               SCIPgetBilinTermsQuadratic(scip, cons), SCIPgetNBilinTermsQuadratic(scip, cons),
-               SCIPgetLhsQuadratic(scip, cons),  SCIPgetRhsQuadratic(scip, cons), transformed) );
+               SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+               SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
+               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetLhsQuadratic(scip, cons),
+               SCIPgetRhsQuadratic(scip, cons), transformed) );
          
          consQuadratic[nConsQuadratic++] = cons;
       }
@@ -3486,8 +3483,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    /* create hashtable for storing aggregated variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggregatedVars, nvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, 
-         NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in SOS1 constraints and output aggregations as linear constraints */
    for (c = 0; c < nConsSOS1; ++c)
@@ -3515,7 +3511,8 @@ SCIP_RETCODE SCIPwriteLp(
       cons = consQuadratic[c];
       for( v = 0; v < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++v )
       {
-         SCIP_CALL( collectAggregatedVars(scip, 1, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var, &nAggregatedVars, &aggregatedVars, &varAggregated) );
+         SCIP_CALL( collectAggregatedVars(scip, 1, &SCIPgetQuadVarTermsQuadratic(scip, cons)[v].var,
+               &nAggregatedVars, &aggregatedVars, &varAggregated) );
       }         
    }
 
@@ -3524,7 +3521,8 @@ SCIP_RETCODE SCIPwriteLp(
    {
       cons = consSOC[c];
       
-      SCIP_CALL( collectAggregatedVars(scip, SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), &nAggregatedVars, &aggregatedVars, &varAggregated) );
+      SCIP_CALL( collectAggregatedVars(scip, SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons),
+            &nAggregatedVars, &aggregatedVars, &varAggregated) );
       var = SCIPgetRhsVarSOC(scip, cons);
       SCIP_CALL( collectAggregatedVars(scip, 1, &var, &nAggregatedVars, &aggregatedVars, &varAggregated) );
    }
