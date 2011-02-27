@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.37 2011/02/15 19:17:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.38 2011/02/27 18:14:58 bzfpfets Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -121,16 +121,17 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
    SCIP_LP*              lp                  /**< LP data */
    );
 
-/** removes redudant cuts form the separation storage without adding the cuts to the LP */
+/** removes cuts that are inefficacious w.r.t. the current LP solution from separation storage without adding the cuts to the LP */
 extern
-SCIP_RETCODE SCIPsepastoreRemoveRedundantCuts(
+SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
-   SCIP_LP*              lp                  /**< LP data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             root                /**< are we at the root node? */
    );
 
 /** get cuts in the separation storage */
