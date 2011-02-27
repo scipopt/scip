@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.118 2011/02/24 19:57:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.119 2011/02/27 17:17:57 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -190,13 +190,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_quadratic.h"
 #include "scip/heur_trysol.h"
-#include <string.h>
 #include "scip/pub_misc.h"
 
 
@@ -235,6 +236,7 @@
 #define DEFAULT_NOLINCONSCONT      FALSE
 #define DEFAULT_ENFORCECUTS        FALSE
 #define DEFAULT_MAXCONDITIONALTLP  0.0
+#define DEFAULT_GENERATEBILINEAR   FALSE
 
 
 /* other values */
@@ -284,6 +286,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             enforceCuts;        /**< in enforcing try to generate cuts (only if sepaAlternativeLP is true) */
    SCIP_Real             maxCouplingValue;   /**< maximum coefficient for binary variable in coupling constraint */
    SCIP_Real             maxConditionAltLP;  /**< maximum estimated condition of the LP solution of the alternative LP to trust its solution */
+   SCIP_Bool             generateBilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
    SCIP_HEUR*            heurTrySol;         /**< trysol heuristic */
    SCIP_Bool             addedCouplingCons;  /**< whether the coupling constraints have been added already */
    SCIP_CONS**           addLinCons;         /**< additional linear constraints that should be added to the alternative LP */
@@ -4375,6 +4378,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->addLinCons = NULL;
    conshdlrdata->nAddLinCons = 0;
    conshdlrdata->maxAddLinCons = 0;
+   conshdlrdata->generateBilinear = FALSE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -4451,6 +4455,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "maximum estimated condition of the solution basis matrix of the alternative LP to be trustworthy (0.0 to disable check)",
          &conshdlrdata->maxConditionAltLP, TRUE, DEFAULT_MAXCONDITIONALTLP, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/generateBilinear",
+         "do not generate indicator constraint, but a bilinear constraint instead",
+         &conshdlrdata->generateBilinear, TRUE, DEFAULT_GENERATEBILINEAR, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -4526,6 +4535,12 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       return SCIP_INVALIDDATA;
    }
 
+   if ( conshdlrdata->noLinconsCont && conshdlrdata->generateBilinear )
+   {
+      SCIPerrorMessage("constraint handler <%s>: parameters <noLinconsCont> and <generateBilinear> cannot both be true.\n", CONSHDLR_NAME);
+      return SCIP_INVALIDDATA;
+   }
+
    /* check if slack variable can be made implicity integer */
    slackvartype = SCIP_VARTYPE_IMPLINT;
    for (i = 0; i < nvars; ++i)
@@ -4553,6 +4568,8 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    {
       SCIP_Bool onlyCont = TRUE;
       int v;
+
+      assert( ! conshdlrdata->generateBilinear );
 
       /* check whether call variables are non-integer */
       for (v = 0; v < nvars; ++v)
@@ -4595,15 +4612,28 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
 
-   /* create constraint data */
-   consdata = NULL;
-   SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlr, 
-         binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
-   assert( consdata != NULL );
-
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
+   /* check whether we should generate a bilinear constraint instead of a indicator contraint */
+   if ( conshdlrdata->generateBilinear )
+   {
+      SCIP_Real val;
+   
+      /* create a quadratic constraint with a single bilinear term - note cons is used */
+      val = 1.0;
+      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   }
+   else
+   {
+      /* create constraint data */
+      consdata = NULL;
+      SCIP_CALL( consdataCreate(scip, conshdlr, name, &consdata, conshdlrdata->eventhdlr, 
+            binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaAlternativeLP) );
+      assert( consdata != NULL );
+      
+      /* create constraint */
+      SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+            local, modifiable, dynamic, removable, stickingatnode) );
+   }
 
    return SCIP_OKAY;
 }
