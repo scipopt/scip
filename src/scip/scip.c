@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.732 2011/02/24 19:57:43 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.733 2011/02/27 18:30:46 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -15894,6 +15894,24 @@ SCIP_RETCODE SCIPclearCuts(
    SCIP_CALL( checkStage(scip, "SCIPclearCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsepastoreClearCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lp) );
+
+   return SCIP_OKAY;
+}
+
+/** removes cuts that are inefficacious w.r.t. the current LP solution from separation storage without adding the cuts to the LP */
+SCIP_RETCODE SCIPremoveInefficaciousCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Bool isroot;
+
+   SCIP_CALL( checkStage(scip, "SCIPremoveInefficaciousCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   isroot = FALSE;
+   if ( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+      isroot = TRUE;
+   SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, 
+         scip->eventqueue, scip->eventfilter, scip->lp, isroot) );
 
    return SCIP_OKAY;
 }
