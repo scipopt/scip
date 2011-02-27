@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.28 2011/01/24 16:48:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.29 2011/02/27 17:18:55 bzfpfets Exp $"
 
 /**@file   cons_quadratic.h
  * @brief  constraint handler for quadratic constraints
@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
  * 
  *  The constraint should be given in the form
  *  \f[
- *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_jz_j \leq u,
+ *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_j z_j \leq u,
  *  \f]
  *  where \f$x_i = y_j = z_k\f$ is possible.
  */
@@ -159,7 +159,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
  * 
  * The constraint should be given in the form
  * \f[
- * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
+ * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_k v_k w_k \leq u.
  * \f]
  */
 extern
