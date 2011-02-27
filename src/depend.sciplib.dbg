@@ -725,8 +725,8 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -797,8 +797,8 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -1430,8 +1430,8 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/scip/scipdef
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -1511,7 +1511,8 @@ $(LIBOBJDIR)/scip/cons_indicator.o: src/scip/cons_indicator.c src/scip/cons_indi
  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/scip/cons_linear.h src/scip/cons_logicor.h \
- src/scip/cons_varbound.h src/scip/heur_trysol.h
+ src/scip/cons_varbound.h src/scip/cons_quadratic.h \
+ src/scip/heur_trysol.h
 $(LIBOBJDIR)/scip/cons_integral.o: src/scip/cons_integral.c src/scip/cons_integral.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -2107,8 +2108,8 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -2178,8 +2179,8 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -2250,8 +2251,8 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -2471,8 +2472,8 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -2542,8 +2543,8 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -2713,8 +2714,8 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -2784,8 +2785,8 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -3085,8 +3086,8 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -3156,8 +3157,8 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
@@ -3825,7 +3826,9 @@ $(LIBOBJDIR)/scip/reader_pip.o: src/scip/reader_pip.c src/scip/reader_pip.h src/
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
  src/scip/type_history.h src/scip/lpi.h src/nlpi/pub_expr.h \
  src/nlpi/type_exprinterpret.h src/scip/intervalarith.h \
- src/scip/cons_linear.h src/scip/cons_quadratic.h
+ src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
+ src/scip/cons_setppc.h src/scip/cons_varbound.h \
+ src/scip/cons_quadratic.h
 $(LIBOBJDIR)/scip/reader_ppm.o: src/scip/reader_ppm.c src/scip/reader_ppm.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
@@ -3975,6 +3978,31 @@ $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/tclique/tclique.h
+$(LIBOBJDIR)/scip/sepa_closecuts.o: src/scip/sepa_closecuts.c src/scip/sepa_closecuts.h \
+ src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+ src/scip/pub_message.h src/blockmemshell/memory.h src/scip/type_result.h \
+ src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
+ src/scip/type_scip.h src/scip/type_event.h src/scip/type_lp.h \
+ src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
+ src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+ src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+ src/nlpi/type_nlpi.h src/nlpi/type_expr.h src/scip/pub_branch.h \
+ src/scip/pub_conflict.h src/scip/pub_cons.h src/scip/pub_cutpool.h \
+ src/scip/type_cutpool.h src/scip/pub_dialog.h src/scip/pub_disp.h \
+ src/scip/pub_event.h src/scip/pub_fileio.h src/scip/pub_heur.h \
+ src/scip/pub_implics.h src/scip/type_implics.h src/scip/pub_lp.h \
+ src/scip/type_set.h src/scip/type_stat.h src/scip/type_lpi.h \
+ src/scip/pub_nlp.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+ src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+ src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+ src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
+ src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
+ src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
+ src/scip/intervalarith.h
 $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/pub_message.h \
@@ -4241,8 +4269,8 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_redcost.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
@@ -4364,8 +4392,8 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_opb.h \
  src/scip/reader_pip.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
  src/scip/reader_sol.h src/scip/reader_wbo.h src/scip/reader_zpl.h \
- src/scip/sepa_clique.h src/scip/sepa_cgmip.h src/scip/sepa_cmir.h \
- src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
+ src/scip/sepa_clique.h src/scip/sepa_closecuts.h src/scip/sepa_cgmip.h \
+ src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
