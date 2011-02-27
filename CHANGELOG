@@ -29,7 +29,7 @@ interface:
 - SCIP_DECL_PROBCOPY got a new parameter global
 - using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions (nlpi/*expr*) results in many renamings of types, structs, and methods
 - added function SCIPcomputeLPRelIntPoint() to compute a relative interior point of the current LP
-- added function SCIPsepastoreRemoveRedundantCuts() to remove redundant cuts from the separation storage
+- added function SCIPsepastoreRemoveInefficaciousCuts() to remove non-efficious cuts from the separation storage
 - added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
 - SCIPchgVarType got an extra boolean to store infeasibility while upgrading a variable from continuous type to an integer type
@@ -119,6 +119,8 @@ features:
 - LP iterations in resolving calls can now be limited w.r.t. the average number of LP iterations in previous calls (after the root node);
   this is currently only done for the initial LP solve at a node and the corresponding parameter resolveiterfac is set to -1 (no limit) per default
 - added writing for pip files
+- reorganized computation of scores in cut filtering: instead of the computation at the time of addition, scores are now only computed w.r.t. the current LP solution and when cut filtering is performed; one can now fill the cut storage with cuts that were separated for different solutions
+
 
 SCIP version 2.0.2
 ==================
