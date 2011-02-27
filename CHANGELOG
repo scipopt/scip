@@ -86,6 +86,7 @@ parameters:
 - added parameters <lp/resolveitermin> and <lp/resolveiterfac> to limit the number of LP iterations in resolving calls: resolveiterfac is a factor 
   by which the average number of iterations per call is multiplied to get the limit, but the limit is at least resolveitermin; default is
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
+- added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -117,6 +118,7 @@ features:
   within a propagator  or a constraint handler
 - LP iterations in resolving calls can now be limited w.r.t. the average number of LP iterations in previous calls (after the root node);
   this is currently only done for the initial LP solve at a node and the corresponding parameter resolveiterfac is set to -1 (no limit) per default
+- added writing for pip files
 
 SCIP version 2.0.2
 ==================
