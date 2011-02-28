@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.27 2011/02/25 10:32:33 bzfheinz Exp $
+# $Id: make.project,v 1.28 2011/02/28 15:40:24 bzfviger Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -85,6 +85,13 @@ LINT		=	flexelint
 DOXY		=	doxygen
 CPLEX		=	cplex
 CBC		=	cbc
+CBCPARALLEL	=	cbc-parallel
+MOSEK           =       mosek
+GUROBI          =       gurobi.sh
+GLPK            =       glpsol
+SYMPHONY        =       symphony
+BLIS            =       blis
+GAMS            =       gams
 
 SHELL		= 	bash
 READ		=	read -e
