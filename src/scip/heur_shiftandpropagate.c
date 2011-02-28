@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.23 2011/02/09 14:34:11 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.24 2011/02/28 12:46:07 bzfwinkm Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -43,7 +43,7 @@
 #define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equalitities */
 #define DEFAULT_RELAX            TRUE   /**< Should continuous variables be relaxed from the problem? */
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
-#define DEFAULT_NPROPROUNDS         1   /**< The default number of propagation rounds for each propagation used */
+#define DEFAULT_NPROPROUNDS        20   /**< The default number of propagation rounds for each propagation used */
 #define DEFAULT_PROPBREAKER      2000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 
