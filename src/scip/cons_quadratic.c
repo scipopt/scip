@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.159 2011/02/28 12:57:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.160 2011/02/28 15:24:01 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5375,7 +5375,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    assert(conss != NULL || nconss == 0);
    
    *brvar = NULL;
-   brvarval = 0.0;
+   brvarval = -1.0;
 
    for( c = 0; c < nconss; ++c )
    {
