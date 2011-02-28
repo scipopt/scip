@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.733 2011/02/27 18:30:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.734 2011/02/28 19:43:12 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -15553,9 +15553,13 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
    SCIP_CALL( SCIPallocBufferArray(scip, &varvals, nvars) );
    for( i = 0; i < nvars; ++i )
    {
+      /* due to numerics, the lower bound on a variable in SCIP can be slightly higher than the upper bound
+       * in this case, we take the most conservative way and switch the bounds
+       * further, we translate SCIP's value for infinity to the users value for infinity
+       */
       SCIPintervalSetBounds(&varvals[i],
-         -infty2infty(SCIPinfinity(scip), infinity, -SCIPvarGetLbLocal(vars[i])),  /*lint !e666*/
-          infty2infty(SCIPinfinity(scip), infinity,  SCIPvarGetUbLocal(vars[i]))); /*lint !e666*/
+         -infty2infty(SCIPinfinity(scip), infinity, -MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]))),  /*lint !e666*/
+          infty2infty(SCIPinfinity(scip), infinity,  MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])))); /*lint !e666*/
    }
 
    SCIP_CALL( SCIPexprtreeEvalInt(tree, infinity, varvals, val) );
