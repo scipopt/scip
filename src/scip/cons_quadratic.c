@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.158 2011/02/24 19:57:43 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.159 2011/02/28 12:57:22 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4203,10 +4203,41 @@ SCIP_RETCODE checkCurvature(
       }
       else
       {
+#if 0
+         SCIP_Bool allbinary;
+         printf("cons <%s>[%g,%g] spectrum = [%g,%g]\n", SCIPconsGetName(cons), consdata->lhs, consdata->rhs, alleigval[0], alleigval[n-1]);
+#endif
          consdata->isconvex  &= !SCIPisNegative(scip, alleigval[0]);   /*lint !e514*/
          consdata->isconcave &= !SCIPisPositive(scip, alleigval[n-1]); /*lint !e514*/
          consdata->iscurvchecked = TRUE;
+#if 0
+         for( i = 0; i < consdata->nquadvars; ++i )
+            if( !SCIPvarIsBinary(consdata->quadvarterms[i].var) )
+               break;
+         allbinary = i == consdata->nquadvars;
+
+         if( !SCIPisInfinity(scip, consdata->rhs) && alleigval[0] > 0.1 && allbinary )
+         {
+            printf("deconvexify cons <%s> by shifting hessian by %g\n", SCIPconsGetName(cons), alleigval[0]);
+            for( i = 0; i < consdata->nquadvars; ++i )
+            {
+               consdata->quadvarterms[i].sqrcoef -= alleigval[0];
+               consdata->quadvarterms[i].lincoef += alleigval[0];
+            }
+         }
+
+         if( !SCIPisInfinity(scip, consdata->lhs) && alleigval[n-1] < -0.1 && allbinary )
+         {
+            printf("deconcavify cons <%s> by shifting hessian by %g\n", SCIPconsGetName(cons), alleigval[n-1]);
+            for( i = 0; i < consdata->nquadvars; ++i )
+            {
+               consdata->quadvarterms[i].sqrcoef -= alleigval[n-1];
+               consdata->quadvarterms[i].lincoef += alleigval[n-1];
+            }
+         }
+#endif
       }
+
       SCIPfreeBufferArray(scip, &alleigval);
    }
    else

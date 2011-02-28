@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.61 2011/02/22 18:47:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.62 2011/02/28 12:57:23 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -541,6 +541,20 @@ void SCIPintervalUnify(
 {
    assert(resultant != NULL);
    
+   if( operand1.inf > operand1.sup )
+   {
+      /* operand1 is empty */
+      *resultant = operand2;
+      return;
+   }
+
+   if( operand2.inf > operand2.sup )
+   {
+      /* operand2 is empty */
+      *resultant = operand1;
+      return;
+   }
+
    resultant->inf = MIN(operand1.inf, operand2.inf);
    resultant->sup = MAX(operand1.sup, operand2.sup);
 }
