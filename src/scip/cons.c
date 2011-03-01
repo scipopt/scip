@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.224 2011/02/18 19:22:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.225 2011/03/01 13:59:06 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4714,11 +4714,15 @@ SCIP_RETCODE SCIPconsParse(
    SCIPdebugMessage("constraint name <%s>\n", consname);
    
    /* skip colon */
-   assert(str[pos] == ':');
+   if( str[pos] != ':' )
+      return SCIP_OKAY;
+   
    pos++;
 
    /* skip space */
-   assert(str[pos] == ' ');
+   if( str[pos] != ' ')
+      return SCIP_OKAY;
+
    pos++;
    
    /* check if a constraint handler with parsed name exists */
