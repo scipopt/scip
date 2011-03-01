@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.22 2011/03/01 13:54:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.23 2011/03/01 14:14:33 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -1275,7 +1275,7 @@ SCIP_RETCODE propagateVbounds(
                   pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
                   
                   /* construct infer info */
-                  inferinfo = getInferInfo(pos, vbvar), SCIP_BOUNDTYPE_LOWER);
+                  inferinfo = getInferInfo(pos, SCIP_BOUNDTYPE_LOWER);
                }
             }
          }
