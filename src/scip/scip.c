@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.734 2011/02/28 19:43:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.735 2011/03/01 13:55:40 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4884,7 +4884,7 @@ int SCIPgetNFixedVars(
    {
    case SCIP_STAGE_PROBLEM:
       return 0;
-
+      
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
@@ -6676,9 +6676,6 @@ SCIP_RETCODE SCIPpresolve(
             /* print solution message */
             if( infeasible )
             {
-               SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-                  "presolving detected infeasibility\n");
-
                /* infeasibility in this round means, that the current best solution is optimal (if existing and not
                 * worse than user objective limit)
                 */
@@ -6694,6 +6691,9 @@ SCIP_RETCODE SCIPpresolve(
                }
                else
                {
+                  SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                     "presolving detected infeasibility\n");
+                  
                   /* switch status to INFEASIBLE */
                   scip->stat->status = SCIP_STATUS_INFEASIBLE;
                }
