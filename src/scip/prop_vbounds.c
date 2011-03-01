@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.21 2011/02/22 16:38:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.22 2011/03/01 13:54:22 bzfheinz Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -912,7 +912,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
       SCIP_CALL( relaxInfervarLowerbound(scip, infervar, inferub, &newlb) );
       
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, newlb, &previnferub) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, -newlb, &previnferub) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -930,7 +930,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
          newlb = SCIPvarGetLbLocal(infervar); 
          
          /* try to relax variable bound variable */
-         SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, newlb, &inferub) );
+         SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, -newlb, &inferub) );
 
          /* continue conflict analysis only if we improved the inference upper bound w.r.t. the previos conflict
           * analysis run; otherwise we end up with previous conflict set
@@ -1275,7 +1275,7 @@ SCIP_RETCODE propagateVbounds(
                   pos = (int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar);
                   
                   /* construct infer info */
-                  inferinfo = getInferInfo((int)(size_t)SCIPhashmapGetImage(propdata->varHashmap, vbvar), SCIP_BOUNDTYPE_LOWER);
+                  inferinfo = getInferInfo(pos, vbvar), SCIP_BOUNDTYPE_LOWER);
                }
             }
          }
