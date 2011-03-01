@@ -1,17 +1,13 @@
-#--- $Id: make.darwin.x86_64.gnu.opt,v 1.6 2010/06/22 07:19:26 bzfheinz Exp $
-FLAGS		+=	-DNDEBUG -DNO_REMOVE_HISTORY -DROUNDING_FE
-OFLAGS		+=	-O2 -m64 -fomit-frame-pointer
-CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+#--- $Id: make.darwin.x86_64.gnu.opt,v 1.7 2011/03/01 16:42:12 bzfheinz Exp $
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
+OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+CFLAGS		+=	-m64 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	-m64 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=      
+LDFLAGS		+=      -m64 -lm -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
-
-ifeq ($(LPS),cpx)
-LPSLDFLAGS	+=	 -framework IOKit -framework Carbon
-endif

@@ -1,18 +1,19 @@
-#--- $Id: make.linux.x86.gnu.opt-shared,v 1.10 2011/02/25 10:19:47 bzfheinz Exp $
-FLAGS		+=	-DNDEBUG -FPIC -DROUNDING_FE
+#--- $Id: make.linux.x86.gnu.opt-shared,v 1.11 2011/03/01 16:42:12 bzfheinz Exp $
+FLAGS		+=	-DNDEBUG -fPIC -DROUNDING_FE
 OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	-m32 $(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	
+LDFLAGS		+=      -m32 -lm -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
-LDFLAGS		+=      -m32 -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 LIBEXT		=	so
 LIBBUILD	=	$(LINKCC)
-LIBBUILDFLAGS	=      -shared -m32 -FPIC
+LIBBUILDFLAGS	=      -shared -m32 -fPIC
 LIBBUILD_o	= 	-o # the trailing space is important
 ARFLAGS		=
 RANLIB		=
