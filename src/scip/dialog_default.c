@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.126 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.127 2011/03/01 13:58:07 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -300,6 +300,168 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 {  /*lint --e{715}*/
    SCIP_CALL( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
 
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the change add constraint */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
+{  /*lint --e{715}*/
+   
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "cannot call method after problem was transformed\n");
+   else if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "cannot call method before problem was created\n");
+   else
+   {
+      SCIP_CONS* cons;
+      SCIP_Bool endoffile;
+      char* str;
+      
+      cons = NULL;
+
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "write constraint in <cip> format\n", &str, &endoffile) );
+      
+      if( str[0] != '\0' )
+      {
+         SCIP_Bool success;
+         
+         printf("<%s>\n", str);
+
+         SCIP_CALL( SCIPparseCons(scip, &cons, str, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+      
+         if( success )
+         {
+            char consstr[SCIP_MAXSTRLEN];
+            
+            /* add and release constraint */
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            
+            SCIPdialogMessage(scip, NULL, "successfully added constraint\n"); 
+            SCIPescapeString(consstr, SCIP_MAXSTRLEN, str);
+
+            SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, consstr, FALSE) );
+         }
+         else
+         {
+            SCIPdialogMessage(scip, NULL, "constraint was not recognizable\n");
+         }
+      }
+   }
+
+   /* set root dialog as next dialog */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the change bounds command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds)
+{  /*lint --e{715}*/
+   
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "cannot call method after problem was transformed\n");
+   else if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "cannot call method before problem was created\n");
+   else
+   {
+      SCIP_VAR* var;
+      SCIP_Bool endoffile;
+      char* varname;
+      
+      var = NULL;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+      do
+      {
+         SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ", &varname, &endoffile) );
+      
+         /* if we get a return or we reached the end of the file, then we stop */
+         if( varname[0] == '\0' || endoffile )
+            break;
+
+         var = SCIPfindVar(scip, varname);
+
+         if( var == NULL )
+            SCIPdialogMessage(scip, NULL, "variable <%s> does not exsist\n", varname);
+      }
+      while( var == NULL );
+
+      if( var != NULL )
+      {
+         do
+         {
+            char* boundstr;
+            char message[SCIP_MAXSTRLEN];
+            SCIP_Real bound;
+            
+            SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname, FALSE) );
+            
+            (void)SCIPsnprintf(message, SCIP_MAXSTRLEN, "current lower bound <%.15g> (Return to skip): ", SCIPvarGetLbGlobal(var));
+            SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, message, &boundstr, &endoffile) );
+
+            /* if we reached the end of the file, then we stop */
+            if( endoffile )
+               break;
+            
+            if( boundstr[0] != '\0' )
+            {
+               char* endptr;
+
+               bound = strtod(boundstr, &endptr);
+               if( endptr == boundstr || *endptr != '\0' )
+               {
+                  printf("<%s> <%s>\n", endptr, boundstr);
+                  SCIPdialogMessage(scip, NULL, "ignore none value string\n");
+               }
+               else if( SCIPisGT(scip, bound, SCIPvarGetUbGlobal(var)) )
+               {
+                  SCIPdialogMessage(scip, NULL, "ignore lower bound <%.15g> since it is larger than the current upper bound <%.15g>\n",
+                     bound, SCIPvarGetUbGlobal(var));
+               }
+               else
+               {
+                  SCIP_CALL( SCIPchgVarLbGlobal(scip, var, bound) );
+               }
+            }
+            
+            (void)SCIPsnprintf(message, SCIP_MAXSTRLEN, "current upper bound <%.15g> (Return to skip): ", SCIPvarGetUbGlobal(var));
+            SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, message, &boundstr, &endoffile) );
+
+            /* if we reached the end of the file, then we stop */
+            if( endoffile )
+               break;
+            
+            if( boundstr[0] != '\0' )
+            {
+               char* endptr;
+
+               bound = strtod(boundstr, &endptr);
+               if( endptr == boundstr || *endptr != '\0' )
+               {
+                  SCIPdialogMessage(scip, NULL, "ignore none value string\n");
+               }
+               else if( SCIPisLT(scip, bound, SCIPvarGetLbGlobal(var)) )
+               {
+                  SCIPdialogMessage(scip, NULL, "ignore new upper bound <%.15g> since it is smaller than the current lower bound <%.15g>\n",
+                     bound, SCIPvarGetLbGlobal(var));
+               }
+               else
+               {
+                  SCIP_CALL( SCIPchgVarUbGlobal(scip, var, bound) );
+               }
+            }
+         }
+         while( FALSE);
+         
+         SCIPdialogMessage(scip, NULL, "variable <%s> global bounds [%.15g,%.15g]\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      }
+   }
+
+   /* set root dialog as next dialog */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
    return SCIP_OKAY;
 }
 
@@ -632,6 +794,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNlpi)
    SCIPdialogMessage(scip, NULL, " -------------        -------- -----------\n");
    for( i = 0; i < nnlpis; ++i )
    {
+      assert(sorted != NULL);
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPnlpiGetName(sorted[i]));
       if( strlen(SCIPnlpiGetName(sorted[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
@@ -1644,6 +1807,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    case SCIP_BRANCHDIR_UPWARDS:
       direction = +1;
       break;
+   case SCIP_BRANCHDIR_FIXED:
    default:
       SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n",
          SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
@@ -2473,6 +2637,44 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    if( root == NULL )
    {
       SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
+   }
+   
+   /* change */
+   if( !SCIPdialogHasEntry(root, "change") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu, 
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "change", "change the problem", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(root, "change", &submenu) != 1 )
+   {
+      SCIPerrorMessage("change sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* change add */
+   if( !SCIPdialogHasEntry(submenu, "add") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecChangeAddCons, NULL, NULL,
+            "add", "add constraint", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* change bounds */
+   if( !SCIPdialogHasEntry(submenu, "bounds") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecChangeBounds, NULL, NULL,
+            "bounds", "change bounds of a variable", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
    /* checksol */

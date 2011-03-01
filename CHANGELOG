@@ -121,7 +121,8 @@ features:
   this is currently only done for the initial LP solve at a node and the corresponding parameter resolveiterfac is set to -1 (no limit) per default
 - added writing for pip files
 - reorganized computation of scores in cut filtering: instead of the computation at the time of addition, scores are now only computed w.r.t. the current LP solution and when cut filtering is performed; one can now fill the cut storage with cuts that were separated for different solutions
-
+- it is possible to change bounds of a variable in the interactive shell
+- it is possible to add a constraint to a problem in the interactive shell
 
 SCIP version 2.0.2
 ==================

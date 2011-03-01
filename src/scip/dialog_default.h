@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.46 2011/01/02 11:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.47 2011/03/01 13:58:07 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -38,6 +38,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu);
 /** standard menu dialog execution method, that doesn't display it's help screen */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
+
+/** dialog execution method for the change add constraint */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons);
+
+/** dialog execution method for the change bounds command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds);
 
 /** dialog execution method for the checksol command */
 extern
