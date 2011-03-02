@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.147 2011/03/02 11:29:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.148 2011/03/02 13:29:21 bzfviger Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -910,7 +910,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   snprintf(cpxname, SCIP_MAXSTRLEN, "CPLEX %.2f", (SCIP_Real)CPX_VERSION/100.0);
+   snprintf(cpxname, SCIP_MAXSTRLEN, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
    return cpxname;
 }
 
