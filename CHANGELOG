@@ -103,7 +103,9 @@ features:
 - added dialog "write nlp" to write current NLP relaxation to a file
 - new data structure SCIP_STAIRMAP
 - information about the quality of the solution of an LP (currently the condition number of the basis matrix) can now be requested from the LPI (currently only available for CPLEX):
-  methods SCIPlpiGetRealSolQuality() and SCIPprintLPSolutionQuality() and command display lpsolquality in interactive shell 
+  - methods SCIPlpiGetRealSolQuality() and SCIPprintLPSolutionQuality()
+  - command display lpsolquality in interactive shell
+  - display column lpcond to show estimate on condition number, if available
 - comparison of solutions now also works for original solutions
 - added writing for wbo files
 - changed opb(/wbo) reader which now creates pseudoboolean constraints instead of linear- and and-constraints, only a non-linear objective will create and-constraints inside the reader and while reading a wbo file the topcost constraint is created as well

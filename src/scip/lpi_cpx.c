@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.146 2011/01/29 01:52:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.147 2011/03/02 11:29:58 bzfviger Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -3051,6 +3051,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
 {
+   int solntype;
    int what;
 
    assert(lpi != NULL);
@@ -3073,7 +3074,16 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
          return SCIP_INVALIDDATA;
    }
 
-   CHECK_ZERO( CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
+   CHECK_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+
+   if( solntype == CPX_NO_SOLN )
+   {
+      *quality = SCIP_INVALID;
+   }
+   else
+   {
+      CHECK_ZERO( CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
+   }
 
    return SCIP_OKAY;
 }

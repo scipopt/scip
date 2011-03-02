@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.83 2011/01/13 14:25:18 bzfgamra Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.84 2011/03/02 11:29:58 bzfviger Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -73,8 +73,16 @@
 #define DISP_HEAD_LPAVGITERS    "LP it/n"
 #define DISP_WIDT_LPAVGITERS    7
 #define DISP_PRIO_LPAVGITERS    25000
-#define DISP_POSI_LPAVGITERS    1500
+#define DISP_POSI_LPAVGITERS    1400
 #define DISP_STRI_LPAVGITERS    TRUE
+
+#define DISP_NAME_LPCOND        "lpcond"
+#define DISP_DESC_LPCOND        "estimate on condition number of LP solution"
+#define DISP_HEAD_LPCOND        "LP cond"
+#define DISP_WIDT_LPCOND        7
+#define DISP_PRIO_LPCOND        0
+#define DISP_POSI_LPCOND        1450
+#define DISP_STRI_LPCOND        TRUE
 
 #define DISP_NAME_MEMUSED       "memused"
 #define DISP_DESC_MEMUSED       "total number of bytes used in block memory"
@@ -393,6 +401,35 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPAvgIters)
       SCIPinfoMessage(scip, file, "%6.1f ", 
          (SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)(SCIPgetNTotalNodes(scip) - 1) );
    
+   return SCIP_OKAY;
+}
+
+
+/** output method of display column to output file stream 'file' for estimate on LP condition */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPCondition)
+{  /*lint --e{715}*/
+   SCIP_LPI* lpi;
+   SCIP_Real cond;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPCOND) == 0);
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+   if( lpi == NULL )
+   {
+      SCIPinfoMessage(scip, file, "     - ");
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &cond) );
+
+   if( cond == SCIP_INVALID )
+      SCIPinfoMessage(scip, file, "   n/a ", cond);
+   else
+      SCIPinfoMessage(scip, file, "%.1e", cond);
+
    return SCIP_OKAY;
 }
 
@@ -845,6 +882,15 @@ SCIP_RETCODE SCIPincludeDispDefault(
             dispCopyDefault,
             NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNLPAvgIters, NULL,
             DISP_WIDT_LPAVGITERS, DISP_PRIO_LPAVGITERS, DISP_POSI_LPAVGITERS, DISP_STRI_LPAVGITERS) );
+   }
+   tmpdisp = SCIPfindDisp(scip, DISP_NAME_LPCOND);
+   if( tmpdisp == NULL )
+   {
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_LPCOND, DISP_DESC_LPCOND, DISP_HEAD_LPCOND,
+            SCIP_DISPSTATUS_AUTO,
+            dispCopyDefault,
+            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLPCondition, NULL,
+            DISP_WIDT_LPCOND, DISP_PRIO_LPCOND, DISP_POSI_LPCOND, DISP_STRI_LPCOND) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_MEMUSED);
    if( tmpdisp == NULL )
