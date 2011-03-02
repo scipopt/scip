@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.735 2011/03/01 13:55:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.736 2011/03/02 15:00:25 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4266,7 +4266,7 @@ SCIP_RETCODE SCIPsetProbName(
    const char*           name                /**< name to be set */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPsetProbName", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetProbName", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPprobSetName(scip->origprob, name);
 }
