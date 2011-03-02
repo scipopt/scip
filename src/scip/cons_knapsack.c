@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.224 2011/02/25 13:34:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.225 2011/03/02 09:30:09 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -4152,6 +4152,8 @@ SCIP_RETCODE propagateCons(
    SCIP_Bool foundmax;
    int c;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(redundant != NULL);
    assert(nfixedvars != NULL);
@@ -6020,6 +6022,10 @@ SCIP_RETCODE addNegatedCliques(
    /* calculate a clique partition */
    SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
    nnegcliques = consdata->nnegcliques;
+
+   /* if we have no negated cliques, stop */
+   if( nnegcliques == nvars )
+      return SCIP_OKAY;
    
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &poscliquevars, nvars) );
@@ -6221,6 +6227,7 @@ SCIP_RETCODE addCliques(
    /* calculate a clique partition */
    SCIP_CALL( calcCliquepartition(scip, consdata, FALSE, TRUE) );
    nnegcliques = consdata->nnegcliques;
+   assert(nnegcliques <= nvars);
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &poscliquevars, nvars) );
@@ -6230,27 +6237,31 @@ SCIP_RETCODE addCliques(
    SCIP_CALL( SCIPallocBufferArray(scip, &secondmaxweights, nnegcliques) );
    BMSclearMemoryArray(secondmaxweights, nnegcliques);
 
-   nnegcliques = 0;
    minactduetonegcliques = 0;
-
-   /* calculate minimal activity due to negated cliques */
-   for( i = 0; i < nvars; ++i )
+   
+   /* calculate minimal activity due to negated cliques, and determine second maximal weight in each clique */
+   if( nnegcliques < nvars )
    {
-      SCIP_Longint weight;
-      
-      cliquenum = consdata->negcliquepartition[i];
-      assert(0 <= cliquenum && cliquenum <= nnegcliques);
-
-      weight = consdata->weights[i];
-      assert(weight > 0);
-
-      if( cliquenum == nnegcliques )
-         nnegcliques++;
-      else
+      nnegcliques = 0;
+   
+      for( i = 0; i < nvars; ++i )
       {
-         minactduetonegcliques += weight;
-         if( secondmaxweights[cliquenum] == 0 )
-            secondmaxweights[cliquenum] = weight;
+         SCIP_Longint weight;
+         
+         cliquenum = consdata->negcliquepartition[i];
+         assert(0 <= cliquenum && cliquenum <= nnegcliques);
+         
+         weight = consdata->weights[i];
+         assert(weight > 0);
+         
+         if( cliquenum == nnegcliques )
+            nnegcliques++;
+         else
+         {
+            minactduetonegcliques += weight;
+            if( secondmaxweights[cliquenum] == 0 )
+               secondmaxweights[cliquenum] = weight;
+         }
       }
    }
 
@@ -7865,6 +7876,9 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
    
    switch( SCIPeventGetType(event) )
    {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
    case SCIP_EVENTTYPE_LBTIGHTENED:
       eventdata->consdata->onesweightsum += eventdata->weight;
       eventdata->consdata->propagated = FALSE;
@@ -7872,6 +7886,18 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       eventdata->consdata->onesweightsum -= eventdata->weight;
+      
+      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+      assert(conshdlr != NULL);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+   
+      if( conshdlrdata->negatedclique )
+      {
+         /* if a variable fixed to 1 is unfixed, it is possible, that it can be fixed to 1 again */
+         eventdata->consdata->propagated = FALSE;
+      }
+  
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if a variable fixed to 0 is unfixed, it is possible, that it can be fixed to 0 again */
