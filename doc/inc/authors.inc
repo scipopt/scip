@@ -206,7 +206,7 @@
                  <a href="http://www.rambau.wm.uni-bayreuth.de/">J&ouml;rg Rambau</a>
 	      </td>
 	      <td>
-                 SamplePricer example
+                 Branch-and-Price contributions
 	      </td>
 	      <td>
 	      </td>
@@ -246,7 +246,7 @@
                  <a href="http://www.zib.de/tuchscherer/">Andreas Tuchscherer</a>
 	      </td>
 	      <td>
-                 SamplePricer example
+                 Branch-and-Price contributions
 	      </td>
 	      <td>
 	      </td>

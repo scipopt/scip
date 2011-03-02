@@ -441,9 +441,9 @@
  *   directory). Depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose 
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project
  *   we suggest the use one of the following examples as starting point:
- *     - <code>SamplePricer</code> should be used if your focus is <b>branch-and-cut-and-price</b>
+ *     - <code>VRP</code> should be used if your focus is <b>branch-and-cut-and-price</b>
  *       (column generation) and you want to use <b>C++</b>.
- *     - <code>Coloring</code> should be used if your focus is 
+ *     - <code>Coloring</code> or <code>Binpacking</code> should be used if your focus is 
  *       <b>branch-and-cut-and-price</b> (column generation) and you want to use <b>C</b>.
  *     - <code>TSP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C++</b>.
  *     - <code>LOP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C</b>.
