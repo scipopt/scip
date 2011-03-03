@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.67 2011/02/08 10:40:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.68 2011/03/03 15:07:56 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2752,7 +2752,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       }
   
       SCIP_CALL( SCIPcreateConsSOC(scip, &upgdconss[0], SCIPconsGetName(cons),
-         lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
+         lhscount, lhsvars, lhscoefs, lhsoffsets, MAX(lhsconstant, 0.0),
          rhsvar, rhscoef, rhsoffset,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
@@ -2838,7 +2838,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          }
 
          SCIP_CALL( SCIPcreateConsSOC(scip, &upgdconss[0], SCIPconsGetName(cons),
-            lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
+            lhscount, lhsvars, lhscoefs, lhsoffsets, MAX(lhsconstant, 0.0),
             rhsvar, rhscoef, rhsoffset,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
