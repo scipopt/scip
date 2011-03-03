@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.sh,v 1.6 2011/02/16 17:10:22 bzfviger Exp $
+# $Id: check_gams.sh,v 1.7 2011/03/03 14:56:18 bzfviger Exp $
 TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}
@@ -179,11 +179,15 @@ then
   fi
 fi
 
-#initialize gams trace file, also add information on solver and limits for eval script
-echo "* Trace Record Definition" > $TRCFILE
-echo "* GamsSolve" >> $TRCFILE
-echo "* InputFileName,ModelType,SolverName,OptionFile,Direction,NumberOfEquations,NumberOfVariables,NumberOfDiscreteVariables,NumberOfNonZeros,NumberOfNonlinearNonZeros," >> $TRCFILE
-echo "* ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime,ETSolver,NumberOfIterations,NumberOfNodes" >> $TRCFILE
+# initialize gams trace file if not continuing previous run
+if test "$CONTINUE" = "false"
+then
+  echo "* Trace Record Definition" > $TRCFILE
+  echo "* GamsSolve" >> $TRCFILE
+  echo "* InputFileName,ModelType,SolverName,OptionFile,Direction,NumberOfEquations,NumberOfVariables,NumberOfDiscreteVariables,NumberOfNonZeros,NumberOfNonlinearNonZeros," >> $TRCFILE
+  echo "* ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime,ETSolver,NumberOfIterations,NumberOfNodes" >> $TRCFILE
+fi
+# add information on solver and limits for eval script
 echo "*" >> $TRCFILE
 echo "* SOLVER,$SOLVER" >> $TRCFILE
 echo "* TIMELIMIT,$TIMELIMIT" >> $TRCFILE
