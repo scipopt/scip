@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.22 2011/02/11 16:43:43 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.23 2011/03/03 17:54:33 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -44,6 +44,8 @@
 #define DEFAULT_MATCHINGRATE            0.5 /**< default percentage by which two variables have to match in their LP-row set to be 
                                              *   associated as pair by heuristic */
 #define DEFAULT_MAXNSLAVES              199 /**< default number of slave candidates for a master variable */
+#define DEFAULT_ARRAYSIZE                10 /**< default initialization size of buffer arrays */
+
 
 /*
  * Data structures
@@ -52,8 +54,8 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   lastsolindex;       /**< index of last solution for which heuristic was performed */
-   SCIP_Real             matchingrate;       /**< percentage by which two variables have have to match in their LP-row 
+   int                  lastsolindex;       /**< index of last solution for which heuristic was performed */
+   SCIP_Real            matchingrate;       /**< percentage by which two variables have have to match in their LP-row
                                               *   set to be associated as pair by heuristic */
    SCIP_VAR**            binvars;            /**< Array of binary variables which are sorted with respect to their occurence
                                               *   in the LP-rows */  
@@ -638,7 +640,7 @@ SCIP_RETCODE innerPresolve(
    /* loop over variables and compare neighbours*/
    for( v = 1; v < nvars; ++v ) 
    {
-      if( !checkConstraintMatching(scip, (*varspointer)[startindex], (*varspointer)[v], heurdata->matchingrate) || v == nvars - 1 )
+      if( !checkConstraintMatching(scip, (*varspointer)[startindex], (*varspointer)[v], heurdata->matchingrate) )
       {
          /* current block has its last variable at position v-1. If v differs from startindex by at least 2,
           * a block is detected. Update the data correspondingly */
@@ -653,6 +655,16 @@ SCIP_RETCODE innerPresolve(
          }
          startindex = v;
       } 
+      else if( v == nvars - 1 && v - startindex >= 2 )
+      {
+	 /* a block is detected at the end of the array */
+         assert(*nblocks < nvars/2);
+         (*nblockvars) += v - startindex + 1;
+         (*maxblocksize) = MAX((*maxblocksize), v - startindex + 1);
+         (*blockstart)[*nblocks] = startindex;
+         (*blockend)[*nblocks] = v;
+         (*nblocks)++;
+      }
    }
 
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &((*blockstart)), nvars/2, *nblocks) );
@@ -864,6 +876,12 @@ SCIP_RETCODE optimize(
    )
 {  /*lint --e{715}*/
    int b;
+   SCIP_Real* objchanges;
+   SCIP_VAR** bestmasters;
+   SCIP_VAR** bestslaves;
+   int* bestdirections;
+   int arraysize;
+   int npairs;
    
    assert(scip != NULL);
    assert(nblocks > 0);
@@ -874,6 +892,15 @@ SCIP_RETCODE optimize(
    assert(improvement != NULL);
    
    *varboundserr = FALSE;
+
+
+   /* allocate memory to store candidate pair information */
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestmasters, DEFAULT_ARRAYSIZE) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestslaves, DEFAULT_ARRAYSIZE) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &objchanges, DEFAULT_ARRAYSIZE) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestdirections, DEFAULT_ARRAYSIZE) );
+   arraysize = DEFAULT_ARRAYSIZE;
+   npairs = 0;
 
    /* iterate over blocks */
    for( b = 0; b < nblocks; ++b )
@@ -896,6 +923,7 @@ SCIP_RETCODE optimize(
          int s;
 	 int firstslave;
 	 int nslaves;
+	 int bestdirection;
          DIRECTION bestmasterdir;
          DIRECTION bestslavedir;
 
@@ -910,7 +938,7 @@ SCIP_RETCODE optimize(
             *varboundserr = TRUE;
             SCIPdebugMessage("Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
                   SCIPvarGetName(master), SCIPvarGetLbGlobal(master), mastersolval, SCIPvarGetUbGlobal(master));
-            return SCIP_OKAY;
+            goto TERMINATE;
          }    
 
 	 /* if variable has fixed solution value, it is deleted from heuristic array */
@@ -934,6 +962,7 @@ SCIP_RETCODE optimize(
          bestbound = 0.0;
          bestmasterdir = DIRECTION_NONE;
          bestslavedir = DIRECTION_NONE;
+         bestdirection = -1;
 
 	 /* in blocks with more than heurdata->maxnslaves variables, a slave candidate
 	  * region is chosen */
@@ -985,7 +1014,7 @@ SCIP_RETCODE optimize(
 	       *varboundserr = TRUE;
 	       SCIPdebugMessage("Solution has violated variable bounds for var %s: %g <= %g <= %g \n",
 				SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), slavesolval, SCIPvarGetUbGlobal(slave));
-	       return SCIP_OKAY;
+	       goto TERMINATE;
 	    }    
 	    
 	    /* if solution value of the variable is fixed, delete it from the remaining candidates in the block */
@@ -1052,7 +1081,7 @@ SCIP_RETCODE optimize(
 	    {
 	       bestimprovement = changedobj;
 	       bestslavepos = slaveindex;
-               
+               bestdirection = directions;
                /* the most promising shift, i.e., the one which can improve the objective 
                 * the most, is recorded by the integer 'directions'. It is recovered via the use
                 * of a binary representation of the four different combinations for the shifting directions
@@ -1073,61 +1102,134 @@ SCIP_RETCODE optimize(
                   bestbound = diffdirbound;
 	    }
 	 }
-       
-	 /* choose the most promising candidate, if one exists */
+	 /* store the best master/slave pair information, if there exists such a pair */
          if( bestslavepos >= 0 )
          {
-            SCIP_Real slavesolval;
-            SCIP_VAR* slave;
-            SCIP_Real slaveobj;
-            SCIP_Bool feasible;
-            SCIP_Real changedobj;
-
-            assert(SCIPisFeasGT(scip, bestbound, 0.0));
-
-            slave = vars[bestslavepos];
-            slavesolval = SCIPgetSolVal(scip, worksol, slave);
-            slaveobj = SCIPvarGetObj(slave);
-
-            SCIPdebugMessage("  Promising candidates {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g}\n",
-               SCIPvarGetName(master), SCIPgetSolVal(scip, worksol, master), SCIPvarGetName(slave), SCIPgetSolVal(scip, worksol, slave),
-               masterobj, slaveobj, mastersolval + (int)bestmasterdir * bestbound, slavesolval + (int)bestslavedir * bestbound);
-
-            /* the improvement of objective function is calculated */
-            changedobj = ((int)bestslavedir * slaveobj  + (int)bestmasterdir *  masterobj) * bestbound;
-	  	  
-            assert(SCIPisFeasLT(scip, changedobj, 0.0));
-            assert(SCIPvarGetStatus(master) == SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(slave) == SCIP_VARSTATUS_COLUMN);
-            /* try to change the solution values of the variables */
-            feasible = FALSE;
-            SCIP_CALL( shiftValues(scip, master, slave, mastersolval, bestmasterdir, slavesolval, bestslavedir, bestbound,
-                  activities, nrows, &feasible) );
-
-            if( feasible )
+	    /* reallocate memory for buffer arrays if necessary */
+            if( npairs == arraysize )
             {
-               /* The variables' solution values were successfully shifted and can hence be updated. */
-               assert(SCIPisFeasIntegral(scip, mastersolval + ((int)bestmasterdir * bestbound)));
-               assert(SCIPisFeasIntegral(scip, slavesolval + ((int)bestslavedir * bestbound)));
-
-               SCIP_CALL( SCIPsetSolVal(scip, worksol, master, mastersolval + (int)bestmasterdir * bestbound) );
-               SCIP_CALL( SCIPsetSolVal(scip, worksol, slave, slavesolval + (int)bestslavedir * bestbound) );
-               SCIPdebugMessage("  Feasible shift: <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n", 
-                  SCIPvarGetName(master), SCIPvarGetLbGlobal(master), SCIPvarGetUbGlobal(master), masterobj, mastersolval, SCIPgetSolVal(scip, worksol, master));
-               SCIPdebugMessage("                  <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n", 
-                  SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), SCIPvarGetUbGlobal(slave), slaveobj, slavesolval, SCIPgetSolVal(scip, worksol, slave));
-
-#ifdef STATISTIC_INFORMATION
-               /* update statistics */
-               if( opttype == OPTTYPE_BINARY )
-                  ++(heurdata->binnexchanges);
-               else
-                  ++(heurdata->intnexchanges);
-#endif
-               *improvement = TRUE;
+               SCIP_CALL( SCIPreallocBufferArray(scip, &bestmasters, 2 * arraysize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &bestslaves, 2 * arraysize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &objchanges, 2 * arraysize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &bestdirections, 2 * arraysize) );
+               arraysize = 2 * arraysize;
             }
+
+            assert( npairs < arraysize );
+
+            bestmasters[npairs] = master;
+            bestslaves[npairs] = vars[bestslavepos];
+            objchanges[npairs] = ((int)bestslavedir * SCIPvarGetObj(bestslaves[npairs])  + (int)bestmasterdir *  masterobj) * bestbound;
+            bestdirections[npairs] = bestdirection;
+
+            assert(objchanges[npairs] < 0);
+
+            SCIPdebugMessage("  Saved candidate pair {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g} %d\n",
+                  SCIPvarGetName(master), mastersolval, SCIPvarGetName(bestslaves[npairs]), SCIPgetSolVal(scip, worksol, bestslaves[npairs]) ,
+                  masterobj, SCIPvarGetObj(bestslaves[npairs]), mastersolval + (int)bestmasterdir * bestbound, SCIPgetSolVal(scip, worksol, bestslaves[npairs])
+                     + (int)bestslavedir * bestbound, bestdirections[npairs]);
+
+            ++npairs;
          }
       }
    }
+
+   /* terminate method if no pairs were found */
+   if( npairs == 0 )
+      goto TERMINATE;
+
+   /* sort the pairs by the best possible objective function benefit */
+   SCIPsortRealPtrPtrInt(objchanges, (void**)bestmasters, (void**)bestslaves, bestdirections, npairs);
+
+   /* go through sorted pairs and shift their solution values to improve objective value of current solution */
+   for( b = 0; b < npairs; ++b )
+   {
+      SCIP_VAR* master;
+      SCIP_VAR* slave;
+      SCIP_Real mastersolval;
+      SCIP_Real slavesolval;
+      SCIP_Real masterobj;
+      SCIP_Real slaveobj;
+      SCIP_Real bound;
+      int masterdir;
+      int slavedir;
+
+      master = bestmasters[b];
+      slave = bestslaves[b];
+      mastersolval = SCIPgetSolVal(scip, worksol, master);
+      slavesolval = SCIPgetSolVal(scip, worksol, slave);
+      masterobj  =SCIPvarGetObj(master);
+      slaveobj = SCIPvarGetObj(slave);
+
+      assert(0 <= bestdirections[b] && bestdirections[b] < 4);
+
+      /* recover information about shifting directions */
+      if( bestdirections[b] / 2 == 1 )
+         masterdir = DIRECTION_UP;
+      else
+         masterdir = DIRECTION_DOWN;
+
+      if( bestdirections[b] % 2 == 1 )
+         slavedir = DIRECTION_UP;
+      else
+         slavedir = DIRECTION_DOWN;
+
+      /* bound could have changed in case of preceding shifting steps and has to be recalculated */
+      bound = determineBound(scip, worksol, master, masterdir, slave, slavedir, activities, nrows);
+
+      /* Shift variables' solution values by bound in their respective directions */
+      if( !SCIPisZero(scip, bound) )
+      {
+         SCIP_Real changedobj;
+         SCIP_Bool feasible;
+
+         SCIPdebugMessage("  Promising candidates {%s=%g, %s=%g} with objectives <%g>, <%g> to be set to {%g, %g}\n",
+               SCIPvarGetName(master), mastersolval, SCIPvarGetName(slave), slavesolval,
+               masterobj, slaveobj, mastersolval + (int)masterdir * bound, slavesolval + (int)slavedir * bound);
+
+         /* the improvement of objective function is calculated */
+         changedobj = ((int)slavedir * slaveobj  + (int)masterdir *  masterobj) * bound;
+
+         assert(SCIPisFeasLT(scip, changedobj, 0.0));
+         assert(SCIPvarGetStatus(master) == SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(slave) == SCIP_VARSTATUS_COLUMN);
+
+         /* try to change the solution values of the variables */
+         feasible = FALSE;
+
+         SCIP_CALL( shiftValues(scip, master, slave, mastersolval, masterdir, slavesolval, slavedir, bound,
+               activities, nrows, &feasible) );
+
+         if( feasible )
+         {
+            /* The variables' solution values were successfully shifted and can hence be updated. */
+            assert(SCIPisFeasIntegral(scip, mastersolval + ((int)masterdir * bound)));
+            assert(SCIPisFeasIntegral(scip, slavesolval + ((int)slavedir * bound)));
+
+            SCIP_CALL( SCIPsetSolVal(scip, worksol, master, mastersolval + (int)masterdir * bound) );
+            SCIP_CALL( SCIPsetSolVal(scip, worksol, slave, slavesolval + (int)slavedir * bound) );
+            SCIPdebugMessage("  Feasible shift: <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
+                  SCIPvarGetName(master), SCIPvarGetLbGlobal(master), SCIPvarGetUbGlobal(master), masterobj, mastersolval, SCIPgetSolVal(scip, worksol, master));
+            SCIPdebugMessage("                  <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
+                  SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), SCIPvarGetUbGlobal(slave), slaveobj, slavesolval, SCIPgetSolVal(scip, worksol, slave));
+
+#ifdef STATISTIC_INFORMATION
+            /* update statistics */
+            if( opttype == OPTTYPE_BINARY )
+               ++(heurdata->binnexchanges);
+            else
+               ++(heurdata->intnexchanges);
+#endif
+            *improvement = TRUE;
+         }
+      }
+   }
+   TERMINATE:
+   /* free all allocated memory */
+   SCIPfreeBufferArray(scip, &bestdirections);
+   SCIPfreeBufferArray(scip, &objchanges);
+   SCIPfreeBufferArray(scip, &bestslaves);
+   SCIPfreeBufferArray(scip, &bestmasters);
+
    return SCIP_OKAY;
 }
 
@@ -1376,6 +1478,9 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       return SCIP_OKAY;
 
    presolthiscall = FALSE;
+   /* get LP column data */
+   SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
+
    ncolsforsorting = MIN(ncols, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
 
    /* ensure that heuristic specific presolve is applied when heuristic is executed first */
@@ -1441,7 +1546,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
    if( !presolthiscall )
    {
-      SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
+      /* sort row indices of all integral LP columns */
       for( i = 0; i < ncolsforsorting; ++i )
       {
          SCIPcolSort(cols[i]);
