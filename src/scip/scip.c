@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.737 2011/03/03 15:07:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.738 2011/03/03 18:28:35 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -19126,15 +19126,9 @@ SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Real lowerbound;
-
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
-   if( SCIPsetIsInfinity(scip->set, lowerbound) )
-      return getPrimalbound(scip);
-   else
-      return getDualbound(scip);
+   return getDualbound(scip);
 }
 
 /** gets global lower (dual) bound in transformed problem */
