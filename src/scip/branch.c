@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.109 2011/01/03 13:13:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.110 2011/03/03 15:09:13 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -2026,19 +2026,19 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       {
          SCIP_Real lbabs;
 
-         /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound */
+         /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere above the lower bound, but not above infinity */
          assert(SCIPsetIsInfinity(set,  ub));
          lbabs = REALABS(lb);
-         branchpoint = lb + MAX(0.5 * lbabs, 1000);
+         branchpoint = lb + MIN(MAX(0.5 * lbabs, 1000), 0.9*(SCIPsetInfinity(set)-lb));
       }
       else if( !SCIPsetIsGT(set, ub, branchpoint) )
       { 
          SCIP_Real ubabs;
 
-         /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound */
+         /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound, but not below infinity */
          assert(SCIPsetIsInfinity(set, -lb));
          ubabs = REALABS(ub);
-         branchpoint = ub - MAX(0.5 * ubabs, 1000);
+         branchpoint = ub - MIN(MAX(0.5 * ubabs, 1000), 0.9*(ub+SCIPsetInfinity(set)));
       }
 
       return branchpoint;
