@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.24 2011/02/28 12:46:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_shiftandpropagate.c,v 1.25 2011/03/03 17:55:59 bzfhende Exp $"
 
 /**@file   heur_shiftandpropagate.c
  * @ingroup PRIMALHEURISTICS
@@ -27,7 +27,6 @@
 #include <string.h>
 #include "scip/lp.h"
 #include "scip/heur_shiftandpropagate.h"
-#include "scip/struct_scip.h"
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic"
@@ -571,7 +570,7 @@ SCIP_RETCODE initMatrix(
          assert(currentpointer < matrix->nnonzs);
 
          /* rows are normalized by maximum norm */
-         maxval = SCIProwGetMaxval(rows[i], scip->set);
+         maxval = SCIPgetRowMaxCoef(scip, rows[i]);
 
          assert(maxval > 0);
 
