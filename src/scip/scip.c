@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.736 2011/03/02 15:00:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.737 2011/03/03 15:07:34 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -17007,9 +17007,11 @@ SCIP_RETCODE SCIPbranchVarVal(
     * in the other case, the given branching value should be such that it does not sits on one of the bounds
     * we assert this by requiring that it is at least eps/2 away from each bound
     * the /2 is there, because ub-lb may be in (eps, 2eps], in which case there is no way to choose a branching value that is at least eps away from both bounds
+    * however, if variable bounds are below/above -/+infinity/2.1, then SCIPisLT will give an assert, so we omit the check then
     */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
       SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
+      SCIPisInfinity(scip, -2.1*SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, 2.1*SCIPvarGetUbLocal(var)) ||
       (SCIPisLT(scip, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPisLT(scip, 2.1*val, 2.1*SCIPvarGetUbLocal(var)) ) );
 
    if( SCIPsetIsEQ(scip->set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
