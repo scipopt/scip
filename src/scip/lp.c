@@ -11491,7 +11491,7 @@ SCIP_RETCODE lpSolveStable(
    /* if FASTMIP is turned on, solve again without FASTMIP (starts from the solution of the last LP solving call);
     * do this only if the iteration limit was not exceeded in the last LP solving call 
     */
-   if( fastmip > 0 && simplex && !SCIPlpiIsIterlimExc(lp->lpi))
+   if( fastmip > 0 && simplex && ((*lperror) || !SCIPlpiIsIterlimExc(lp->lpi)) )
    {
       SCIP_CALL( lpSetFastmip(lp, 0, &success) );
       if( success )
@@ -11521,7 +11521,7 @@ SCIP_RETCODE lpSolveStable(
    /* if the iteration limit was exceeded in the last LP solving call, we leave out the remaining resolving calls with changed settings
     * and go directly to solving the LP from scratch 
     */
-   if( !SCIPlpiIsIterlimExc(lp->lpi) )
+   if( (*lperror) || !SCIPlpiIsIterlimExc(lp->lpi) )
    {
       /* solve again with opposite scaling setting (starts from the solution of the last LP solving call) */
       SCIP_CALL( lpSetScaling(lp, !set->lp_scaling, &success) );
@@ -11556,7 +11556,7 @@ SCIP_RETCODE lpSolveStable(
    /* if the iteration limit was exceeded in the last LP solving call, we leave out the remaining resolving calls with changed settings
     * and go directly to solving the LP from scratch
     */
-   if( !SCIPlpiIsIterlimExc(lp->lpi) )
+   if( (*lperror) || !SCIPlpiIsIterlimExc(lp->lpi) )
    {
       /* solve again with opposite presolving setting (starts from the solution of the last LP solving call) */
       SCIP_CALL( lpSetPresolving(lp, !set->lp_presolving, &success) );
@@ -11591,7 +11591,7 @@ SCIP_RETCODE lpSolveStable(
    /* solve again with a tighter feasibility tolerance (starts from the solution of the last LP solving call);
     * do this only if the iteration limit was not exceeded in the last LP solving call 
     */
-   if( !tightfeastol && !SCIPlpiIsIterlimExc(lp->lpi))
+   if( !tightfeastol && ((*lperror) || !SCIPlpiIsIterlimExc(lp->lpi)) )
    {
       SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetFeastol(set), &success) );
       SCIP_CALL( lpSetDualfeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
