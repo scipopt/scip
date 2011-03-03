@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.160 2011/02/28 15:24:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.161 2011/03/03 15:08:36 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -1449,8 +1449,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->linvar_mayincrease = -1;
    
    (*consdata)->activity = SCIP_INVALID;
-   (*consdata)->lhsviol  = SCIP_INVALID;
-   (*consdata)->rhsviol  = SCIP_INVALID;
+   (*consdata)->lhsviol  = SCIPisInfinity(scip, -lhs) ? 0.0 : SCIP_INVALID;
+   (*consdata)->rhsviol  = SCIPisInfinity(scip,  rhs) ? 0.0 : SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -2183,8 +2183,6 @@ SCIP_RETCODE addQuadVarTerm(
 
    /* invalidate activity information */
    consdata->activity = SCIP_INVALID;
-   consdata->lhsviol  = SCIP_INVALID;
-   consdata->rhsviol  = SCIP_INVALID;
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate nonlinear row */
@@ -2422,8 +2420,6 @@ SCIP_RETCODE replaceQuadVarTermPos(
 
    /* invalidate activity information */
    consdata->activity = SCIP_INVALID;
-   consdata->lhsviol  = SCIP_INVALID;
-   consdata->rhsviol  = SCIP_INVALID;
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate nonlinear row */
@@ -8823,8 +8819,6 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
 
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
    consdata->activity = SCIP_INVALID;
-   consdata->lhsviol  = SCIP_INVALID;
-   consdata->rhsviol  = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -8874,8 +8868,6 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
 
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
    consdata->activity = SCIP_INVALID;
-   consdata->lhsviol  = SCIP_INVALID;
-   consdata->rhsviol  = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
