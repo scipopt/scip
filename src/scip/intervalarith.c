@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.62 2011/02/28 12:57:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.63 2011/03/03 14:07:18 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -2111,7 +2111,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->inf = SCIPintervalPowerScalarIntegerInf(operand1.sup, (int)operand2);
+            resultant->inf = -SCIPintervalPowerScalarIntegerSup(-operand1.sup, (int)operand2);
          }
          if( operand1.inf <= -infinity )
          {
@@ -2125,7 +2125,7 @@ void SCIPintervalPowerScalar(
          }
          else
          {
-            resultant->sup = SCIPintervalPowerScalarIntegerSup(operand1.inf, (int)operand2);
+            resultant->sup = -SCIPintervalPowerScalarIntegerInf(-operand1.inf, (int)operand2);
          }
       }
       else if( operand2 >= 0.0 )
