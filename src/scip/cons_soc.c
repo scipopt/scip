@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.68 2011/03/03 15:07:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.69 2011/03/04 20:03:09 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2678,6 +2678,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
+   /* currently, a proper SOC constraint needs at least 3 variables */
+   if( nquadvars < 3 )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &lhsvars,    nquadvars-1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lhscoefs,   nquadvars-1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffsets, nquadvars-1) );
@@ -2696,7 +2700,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       {
          term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
          
-         assert(term->sqrcoef != 0.0); /* otherwise it should not be a quadratic variable */
+         /* if there is a linear variable that is still considered as quadratic (constraint probably not presolved yet), then give up */
+         if( term->sqrcoef == 0.0 )
+            goto cleanup;
             
          if( term->sqrcoef > 0.0 )
          {
@@ -2737,7 +2743,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       }
    }
    
-   if( rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
    { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
       SCIPdebugMessage("found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -2783,7 +2789,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       {
          term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
          
-         assert(term->sqrcoef != 0.0);
+         /* if there is a linear variable that is still considered as quadratic (constraint probably not presolved yet), then give up */
+         if( term->sqrcoef == 0.0 )
+            goto cleanup;
          
          if( term->sqrcoef < 0.0 )
          {
