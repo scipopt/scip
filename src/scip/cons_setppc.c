@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.164 2011/01/14 13:44:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.165 2011/03/04 18:52:19 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -100,7 +100,7 @@ struct SCIP_ConsData
    unsigned int          cliqueadded:1;      /**< was the set partitioning / packing constraint already added as clique? */
    unsigned int          validsignature:1;   /**< is the bit signature valid? */
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
-   unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
+   unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
 };
 
 
