@@ -33,6 +33,7 @@ interface:
 - added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without previous calls to other separators/conshdlrs)
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
 - SCIPchgVarType got an extra boolean to store infeasibility while upgrading a variable from continuous type to an integer type
+- added function SCIPaddCoefLogicor() to add a variable to a logic or constraint 
 
 performance improvements:
 - performance improvements in prop_vbounds

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.34 2011/01/02 11:10:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.h,v 1.35 2011/03/04 18:56:36 bzfwinkm Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
@@ -69,6 +69,14 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** adds coefficient in logic or constraint */
+extern
+SCIP_RETCODE SCIPaddCoefLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< logicor constraint */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
    );
 
 /** gets number of variables in logic or constraint */

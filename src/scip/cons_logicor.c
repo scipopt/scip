@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.164 2011/01/28 16:51:09 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.165 2011/03/04 18:56:36 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -103,6 +103,7 @@ struct SCIP_ConsData
    unsigned int          impladded:1;        /**< was the 2-variable logic or constraint already added as implication? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
+   unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
 };
 
 
@@ -112,7 +113,6 @@ struct SCIP_ConsData
  * Local methods
  */
 
-#if 0
 /** installs rounding locks for the given variable in the given logic or constraint */
 static
 SCIP_RETCODE lockRounding(
@@ -126,7 +126,6 @@ SCIP_RETCODE lockRounding(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** removes rounding locks for the given variable in the given logic or constraint */
 static
@@ -182,6 +181,30 @@ SCIP_RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
+/** ensures, that the vars array can store at least num entries */
+static
+SCIP_RETCODE consdataEnsureVarsSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< logicor constraint data */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(consdata != NULL);
+   assert(consdata->nvars <= consdata->varssize);
+
+   if( num > consdata->varssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, num);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
+      consdata->varssize = newsize;
+   }
+   assert(num <= consdata->varssize);
+
+   return SCIP_OKAY;
+}
+
 /** creates a logic or constraint data object */
 static
 SCIP_RETCODE consdataCreate(
@@ -216,6 +239,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->impladded = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->sorted = (nvars <= 1);
+   (*consdata)->merged = (nvars <= 1);
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -342,6 +366,54 @@ SCIP_RETCODE switchWatchedvars(
    consdata->watchedvar1 = watchedvar1;
    consdata->watchedvar2 = watchedvar2;
    
+   return SCIP_OKAY;
+}
+
+/** adds coefficient in logicor constraint */
+static
+SCIP_RETCODE addCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< logicor constraint */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool transformed;
+
+   assert(var != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* are we in the transformed problem? */
+   transformed = SCIPconsIsTransformed(cons);
+
+   /* always use transformed variables in transformed constraints */
+   if( transformed )
+   {
+      SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
+   }
+   assert(var != NULL);
+   assert(transformed == SCIPvarIsTransformed(var));
+
+   SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars + 1) );
+   consdata->vars[consdata->nvars] = var;
+   consdata->nvars++;
+
+   consdata->sorted = (consdata->nvars == 1);
+   consdata->changed = TRUE;
+
+   /* install the rounding locks for the new variable */
+   SCIP_CALL( lockRounding(scip, cons, var) );
+
+   /* add the new coefficient to the LP row */
+   if( consdata->row != NULL )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, 1.0) );
+   }
+
+   consdata->merged = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -707,8 +779,8 @@ SCIP_RETCODE disableCons(
    return SCIP_OKAY;
 }
 
-/**find pairs of negated variables in constraint: constraint is redundant */
-/**find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
+/** find pairs of negated variables in constraint: constraint is redundant */
+/** find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
 static
 SCIP_RETCODE mergeMultiples(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -740,9 +812,15 @@ SCIP_RETCODE mergeMultiples(
    nvars = consdata->nvars;
 
    *redundant = FALSE;
-   
-   if( nvars == 0 )
+
+   if( consdata->merged ) 
       return SCIP_OKAY;
+
+   if( consdata->nvars <= 1 )
+   {
+      consdata->merged = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
@@ -811,6 +889,8 @@ SCIP_RETCODE mergeMultiples(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &negarray);
    SCIPfreeBufferArray(scip, &vars);
+
+   consdata->merged = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3099,6 +3179,29 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** adds coefficient in logic or constraint */
+SCIP_RETCODE SCIPaddCoefLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< logicor constraint */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
+   )
+{
+   assert(var != NULL);
+
+   /*debugMessage("adding variable <%s> to logicor constraint <%s>\n",
+     SCIPvarGetName(var), SCIPconsGetName(cons));*/
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( addCoef(scip, cons, var) );
 
    return SCIP_OKAY;
 }
