@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.738 2011/03/03 18:28:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.739 2011/03/04 19:02:06 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8722,9 +8722,7 @@ SCIP_RETCODE SCIPaddVarLocks(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
-      return SCIP_OKAY;
-
+      /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
@@ -8780,9 +8778,7 @@ SCIP_RETCODE SCIPlockVarCons(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, nlocksdown, nlocksup) );
-      return SCIP_OKAY;
-
+      /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_INITSOLVE:
@@ -8807,8 +8803,8 @@ SCIP_RETCODE SCIPunlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             lockdown,           /**< should the rounding be locked in downwards direction? */
-   SCIP_Bool             lockup              /**< should the rounding be locked in upwards direction? */
+   SCIP_Bool             lockdown,           /**< should the rounding be unlocked in downwards direction? */
+   SCIP_Bool             lockup              /**< should the rounding be unlocked in upwards direction? */
    )
 {
    int nlocksdown;
@@ -8837,9 +8833,7 @@ SCIP_RETCODE SCIPunlockVarCons(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      SCIP_CALL( SCIPvarAddLocks(var, scip->mem->probmem, scip->set, scip->eventqueue, -nlocksdown, -nlocksup) );
-      return SCIP_OKAY;
-
+      /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_INITSOLVE:
