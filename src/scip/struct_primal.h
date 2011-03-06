@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_primal.h,v 1.21 2011/01/02 11:10:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_primal.h,v 1.22 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   struct_primal.h
  * @brief  datastructures for collecting primal CIP solutions and primal informations
@@ -44,6 +44,8 @@ struct SCIP_Primal
    SCIP_SOL**            sols;               /**< primal CIP solutions */
    SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible and infeasible) */
    SCIP_SOL*             currentsol;         /**< internal solution for temporarily storing the current solution */
+   SCIP_SOL*             primalray;          /**< solution representing the primal ray for (infeasible or) unbounded problems;
+                                              *   warning: this does not have to be a feasible solution */
    int                   solssize;           /**< size of sols array */
    int                   nsols;              /**< number of primal CIP solutions stored in sols array */
    int                   existingsolssize;   /**< size of existingsols array */

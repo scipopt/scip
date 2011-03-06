@@ -12,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.147 2011/02/23 08:33:22 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.148 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
  * @author Tobias Achterberg
  * @author Marc Pfetsch
  * @author Kati Wolter
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1169,6 +1170,16 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
+   );
+
+/** returns primal ray proving the unboundedness of the current LP */
+extern
+SCIP_RETCODE SCIPlpGetPrimalRay(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ray                 /**< array for storing primal ray values, they are stored w.r.t. the problem index of the variables,
+                                              *   so the size of this array should be at least number of active variables
+                                              *   (all entries have to be initialized to 0 before) */
    );
 
 /** stores the dual Farkas multipliers for infeasibility proof in rows */

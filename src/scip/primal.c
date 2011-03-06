@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.102 2011/01/03 17:40:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.103 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -100,6 +100,7 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->sols = NULL;
    (*primal)->existingsols = NULL;
    (*primal)->currentsol = NULL;
+   (*primal)->primalray = NULL;
    (*primal)->solssize = 0;
    (*primal)->nsols = 0;
    (*primal)->existingsolssize = 0;
@@ -127,6 +128,12 @@ SCIP_RETCODE SCIPprimalFree(
    if( (*primal)->currentsol != NULL )
    {
       SCIP_CALL( SCIPsolFree(&(*primal)->currentsol, blkmem, *primal) );
+   }
+
+   /* free solution for storing primal ray */
+   if( (*primal)->primalray != NULL )
+   {
+      SCIP_CALL( SCIPsolFree(&(*primal)->primalray, blkmem, *primal) );
    }
 
    /* free feasible primal CIP solutions */

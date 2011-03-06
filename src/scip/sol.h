@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.62 2011/01/03 17:40:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.63 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -246,6 +246,16 @@ SCIP_Real SCIPsolGetVal(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_VAR*             var                 /**< variable to get value for */
    );
+
+/** returns value of variable in primal ray represented by primal CIP solution */
+extern
+SCIP_Real SCIPsolGetRayVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution, representing a primal ray */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   );
+
 
 /** gets objective value of primal CIP solution in transformed problem */
 extern

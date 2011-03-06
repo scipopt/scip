@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.739 2011/03/04 19:02:06 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.740 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -18136,6 +18136,30 @@ SCIP_RETCODE SCIPcheckSolOrig(
    return SCIP_OKAY;
 }
 
+/** return whether a primal ray is stored that proves unboundedness of the LP relaxation */
+SCIP_Bool SCIPhasPrimalRay(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return scip->primal->primalray != NULL;
+}
+
+/** gets value of given variable in primal ray causing unboundedness of the LP relaxation; 
+ *  should only be called if such a ray is stored (check with SCIPhasPrimalRay()) */
+SCIP_Real SCIPgetPrimalRayVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   assert(var != NULL);
+   assert(scip->primal->primalray != NULL);
+
+   return SCIPsolGetRayVal(scip->primal->primalray, scip->set, scip->stat, var);
+}
 
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.319 2011/02/10 01:38:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.320 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -13858,7 +13858,7 @@ SCIP_Real SCIPvarGetPseudoSol(
       return SCIPvarGetPseudoSol_rec(var);
 }
 
-/** gets primal LP solution value of variable */
+/** returns the average number of inferences found after branching on the variable in given direction */
 SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */

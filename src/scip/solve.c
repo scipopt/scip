@@ -12,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.327 2011/02/23 08:33:22 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.328 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Marc Pfetsch
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1924,8 +1925,7 @@ SCIP_RETCODE priceAndCutLoop(
          SCIPdebugMessage("constraint separation\n");
 
          /* separate constraints and LP */
-         if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved
-            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
+         if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved )
          {
             /* apply a separation round */
             SCIP_CALL( separationRoundLP(blkmem, set, stat, eventqueue, eventfilter, prob, lp, sepastore, actdepth, bounddist, delayedsepa,
@@ -2256,6 +2256,48 @@ SCIP_RETCODE solveNodeLP(
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
+   /* if the LP was unbounded, get the primal ray and store it */
+   assert((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded);
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   {
+      SCIP_VAR** vars;
+      SCIP_Real* ray;
+      int nvars;
+      int i;
+
+      assert(transprob != NULL);
+
+      SCIPdebugMessage("LP is unbounded, store primal ray\n");
+
+      vars = transprob->vars;
+      nvars = transprob->nvars;
+            
+      /* get buffer memory for storing the ray and load the ray values into it */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &ray, nvars) );
+      BMSclearMemoryArray(ray, nvars);
+      SCIP_CALL( SCIPlpGetPrimalRay(lp, set, ray) );
+
+      /* create solution to store the primal ray in */
+      assert(primal->primalray == NULL);
+      SCIP_CALL( SCIPsolCreate(&primal->primalray, blkmem, set, stat, primal, tree, NULL) );
+      
+      /* set values of all active variable in the solution that represents the primal ray */
+      for( i = 0; i < nvars; i++ )
+      {
+         SCIP_CALL( SCIPsolSetVal(primal->primalray, set, stat, tree, vars[i], ray[i]) );
+      }
+
+      /* free memory for buffering the ray values */
+      SCIPsetFreeBufferArray(set, &ray);
+   }
+   /* free previously stored primal ray */
+   else if( primal->primalray != NULL )
+   {
+      SCIPdebugMessage("LP is not unbounded, free previously stored primal ray\n");
+      SCIP_CALL( SCIPsolFree(&primal->primalray, blkmem, primal) );
+      primal->primalray = NULL;
+   }
+
    /* If pricing was aborted while solving the LP of the node and the node can not be cut off due to the lower bound computed by the pricer,
    *  the solving of the LP might be stopped due to the objective limit, but the node may not be cut off, since the LP objective
    *  is not a feasible lower bound for the solutions in the current subtree. 
@@ -2288,7 +2330,7 @@ SCIP_RETCODE solveNodeLP(
          *cutoff = TRUE;
       }
    }
-   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || (*cutoff));
+   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || (*cutoff));
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.468 2011/02/27 18:30:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.469 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -6416,6 +6416,20 @@ SCIP_RETCODE SCIPcheckSolOrig(
    SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
    SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_Bool             completely          /**< should all violations be checked? */
+   );
+
+/** return whether a primal ray is stored that proves unboundedness of the LP relaxation */
+extern
+SCIP_Bool SCIPhasPrimalRay(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets value of given variable in primal ray causing unboundedness of the LP relaxation; 
+ *  should only be called if such a ray is stored (check with SCIPhasPrimalRay()) */
+extern
+SCIP_Real SCIPgetPrimalRayVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get value for */
    );
 
 /**@} */

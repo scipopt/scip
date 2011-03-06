@@ -19,6 +19,7 @@
  * @author Timo Berthold
  * @author Marc Pfetsch
  * @author Kati Wolter
+ * @author Gerald Gamrath
  *
  *  In LP management, we have to differ between the current LP and the SCIP_LP
  *  stored in the LP solver. All LP methods affect the current LP only. 
@@ -12301,11 +12302,25 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
+         SCIPdebugMessage(" -> LP infeasible\n");
 	 if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
-            SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
+            if( SCIPlpiHasDualRay(lp->lpi) )
+            {
+               SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
+            }
+            /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
+             * with the primal simplex due to numerical problems) - treat this case like an LP error
+             */
+            else
+            {
+               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %"SCIP_LONGINT_FORMAT") infeasibility of LP %d could not be proven by dual ray\n", stat->nnodes, stat->nlps);
+               lp->solved = FALSE;
+               lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+               *lperror = TRUE;
+            }
          }
-         SCIPdebugMessage(" -> LP infeasible\n");
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
@@ -13649,6 +13664,60 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIPsetFreeBufferArray(set, &ray);
    SCIPsetFreeBufferArray(set, &activity);
    SCIPsetFreeBufferArray(set, &primsol);
+
+   return SCIP_OKAY;
+}
+
+/** returns primal ray proving the unboundedness of the current LP */
+SCIP_RETCODE SCIPlpGetPrimalRay(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ray                 /**< array for storing primal ray values, they are stored w.r.t. the problem index of the variables,
+                                              *   so the size of this array should be at least number of active variables
+                                              *   (all entries have to be initialized to 0 before) */
+   )
+{
+   SCIP_COL** lpicols;
+   SCIP_Real* lpiray;
+   SCIP_VAR* var;
+   int nlpicols;
+   int c;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(ray != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+   assert(SCIPsetIsInfinity(set, -lp->lpobjval));
+
+   /* check if the LP solver is able to provide a primal unbounded ray */
+   if( !SCIPlpiHasPrimalRay(lp->lpi) )
+      return SCIP_LPERROR;
+
+   /* get temporary memory */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &lpiray, lp->nlpicols) );
+
+   SCIPdebugMessage("getting primal ray values\n");
+
+   /* get primal unbounded ray */
+   SCIP_CALL( SCIPlpiGetPrimalRay(lp->lpi, lpiray) );
+
+   lpicols = lp->lpicols;
+   nlpicols = lp->nlpicols;
+
+   /* store the ray values of active problem variables */
+   for( c = 0; c < nlpicols; c++ )
+   {
+      assert(lpicols[c] != NULL);
+      
+      var = lpicols[c]->var;
+      assert(var != NULL);
+      assert(SCIPvarGetProbindex(var) != -1);
+      ray[SCIPvarGetProbindex(var)] = lpiray[c];
+   }
+
+   SCIPsetFreeBufferArray(set, &lpiray);
 
    return SCIP_OKAY;
 }

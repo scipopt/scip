@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.101 2011/01/03 17:40:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.102 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -931,6 +931,75 @@ SCIP_Real SCIPsolGetVal(
       if( SCIPsetIsInfinity(set, -solval) )
          return SCIPsetInfinity(set);
       return SCIPvarGetNegationConstant(var) - solval;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** returns value of variable in primal ray represented by primal CIP solution */
+SCIP_Real SCIPsolGetRayVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution, representing a primal ray */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real* scalars;
+   SCIP_Real solval;
+   SCIP_Real solvalsum;
+   int nvars;
+   int i;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO);
+   assert(var != NULL);
+
+   /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      return SCIPsolGetVal(sol, set, stat, SCIPvarGetTransVar(var));
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return solGetArrayVal(sol, var);
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
+      return 0.0; /* constants are ignored for computing the ray direction */
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var));
+      assert(solval != SCIP_UNKNOWN);
+      assert(!SCIPsetIsInfinity(set, REALABS(solval)));
+      return SCIPvarGetAggrScalar(var) * solval; /* constants are ignored for computing the ray direction */
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      nvars = SCIPvarGetMultaggrNVars(var);
+      vars = SCIPvarGetMultaggrVars(var);
+      scalars = SCIPvarGetMultaggrScalars(var);
+      solvalsum = 0.0; /* constants are ignored for computing the ray direction */
+      for( i = 0; i < nvars; ++i )
+      {
+         solval = SCIPsolGetVal(sol, set, stat, vars[i]);
+         assert(solval != SCIP_UNKNOWN );
+         assert(!SCIPsetIsInfinity(set, REALABS(solval)));
+         solvalsum += scalars[i] * solval;
+      }
+      return solvalsum;
+
+   case SCIP_VARSTATUS_NEGATED:
+      solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var));
+      assert(solval != SCIP_UNKNOWN);
+      assert(!SCIPsetIsInfinity(set, REALABS(solval)));
+      return -solval; /* constants are ignored for computing the ray direction */
 
    default:
       SCIPerrorMessage("unknown variable status\n");
