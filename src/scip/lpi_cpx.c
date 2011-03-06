@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.148 2011/03/02 13:29:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.149 2011/03/06 11:14:09 bzfviger Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -25,6 +25,9 @@
 #include <assert.h>
 
 #include "cplex.h"
+#ifndef CPX_SUBVERSION
+#define CPX_SUBVERSION 0
+#endif
 #include "scip/bitencode.h"
 #include "scip/lpi.h"
 #include "scip/message.h"
