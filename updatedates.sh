@@ -16,7 +16,7 @@
 NEWYEAR=`date +"%Y"`
 LASTYEAR=`expr $NEWYEAR - 1`
 
-DIRECTORIES=(check doc src src/scip src/objscip src/blockmemshell src/tclique examples examples/* examples/*/src examples/*/doc)
+DIRECTORIES=(check doc src src/* examples examples/* examples/*/src examples/*/doc)
 EXTENSIONS=(sh awk h c hpp cpp)
 EXTRAFILE=(Makefile)
 
