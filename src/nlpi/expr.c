@@ -1561,7 +1561,7 @@ SCIP_RETCODE SCIPexprCopyDeep(
 void SCIPexprFreeDeep(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr                /**< pointer to expression to free */
-)
+   )
 {
    assert(blkmem != NULL);
    assert(expr   != NULL);
@@ -1574,7 +1574,7 @@ void SCIPexprFreeDeep(
       {
          SCIP_Real* freedata;
 
-         freedata = (*expr)->data.data;
+         freedata = (SCIP_Real*)(*expr)->data.data;
          assert(freedata != NULL);
 
          BMSfreeBlockMemoryArray(blkmem, &freedata, (*expr)->nchildren + 1);  /*lint !e866*/
