@@ -237,7 +237,7 @@ fi
 # signal 9 (sigkill) when at hard timelimit + 60 seconds
 # set sleepseconds small enough so that we check at least once between $TIMELIMIT and $HARDTIMELIMIT, which have difference at least $TIMELIMIT/10,
 # and at least once between $HARDTIMELIMIT and $HARDTIMELIMIT + 60
-(( sleepsec = TIMELIMIT > 600 ? 60 : (TIMELIMIT / 10 - 2) ))
+(( sleepsec = TIMELIMIT > 600 ? 60 : (TIMELIMIT > 30 ? TIMELIMIT / 10 - 2 : 1) ))
 ./schulz.sh "^$solverexe" "`expr $TIMELIMIT + 5`:$HARDTIMELIMIT:`expr $HARDTIMELIMIT + 60`" "2:1:9" $sleepsec > $SCHFILE 2>&1 &
 schulzpid=$!
 # kill schulz on exit, or if we are interrupted
