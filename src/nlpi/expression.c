@@ -1376,7 +1376,7 @@ SCIP_RETCODE SCIPexprCopyDeep(
 void SCIPexprFreeDeep(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr                /**< pointer to expression to free */
-)
+   )
 {
    assert(blkmem != NULL);
    assert(expr   != NULL);
@@ -1388,11 +1388,11 @@ void SCIPexprFreeDeep(
       case SCIP_EXPR_LINEAR:
       {
          SCIP_Real* freedata;
-
-         freedata = (*expr)->data.data;
+         
+         freedata = (SCIP_Real*)(*expr)->data.data;
+         assert(freedata != NULL);
 
          /* for a linear expression, we need to copy the array that holds the coefficients and constant term */
-         assert((*expr)->data.data != NULL);
          BMSfreeBlockMemoryArray(blkmem, &freedata, (*expr)->nchildren + 1);  /*lint !e866*/
          break;
       }
