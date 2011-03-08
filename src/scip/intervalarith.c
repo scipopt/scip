@@ -964,6 +964,8 @@ void SCIPintervalMulScalarInf(
    {
       if( operand1.inf <= -infinity )
          resultant->inf = -infinity;
+      else if( operand1.inf >= infinity )
+         resultant->inf =  infinity;
       else
          resultant->inf = operand1.inf * operand2;
    }
@@ -971,6 +973,8 @@ void SCIPintervalMulScalarInf(
    {
       if( operand1.sup >= infinity )
          resultant->inf = -infinity;
+      else if( operand1.sup <= -infinity )
+         resultant->inf =  infinity;
       else
          resultant->inf = operand1.sup * operand2;
    }
@@ -1016,6 +1020,8 @@ void SCIPintervalMulScalarSup(
    {
       if( operand1.sup >= infinity )
          resultant->sup = infinity;
+      else if( operand1.sup <= -infinity )
+         resultant->sup = -infinity;
       else
          resultant->sup = operand1.sup * operand2;
    }
@@ -1023,6 +1029,8 @@ void SCIPintervalMulScalarSup(
    {
       if( operand1.inf <= -infinity )
          resultant->sup = infinity;
+      else if( operand1.inf >= infinity )
+         resultant->sup = -infinity;
       else
          resultant->sup = operand1.inf * operand2;
    }
