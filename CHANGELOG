@@ -180,6 +180,8 @@ parameters:
 - new parameters "conflict/bounddisjunction/continuousfrac" which defines the maximum percantage of continuous variables 
   within a conflict create by the bounddisjunction consflict handler
 - added parameter <presolving/donotaggr> to deactivate aggregation of variables globally
+- added parameter <lp/resolverestore> controlling how LP solution is restored after diving: if TRUE by resolving them,
+  if FALSE by buffering them; if <lp/freesolvalbuffers> is TRUE, we free the buffer memory each time (FALSE by default)
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -246,6 +248,8 @@ features:
   transformed problem the best feasible solution of the transformed problem  are copied to the solution candidate store of the original problem; this
   useful if you solve several problems iteratively, solutions get now carried over automatically.
 - solutions which are given by the user form the outside are now marked by '#' in the output
+- implemented possibility to buffer and restore LP solution after diving without having to resolve the LP; currently
+  turned off, because performance impact is unclear; controlled by parameters lp/resolverestore and lp/freesolvalbuffers
 
 design:
 - SCIP_HASHMAP now works also without block memory

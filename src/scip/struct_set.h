@@ -211,6 +211,10 @@ struct SCIP_Set
                                               *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
    char                  lp_pricing;         /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
                                               *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
+   SCIP_Bool             lp_resolverestore;  /**< should the LP be resolved to restore the state at start of diving (if
+                                              *   FALSE we buffer the solution values)? */
+   SCIP_Bool             lp_freesolvalbuffers; /**< should the buffers for storing LP solution values during diving be
+                                              *   freed at end of diving? */
    int                   lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the SCIP_LP
                                               *   (-1: don't delete columns due to aging) */
    int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 

@@ -153,6 +153,8 @@
 #define SCIP_DEFAULT_LP_PRICING             'l' /**< LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial,
                                                  *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
                                                  *   'd'evex pricing) */
+#define SCIP_DEFAULT_LP_RESOLVERESTORE     TRUE /**< should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)? */
+#define SCIP_DEFAULT_LP_FREESOLVALBUFFERS FALSE /**< should the buffers for storing LP solution values during diving be freed at end of diving? */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
                                                  *   (-1: don't delete columns due to aging) */
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from SCIP_LP
@@ -996,6 +998,16 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/pricing",
          "LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
          &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "lafpsqd",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/resolverestore",
+         "should the LP be resolved to restore the state at start of diving (if FALSE we buffer the solution values)?",
+         &(*set)->lp_resolverestore, TRUE, SCIP_DEFAULT_LP_RESOLVERESTORE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/freesolvalbuffers",
+         "should the buffers for storing LP solution values during diving be freed at end of diving?",
+         &(*set)->lp_freesolvalbuffers, TRUE, SCIP_DEFAULT_LP_FREESOLVALBUFFERS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",
