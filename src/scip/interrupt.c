@@ -65,11 +65,13 @@ void interruptHandler(
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
-      SCIPmessagePrintInfo("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
+      //SCIPmessagePrintInfo("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
       exit(1);
    }
    else
-      SCIPmessagePrintInfo("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+   {
+      //SCIPmessagePrintInfo("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+   }
 }
 
 /** creates a CTRL-C interrupt data */
@@ -106,7 +108,7 @@ void SCIPinterruptCapture(
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      interrupt->oldsighdlr = signal(SIGINT, interruptHandler);
+      interrupt->oldsighdlr = signal(SIGTERM, interruptHandler);
 #else
       struct sigaction newaction;
       
@@ -116,7 +118,7 @@ void SCIPinterruptCapture(
       (void)sigemptyset(&newaction.sa_mask);
       
       /* set new signal action, and remember old one */
-      (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
+      (void)sigaction(SIGTERM, &newaction, &interrupt->oldsigaction);
 #endif
 
       ninterrupts = 0;
@@ -136,9 +138,9 @@ void SCIPinterruptRelease(
    if( interrupt->nuses == 0 )
    {
 #ifdef NO_SIGACTION
-      (void)signal(SIGINT, interrupt->oldsighdlr);
+      (void)signal(SIGTERM, interrupt->oldsighdlr);
 #else
-      (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
+      (void)sigaction(SIGTERM, &interrupt->oldsigaction, NULL);
 #endif
    }
 }
