@@ -18686,7 +18686,8 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNAddHoles(conshdlr) > 0
             || SCIPconshdlrGetNDelConss(conshdlr) > 0
             || SCIPconshdlrGetNChgSides(conshdlr) > 0
-            || SCIPconshdlrGetNChgCoefs(conshdlr) > 0) )
+            || SCIPconshdlrGetNChgCoefs(conshdlr) > 0
+            || SCIPconshdlrGetNUpgdConss(conshdlr) > 0) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d\n",
