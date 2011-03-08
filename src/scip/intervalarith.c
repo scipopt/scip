@@ -1071,177 +1071,49 @@ void SCIPintervalDiv(
    )
 {
    SCIP_ROUNDMODE roundmode;
+   SCIP_INTERVAL intmed;
 
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
    assert(operand2.inf <= operand2.sup);
 
+   if( operand2.inf <= 0.0 && operand2.sup >= 0.0 )
+   {  /* division by [0,0] or interval containing 0 gives [-inf, +inf] */
+      resultant->inf = -infinity;
+      resultant->sup =  infinity;
+      return;
+   }
+
    if( operand1.inf == 0.0 && operand1.sup == 0.0 )
-   {  /* division of [0,0] by something */
+   {  /* division of [0,0] by something nonzero */
       SCIPintervalSet(resultant, 0.0);
       return;
    }
 
-   if( operand2.inf == 0.0 && operand2.sup == 0.0 )
-   {  /* division by [0,0] gives [-inf, +inf] */
-      resultant->inf = -infinity;
-      resultant->sup =  infinity;
-      return;
-   }
-  
    roundmode = SCIPintervalGetRoundingMode();
 
-   if( operand2.inf > 0.0 || operand2.sup < 0.0 )
-   {  /* divison by nonzero: resultant = x * (1/y) */
-      SCIP_INTERVAL intmed;
-      if( operand2.sup >=  infinity || operand2.sup <= -infinity )
-      {
-         intmed.inf = 0.0;
-      }
-      else
-      {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-         intmed.inf = 1 / operand2.sup;
-      }
-      if( operand2.inf <= -infinity || operand2.inf >= infinity )
-      {
-         intmed.sup = 0.0;
-      }
-      else
-      {
-         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-         intmed.sup = 1 / operand2.inf;
-      }
-      SCIPintervalMul(infinity, resultant, operand1, intmed);
-   }
-   else if( operand1.inf >= 0.0 )
+   /* division by nonzero: resultant = x * (1/y) */
+   if( operand2.sup >=  infinity || operand2.sup <= -infinity )
    {
-      /* division of [+,+] by something */
-      if( operand1.inf == infinity )
-      {
-         /* division of [+inf, +inf] by something */
-         if( operand2.inf == 0.0 )
-         {
-            /* [+inf,+inf] / [0,+] = +inf */
-            resultant->inf = infinity;
-            resultant->sup = infinity;
-         }
-         else if( operand2.sup == 0.0 )
-         {
-            /* [+inf,+inf] / [-,0] = -inf */
-            resultant->inf = -infinity;
-            resultant->sup = -infinity;
-         }
-         else
-         {
-            /* [+inf,+inf] / [-,+] = [-inf, +inf] */
-            resultant->inf = -infinity;
-            resultant->sup =  infinity;
-         }
-      }
-      else if( operand2.inf == 0.0 )
-      {
-         /* [0,+] / [0,+] = [..., +inf] */
-         if( operand2.sup >=  infinity )
-         {
-            resultant->inf = 0.0;
-         }
-         else
-         {
-            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-            resultant->inf = operand1.inf / operand2.sup;
-         }
-         resultant->sup = infinity;
-      }
-      else if( operand2.sup == 0.0 )
-      {
-         /* [0,+] / [-,0] = [-inf, ...] */
-         resultant->inf = -infinity;
-         if( operand2.inf <= -infinity )
-         {
-            resultant->sup = 0.0;
-         }
-         else
-         {
-            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-            resultant->sup = operand1.inf / operand2.inf;
-         }
-      }
-      else
-      {
-         /* [0,+] / [-,+] = [-inf, +inf] */
-         resultant->inf = -infinity;
-         resultant->sup =  infinity;
-      }
-   }
-   else if( operand1.sup <= 0.0 )
-   {
-      /* division of [-,-] by something */
-      if( operand1.sup == -infinity )
-      {
-         /* division of [-inf,-inf] by something */
-         if( operand2.inf == 0.0 )
-         {
-            /* [-inf,-inf] / [0,+] = -inf */
-            resultant->inf = -infinity;
-            resultant->sup = -infinity;
-         }
-         else if( operand2.sup == 0.0 )
-         {
-            /* [-inf,-inf] / [-,0] = +inf */
-            resultant->inf =  infinity;
-            resultant->sup =  infinity;
-         }
-         else
-         {
-            /* [-inf,-inf] / [-,+] = [-inf, +inf] */
-            resultant->inf = -infinity;
-            resultant->sup =  infinity;
-         }
-      }
-      else if( operand2.inf == 0.0 )
-      {
-         /* [-,0] / [0,+] = [-inf, ...] */
-         resultant->inf = -infinity;
-         if( operand2.sup >= infinity )
-         {
-            resultant->sup = 0.0;
-         }
-         else
-         {
-            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-            resultant->sup = operand1.sup / operand2.sup;
-         }
-      }
-      else if( operand2.sup == 0.0 )
-      {
-         /* [-,0] / [-,0] = [..., +inf] */
-         if( operand2.inf <= -infinity )
-         {
-            resultant->inf = 0.0;
-         }
-         else
-         {
-            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-            resultant->inf = operand1.sup / operand2.inf;
-         }
-         resultant->sup = infinity;
-      }
-      else
-      {
-         /* [-,0] / [-,+] = [-inf, +inf] */
-         resultant->inf = -infinity;
-         resultant->sup =  infinity;
-      }
+      intmed.inf = 0.0;
    }
    else
    {
-      /* division of [-,+] by [-,+] */
-      resultant->inf = -infinity;
-      resultant->sup =  infinity;
+      SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
+      intmed.inf = 1.0 / operand2.sup;
    }
+   if( operand2.inf <= -infinity || operand2.inf >= infinity )
+   {
+      intmed.sup = 0.0;
+   }
+   else
+   {
+      SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+      intmed.sup = 1.0 / operand2.inf;
+   }
+   SCIPintervalMul(infinity, resultant, operand1, intmed);
  
-  SCIPintervalSetRoundingMode(roundmode);
+   SCIPintervalSetRoundingMode(roundmode);
 }
 
 /** divides operand1 by scalar operand2 and stores result in resultant */
