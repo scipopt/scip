@@ -393,8 +393,10 @@ SCIP_Real getDualbound(
    {
       /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with 
        * dual bound = -inf instead of dual bound = primal bound = +inf
+       * also in case we prove that the problem is unbounded, it seems to make sense to return with dual bound = -inf,
+       * since -infinity is the only valid lower bound
        */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
          return (-SCIPinfinity(scip));
       else
          return getPrimalbound(scip);
