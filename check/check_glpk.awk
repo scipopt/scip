@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_glpk.awk,v 1.14 2011/01/02 11:10:54 bzfheinz Exp $
 #
 #@file    check_glpk.awk
 #@brief   GLPK Check Report Generator

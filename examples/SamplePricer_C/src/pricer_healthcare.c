@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.10 2011/01/02 11:10:53 bzfheinz Exp $"
 
 /**@file   pricer_healthcare.c
  * @brief  healthcare variable pricer

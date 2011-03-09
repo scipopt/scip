@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.19 2011/01/31 18:46:23 bzfheinz Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators

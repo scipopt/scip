@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_vbounds.h,v 1.4 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   heur_vbounds.h
  * @brief  LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood

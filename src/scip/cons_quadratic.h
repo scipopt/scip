@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.29 2011/02/27 17:18:55 bzfpfets Exp $"
 
 /**@file   cons_quadratic.h
  * @brief  constraint handler for quadratic constraints

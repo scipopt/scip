@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.132 2011/02/24 14:23:41 bzfgleix Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS

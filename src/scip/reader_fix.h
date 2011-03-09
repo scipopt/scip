@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.h,v 1.7 2011/01/02 11:10:43 bzfheinz Exp $"
 
 /**@file   reader_fix.h
  * @brief  file reader for variable fixings

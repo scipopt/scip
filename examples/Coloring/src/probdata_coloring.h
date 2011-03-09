@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.h,v 1.9 2011/01/02 11:10:54 bzfheinz Exp $"
 
 /**@file   probdata_coloring.h
  * @brief  problem data for coloring algorithm

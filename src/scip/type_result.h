@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_result.h,v 1.19 2011/02/18 19:22:43 bzfpfets Exp $"
 
 /**@file   type_result.h
  * @brief  result codes for SCIP callback methods

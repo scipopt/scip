@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_mosek.awk,v 1.14 2011/01/02 11:10:54 bzfheinz Exp $
 #
 #@file    check_mosek.awk
 #@brief   MOSEK Check Report Generator

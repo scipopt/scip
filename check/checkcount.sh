@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.sh,v 1.11 2011/01/02 11:10:54 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3

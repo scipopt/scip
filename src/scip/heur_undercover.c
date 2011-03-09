@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.118 2011/02/18 19:20:11 bzfpfets Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS

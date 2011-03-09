@@ -1,4 +1,3 @@
-#--- $Id: make.moskito,v 1.5 2011/02/21 20:36:53 bzfpfets Exp $
 override MEM	=	7110
 QUEUE		=	extra
 PPN		=	2

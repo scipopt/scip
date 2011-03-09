@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.c,v 1.12 2011/01/02 11:10:54 bzfheinz Exp $"
 
 /**@file   reader_col.c
  * @brief  COL file reader

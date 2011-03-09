@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.103 2011/01/02 11:10:55 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator

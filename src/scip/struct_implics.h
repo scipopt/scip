@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_implics.h,v 1.15 2011/01/02 11:10:41 bzfheinz Exp $"
 
 /**@file   struct_implics.h
  * @brief  datastructures for implications, variable bounds, and cliques

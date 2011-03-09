@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.h,v 1.28 2011/01/02 11:10:50 bzfheinz Exp $"
 
 /**@file   cons_eqknapsack.h
  * @brief  constraint handler for eqknapsack constraints

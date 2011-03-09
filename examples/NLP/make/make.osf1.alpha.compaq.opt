@@ -1,4 +1,3 @@
-#--- $Id: make.osf1.alpha.compaq.opt,v 1.1 2007/09/21 13:32:04 bzfpfend Exp $
 CC		=	cc
 CXX		=	cxx
 FLAGS		+=      -DNDEBUG # -DROUNDING_FP

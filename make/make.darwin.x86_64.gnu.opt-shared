@@ -1,4 +1,3 @@
-#--- $Id: make.darwin.x86_64.gnu.opt-shared,v 1.1 2011/03/01 16:25:46 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG -fPIC -DROUNDING_FE
 OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	-m64 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

@@ -1,4 +1,3 @@
-#--- $Id: make.aix.pwr4.ibm.opt,v 1.1 2007/09/21 13:32:02 bzfpfend Exp $
 FLAGS		+=	-DNDEBUG # -DROUNDING_FE
 OFLAGS		+=	-O3 -q64 -qmaxmem=-1 -qarch=auto -qtune=auto -qcache=auto -qsuppress=1506-732
 CFLAGS		+=	

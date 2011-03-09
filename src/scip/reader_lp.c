@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.113 2011/02/27 17:23:13 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 

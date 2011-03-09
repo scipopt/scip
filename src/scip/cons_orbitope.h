@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.h,v 1.3 2011/01/02 11:10:48 bzfheinz Exp $"
 
 /**@file   cons_orbitope.h
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group

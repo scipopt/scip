@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: runcluster.sh,v 1.13 2011/02/07 21:13:27 bzfpfets Exp $
 
 # check if tmp-path exists 
 if test ! -d $CLIENTTMPDIR

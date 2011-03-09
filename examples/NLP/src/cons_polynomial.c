@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_polynomial.c,v 1.7 2011/01/02 11:10:53 bzfheinz Exp $"
 
 /**@file   cons_polynomial.h
  * @brief  constraint handler for polynomial constraints

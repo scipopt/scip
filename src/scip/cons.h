@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.134 2011/01/02 11:10:50 bzfheinz Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.38 2011/01/02 11:10:45 bzfheinz Exp $"
 
 /**@file   nodesel_dfs.c
  * @ingroup NODESELECTORS

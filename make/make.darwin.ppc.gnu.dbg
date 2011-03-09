@@ -1,4 +1,3 @@
-#--- $Id: make.darwin.ppc.gnu.dbg,v 1.3 2009/07/23 12:52:51 bzfviger Exp $
 FLAGS		+=	-DNO_REMOVE_HISTORY -DROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)

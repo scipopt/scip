@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.21 2011/01/02 11:10:41 bzfheinz Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues

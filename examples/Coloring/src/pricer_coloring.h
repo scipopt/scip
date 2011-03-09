@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.h,v 1.7 2011/01/02 11:10:54 bzfheinz Exp $"
 
 /**@file   pricer_coloring.h
  * @brief  coloring variable pricer

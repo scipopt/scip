@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.63 2011/01/02 11:10:51 bzfheinz Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage

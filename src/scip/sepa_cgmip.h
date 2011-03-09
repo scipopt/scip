@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cgmip.h,v 1.2 2011/01/02 11:10:42 bzfheinz Exp $"
 
 /**@file   sepa_cgmip.h
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP

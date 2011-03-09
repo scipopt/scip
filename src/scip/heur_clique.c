@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_clique.c,v 1.3 2011/02/03 11:08:09 bzfheinz Exp $"
 
 /**@file   heur_clique.c
  * @ingroup PRIMALHEURISTICS

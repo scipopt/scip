@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.c,v 1.7 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   cons_pseudoboolean.c
  * @ingroup CONSHDLRS 

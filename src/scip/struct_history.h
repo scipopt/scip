@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.23 2011/01/02 11:10:41 bzfheinz Exp $"
 
 /**@file   struct_history.h
  * @brief  datastructures for branching and inference history

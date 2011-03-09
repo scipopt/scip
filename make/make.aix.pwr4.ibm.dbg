@@ -1,4 +1,3 @@
-#--- $Id: make.aix.pwr4.ibm.dbg,v 1.3 2009/07/23 12:52:50 bzfviger Exp $
 FLAGS		+=	-DROUNDING_FE
 OFLAGS		+=	-O0 -g -q64 -qmaxmem=-1 -bnoquiet -qsuppress=1506-732 -qflttrap -qcheck=all
 CFLAGS		+=	

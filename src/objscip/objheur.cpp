@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.34 2011/01/02 11:10:52 bzfheinz Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics

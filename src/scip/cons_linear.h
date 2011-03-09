@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.69 2011/01/02 11:10:48 bzfheinz Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints

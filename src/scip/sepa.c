@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.79 2011/02/18 19:22:43 bzfpfets Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators

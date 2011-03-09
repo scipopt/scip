@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.266 2011/02/23 08:33:22 bzfgamra Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings

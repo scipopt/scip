@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_binpacking.h,v 1.2 2011/01/02 11:10:54 bzfheinz Exp $"
 
 /**@file   probdata_binpacking.h
  * @brief  problem data for binpacking problem 

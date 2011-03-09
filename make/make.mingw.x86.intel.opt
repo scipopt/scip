@@ -1,4 +1,3 @@
-#--- $Id: make.mingw.x86.intel.opt,v 1.2 2010/11/11 20:14:40 bzfviger Exp $
 CC		=	icl -nologo
 CC_o	=	-Fo
 CXX		=	icl -nologo

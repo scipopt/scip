@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.h,v 1.7 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   heur_intshifting.h
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xyz.h,v 1.1 2011/02/01 11:55:34 bzfberth Exp $"
 
 /**@file   heur_xyz.h
  * @brief  xyz primal heuristic

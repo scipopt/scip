@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.awk,v 1.4 2011/02/25 17:33:48 bzfviger Exp $
 #
 #@file    check_gams.awk
 #@brief   GAMS Tracefile Check Report Generator

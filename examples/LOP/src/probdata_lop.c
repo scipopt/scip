@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.16 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   probdata_lop.h
  * @brief  handling of data needed for solving linear ordering problems

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.h,v 1.11 2011/01/02 11:10:47 bzfheinz Exp $"
 
 /**@file   cons_sos2.h
  * @brief  constraint handler for SOS type 2 constraints

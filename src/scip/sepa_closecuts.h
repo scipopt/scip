@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_closecuts.h,v 1.1 2011/02/27 18:36:14 bzfpfets Exp $"
 
 /**@file   sepa_closecuts.h
  * @brief  closecuts meta separator
