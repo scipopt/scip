@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.h,v 1.11.2.2 2010/03/22 16:05:36 bzfwolte Exp $"
 
 /**@file   sepa_cmir.h
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primalex.h,v 1.1.2.3 2010/03/30 20:33:27 bzfwolte Exp $"
 
 /**@file   primalex.h
  * @brief  internal methods for collecting exact primal CIP solutions and exact primal information

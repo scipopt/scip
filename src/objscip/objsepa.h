@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.25.2.3 2010/03/22 16:05:13 bzfwolte Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators

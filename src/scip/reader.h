@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.28.2.2 2010/03/22 16:05:32 bzfwolte Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers

@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.45.2.3 2010/03/22 16:05:00 bzfwolte Exp $
 
 TSTNAME=$1
 BINNAME=$2

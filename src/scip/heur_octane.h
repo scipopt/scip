@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.h,v 1.6.2.2 2010/03/22 16:05:22 bzfwolte Exp $"
 
 /**@file   heur_octane.h
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki

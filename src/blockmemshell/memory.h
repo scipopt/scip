@@ -12,7 +12,6 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.4.2.2 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines

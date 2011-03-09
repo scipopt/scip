@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solex.c,v 1.1.2.2 2010/03/30 20:33:27 bzfwolte Exp $"
 
 //#define SCIP_DEBUG /* only for debugging ?????????? */
 

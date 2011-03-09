@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.10.2.3 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers

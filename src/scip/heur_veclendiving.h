@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_veclendiving.h,v 1.2.2.2 2010/03/22 16:05:24 bzfwolte Exp $"
 
 /**@file   heur_veclendiving.h
  * @brief  LP diving heuristic that rounds variables with long column vectors

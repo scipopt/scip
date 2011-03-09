@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.awk,v 1.4.2.3 2010/03/22 16:05:01 bzfwolte Exp $
 #
 #@file    checkcount.awk
 #@brief   SCIP Check Report Generator for counting tests

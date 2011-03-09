@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_symphony.awk,v 1.3.2.2 2010/03/22 16:05:01 bzfwolte Exp $
 #
 #@file    check_symphony.awk
 #@brief   SYMPHONY Check Report Generator

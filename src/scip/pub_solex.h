@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_solex.h,v 1.1.2.2 2010/03/30 20:33:27 bzfwolte Exp $"
 
 /**@file   pub_solex.h
  * @brief  public methods for exact primal CIP solutions

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.2.2.2 2010/03/22 16:05:30 bzfwolte Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS

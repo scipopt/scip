@@ -12,7 +12,6 @@
 /*  along with RECTLU; see the file COPYING.                                 */ 
 /*                                                                           */ 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: rectlu.h,v 1.1.2.2 2010/06/08 21:22:00 bzfsteff Exp $"
 
 /**@file   rectlu.h 
  * @brief  rectlu user interface

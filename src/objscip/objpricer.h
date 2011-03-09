@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.23.2.3 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers

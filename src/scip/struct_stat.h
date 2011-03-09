@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.48.2.3 2010/10/15 16:39:17 bzfwolte Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics

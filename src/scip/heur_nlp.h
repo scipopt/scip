@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.9.2.2 2010/03/22 16:05:22 bzfwolte Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic

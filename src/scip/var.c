@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.218.2.5 2010/10/15 16:39:17 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables

@@ -12,7 +12,6 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_def.h,v 1.3.2.2 2010/03/22 16:05:44 bzfwolte Exp $"
 
 /**@file   tclique_def.h
  * @brief  tclique defines

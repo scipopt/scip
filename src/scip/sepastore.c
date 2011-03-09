@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.4 2010/11/12 11:22:28 bzfwolte Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts

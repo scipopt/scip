@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.cpp,v 1.1.2.2 2010/03/22 16:05:12 bzfwolte Exp $"
 
 /**@file   objdisp.cpp
  * @brief  C++ wrapper for display column

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.81.2.5 2010/03/22 16:05:38 bzfwolte Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions

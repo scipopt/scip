@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.126.2.4 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management

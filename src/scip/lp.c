@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.13 2010/11/12 11:22:27 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????????*/
 //#define PROVEDBOUNDOUT /*only for debugging ?????????*/
 //#define PROVEDBOUNDOUT2 /*only for debugging ?????????*/

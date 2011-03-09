@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.77.2.3 2010/10/15 16:39:17 bzfwolte Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics

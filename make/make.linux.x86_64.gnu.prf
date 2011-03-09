@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86_64.gnu.prf,v 1.1.2.2 2010/03/22 16:05:08 bzfwolte Exp $
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
 OFLAGS		+=	-O2 -m64 -march=nocona -g -pg -fno-inline 
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.51.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
 //#define EST_OUT /*????????????????*/
 
 /**@file   nodesel_bfs.c

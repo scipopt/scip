@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: runcluster.sh,v 1.8.2.4 2010/10/15 16:39:15 bzfwolte Exp $
 OUTFILE=/scratch/$BASENAME.out
 ERRFILE=/scratch/$BASENAME.err
 TMPFILE=$SCIPPATH/results/$BASENAME.tmp

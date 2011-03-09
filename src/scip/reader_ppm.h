@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.h,v 1.4.2.3 2010/03/22 16:05:33 bzfwolte Exp $"
 
 /**@file   reader_ppm.h
  * @brief  PPM file reader

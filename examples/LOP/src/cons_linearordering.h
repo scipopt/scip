@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.h,v 1.2.2.2 2010/03/22 16:05:02 bzfwolte Exp $"
 
 /**@file   cons_linearordering.h
  * @brief  constraint handler for linear ordering constraints

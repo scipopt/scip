@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_clock.h,v 1.11.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_clock.h
  * @brief  type definitions for clocks and timing issues

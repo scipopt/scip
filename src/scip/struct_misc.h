@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.17.2.3 2010/03/22 16:05:40 bzfwolte Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures

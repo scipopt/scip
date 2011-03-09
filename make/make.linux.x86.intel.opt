@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86.intel.opt,v 1.1.2.2 2010/03/22 16:05:07 bzfwolte Exp $
 CC		=	icc
 CXX		=	icpc
 LINKCC		=	icc

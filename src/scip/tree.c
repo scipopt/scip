@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.201.2.8 2010/11/05 19:26:43 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define EST_OUT /*??????????????????*/
 

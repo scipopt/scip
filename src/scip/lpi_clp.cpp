@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.34.2.2 2010/03/22 16:05:25 bzfwolte Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS

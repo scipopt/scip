@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.33.2.2 2010/03/22 16:05:35 bzfwolte Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS

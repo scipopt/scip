@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.h,v 1.1.2.2 2010/03/22 16:05:03 bzfwolte Exp $"
 
 #ifndef __HCP_PROBDATA_LOP__
 #define __HCP_PROBDATA_LOP__

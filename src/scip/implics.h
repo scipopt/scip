@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.15.2.2 2010/03/22 16:05:24 bzfwolte Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques

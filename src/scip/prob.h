@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.59.2.3 2010/10/15 16:39:16 bzfwolte Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem

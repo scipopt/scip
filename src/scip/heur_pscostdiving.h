@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.h,v 1.10.2.2 2010/03/22 16:05:22 bzfwolte Exp $"
 
 /**@file   heur_pscostdiving.h
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values

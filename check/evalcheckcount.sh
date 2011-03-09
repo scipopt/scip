@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheckcount.sh,v 1.3.2.3 2010/03/22 16:05:01 bzfwolte Exp $
 
 export LANG=C
 

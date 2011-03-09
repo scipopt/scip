@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86.gnu.tst,v 1.1.2.2 2010/03/22 16:05:07 bzfwolte Exp $
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
 OFLAGS		+=	-g -O0 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

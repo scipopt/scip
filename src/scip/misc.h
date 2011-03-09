@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.27.2.4 2010/03/30 20:33:27 bzfwolte Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods

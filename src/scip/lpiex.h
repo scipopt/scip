@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.7 2010/11/02 17:41:26 bzfwolte Exp $"
 
 /**@file   lpiex.h
  * @brief  interface methods for specific LP solvers

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.h,v 1.17.2.2 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_integral.h
  * @brief  constraint handler for the integrality constraint

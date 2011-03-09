@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.13.2.2 2010/03/22 16:05:42 bzfwolte Exp $"
 
 /**@file   type_disp.h
  * @ingroup TYPEDEFINITIONS

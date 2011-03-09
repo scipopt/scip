@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pqueue.h,v 1.1.2.2 2010/03/22 16:05:07 bzfwolte Exp $"
 
 #ifndef _PQUEUE_H
 #define _PQUEUE_H

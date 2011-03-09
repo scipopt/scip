@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.24.2.2 2010/03/22 16:05:29 bzfwolte Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings

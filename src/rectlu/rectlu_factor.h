@@ -12,7 +12,6 @@
 /*  along with RECTLU; see the file COPYING.                                 */ 
 /*                                                                           */ 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: rectlu_factor.h,v 1.1.2.1 2010/04/02 18:40:45 bzfsteff Exp $"
 
 /**@file   rectlu_factor.h 
  * @brief  rectlu internal functions interface

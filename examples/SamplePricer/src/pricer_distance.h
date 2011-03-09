@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.5.2.2 2010/03/22 16:05:03 bzfwolte Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin

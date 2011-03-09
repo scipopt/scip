@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_healthcare.h,v 1.2.2.2 2010/03/22 16:05:04 bzfwolte Exp $"
 
 #ifndef __HCP_PROBDATA_HEALTHCARE__
 #define __HCP_PROBDATA_HEALTHCARE__

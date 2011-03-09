@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.h,v 1.7.2.3 2010/03/22 16:05:16 bzfwolte Exp $"
 
 /**@file   cons_countsols.h
  * @brief  constraint handler for counting feasible solutions

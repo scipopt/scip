@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve_nlp.c,v 1.3.2.1 2010/03/22 16:05:03 bzfwolte Exp $"
 
 #include "IpStdCInterface.h"
 #include <stdlib.h>

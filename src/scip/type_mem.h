@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_mem.h,v 1.10.2.2 2010/03/22 16:05:43 bzfwolte Exp $"
 
 /**@file   type_mem.h
  * @brief  type definitions for block memory pools and memory buffers

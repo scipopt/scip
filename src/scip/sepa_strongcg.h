@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.h,v 1.11.2.2 2010/03/22 16:05:37 bzfwolte Exp $"
 
 /**@file   sepa_strongcg.h
  * @brief  Strong CG Cuts (Letchford & Lodi)

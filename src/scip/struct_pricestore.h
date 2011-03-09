@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricestore.h,v 1.14.2.2 2010/03/22 16:05:41 bzfwolte Exp $"
 
 /**@file   struct_pricestore.h
  * @brief  datastructures for storing priced variables

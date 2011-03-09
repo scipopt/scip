@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: fileio.c,v 1.3.2.2 2010/03/22 16:05:20 bzfwolte Exp $"
 
 /**@file   fileio.c
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o

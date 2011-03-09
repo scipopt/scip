@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.33.2.2 2010/03/22 16:05:20 bzfwolte Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics

@@ -12,7 +12,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230.2.9 2010/04/02 18:40:45 bzfsteff Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile

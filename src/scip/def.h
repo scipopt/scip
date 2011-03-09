@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.135.2.2 2010/03/22 16:05:19 bzfwolte Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP

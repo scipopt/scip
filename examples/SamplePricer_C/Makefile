@@ -12,7 +12,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.13.2.1 2009/06/19 07:53:32 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a very simple pricer

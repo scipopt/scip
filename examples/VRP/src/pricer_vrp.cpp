@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.1.2.2 2010/03/22 16:05:07 bzfwolte Exp $"
 
 #include "pricer_vrp.h"
 #include "pqueue.h"

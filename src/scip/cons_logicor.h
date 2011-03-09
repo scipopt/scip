@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.28.2.2 2010/03/22 16:05:17 bzfwolte Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
