@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.h,v 1.15.2.1 2011/01/02 11:19:38 bzfheinz Exp $"
 
 /**@file   pricer_xxx.h
  * @brief  xxx variable pricer

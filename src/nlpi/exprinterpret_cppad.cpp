@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_cppad.cpp,v 1.25.2.2 2011/01/24 21:32:04 bzfviger Exp $"
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD

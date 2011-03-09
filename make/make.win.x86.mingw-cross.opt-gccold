@@ -1,4 +1,3 @@
-#--- $Id: make.win.x86.mingw-cross.opt-gccold,v 1.1 2010/09/27 14:45:25 bzfwinkm Exp $
 FLAGS		+=	-DNDEBUG -DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNO_REMOVE_HISTORY -DSCIP_LONGINT_FORMAT='"lld"' -DROUNDING_FE
 CFLAGS		=	-O6
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.50.2.1 2011/01/02 11:19:49 bzfheinz Exp $"
 
 /**@file   cons_invarknapsack.c
  * @ingroup CONSHDLRS 

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_history.h,v 1.19.2.3 2011/01/19 13:04:46 bzfberth Exp $"
 
 /**@file   type_history.h
  * @ingroup TYPEDEFINITIONS

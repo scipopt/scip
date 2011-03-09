@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve_nlp.h,v 1.3.2.1 2011/01/02 11:19:54 bzfheinz Exp $"
 
 #ifndef _NLP_H_
 #define _NLP_H_

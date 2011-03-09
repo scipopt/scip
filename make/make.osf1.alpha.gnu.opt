@@ -1,4 +1,3 @@
-#--- $Id: make.osf1.alpha.gnu.opt,v 1.15 2009/07/23 12:52:51 bzfviger Exp $
 FLAGS		+=      -DNDEBUG -DROUNDING_FP  # if ROUNDING_FP does not work, try ROUNDING_FE or without
 OFLAGS		+=	-O6 -mcpu=ev6 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt_dummy.c,v 1.5 2010/09/22 16:05:46 bzfviger Exp $"
 
 /**@file    nlpi_ipopt_dummy.c
  * @brief   dummy Ipopt NLP interface for the case that Ipopt is not available

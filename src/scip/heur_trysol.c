@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.14.2.1 2011/01/02 11:19:42 bzfheinz Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS

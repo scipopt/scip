@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_primal.h,v 1.20.2.1 2011/01/02 11:19:28 bzfheinz Exp $"
 
 /**@file   struct_primal.h
  * @brief  datastructures for collecting primal CIP solutions and primal informations

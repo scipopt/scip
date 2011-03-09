@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_mem.h,v 1.14.2.1 2011/01/02 11:19:28 bzfheinz Exp $"
 
 /**@file   struct_mem.h
  * @brief  datastructures for block memory pools and memory buffers

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.15.2.1 2011/01/02 11:19:53 bzfheinz Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthest insert - combinatorial heuristic for TSP

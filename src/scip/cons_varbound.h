@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.h,v 1.24.2.1 2011/01/02 11:19:46 bzfheinz Exp $"
 
 /**@file   cons_varbound.h
  * @brief  constraint handler for variable bound constraints

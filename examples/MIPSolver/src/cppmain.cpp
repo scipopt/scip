@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.13.2.1 2011/01/02 11:19:56 bzfheinz Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library

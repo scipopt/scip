@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.63.2.1 2011/01/02 11:19:28 bzfheinz Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management

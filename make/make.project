@@ -12,7 +12,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.26.2.1 2011/02/25 10:29:05 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects

@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cbc.sh,v 1.9.2.1 2011/01/02 11:19:59 bzfheinz Exp $
 #
 # Call with "make testclustercbc"
 #

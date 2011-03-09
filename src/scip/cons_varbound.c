@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.101.2.1 2011/01/02 11:19:46 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 

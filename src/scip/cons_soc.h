@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.10.2.1 2011/01/02 11:19:46 bzfheinz Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints

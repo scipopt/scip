@@ -1,4 +1,3 @@
-#--- $Id: make.mingw.x86.gnu.dbg,v 1.1 2010/09/29 17:35:06 bzfviger Exp $
 FLAGS		+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNO_STRERROR_R -DROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.54.2.1 2011/01/02 11:19:29 bzfheinz Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers

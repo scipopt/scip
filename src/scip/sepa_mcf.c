@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.132.2.1 2011/01/02 11:19:31 bzfheinz Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */

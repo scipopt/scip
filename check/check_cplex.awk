@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.52.2.1 2011/01/02 11:19:59 bzfheinz Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator

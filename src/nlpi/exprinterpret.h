@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret.h,v 1.6 2010/08/29 16:25:01 bzfviger Exp $"
 
 /**@file   exprinterpret.h
  * @brief  methods to interpret (evaluate) an expression tree "fast"

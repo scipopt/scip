@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.88.2.1 2011/01/02 11:19:32 bzfheinz Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS

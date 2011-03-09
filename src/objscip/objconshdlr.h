@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.68.2.1 2011/01/02 11:19:53 bzfheinz Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers

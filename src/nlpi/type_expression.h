@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_expression.h,v 1.10 2010/09/27 18:34:20 bzfviger Exp $"
 
 /**@file   type_expression.h
  * @brief  type definitions for expressions and expression trees

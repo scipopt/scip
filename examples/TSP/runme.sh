@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: runme.sh,v 1.5.6.1 2011/01/02 11:19:54 bzfheinz Exp $
 make
 cd tspviewer
 javac TSPViewer.java

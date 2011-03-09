@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.53.2.2 2011/01/02 11:19:42 bzfheinz Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds

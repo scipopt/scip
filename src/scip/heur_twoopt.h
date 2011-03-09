@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.h,v 1.1.4.1 2011/01/02 11:19:42 bzfheinz Exp $"
 
 /**@file   heur_twoopt.h
  * @brief  primal heuristic to improve incumbent solution by flipping pairs of variables

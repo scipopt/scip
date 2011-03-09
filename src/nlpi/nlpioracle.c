@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.c,v 1.28.2.1 2010/11/04 07:37:44 bzfviger Exp $"
 
 /**@file    nlpioracle.c
  * @brief   implementation of NLPI oracle interface

@@ -12,7 +12,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.11.2.1 2011/01/02 11:19:58 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C Coloring example using SCIP as a callable library

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.18.2.2 2011/02/09 13:50:15 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS

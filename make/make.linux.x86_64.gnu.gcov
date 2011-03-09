@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86_64.gnu.gcov,v 1.4 2009/07/23 12:52:51 bzfviger Exp $
 FLAGS		+=	-DROUNDING_FE
 OFLAGS		+=	-O0 -m64 -fprofile-arcs -ftest-coverage
 CFLAGS		+=	$(GCCWARN)

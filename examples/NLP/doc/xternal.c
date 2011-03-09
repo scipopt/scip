@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xternal.c,v 1.2.2.1 2011/01/02 11:19:54 bzfheinz Exp $"
 
 /**@file   xternal.c
  * @brief  main document page

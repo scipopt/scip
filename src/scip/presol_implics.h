@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.h,v 1.7.2.1 2011/01/02 11:19:38 bzfheinz Exp $"
 
 /**@file   presol_implics.h
  * @brief  implics presolver

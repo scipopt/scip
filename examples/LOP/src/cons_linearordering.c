@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.15.2.1 2011/01/02 11:19:57 bzfheinz Exp $"
 
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */

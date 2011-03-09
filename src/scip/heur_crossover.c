@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.63.2.2 2011/02/18 13:45:48 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
