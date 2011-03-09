@@ -201,6 +201,18 @@ SCIP_RETCODE branchcandCalcLPCands(
    SCIPdebugMessage("calculating LP branching candidates: validlp=%d, lpcount=%d\n",
       branchcand->validlpcandslp, stat->lpcount);
 
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   {
+      branchcand->lpmaxpriority = INT_MIN;
+      branchcand->nlpcands = 0;
+      branchcand->npriolpcands = 0;
+      branchcand->npriolpbins = 0;
+      branchcand->validlpcandslp = stat->lpcount;
+
+      SCIPdebugMessage(" LP is unbounded -> no branching candidates\n");
+      return SCIP_OKAY;
+   }
+
    /* check, if the current LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
    {

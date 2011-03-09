@@ -2075,7 +2075,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* check for unboundness */
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
-         assert(root); /* this can only happen in the root node */
+         /* assert(root); */ /* this can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
          *unbounded = TRUE;
       }
    }
@@ -2178,7 +2178,6 @@ SCIP_RETCODE solveNodeLP(
    assert(unbounded != NULL);
    assert(lperror != NULL);
    assert(*cutoff == FALSE);
-   assert(*unbounded == FALSE);
    assert(*lperror == FALSE);
 
    nlps = stat->nlps;
@@ -2256,7 +2255,7 @@ SCIP_RETCODE solveNodeLP(
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
    /* if the LP was unbounded, get the primal ray and store it */
-   assert((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded);
+   /*assert((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded);*/
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       SCIP_VAR** vars;
@@ -2276,7 +2275,12 @@ SCIP_RETCODE solveNodeLP(
       BMSclearMemoryArray(ray, nvars);
       SCIP_CALL( SCIPlpGetPrimalRay(lp, set, ray) );
 
-      /* create solution to store the primal ray in */
+      /* create solution to store the primal ray in
+       * clear previously stored primal ray */
+      if( primal->primalray != NULL )
+      {
+         SCIP_CALL( SCIPsolFree(&primal->primalray, blkmem, primal) );
+      }
       assert(primal->primalray == NULL);
       SCIP_CALL( SCIPsolCreate(&primal->primalray, blkmem, set, stat, primal, tree, NULL) );
       
@@ -3154,7 +3158,7 @@ SCIP_RETCODE solveNode(
        * therefore lead to an infinite loop.
        */
       forcedlpsolve = FALSE;
-      if( *infeasible && !(*cutoff) && !(*unbounded) && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
+      if( *infeasible && !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
       {
          SCIP_RESULT result;
          int nlpcands;
