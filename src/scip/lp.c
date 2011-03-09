@@ -11359,7 +11359,7 @@ SCIP_RETCODE lpAlgorithm(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("calling LP algorithm <%s>\n with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
+   SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
