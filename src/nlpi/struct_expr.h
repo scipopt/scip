@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,14 +35,16 @@ extern "C" {
 #endif
 
 /** operator data of an expression */
-union SCIP_ExprOpData {
+union SCIP_ExprOpData 
+{
    int                   intval;             /**< index of a variable or parameter or a constant integer value */
    SCIP_Real             dbl;                /**< a constant double value */
    void*                 data;               /**< pointer to some data structure */
 };
 
 /** arithmetic expression node */
-struct SCIP_Expr {
+struct SCIP_Expr 
+{
    SCIP_EXPROP           op;                 /**< operator of the node */
    int                   nchildren;          /**< number of children */
    SCIP_EXPR**           children;           /**< children nodes */
@@ -50,7 +52,8 @@ struct SCIP_Expr {
 };
 
 /** expression tree */
-struct SCIP_ExprTree {
+struct SCIP_ExprTree 
+{
    BMS_BLKMEM*           blkmem;             /**< block memory data structure */
    SCIP_EXPR*            root;               /**< root node expression of expression tree */
    int                   nvars;              /**< number of variables */
@@ -61,14 +64,16 @@ struct SCIP_ExprTree {
 };
 
 /** data of quadratic expression: sum_i coef_i x_i y_i */
-struct SCIP_ExprData_Quadratic {
+struct SCIP_ExprData_Quadratic 
+{
    SCIP_QUADELEM*        quadelems;          /**< quadratic elements */
    int                   nquadelems;         /**< number of quadratic elements */
    SCIP_Bool             sorted;             /**< are the quadratic elements sorted? */
 };
 
 /** data of polynomial expression: constant + sum_i monom_i */
-struct SCIP_ExprData_Polynomial {
+struct SCIP_ExprData_Polynomial 
+{
    SCIP_Real             constant;           /**< constant term of polynomial */
    SCIP_EXPRDATA_MONOMIAL** monomials;       /**< monomials that constitute the polynomial */
    int                   monomialssize;      /**< size of monomials array */
@@ -77,8 +82,10 @@ struct SCIP_ExprData_Polynomial {
 };
 
 /** data of monomial in polynomial expression: coef * prod_i child_i^exponent_i
- * we allow for real values exponents here */
-struct SCIP_ExprData_Monomial {
+ * we allow for real values exponents here 
+ */
+struct SCIP_ExprData_Monomial 
+{
    SCIP_Real             coef;               /**< coefficient of monomial */
    int                   factorssize;        /**< size of factors arrays */
    int                   nfactors;           /**< number of factors */
