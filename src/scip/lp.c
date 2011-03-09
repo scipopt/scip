@@ -12672,14 +12672,14 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
    {
       if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
-	 pseudoobjvalinf--;
+         pseudoobjvalinf--;
       else
-	 pseudoobjval -= oldbound * obj;
+         pseudoobjval -= oldbound * obj;
       assert(pseudoobjvalinf >= 0);
       if( SCIPsetIsInfinity(set, REALABS(newbound)) )
-	 pseudoobjvalinf++;
+         pseudoobjvalinf++;
       else
-	 pseudoobjval += newbound * obj;
+         pseudoobjval += newbound * obj;
    }
    assert(pseudoobjvalinf >= 0);
 
