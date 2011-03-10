@@ -13634,18 +13634,19 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             /* add artificial variable */
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -lhs;
-            ++nnonz;
 
             if ( relaxrows )
             {
                /* add slack variable */
-               colinds[nnonz] = lp->ncols + 1 + cnt;
-               colvals[nnonz] = -1.0;
-               ++nnonz;
-               assert( nnonz <= lp->ncols+2 );
+               colinds[nnonz+1] = lp->ncols + 1 + cnt;
+               colvals[nnonz+1] = -1.0;
                ++cnt;
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz+2, &beg, colinds, colvals) );
             }
-            SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz, &beg, colinds, colvals) );
+            else
+            {
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz+1, &beg, colinds, colvals) );
+            }
 	 }
 
 	 /* treat rhs */
@@ -13656,18 +13657,19 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             /* add artificial variable */
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -rhs;
-            ++nnonz;
 
             if ( relaxrows )
             {
                /* add slack variable */
-               colinds[nnonz] = lp->ncols + 1 + cnt;
-               colvals[nnonz] = 1.0;
-               ++nnonz;
-               assert( nnonz <= lp->ncols+2 );
+               colinds[nnonz+1] = lp->ncols + 1 + cnt;
+               colvals[nnonz+1] = 1.0;
                ++cnt;
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz+2, &beg, colinds, colvals) );
             }
-	    SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz, &beg, colinds, colvals) );
+            else
+            {
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz+1, &beg, colinds, colvals) );
+            }
 	 }
       }
    }
