@@ -2071,14 +2071,17 @@ SCIP_RETCODE priceAndCutLoop(
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
       }
-
-      /* check for unboundness */
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
-      {
-         /* assert(root); */ /* this can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
-         *unbounded = TRUE;
-      }
    }
+   /* check for unboundness
+    * also check if *cutoff, since later we assume (and assert) that *unbounded is equivalent with LP having the solution status SCIP_LPSOLSTAT_UNBOUNDEDRAY
+    * also it is possible that the relaxation is unbounded and at the same time a cutoff is detected
+    */
+   if( !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   {
+      /* assert(root); */ /* this can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
+      *unbounded = TRUE;
+   }
+
    lp->installing = FALSE;
 
    SCIPdebugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -3158,9 +3161,18 @@ SCIP_RETCODE solveNode(
        *    off the current solution.
        * In LP branching, we cannot allow adding constraints, because this does not necessary change the LP and can
        * therefore lead to an infinite loop.
+       *
+       * @todo improve handling of infeasible nodes with unbounded LP relaxation
+       * If node is infeasible, no constraint handler did something, but also the LP is unbounded, then proving unboundedness of the CIP is not trivial.
+       * E.g., for MIP, it would be necessary to find an integral solution with infinite objective function value, or to prove that none exists.
+       * Unfortunately, this is not implemented so far: if the LP is unbounded, then there is no branching on fractional variables.
+       * Thus, infeasibility of the node would not be resolved, leading to an assert somewhere below.
+       * Hence, we assume in this case that the node itself is unbounded and just prune the node.
+       * However, for general CIP, an unbounded LP relaxation may just mean that constraint handlers could not generate a linear relaxation so far, but may do this after some branching.
+       * Thus, if external branching candidates are available, then branching is possible, so there is still hope to proceed gracefully.
        */
       forcedlpsolve = FALSE;
-      if( *infeasible && !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
+      if( *infeasible && !(*cutoff) && (!*unbounded || SCIPbranchcandGetNExternCands(branchcand) > 0) && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
       {
          SCIP_RESULT result;
          int nlpcands;
