@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vardata_binpacking.c,v 1.4 2011/01/02 11:10:54 bzfheinz Exp $"
 
 /**@file   vardata_binpacking.c
  * @brief  variable data containing the ids of constraints in which the variable appears 

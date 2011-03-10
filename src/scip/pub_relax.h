@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_relax.h,v 1.17 2011/01/02 11:10:43 bzfheinz Exp $"
 
 /**@file   pub_relax.h
  * @ingroup PUBLICMETHODS

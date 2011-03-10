@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86.gnu.dbg,v 1.18 2011/02/28 13:06:11 bzfviger Exp $
 FLAGS		+=	-DROUNDING_FE -funit-at-a-time
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	-m32 $(GCCWARN)

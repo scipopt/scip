@@ -1,4 +1,3 @@
-#--- $Id: make.mingw.x86.cl.dbg,v 1.1 2010/09/29 17:35:06 bzfviger Exp $
 CC		=	cl -nologo
 CC_o		=	-Fo
 CXX		=	cl -nologo

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.h,v 1.7 2011/01/02 11:10:52 bzfheinz Exp $"
 
 /**@file   
  * @brief  VRP pricer plugin

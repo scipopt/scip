@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_blis.awk,v 1.13 2011/01/02 11:10:54 bzfheinz Exp $
 #
 #@file    check_blis.awk
 #@brief   BLIS Check Report Generator

@@ -1,4 +1,3 @@
-#--- $Id: make.win.x86.mingw-cross.dbg,v 1.3 2009/07/23 12:52:52 bzfviger Exp $
 FLAGS		+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNO_REMOVE_HISTORY -DSCIP_LONGINT_FORMAT='"lld"' -DROUNDING_FE
 CFLAGS		=	-O -g
 CFLAGS		+=	$(GCCWARN)

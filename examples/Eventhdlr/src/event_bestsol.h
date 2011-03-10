@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event_bestsol.h,v 1.3 2011/01/02 11:10:53 bzfheinz Exp $"
 
 /**@file   event_bestsol.h
  * @brief  eventhdlr for best solution found

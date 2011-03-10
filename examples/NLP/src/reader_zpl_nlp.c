@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.8 2011/01/02 11:10:53 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader

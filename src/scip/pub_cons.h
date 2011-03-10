@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.47 2011/01/31 18:46:22 bzfheinz Exp $"
 
 /**@file   pub_cons.h
  * @ingroup PUBLICMETHODS

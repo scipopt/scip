@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.33 2011/01/02 11:10:52 bzfheinz Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers

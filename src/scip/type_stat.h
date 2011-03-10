@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_stat.h,v 1.18 2011/01/02 11:10:40 bzfheinz Exp $"
 
 /**@file   type_stat.h
  * @brief  type definitions for problem statistics

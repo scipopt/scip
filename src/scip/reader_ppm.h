@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.h,v 1.9 2011/01/02 11:10:43 bzfheinz Exp $"
 
 /**@file   reader_ppm.h
  * @brief  file writer for portable pixmap file format (PPM), open with common graphic viewer programs (e.g. xview)

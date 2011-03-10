@@ -1,4 +1,3 @@
-#--- $Id: make.sunos.x86.gnu.opt-gccold,v 1.1 2010/09/27 14:45:25 bzfwinkm Exp $
 FLAGS		+=	-DNDEBUG -DNO_STRERROR_R -DROUNDING_FE
 OFLAGS		+=	-O3 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

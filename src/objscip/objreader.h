@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.31 2011/01/02 11:10:51 bzfheinz Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers

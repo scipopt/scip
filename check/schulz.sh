@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: schulz.sh,v 1.2 2011/02/16 16:03:17 bzfviger Exp $
 
 # Bash-shell version of schulz script from GAMS performance tools (http://www.gamsworld.org/performance/schulz.htm)
 #

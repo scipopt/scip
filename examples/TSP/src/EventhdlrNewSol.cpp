@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.11 2011/01/02 11:10:53 bzfheinz Exp $"
 
 /**@file   EventhdlrNewSol.cpp
  * @brief  event handler for new solutions in TSP

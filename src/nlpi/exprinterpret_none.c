@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: exprinterpret_none.c,v 1.12 2010/09/28 09:42:28 bzfviger Exp $"
 
 /**@file    exprinterpret_none.c
  * @brief   function definitions for nonexisting expression interpreter to resolve linking references

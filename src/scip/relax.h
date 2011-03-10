@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.24 2011/01/02 11:10:43 bzfheinz Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators

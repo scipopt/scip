@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: testfiles.sh,v 1.6 2011/01/02 11:10:54 bzfheinz Exp $
 
 # Test the file names contained in all "*.test" files in the current directory.
 # Output names of files that do not exist.
