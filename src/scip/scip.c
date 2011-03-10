@@ -5172,6 +5172,37 @@ SCIP_RETCODE SCIPdelCons(
    }  /*lint !e788*/
 }
 
+/** returns original constraint of given name in the problem, or NULL if not existing */
+SCIP_CONS* SCIPfindOrigCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of constraint to find */
+   )
+{
+   SCIP_CONS* cons;
+
+   assert(name != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPfindOrigCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      return SCIPprobFindCons(scip->origprob, name);
+   
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return NULL; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
 /** returns constraint of given name in the problem, or NULL if not existing */
 SCIP_CONS* SCIPfindCons(
    SCIP*                 scip,               /**< SCIP data structure */

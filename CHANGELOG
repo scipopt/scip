@@ -36,6 +36,7 @@ interface:
 - added function SCIPaddCoefLogicor() to add a variable to a logic or constraint
 - new methods SCIPhasPrimalRay() and SCIPgetPrimalRayVal() that return whether a primal ray is stored and
   which value a given variable has in the primal ray, respectively
+- new method SCIPfindOrigCons() which return a original constraint with the given name or NULL
 
 performance improvements:
 - performance improvements in prop_vbounds

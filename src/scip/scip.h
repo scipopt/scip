@@ -2016,6 +2016,13 @@ SCIP_CONS* SCIPfindCons(
    const char*           name                /**< name of constraint to find */
    );
 
+/** returns original constraint of given name in the problem, or NULL if not existing */
+extern
+SCIP_CONS* SCIPfindOrigCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of constraint to find */
+   );
+
 /** gets number of upgraded constraints */
 extern
 int SCIPgetNUpgrConss(
