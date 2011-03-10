@@ -18,7 +18,7 @@
  * @brief  LP interface for SoPlex version 1.4 and higher
  * @author Tobias Achterberg
  * @author Timo Berthold
- * @author Ambros Gleixer
+ * @author Ambros Gleixner
  * @author Marc Pfetsch
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
