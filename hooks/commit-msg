@@ -1,0 +1,26 @@
+#!/bin/bash
+
+n=0
+cat $1 | while read line
+do
+  let n=$n+1
+  count=$(echo $line | wc -c)
+  if [ $n -eq 1 ] && [ $count -gt 71 ]
+  then
+    echo "bad commit message: header line is too long (max 70 char)"
+    echo "try again with correct message format"
+    exit 1
+  fi
+  if [ $n -eq 2 ] && [ $count -gt 1 ]
+  then
+    echo "bad commit message: second line has to be blank"
+    echo "try again with correct message format"
+    exit 1
+  fi
+  if [ $n -gt 2 ] && [ $count -gt 71 ]
+  then
+    echo "bad commit message: description lines are too long (max 70 char)"
+    echo "try again with correct message format"
+    exit 1
+  fi
+done
