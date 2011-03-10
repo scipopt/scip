@@ -2258,9 +2258,10 @@ SCIP_RETCODE solveNodeLP(
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
+   /* if there is no LP error, then *unbounded should be TRUE, iff the LP solution status is unboundedray */
+   assert(*lperror || ((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded));
    /* if the LP was unbounded, get the primal ray and store it */
-   assert((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded);
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   if( !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       SCIP_VAR** vars;
       SCIP_Real* ray;
