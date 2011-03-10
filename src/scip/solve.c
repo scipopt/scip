@@ -2133,7 +2133,7 @@ SCIP_RETCODE applyBounding(
          *cutoff = TRUE;
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
-         if( pseudoobjval >= primal->cutoffbound )
+         if( pseudoobjval >= primal->cutoffbound && !SCIPsetIsInfinity(set, -pseudoobjval) )
          {
             SCIP_CALL( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
          }
@@ -2224,7 +2224,7 @@ SCIP_RETCODE solveNodeLP(
          {
             SCIP_Bool feasible;
 
-            SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, transprob, FALSE, TRUE, TRUE, TRUE, &feasible) );
+            SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, transprob, FALSE, TRUE, TRUE, checklprows, &feasible) );
             assert(feasible);
          }
 

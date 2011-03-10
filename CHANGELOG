@@ -151,6 +151,7 @@ fixed bugs:
 - fixed behavior of LNS heuristics when the subproblem aborts: continue in optimized mode, stop in debug mode
 - fixed bug in prop_vbounds.c w.r.t. infinity lower and upper bound of variable bound variables
 - fixed make/make.project 
+- fixed two bugs at nodes with unbounded LP relaxation: don't check lp rows of infinite solution; don't analyze conflict due to primal cutoff bound of -infinity
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
