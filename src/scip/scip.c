@@ -5178,8 +5178,6 @@ SCIP_CONS* SCIPfindOrigCons(
    const char*           name                /**< name of constraint to find */
    )
 {
-   SCIP_CONS* cons;
-
    assert(name != NULL);
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPfindOrigCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
