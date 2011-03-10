@@ -2178,6 +2178,7 @@ SCIP_RETCODE solveNodeLP(
    assert(unbounded != NULL);
    assert(lperror != NULL);
    assert(*cutoff == FALSE);
+   assert(*unbounded == FALSE);
    assert(*lperror == FALSE);
 
    nlps = stat->nlps;
@@ -2255,7 +2256,7 @@ SCIP_RETCODE solveNodeLP(
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
    /* if the LP was unbounded, get the primal ray and store it */
-   /*assert((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded);*/
+   assert((SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) == *unbounded);
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       SCIP_VAR** vars;
@@ -2887,6 +2888,7 @@ SCIP_RETCODE solveNode(
 
       nloops++;
       lperror = FALSE;
+      *unbounded = FALSE;
       solverelax = solverelaxagain;
       solverelaxagain = FALSE;
       solvelp = solvelpagain;
