@@ -44,6 +44,7 @@ performance improvements:
 - added dual reduction to cons_cumulative.c
 - for continuous variables, the pseudo costs update and the pscost branching rule now use the same strategies for updating the pseudo costs and estimating the improvement in the LP bound
 - only perform probing if the variables are locked
+- performance and memory consumption improvements in xmlparse.c
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
