@@ -1,5 +1,4 @@
 #! /bin/sh
-# this sets up symbolic links to enable git hooks
 
 cd ../.git/hooks/
 ln -s ../../hooks/commit-msg
