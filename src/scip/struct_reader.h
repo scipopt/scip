@@ -42,6 +42,7 @@ struct SCIP_Reader
    SCIP_DECL_READERREAD  ((*readerread));    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite));   /**< write method */
    SCIP_READERDATA*      readerdata;         /**< reader data */
+   SCIP_CLOCK*           readingtime;        /**< time used for reading of this reader */
 };
 
 #ifdef __cplusplus

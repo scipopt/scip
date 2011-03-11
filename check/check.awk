@@ -355,7 +355,8 @@ BEGIN {
 #
 # time
 #
-/^Solving Time       :/ { tottime = $4 }
+/^Solving Time       :/ { tottime = $4 } # for older scip version ( < 2.0.1.3 )
+/^  solving          :/ { tottime = $3 } 
 #
 # solver status overview (in order of priority): 
 # 1) solver broke before returning solution => abort

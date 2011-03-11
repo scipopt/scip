@@ -7356,6 +7356,12 @@ SCIP_Real SCIPgetSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets the current reading time in seconds */
+extern
+SCIP_Real SCIPgetReadingTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets the current presolving time in seconds */
 extern
 SCIP_Real SCIPgetPresolvingTime(
