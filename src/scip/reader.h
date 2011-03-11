@@ -87,6 +87,19 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets time in seconds used in this reader for reading */
+extern
+SCIP_Real SCIPreaderGetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   );
+
+/** resets reading time of reader */
+extern
+SCIP_RETCODE SCIPreaderResetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   );
+
+
 #ifdef __cplusplus
 }
 #endif

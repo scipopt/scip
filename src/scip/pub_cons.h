@@ -627,7 +627,7 @@ int SCIPconsGetNLocksNeg(
  */
 
 #define SCIPconsGetName(cons)           (cons)->name
-#define SCIPconsGetPos(cons)           (cons)->consspos
+#define SCIPconsGetPos(cons)            (cons)->consspos
 #define SCIPconsGetHdlr(cons)           (cons)->conshdlr
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsGetNUses(cons)          (cons)->nuses

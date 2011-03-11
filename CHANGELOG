@@ -37,6 +37,7 @@ interface:
 - new methods SCIPhasPrimalRay() and SCIPgetPrimalRayVal() that return whether a primal ray is stored and
   which value a given variable has in the primal ray, respectively
 - new method SCIPfindOrigCons() which return a original constraint with the given name or NULL
+- new method SCIPgetReadingTime() which returns the time for reading in seconds
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -95,6 +96,7 @@ parameters:
   by which the average number of iterations per call is multiplied to get the limit, but the limit is at least resolveitermin; default is
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
 - added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
+- added parameter <timing/reading> to add reading time to solving time
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -132,6 +134,7 @@ features:
 - reorganized computation of scores in cut filtering: instead of the computation at the time of addition, scores are now only computed w.r.t. the current LP solution and when cut filtering is performed; one can now fill the cut storage with cuts that were separated for different solutions
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
+- added clock for determine the time for reading
 
 SCIP version 2.0.2
 ==================
