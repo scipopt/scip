@@ -2731,13 +2731,19 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nbdchginfos) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nbdchginfos) );
+
    for( i = 0; i < nbdchginfos; ++i )
    {
       assert(bdchginfos != NULL);
 
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
       boundtypes[i] = SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i]));
-      bounds[i] = SCIPbdchginfoGetNewbound(bdchginfos[i]);
+      bounds[i] = relaxedbds[i];
+
+      /* check if the relaxed bound is really a relaxed bound */
+      assert(SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER || SCIPisGE(scip, relaxedbds[i], SCIPbdchginfoGetNewbound(bdchginfos[i])));
+      assert(SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_UPPER || SCIPisLE(scip, relaxedbds[i], SCIPbdchginfoGetNewbound(bdchginfos[i])));
+
       /* for continuous variables, we can only use the relaxed version of the bounds negation: !(x <= u) -> x >= u */
       if( SCIPvarIsIntegral(vars[i]) )
       {

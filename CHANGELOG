@@ -81,6 +81,14 @@ interface
   to SCIP_STAGE_EXITSOLVE
 - new method SCIPisHugeValue() to check whether a value is huge and should be handled separately from other values
   (e.g., in activity computations), and SCIPgetHugeValue() to get the smallest value counting as huge
+- new methods SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), and SCIPaddConflictRelaxedBd(); these methods
+  can be used to give for a bound change which is part of an explanation a relaxed bound; this means the relaxed bound
+  is already efficient to be part of a valid explanation
+- new method SCIPisConflictVarUsed() returns TRUE if the given bound change is already part of the conflict set;
+  that is the bound change is redundant;
+- new methods SCIPgetConflictVarLb(), SCIPgetConflictVarUb(), SCIPgetConflictVarRelaxedLb(), and
+  SCIPgetConflictVarRelaxedUb() returning the (relaxed) lower/upper bound of the given variable within the current
+  active conflict set
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
