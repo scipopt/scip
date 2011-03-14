@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.81.2.1 2011/01/02 11:19:45 bzfheinz Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS

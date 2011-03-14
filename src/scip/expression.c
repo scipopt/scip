@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: expression.c,v 1.13.2.1 2011/01/02 11:19:44 bzfheinz Exp $"
 
 /**@file   scip/expression.c
  * @brief  more methods for expressions and expression trees

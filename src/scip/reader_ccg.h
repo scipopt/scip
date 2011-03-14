@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.h,v 1.4.2.1 2011/01/02 11:19:36 bzfheinz Exp $"
 
 /**@file   reader_ccg.h
  * @brief  Column connectivity graph file reader (actually, only a writer)

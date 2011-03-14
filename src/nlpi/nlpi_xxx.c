@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_xxx.c,v 1.8 2010/09/15 14:57:34 bzfviger Exp $"
 
 /**@file    nlpi_xxx.c
  * @ingroup NLPIS

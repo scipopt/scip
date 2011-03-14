@@ -1,4 +1,3 @@
-#--- $Id: make.hp-ux.hppa.hp.opt,v 1.3 2009/07/23 12:52:51 bzfviger Exp $
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
 OFLAGS		+=	+O3 +DD64 +W21,486,474
 CFLAGS		+=	

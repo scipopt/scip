@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_paramset.h,v 1.18.2.1 2011/01/02 11:19:28 bzfheinz Exp $"
 
 /**@file   struct_paramset.h
  * @brief  datastructures for handling parameter settings

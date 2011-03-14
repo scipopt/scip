@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dijkstra_bh.c,v 1.5 2010/09/26 20:43:53 bzfwinkm Exp $"
 
 /**@file   dijkstra_bh.c
  * @brief  C implementation of Dijkstra's algorithm using binary heaps

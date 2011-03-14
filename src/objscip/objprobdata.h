@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.28.2.1 2011/01/02 11:19:52 bzfheinz Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data

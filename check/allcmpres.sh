@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.21.2.1 2011/01/02 11:20:00 bzfheinz Exp $
 
 AWKARGS=""
 FILES=""

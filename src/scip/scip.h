@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.441.2.4 2011/01/19 13:04:45 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS

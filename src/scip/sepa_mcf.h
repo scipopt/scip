@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.h,v 1.7.2.1 2011/01/02 11:19:31 bzfheinz Exp $"
 
 /**@file   sepa_mcf.h
  * @brief  multi-commodity-flow network cut separator

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.317.2.3 2011/01/11 19:10:34 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1911,7 +1910,7 @@ SCIP_RETCODE applyBounding(
          *cutoff = TRUE;
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
-         if( pseudoobjval >= primal->cutoffbound )
+         if( pseudoobjval >= primal->cutoffbound && !SCIPsetIsInfinity(set, -pseudoobjval) )
          {
             SCIP_CALL( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
          }
@@ -2001,7 +2000,7 @@ SCIP_RETCODE solveNodeLP(
          {
             SCIP_Bool feasible;
 
-            SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, prob, FALSE, TRUE, TRUE, TRUE, &feasible) );
+            SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, transprob, FALSE, TRUE, TRUE, checklprows, &feasible) );
             assert(feasible);
          }
 

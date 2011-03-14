@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_ryanfoster.c,v 1.3.2.1 2011/01/02 11:19:58 bzfheinz Exp $"
 
 /**@file   branch_ryanfoster.c
  * @ingroup BRANCHINGRULES

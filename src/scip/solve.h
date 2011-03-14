@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.60.2.2 2011/01/02 11:19:29 bzfheinz Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing

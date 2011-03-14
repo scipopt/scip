@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.22.2.1 2011/01/02 11:19:52 bzfheinz Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators

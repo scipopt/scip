@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: genRandomLOPInstance.c,v 1.6.2.1 2011/01/02 11:19:57 bzfheinz Exp $"
 
 /**@file   genRandomLOPInstance.c
  * @brief  generate a random linear ordering problem instance

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_vbc.h,v 1.18.2.1 2011/01/02 11:19:16 bzfheinz Exp $"
 
 /**@file   type_vbc.h
  * @brief  type definitions for VBC Tool output

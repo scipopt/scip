@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.66.2.1 2011/01/02 11:19:45 bzfheinz Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool

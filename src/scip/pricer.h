@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.30.2.1 2011/01/02 11:19:38 bzfheinz Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers

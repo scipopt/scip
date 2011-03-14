@@ -12,7 +12,6 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.16.2.1 2011/01/02 11:19:14 bzfheinz Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xmldef.h,v 1.1 2010/08/12 20:45:59 bzfpfets Exp $"
 
 /**@file   xmldef.h
  * @brief  definitions for XML parsing

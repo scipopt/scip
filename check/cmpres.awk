@@ -14,7 +14,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.59.2.1 2011/01/02 11:19:59 bzfheinz Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator

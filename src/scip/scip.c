@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.689.2.10 2011/01/19 13:04:45 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -18686,7 +18685,8 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNAddHoles(conshdlr) > 0
             || SCIPconshdlrGetNDelConss(conshdlr) > 0
             || SCIPconshdlrGetNChgSides(conshdlr) > 0
-            || SCIPconshdlrGetNChgCoefs(conshdlr) > 0) )
+            || SCIPconshdlrGetNChgCoefs(conshdlr) > 0
+            || SCIPconshdlrGetNUpgdConss(conshdlr) > 0) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d\n",

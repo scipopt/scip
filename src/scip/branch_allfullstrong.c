@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.42.2.1 2011/01/02 11:19:51 bzfheinz Exp $"
 
 /**@file   branch_allfullstrong.c
  * @ingroup BRANCHINGRULES

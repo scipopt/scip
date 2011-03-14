@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.16.2.2 2011/01/13 12:24:42 bzfwinkm Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files

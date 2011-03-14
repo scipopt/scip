@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_storeGraph.h,v 1.5.2.1 2011/01/02 11:19:57 bzfheinz Exp $"
 
 /**@file   cons_storeGraph.h
  * @brief  constraint handler for storing the graph at each node of the tree

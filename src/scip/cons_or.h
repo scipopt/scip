@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.h,v 1.23.2.1 2011/01/02 11:19:48 bzfheinz Exp $"
 
 /**@file   cons_or.h
  * @brief  constraint handler for or constraints

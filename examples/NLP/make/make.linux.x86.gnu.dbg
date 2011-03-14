@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86.gnu.dbg,v 1.2 2007/09/24 13:55:54 bzfkocht Exp $
 FLAGS           +=      -I../../ipopt/include/ipopt # -DROUNDING_FE
 OFLAGS          +=      -O0 -g 
 CFLAGS          +=      $(GCCWARN) 

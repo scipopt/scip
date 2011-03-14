@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.24.2.1 2011/01/02 11:19:25 bzfheinz Exp $"
 
 /**@file   type_presol.h
  * @ingroup TYPEDEFINITIONS

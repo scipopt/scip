@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.45.2.1 2011/01/02 11:19:49 bzfheinz Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints

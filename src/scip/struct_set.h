@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.103.2.1 2011/01/02 11:19:27 bzfheinz Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings

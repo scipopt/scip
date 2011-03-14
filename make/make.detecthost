@@ -12,7 +12,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.detecthost,v 1.6 2010/09/29 17:35:06 bzfviger Exp $
 
 #@file    Makefile include to detect host system
 #@brief   SCIP Makefile

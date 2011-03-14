@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86.intel.dbg,v 1.1 2007/09/21 13:32:03 bzfpfend Exp $
 CC		=	icc
 CXX		=	icc
 FLAGS		+=	# -DROUNDING_FE

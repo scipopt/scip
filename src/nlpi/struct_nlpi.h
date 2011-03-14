@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlpi.h,v 1.5 2010/09/01 12:50:00 bzfviger Exp $"
 
 /**@file   struct_nlpi.h
  * @brief  data definitions for an NLP solver interface

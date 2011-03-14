@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.42.2.1 2011/01/02 11:19:38 bzfheinz Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables

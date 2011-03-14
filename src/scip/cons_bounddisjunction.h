@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.h,v 1.10.2.1 2011/01/02 11:19:50 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.h
  * @brief  constraint handler for bound disjunction constraints
