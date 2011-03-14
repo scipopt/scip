@@ -2072,10 +2072,7 @@ SCIP_RETCODE priceAndCutLoop(
          SCIP_CALL( SCIPconflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
       }
    }
-   /* check for unboundness
-    * also check if *cutoff, since later we assume (and assert) that *unbounded is equivalent with LP having the solution status SCIP_LPSOLSTAT_UNBOUNDEDRAY
-    * also it is possible that the relaxation is unbounded and at the same time a cutoff is detected
-    */
+   /* check for unboundedness */
    if( !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       /* assert(root); */ /* this can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
@@ -2280,13 +2277,14 @@ SCIP_RETCODE solveNodeLP(
       BMSclearMemoryArray(ray, nvars);
       SCIP_CALL( SCIPlpGetPrimalRay(lp, set, ray) );
 
-      /* create solution to store the primal ray in
-       * clear previously stored primal ray */
+      /* clear previously stored primal ray, if any */
       if( primal->primalray != NULL )
       {
          SCIP_CALL( SCIPsolFree(&primal->primalray, blkmem, primal) );
       }
       assert(primal->primalray == NULL);
+
+      /* create solution to store the primal ray in */
       SCIP_CALL( SCIPsolCreate(&primal->primalray, blkmem, set, stat, primal, tree, NULL) );
       
       /* set values of all active variable in the solution that represents the primal ray */
