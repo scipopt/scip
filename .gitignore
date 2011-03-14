@@ -9,6 +9,9 @@ lib/
 obj/
 release/
 check/results/
+check/locks
 cplex.log
 doc/html/
 doc/html_devel/
+.cproject
+.project
