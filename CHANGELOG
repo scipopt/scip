@@ -156,6 +156,7 @@ fixed bugs:
 - fixed bug in prop_vbounds.c w.r.t. infinity lower and upper bound of variable bound variables
 - fixed make/make.project 
 - fixed two bugs at nodes with unbounded LP relaxation: don't check lp rows of infinite solution; don't analyze conflict due to primal cutoff bound of -infinity
+- fixed bug w.r.t. setting wall clocks
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions
