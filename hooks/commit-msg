@@ -1,26 +1,28 @@
-#!/bin/bash
+#!/usr/bin/env python
+# -*- coding: iso-8859-15 -*-
 
-n=0
-cat $1 | while read line
-do
-  let n=$n+1
-  count=$(echo $line | wc -c)
-  if [ $n -eq 1 ] && [ $count -gt 71 ]
-  then
-    echo "bad commit message: header line is too long (max 70 char)"
-    echo "try again with correct message format"
-    exit 1
-  fi
-  if [ $n -eq 2 ] && [ $count -gt 1 ]
-  then
-    echo "bad commit message: second line has to be blank"
-    echo "try again with correct message format"
-    exit 1
-  fi
-  if [ $n -gt 2 ] && [ $count -gt 71 ]
-  then
-    echo "bad commit message: description lines are too long (max 70 char)"
-    echo "try again with correct message format"
-    exit 1
-  fi
-done
+import os
+import sys
+
+msgfile = open(sys.argv[1], 'r')
+
+message = msgfile.readlines()
+
+for i in range(0,len(message)):
+  line = message[i].strip('\n')
+  if line.startswith('#'):
+    continue
+  if (i == 0) and (len(line) > 70):
+    print "bad commit message: header line is too long (max 70 chars)"
+    print "try again with correct message format"
+    exit(1)
+  if (i == 1) and (len(line) > 1):
+    print "bad commit message: second line has to be blank"
+    print "try again with correct message format"
+    exit(1)
+  if (i > 1) and (len(line) > 70):
+    print "bad commit message: description lines are too long (max 70 chars)"
+    print "try again with correct message format"
+    exit(1)
+  
+exit(0)
