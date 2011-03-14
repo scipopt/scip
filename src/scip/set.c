@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.266 2011/02/23 08:33:22 bzfgamra Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -278,6 +277,7 @@
 
 #define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
 #define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
+#define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 
 
 /* VBC Tool output */
@@ -1412,6 +1412,11 @@ SCIP_RETCODE SCIPsetCreate(
          "timing/enabled",
          "is timing enabled?",
          &(*set)->time_enabled, FALSE, SCIP_DEFAULT_TIME_ENABLED,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "timing/reading",
+         "belongs reading time to solving time?",
+         &(*set)->time_reading, FALSE, SCIP_DEFAULT_TIME_READING,
          NULL, NULL) );
 
    /* VBC tool parameters */

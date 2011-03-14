@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86.gnu.noblkbufmem-gccold,v 1.2 2011/02/25 10:19:47 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG -DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM -DROUNDING_FE
 OFLAGS		+=	-O3 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

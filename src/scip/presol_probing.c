@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.63 2011/02/24 16:55:38 bzfpfets Exp $"
 
 /**@file   presol_probing.c
  * @ingroup PRESOLVERS

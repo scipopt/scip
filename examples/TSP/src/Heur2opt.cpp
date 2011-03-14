@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.14 2011/01/02 11:10:52 bzfheinz Exp $"
 
 /**@file   Heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dijkstra_bh.h,v 1.4 2010/09/26 20:43:53 bzfwinkm Exp $"
 
 /**@file   dijkstra_bh.h
  * @brief  Definitions for Disjkstra's shortest path algorithm using binary heaps

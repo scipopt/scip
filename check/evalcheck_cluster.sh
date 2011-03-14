@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.19 2011/02/07 21:14:29 bzfpfets Exp $
 
 export LANG=C
 

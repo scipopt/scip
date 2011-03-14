@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.h,v 1.15 2011/01/02 11:10:44 bzfheinz Exp $"
 
 /**@file   prop_pseudoobj.h
  * @brief  pseudoobj propagator

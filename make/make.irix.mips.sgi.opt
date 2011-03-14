@@ -1,4 +1,3 @@
-#--- $Id: make.irix.mips.sgi.opt,v 1.3 2009/07/23 12:52:51 bzfviger Exp $
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
 OFLAGS		+=	-O2 -mips4 -n32 -IPA
 CFLAGS		+=	

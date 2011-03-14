@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ProbDataTSP.h,v 1.10 2011/01/13 14:47:21 bzfberth Exp $"
 
 /**@file   ProbDataTSP.h
  * @brief  C++ problem data for TSP

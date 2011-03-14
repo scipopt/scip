@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.54 2011/02/18 13:49:40 bzfberth Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS

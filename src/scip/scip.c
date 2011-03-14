@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.740 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -393,8 +392,10 @@ SCIP_Real getDualbound(
    {
       /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with 
        * dual bound = -inf instead of dual bound = primal bound = +inf
+       * also in case we prove that the problem is unbounded, it seems to make sense to return with dual bound = -inf,
+       * since -infinity is the only valid lower bound
        */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
          return (-SCIPinfinity(scip));
       else
          return getPrimalbound(scip);
@@ -3870,11 +3871,20 @@ SCIP_RETCODE SCIPreadProb(
    case SCIP_SUCCESS:
       if( scip->origprob != NULL )
       {
+         SCIP_Real readingtime;
+
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
             "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
             scip->origprob->nvars, scip->origprob->nbinvars, scip->origprob->nintvars,
             scip->origprob->nimplvars, scip->origprob->ncontvars,
             scip->origprob->nconss);
+
+         /* get reading time */
+         readingtime = SCIPgetReadingTime(scip);
+         
+         /* display timing statistics */
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "Reading Time: %.2f\n", readingtime);
       }
       retcode = SCIP_OKAY;
       break;
@@ -3889,6 +3899,18 @@ SCIP_RETCODE SCIPreadProb(
    /* free buffer array */
    SCIPfreeBufferArray(scip, &tmpfilename);
 
+   /* check if reading time should belong to solving time */
+   if( scip->set->time_reading )
+   {
+      SCIP_Real readingtime;
+
+      /* get reading time */
+      readingtime = SCIPgetReadingTime(scip);
+    
+      /* add reading time to solving time */
+      SCIPclockSetTime(scip->stat->solvingtime, readingtime);
+   }
+   
    return retcode;
 }
 
@@ -4061,18 +4083,24 @@ SCIP_RETCODE SCIPfreeProb(
 
    if( scip->set->stage == SCIP_STAGE_PROBLEM )
    {
-      int p;
+      int i;
 
       /* deactivate all pricers */
-      for( p = scip->set->nactivepricers-1; p >= 0; --p )
+      for( i = scip->set->nactivepricers-1; i >= 0; --i )
       {
-         SCIP_CALL( SCIPpricerDeactivate(scip->set->pricers[p], scip->set) );
+         SCIP_CALL( SCIPpricerDeactivate(scip->set->pricers[i], scip->set) );
       }
       assert(scip->set->nactivepricers == 0);
 
       /* free problem and problem statistics data structures */
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
+
+      /* readers */
+      for( i = 0; i < scip->set->nreaders; ++i )
+      {
+         SCIP_CALL( SCIPreaderResetReadingTime(scip->set->readers[i]) );
+      }
 
       /* switch stage to INIT */
       scip->set->stage = SCIP_STAGE_INIT;
@@ -5168,6 +5196,35 @@ SCIP_RETCODE SCIPdelCons(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
+   }  /*lint !e788*/
+}
+
+/** returns original constraint of given name in the problem, or NULL if not existing */
+SCIP_CONS* SCIPfindOrigCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of constraint to find */
+   )
+{
+   assert(name != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPfindOrigCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      return SCIPprobFindCons(scip->origprob, name);
+   
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -7442,37 +7499,37 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
          (*endpos) = pos;
 
       
-      /* parse variable name */
-      SCIP_CALL( SCIPparseVarName(scip, str, pos, &var, &pos) );
+         /* parse variable name */
+         SCIP_CALL( SCIPparseVarName(scip, str, pos, &var, &pos) );
       
-      if( var == NULL )
-         break;
+         if( var == NULL )
+            break;
       
-      nextpos = pos; 
+         nextpos = pos; 
       
-      /* check if the bext token is a variable name again */
-      SCIP_CALL( SCIPparseVarName(scip, str, pos, &nextvar, &pos) );
+         /* check if the bext token is a variable name again */
+         SCIP_CALL( SCIPparseVarName(scip, str, pos, &nextvar, &pos) );
       
-      if( nextvar != NULL )
-      {
-      }
-      (*endpos) = )
+         if( nextvar != NULL )
+         {
+         }
+         (*endpos) = )
       
  
-      if( var == NULL )
-      {
-         SCIPdebugMessage("variable with does not exist\n");
-         (*success) = FALSE;
-         break;
-      }
+         if( var == NULL )
+         {
+            SCIPdebugMessage("variable with does not exist\n");
+            (*success) = FALSE;
+            break;
+         }
 
-      /* store the variable in the tmp array */
-      if( ntmpvars < varssize )
-      {
-         tmpvars[ntmpvars] = var;
-         tmpvals[ntmpvars] = value;
-      }
-      ntmpvars++;
+         /* store the variable in the tmp array */
+         if( ntmpvars < varssize )
+         {
+            tmpvars[ntmpvars] = var;
+            tmpvals[ntmpvars] = value;
+         }
+         ntmpvars++;
    }
  
    /* if all variable name searches were successfully and the variable array has enough slots copy the collected
@@ -13604,18 +13661,19 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             /* add artificial variable */
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -lhs;
-            ++nnonz;
 
             if ( relaxrows )
             {
                /* add slack variable */
-               colinds[nnonz] = lp->ncols + 1 + cnt;
-               colvals[nnonz] = -1.0;
-               ++nnonz;
-               assert( nnonz <= lp->ncols+2 );
+               colinds[nnonz+1] = lp->ncols + 1 + cnt;
+               colvals[nnonz+1] = -1.0;
                ++cnt;
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz+2, &beg, colinds, colvals) );
             }
-            SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz, &beg, colinds, colvals) );
+            else
+            {
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz+1, &beg, colinds, colvals) );
+            }
 	 }
 
 	 /* treat rhs */
@@ -13626,18 +13684,19 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
             /* add artificial variable */
             colinds[nnonz] = lp->ncols;
             colvals[nnonz] = -rhs;
-            ++nnonz;
 
             if ( relaxrows )
             {
                /* add slack variable */
-               colinds[nnonz] = lp->ncols + 1 + cnt;
-               colvals[nnonz] = 1.0;
-               ++nnonz;
-               assert( nnonz <= lp->ncols+2 );
+               colinds[nnonz+1] = lp->ncols + 1 + cnt;
+               colvals[nnonz+1] = 1.0;
                ++cnt;
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz+2, &beg, colinds, colvals) );
             }
-	    SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz, &beg, colinds, colvals) );
+            else
+            {
+               SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz+1, &beg, colinds, colvals) );
+            }
 	 }
       }
    }
@@ -20170,7 +20229,7 @@ void printLPStatistics(
       SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
    else
       SCIPmessageFPrintInfo(file, "          -\n");
-
+   
 }
 
 static
@@ -20243,6 +20302,7 @@ void printTreeStatistics(
    SCIPmessageFPrintInfo(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 
+/** display solution statistics */
 static
 void printSolutionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -20350,6 +20410,43 @@ void printSolutionStatistics(
    SCIPmessageFPrintInfo(file, "  Root Iterations  : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nrootlpiterations);
 }
       
+/** display timing statistics */
+static
+void printTimingStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   SCIP_Real readingtime;
+
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM);
+   
+   readingtime = SCIPgetReadingTime(scip);
+   
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+   {
+      SCIPmessageFPrintInfo(file, "Total Time         : %10.2f\n", readingtime);
+      SCIPmessageFPrintInfo(file, "  reading          : %10.2f\n", readingtime);
+   }
+   else
+   {
+      SCIP_Real totaltime;
+      SCIP_Real solvingtime;
+      
+      solvingtime  = SCIPclockGetTime(scip->stat->solvingtime);
+
+      if( scip->set->time_reading ) 
+         totaltime = solvingtime;
+      else
+         totaltime = solvingtime + readingtime;
+   
+      SCIPmessageFPrintInfo(file, "Total Time         : %10.2f\n", totaltime);
+      SCIPmessageFPrintInfo(file, "  solving          : %10.2f\n", solvingtime);
+      SCIPmessageFPrintInfo(file, "  presolving       : %10.2f (in solving included)\n", SCIPclockGetTime(scip->stat->presolvingtime));
+      SCIPmessageFPrintInfo(file, "  reading          : %10.2f%s\n", readingtime, scip->set->time_reading ? " (in solving included)" : "");
+   }
+}
+
 /** outputs solving statistics */
 SCIP_RETCODE SCIPprintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -20369,14 +20466,17 @@ SCIP_RETCODE SCIPprintStatistics(
       return SCIP_OKAY;
 
    case SCIP_STAGE_PROBLEM:
+   {
+      printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       return SCIP_OKAY;
-
+   }
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
-      SCIPmessageFPrintInfo(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+   {
+      printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       SCIPmessageFPrintInfo(file, "Presolved Problem  :\n");
@@ -20387,10 +20487,11 @@ SCIP_RETCODE SCIPprintStatistics(
       printPropagatorStatistics(scip, file);
       printConflictStatistics(scip, file);
       return SCIP_OKAY;
-
+   }
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      SCIPmessageFPrintInfo(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+   {
+      printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       SCIPmessageFPrintInfo(file, "Presolved Problem  :\n");
@@ -20410,7 +20511,7 @@ SCIP_RETCODE SCIPprintStatistics(
       printTreeStatistics(scip, file);
       printSolutionStatistics(scip, file);
       return SCIP_OKAY;
-
+   }
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
@@ -20808,6 +20909,29 @@ SCIP_Real SCIPgetSolvingTime(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolvingTime", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPclockGetTime(scip->stat->solvingtime);
+}
+
+/** gets the current reading time in seconds */
+SCIP_Real SCIPgetReadingTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real readingtime;
+   int r;
+   
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetReadingTime", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   readingtime = 0.0;
+   
+   /* sum up the reading time of all readers */
+   for( r = 0; r < scip->set->nreaders; ++r )
+   {
+      assert(scip->set->readers[r] != NULL);
+      assert(!SCIPisNegative(scip, SCIPreaderGetReadingTime(scip->set->readers[r])));
+      readingtime += SCIPreaderGetReadingTime(scip->set->readers[r]);
+   }
+   
+   return readingtime;
 }
 
 /** gets the current presolving time in seconds */

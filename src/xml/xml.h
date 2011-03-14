@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xml.h,v 1.1 2010/08/12 20:45:59 bzfpfets Exp $"
 
 /**@file   xml.h
  * @brief  declarations for XML parsing
@@ -91,7 +90,7 @@ void xml_append_child(
 /** free node */
 extern
 void xml_free_node(
-   XML_NODE*             n
+   XML_NODE*             node
    );
 
 /** output node */
@@ -121,11 +120,20 @@ const XML_NODE* xml_next_node(
    const char*           name
    );
 
-/** find next node */
+/** find node */
 extern
 const XML_NODE* xml_find_node(
    const XML_NODE*       node,
    const char*           name
+   );
+
+/** find node with bound on the depth */
+extern
+const XML_NODE* xml_find_node_maxdepth(
+   const XML_NODE*       node,               /**< current node - use start node to begin */
+   const char*           name,               /**< name of tag to search for */
+   int                   depth,              /**< current depth - start with 0 */
+   int                   maxdepth            /**< maximal depth */
    );
 
 /** return next sibling */

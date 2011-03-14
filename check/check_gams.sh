@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gams.sh,v 1.7 2011/03/03 14:56:18 bzfviger Exp $
 TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}

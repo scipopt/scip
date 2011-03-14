@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlp.h,v 1.2 2011/01/02 11:10:40 bzfheinz Exp $"
 
 /**@file   type_nlp.h
  * @brief  type definitions for NLP management

@@ -14,7 +14,6 @@
 //*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 //*                                                                           */
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// $Id: sciptsp.lnt,v 1.3 2011/02/01 11:55:33 bzfberth Exp $
 
 -passes(1)
 // esoteric size settings to find erros.

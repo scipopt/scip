@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xyz.c,v 1.1 2011/02/01 11:55:33 bzfberth Exp $"
 
 /**@file   dialog_xyz.c
  * @ingroup DIALOGS

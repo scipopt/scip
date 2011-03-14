@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86_64.gnu.opt-shared-gccold,v 1.1 2010/09/27 14:45:25 bzfwinkm Exp $
 FLAGS		+=	-DNDEBUG -fPIC -DROUNDING_FE
 OFLAGS		+=	-O3 -m64 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

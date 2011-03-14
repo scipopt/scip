@@ -1,4 +1,3 @@
-#--- $Id: make.alibaba,v 1.3 2011/02/07 21:13:27 bzfpfets Exp $
 # Call with "make testcluster"
 #
 # The cluster consists of 80 nodes. These are divided into two sets of 40

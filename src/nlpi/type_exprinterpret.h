@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_exprinterpret.h,v 1.2 2010/08/23 19:33:13 bzfviger Exp $"
 
 /**@file   type_exprinterpret.h
  * @brief  type definitions for expression interpreter

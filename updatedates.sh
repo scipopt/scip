@@ -11,7 +11,6 @@
 #
 # This bash script also changes the copyrights of the SCIP examples
 #
-# $Id: updatedates.sh,v 1.12 2011/01/02 11:10:55 bzfheinz Exp $
 
 NEWYEAR=`date +"%Y"`
 LASTYEAR=`expr $NEWYEAR - 1`

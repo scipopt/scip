@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.56 2011/01/02 11:10:47 bzfheinz Exp $"
 
 /**@file   heur_guideddiving.c
  * @ingroup PRIMALHEURISTICS

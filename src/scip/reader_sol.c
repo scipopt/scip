@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.23 2011/01/04 20:14:09 bzfpfets Exp $"
 
 /**@file   reader_sol.c
  * @ingroup FILEREADERS 
@@ -205,7 +204,7 @@ SCIP_RETCODE readXMLSol(
 
    /* find variable sections */
    tag = "variables";
-   varsnode = xml_find_node(start, tag);
+   varsnode = xml_find_node_maxdepth(start, tag, 0, 2);
    if ( varsnode == NULL )
    {
       /* free xml data */

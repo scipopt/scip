@@ -1,4 +1,3 @@
-#--- $Id: make.linux.x86.gnu.opt-shared,v 1.11 2011/03/01 16:42:12 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG -fPIC -DROUNDING_FE
 OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	-m32 $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

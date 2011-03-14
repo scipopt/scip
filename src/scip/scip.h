@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.469 2011/03/06 22:48:26 bzfgamra Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2013,6 +2012,13 @@ SCIP_RETCODE SCIPdelCons(
 /** returns constraint of given name in the problem, or NULL if not existing */
 extern
 SCIP_CONS* SCIPfindCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of constraint to find */
+   );
+
+/** returns original constraint of given name in the problem, or NULL if not existing */
+extern
+SCIP_CONS* SCIPfindOrigCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint to find */
    );
@@ -7347,6 +7353,12 @@ SCIP_Real SCIPgetTotalTime(
 /** gets the current solving time in seconds */
 extern
 SCIP_Real SCIPgetSolvingTime(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the current reading time in seconds */
+extern
+SCIP_Real SCIPgetReadingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

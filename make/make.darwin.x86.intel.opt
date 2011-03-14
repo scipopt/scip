@@ -1,4 +1,3 @@
-#--- $Id: make.darwin.x86.intel.opt,v 1.2 2009/07/23 12:52:51 bzfviger Exp $
 CC		=	icc
 CXX		=	icc -Kc++
 LINKCC		=	icc

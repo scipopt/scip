@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.55 2011/01/20 08:21:26 bzfberth Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 

@@ -36,6 +36,8 @@ interface:
 - added function SCIPaddCoefLogicor() to add a variable to a logic or constraint
 - new methods SCIPhasPrimalRay() and SCIPgetPrimalRayVal() that return whether a primal ray is stored and
   which value a given variable has in the primal ray, respectively
+- new method SCIPfindOrigCons() which return a original constraint with the given name or NULL
+- new method SCIPgetReadingTime() which returns the time for reading in seconds
 
 performance improvements:
 - performance improvements in prop_vbounds
@@ -43,6 +45,7 @@ performance improvements:
 - added dual reduction to cons_cumulative.c
 - for continuous variables, the pseudo costs update and the pscost branching rule now use the same strategies for updating the pseudo costs and estimating the improvement in the LP bound
 - only perform probing if the variables are locked
+- performance and memory consumption improvements in xmlparse.c
 
 fixed bugs:
 - fixed bug in propagation of indicator constraints: cannot fix slack variable to 0 if linear constraint is disabled/not active
@@ -93,6 +96,7 @@ parameters:
   by which the average number of iterations per call is multiplied to get the limit, but the limit is at least resolveitermin; default is
   -1 (no limit) for resolveiterfac and 1000 for resolveitermin
 - added parameter <constraints/indicator/genBilinear> to generate bilinear (quadratic) constraints instead of indicator constraints
+- added parameter <timing/reading> to add reading time to solving time
 
 features:
 - flatzinc reader is now capable to read cumulative constraints
@@ -130,6 +134,7 @@ features:
 - reorganized computation of scores in cut filtering: instead of the computation at the time of addition, scores are now only computed w.r.t. the current LP solution and when cut filtering is performed; one can now fill the cut storage with cuts that were separated for different solutions
 - it is possible to change bounds of a variable in the interactive shell
 - it is possible to add a constraint to a problem in the interactive shell
+- added clock for determine the time for reading
 
 SCIP version 2.0.2
 ==================
@@ -150,6 +155,8 @@ fixed bugs:
 - fixed behavior of LNS heuristics when the subproblem aborts: continue in optimized mode, stop in debug mode
 - fixed bug in prop_vbounds.c w.r.t. infinity lower and upper bound of variable bound variables
 - fixed make/make.project 
+- fixed two bugs at nodes with unbounded LP relaxation: don't check lp rows of infinite solution; don't analyze conflict due to primal cutoff bound of -infinity
+- fixed bug w.r.t. setting wall clocks
 
 performance improvements:
 - fasten propagation in cons_knapsack.c due to negated clique partitions

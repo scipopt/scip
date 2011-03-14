@@ -12,7 +12,6 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.10 2011/01/02 11:10:39 bzfheinz Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques

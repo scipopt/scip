@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.109 2011/02/23 08:33:23 bzfgamra Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -332,6 +331,7 @@ struct SCIP_Set
    /* timing settings */
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
+   SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
 
    /* VBC tool settings */
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */

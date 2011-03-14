@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: disscmpres.sh,v 1.9 2011/01/02 11:10:54 bzfheinz Exp $
 
 AWKARGS=""
 FILES=""

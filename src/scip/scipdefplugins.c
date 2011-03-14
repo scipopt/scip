@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.113 2011/02/27 18:37:14 bzfpfets Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins

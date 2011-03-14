@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.h,v 1.4 2011/01/02 11:10:44 bzfheinz Exp $"
 
 /**@file   prop_vbounds.h
  * @brief  variable upper and lower bound propagator

@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloringplugins.c,v 1.8 2011/01/02 11:10:54 bzfheinz Exp $"
 
 /**@file   coloringplugins.c
  * @brief  SCIP plugins for coloring

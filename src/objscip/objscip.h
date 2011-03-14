@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objscip.h,v 1.21 2011/01/02 11:10:51 bzfheinz Exp $"
 
 /**@file   objscip.h
  * @brief  C++ wrapper classes for SCIP

@@ -1,4 +1,3 @@
-#--- $Id: make.sunos.sparc.gnu.opt,v 1.8 2009/07/23 12:52:51 bzfviger Exp $
 FLAGS		+=	-DNO_STRERROR_R -DNDEBUG -DROUNDING_FE
 OFLAGS		+=	-O3 -mcpu=ultrasparc -mtune=ultrasparc -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

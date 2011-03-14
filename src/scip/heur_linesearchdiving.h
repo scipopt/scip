@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.h,v 1.15 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   heur_linesearchdiving.h
  * @brief  linesearchdiving primal heuristic

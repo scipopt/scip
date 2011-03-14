@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.34 2011/01/02 11:10:51 bzfheinz Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -77,7 +76,7 @@ SCIP_Real walltime2sec(
 static
 void sec2cputime(
    SCIP_Real             sec,                /**< seconds */
-   clock_t*         cputime             /**< pointer to store clock ticks for CPU time */
+   clock_t*              cputime             /**< pointer to store clock ticks for CPU time */
    )
 {
    clock_t clocks_per_second;
@@ -108,7 +107,7 @@ void sec2walltime(
    assert(wallusec != NULL);
 
    *wallsec = (long)sec;
-   *wallusec = (long)(sec * 1000000.0) - (*wallsec);
+   *wallusec = (long)((sec  - *wallsec) * 1000000.0);
 }
 
 

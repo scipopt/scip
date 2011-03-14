@@ -1,4 +1,3 @@
-#--- $Id: make.win.x86.mingw-cross.opt,v 1.1 2007/09/21 13:32:04 bzfpfend Exp $
 FLAGS		+=	-DNDEBUG # -DROUNDING_FE
 CFLAGS		=	-O6 -march=pentiumpro
 CFLAGS		+=	$(GCCWARN)

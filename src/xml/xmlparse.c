@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: xmlparse.c,v 1.7 2010/12/30 10:39:43 bzfviger Exp $"
 
 /**@file   xmldef.h
  * @brief  declarations for XML parsing
@@ -21,6 +20,9 @@
  *
  * If SPEC_LIKE_SPACE_HANDLING is not defined, all LF,CR will be changed into spaces and from a
  * sequence of spaces only one will be used.
+ *
+ * @todo Implement possibility to avoid the construction of parsing information for certain tags
+ * (and their children). For solution files this would avoid parsing the constraints section.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -113,8 +115,9 @@ static void xml_errmsg(
 }
 
 
-/** Push new element on the parse stack. Ein neues Element auf den Parse Stack legen.
- * TRUE if it worked, FAILURE otherwise.
+/** Push new element on the parse stack.
+ *
+ *  TRUE if it worked, FAILURE otherwise.
  */
 static
 XML_Bool push_pstack(
@@ -152,7 +155,7 @@ static XML_NODE* top_pstack(
 
 /** remove top element from stack and deletes it
  *
- * TRUE if ok, FALSE otherwise
+ *  TRUE if ok, FALSE otherwise
  */
 static
 XML_Bool pop_pstack(
@@ -737,7 +740,7 @@ void handle_starttag(
    )
 {
    XML_NODE* node;
-   char*   name;
+   char* name;
 
    assert(ppos != NULL);
 
@@ -1172,9 +1175,27 @@ void xml_append_child(
 /** free attribute */
 static
 void xml_free_attr(
-   XML_ATTR*             a
+   XML_ATTR*             attr
    )
 {
+   XML_ATTR* a;
+
+   a = attr;
+   while (a != NULL)
+   {
+      XML_ATTR* b;
+      b = a->next;
+
+      assert(a->name  != NULL);
+      assert(a->value != NULL);
+      
+      BMSfreeMemoryArray(&a->name);
+      BMSfreeMemoryArray(&a->value);
+      BMSfreeMemory(&a);
+      a = b;
+   }
+
+#if 0
    if (a != NULL)
    {
       xml_free_attr(a->next);
@@ -1186,13 +1207,40 @@ void xml_free_attr(
       BMSfreeMemoryArray(&a->value);
       BMSfreeMemory(&a);
    }
+#endif
 }
 
 /** free node */
 void xml_free_node(
-   XML_NODE*             n
+   XML_NODE*             node
    )
 {
+   XML_NODE* n;
+
+   if (node == NULL)
+      return;
+
+   n = node->first_child;
+   while (n != NULL)
+   {
+      XML_NODE* m;
+      m = n->next_sibl;
+      xml_free_node(n);
+      n = m;
+   }
+
+   xml_free_attr(node->attr_list);
+
+   if (node->data != NULL)
+   {
+      BMSfreeMemoryArray(&node->data);
+   }
+   assert(node->name != NULL);
+
+   BMSfreeMemoryArray(&node->name);
+   BMSfreeMemory(&node);
+
+#if 0
    if (n != NULL)
    {
       xml_free_node(n->first_child);
@@ -1208,6 +1256,7 @@ void xml_free_node(
       BMSfreeMemoryArray(&n->name);
       BMSfreeMemory(&n);
    }
+#endif
 }
 
 /** output node */
@@ -1296,13 +1345,14 @@ const XML_NODE* xml_next_node(
    return (node->next_sibl == NULL) ? NULL : xml_first_node(node->next_sibl, name);
 }
 
-/** find next node */
+/** find node */
 const XML_NODE* xml_find_node(
    const XML_NODE*       node,
    const char*           name
    )
 {
    const XML_NODE* n;
+   const XML_NODE* r;
 
    assert(node != NULL);
    assert(name != NULL);
@@ -1310,6 +1360,14 @@ const XML_NODE* xml_find_node(
    if (!strcmp(name, node->name))
       return node;
 
+   for (n = node->first_child; n != NULL; n = n->next_sibl)
+   {
+      r = xml_find_node(n, name);
+      if (r != NULL )
+         return r;
+   }
+
+#if 0
    if (node->first_child != NULL)
    {
       if (NULL != (n = xml_find_node(node->first_child, name)))
@@ -1320,6 +1378,37 @@ const XML_NODE* xml_find_node(
    {
       if (NULL != (n = xml_find_node(node->next_sibl, name)))
          return n;
+   }
+#endif
+
+   return NULL;
+}
+
+/** find node with bound on the depth */
+const XML_NODE* xml_find_node_maxdepth(
+   const XML_NODE*       node,               /**< current node - use start node to begin */
+   const char*           name,               /**< name of tag to search for */
+   int                   depth,              /**< current depth - start with 0 for root */
+   int                   maxdepth            /**< maximal depth */
+   )
+{
+   const XML_NODE* n;
+   const XML_NODE* r;
+
+   assert(node != NULL);
+   assert(name != NULL);
+
+   if (!strcmp(name, node->name))
+      return node;
+
+   if ( depth < maxdepth )
+   {
+      for (n = node->first_child; n != NULL; n = n->next_sibl)
+      {
+         r = xml_find_node_maxdepth(n, name, depth+1, maxdepth);
+         if (r != NULL )
+            return r;
+      }
    }
 
    return NULL;

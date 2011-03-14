@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.h,v 1.8 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   heur_intdiving.h
  * @brief  LP diving heuristic that fixes variables with integral LP value

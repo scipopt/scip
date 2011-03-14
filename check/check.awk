@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.103 2011/01/02 11:10:55 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -356,7 +355,8 @@ BEGIN {
 #
 # time
 #
-/^Solving Time       :/ { tottime = $4 }
+/^Solving Time       :/ { tottime = $4 } # for older scip version ( < 2.0.1.3 )
+/^  solving          :/ { tottime = $3 } 
 #
 # solver status overview (in order of priority): 
 # 1) solver broke before returning solution => abort

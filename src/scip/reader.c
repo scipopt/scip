@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.60 2011/01/02 11:10:43 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -28,6 +27,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
+#include "scip/clock.h"
 #include "scip/pub_misc.h"
 #include "scip/reader.h"
 #include "scip/prob.h"
@@ -84,7 +84,10 @@ SCIP_RETCODE SCIPreaderCreate(
    (*reader)->readerread = readerread;
    (*reader)->readerwrite = readerwrite;
    (*reader)->readerdata = readerdata;
-   
+
+   /* create reading clock */
+   SCIP_CALL( SCIPclockCreate(&(*reader)->readingtime, SCIP_CLOCKTYPE_DEFAULT) );
+
    return SCIP_OKAY;
 }
 
@@ -104,6 +107,9 @@ SCIP_RETCODE SCIPreaderFree(
       SCIP_CALL( (*reader)->readerfree(set->scip, *reader) );
    }
 
+   /* free clock */
+   SCIPclockFree(&(*reader)->readingtime);
+   
    BMSfreeMemoryArray(&(*reader)->name);
    BMSfreeMemoryArray(&(*reader)->desc);
    BMSfreeMemoryArray(&(*reader)->extension);
@@ -145,8 +151,32 @@ SCIP_RETCODE SCIPreaderRead(
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerread != NULL )
    {
+      SCIP_CLOCK* readingtime;
+
+      /**@note we need temporary clock to measure the reading time correctly since in case of creating a new problem
+       *       within the reader all clocks are reset (including the reader clocks); this resetting is necessary for
+       *       example for those case we people solve several problems using the (same) interactive shell
+       */
+
+      assert(!SCIPclockIsRunning(reader->readingtime));
+
+      /* create a temporary clock for measuring the reading time */
+      SCIP_CALL( SCIPclockCreate(&readingtime, SCIP_CLOCKTYPE_DEFAULT) );
+      
+      /* start timing */
+      SCIPclockStart(readingtime, set);
+      
       /* call reader to read problem */
       retcode = reader->readerread(set->scip, reader, filename, result);
+
+      /* stop timing */
+      SCIPclockStop(readingtime, set);
+
+      /* add time to reader reading clock */
+      SCIPclockSetTime(reader->readingtime, SCIPclockGetTime(reader->readingtime) + SCIPclockGetTime(readingtime));
+      
+      /* free the temporary clock */
+      SCIPclockFree(&readingtime);
    }
    else
    {
@@ -462,4 +492,26 @@ SCIP_Bool SCIPreaderCanWrite(
    return (reader->readerwrite != NULL);
 }
 
+/** gets time in seconds used in this reader for reading */
+SCIP_Real SCIPreaderGetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   return SCIPclockGetTime(reader->readingtime);
+}
+
+/** resets reading time of reader */
+SCIP_RETCODE SCIPreaderResetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+   
+   /* reset reading time/clock */
+   SCIPclockReset(reader->readingtime);
+
+   return SCIP_OKAY;
+}
 

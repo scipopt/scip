@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.30 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt

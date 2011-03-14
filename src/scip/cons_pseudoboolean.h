@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_pseudoboolean.h,v 1.1 2011/01/03 19:35:07 bzfwinkm Exp $"
 
 /**@file   cons_pseudoboolean.h
  * @brief  constraint handler for pseudoboolean constraints

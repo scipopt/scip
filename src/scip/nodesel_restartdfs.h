@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.h,v 1.17 2011/01/02 11:10:44 bzfheinz Exp $"
 
 /**@file   nodesel_restartdfs.h
  * @brief  node selector for depth first search with periodical selection of the best node

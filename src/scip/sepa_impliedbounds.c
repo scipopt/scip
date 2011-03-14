@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.33 2011/01/02 11:10:42 bzfheinz Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS

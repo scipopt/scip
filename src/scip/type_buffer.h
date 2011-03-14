@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_buffer.h,v 1.15 2011/01/02 11:10:41 bzfheinz Exp $"
 
 /**@file   type_buffer.h
  * @brief  type definitions for memory buffers for temporary objects

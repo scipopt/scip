@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_reader.h,v 1.18 2011/01/02 11:10:41 bzfheinz Exp $"
 
 /**@file   struct_reader.h
  * @brief  datastructures for input file readers
@@ -43,6 +42,7 @@ struct SCIP_Reader
    SCIP_DECL_READERREAD  ((*readerread));    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite));   /**< write method */
    SCIP_READERDATA*      readerdata;         /**< reader data */
+   SCIP_CLOCK*           readingtime;        /**< time used for reading of this reader */
 };
 
 #ifdef __cplusplus

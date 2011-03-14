@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.h,v 1.17 2011/01/02 11:10:51 bzfheinz Exp $"
 
 /**@file   branch_relpscost.h
  * @brief  reliable pseudo costs branching rule

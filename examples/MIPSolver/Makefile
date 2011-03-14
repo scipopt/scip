@@ -12,7 +12,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.32 2011/01/02 11:10:53 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library

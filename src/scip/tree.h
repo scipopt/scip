@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.115 2011/01/20 08:21:26 bzfberth Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree

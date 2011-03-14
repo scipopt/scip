@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.h,v 1.8 2011/01/03 19:35:07 bzfwinkm Exp $"
 
 /**@file   reader_opb.h
  * @brief  pseudo-Boolean file reader (opb format)

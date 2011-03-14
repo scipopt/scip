@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.91 2011/01/12 11:59:39 bzfberth Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 

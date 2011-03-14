@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpioracle.h,v 1.8 2010/09/28 10:13:27 bzfviger Exp $"
 
 /**@file   nlpioracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values

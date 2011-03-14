@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.38 2011/01/02 11:10:43 bzfheinz Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -87,6 +86,19 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
+
+/** gets time in seconds used in this reader for reading */
+extern
+SCIP_Real SCIPreaderGetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   );
+
+/** resets reading time of reader */
+extern
+SCIP_RETCODE SCIPreaderResetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   );
+
 
 #ifdef __cplusplus
 }

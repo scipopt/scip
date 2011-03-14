@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.37 2011/01/02 11:10:46 bzfheinz Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history

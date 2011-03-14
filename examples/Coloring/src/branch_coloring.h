@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.h,v 1.6 2011/01/02 11:10:54 bzfheinz Exp $"
 
 /**@file   branch_coloring.h
  * @brief  coloring branching rule
