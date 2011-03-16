@@ -2000,7 +2000,7 @@ SCIP_RETCODE solveNodeLP(
          {
             SCIP_Bool feasible;
 
-            SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, transprob, FALSE, TRUE, TRUE, checklprows, &feasible) );
+            SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, prob, FALSE, TRUE, TRUE, checklprows, &feasible) );
             assert(feasible);
          }
 
