@@ -1744,7 +1744,7 @@ END {
       else
          printf("\\node () at (-0.4, %1.3f) [bel]{\\footnotesize\\textcolor{blue}{not solved}};\n", -upperbound/6000.0) > diagrammfile;
       for( i = 1; i <= nsolver; ++i )
-         printf("\\node () at (%d, %1.3f) [bel]{\\footnotesize\\textcolor{blue}{%2.0f\\%}};\n",i,-upperbound/6000.0,100.0-100.0*(nsolved[pos[i],0]/(ntimeouts[pos[i],0]+nfails[pos[i],0]+nsolved[pos[i],0]))) > diagrammfile;
+         printf("\\node () at (%d, %1.3f) [bel]{\\footnotesize\\textcolor{blue}{%2.0f\\%}};\n",i,-upperbound/6000.0,100.0-100.0*((nsolved[pos[i],0]+0.0)/(nprocessedprobs[pos[i],0]+0.0))) > diagrammfile;
       printf("\n") > diagrammfile;
 
       printf("%% LEGEND\n") > diagrammfile;
@@ -1757,6 +1757,7 @@ END {
             printf("\\node () at (%1.4f,%1.4f) [legend]{\\small %s};\n",nsolver+1.4,perc,solvername[pos[i]]) > diagrammfile;
          printf("\\node () at (%1.4f,%1.4f) [box,color=c%d,fill=c%d]{};\n",nsolver+1.4,perc,i,i) > diagrammfile;
       }
+      printf("\\node () at (%1.4f,%1.3f) [legend]{\\footnotesize timings w.r.t. %d instances};\n",nsolver+1.4,-upperbound/6000.0,nevalprobs[printorder[0],0]) > diagrammfile;
       printf("\\end{tikzpicture}\n") > diagrammfile;
       printf("\n\\end{document}\n") > diagrammfile;
    }
