@@ -65,6 +65,8 @@ struct SCIP_ExprTree
 /** data of quadratic expression: sum_i coef_i x_i y_i */
 struct SCIP_ExprData_Quadratic 
 {
+   SCIP_Real             constant;           /**< constant term */
+   SCIP_Real*            lincoefs;           /**< linear coefficients of children */
    SCIP_QUADELEM*        quadelems;          /**< quadratic elements */
    int                   nquadelems;         /**< number of quadratic elements */
    SCIP_Bool             sorted;             /**< are the quadratic elements sorted? */

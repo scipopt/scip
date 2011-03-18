@@ -47,20 +47,20 @@ enum SCIP_ExprOp {
    SCIP_EXPR_DIV       = 11,  /**< division (2 operands) */
    SCIP_EXPR_SQUARE    = 12,  /**< square (1 operand) */
    SCIP_EXPR_SQRT      = 13,  /**< square root (1 operand) */
-   SCIP_EXPR_POWER     = 14,  /**< power (x^y, 2 operands) */
-   SCIP_EXPR_EXP       = 15,  /**< exponential (e^x, 1 operand) */
-   SCIP_EXPR_LOG       = 16,  /**< natural logarithm (ln(x), 1 operand) */
-   SCIP_EXPR_SIN       = 17,  /**< sinus (1 operand) */
-   SCIP_EXPR_COS       = 18,  /**< cosinus (1 operand) */
-   SCIP_EXPR_TAN       = 19,  /**< tangent (1 operand) */
-   /* SCIP_EXPR_ERF       = 20, */  /**< gaussian error function (1 operand) */
-   /* SCIP_EXPR_ERFI      = 21, */  /**< imaginary part of gaussian error function (1 operand) */
-   SCIP_EXPR_MIN       = 22,  /**< minimum (2 operands) */
-   SCIP_EXPR_MAX       = 23,  /**< maximum (2 operands) */
-   SCIP_EXPR_ABS       = 24,  /**< absolute value (1 operand) */
-   SCIP_EXPR_SIGN      = 25,  /**< sign of value (1 operand) */
-   SCIP_EXPR_SIGNPOWER = 26,  /**< signed power (sign(x)|x|^y, 2 operands) */
-   SCIP_EXPR_INTPOWER  = 27,  /**< power with integer exponent (1 operand!, exponent stored in expression data) */
+   SCIP_EXPR_REALPOWER = 14,  /**< power with real exponent (1 operand!, assumed to be nonnegative, exponent is stored in expression data) */
+   SCIP_EXPR_INTPOWER  = 15,  /**< power with integer exponent (1 operand!, exponent stored in expression data) */
+   SCIP_EXPR_SIGNPOWER = 16,  /**< signed power (sign(x)|x|^a, 1 operand!, exponent is stored in expression data) */
+   SCIP_EXPR_EXP       = 17,  /**< exponential (e^x, 1 operand) */
+   SCIP_EXPR_LOG       = 18,  /**< natural logarithm (ln(x), 1 operand) */
+   SCIP_EXPR_SIN       = 19,  /**< sinus (1 operand) */
+   SCIP_EXPR_COS       = 20,  /**< cosinus (1 operand) */
+   SCIP_EXPR_TAN       = 21,  /**< tangent (1 operand) */
+   /* SCIP_EXPR_ERF       = 22, */  /**< gaussian error function (1 operand) */
+   /* SCIP_EXPR_ERFI      = 23, */  /**< imaginary part of gaussian error function (1 operand) */
+   SCIP_EXPR_MIN       = 24,  /**< minimum (2 operands) */
+   SCIP_EXPR_MAX       = 25,  /**< maximum (2 operands) */
+   SCIP_EXPR_ABS       = 26,  /**< absolute value (1 operand) */
+   SCIP_EXPR_SIGN      = 27,  /**< sign of value (1 operand) */
    /**@} */
 
    /**@name Complex Operands

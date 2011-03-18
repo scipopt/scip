@@ -72,14 +72,108 @@ struct SCIPexprOpTableElement
    SCIP_DECL_INTEVAL     ((*inteval));       /**< interval evaluation function */
 };
 
+/** creates SCIP_EXPRDATA_QUADRATIC data structure from given quadratic elements */
+static
+SCIP_RETCODE quadraticdataCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_QUADRATIC** quadraticdata,  /**< buffer to store pointer to quadratic data */
+   SCIP_Real             constant,           /**< constant */
+   int                   nchildren,          /**< number of children */
+   SCIP_Real*            lincoefs,           /**< linear coefficients of children, or NULL if all 0.0 */
+   int                   nquadelems,         /**< number of quadratic elements */
+   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
+   )
+{
+   assert(blkmem != NULL);
+   assert(quadraticdata != NULL);
+   assert(quadelems != NULL || nquadelems == 0);
+   assert(nchildren >= 0);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, quadraticdata) );
+
+   (*quadraticdata)->constant   = constant;
+   (*quadraticdata)->lincoefs   = NULL;
+   (*quadraticdata)->nquadelems = nquadelems;
+   (*quadraticdata)->quadelems  = NULL;
+   (*quadraticdata)->sorted     = (nquadelems <= 1);
+
+   if( lincoefs != NULL )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*quadraticdata)->lincoefs, lincoefs, nchildren) );
+   }
+
+   if( nquadelems > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*quadraticdata)->quadelems, quadelems, nquadelems) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees SCIP_EXPRDATA_QUADRATIC data structure */
+static
+void quadraticdataFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPRDATA_QUADRATIC** quadraticdata,  /**< buffer to store pointer to quadratic data */
+   int                   nchildren           /**< number of children */
+   )
+{
+   assert(blkmem != NULL);
+   assert(quadraticdata != NULL);
+   assert(*quadraticdata != NULL);
+   assert(nchildren >= 0);
+
+   if( (*quadraticdata)->lincoefs != NULL )
+   {
+      BMSfreeBlockMemoryArray(blkmem, &(*quadraticdata)->lincoefs, nchildren);
+   }
+
+   if( (*quadraticdata)->nquadelems > 0 )
+   {
+      assert((*quadraticdata)->quadelems != NULL);
+      BMSfreeBlockMemoryArray(blkmem, &(*quadraticdata)->quadelems, (*quadraticdata)->nquadelems);
+   }
+
+   BMSfreeBlockMemory(blkmem, quadraticdata);
+}
+
+/** sorts quadratic elements in a SCIP_EXPRDATA_QUADRATIC data structure */
+static
+void quadraticdataSort(
+   SCIP_EXPRDATA_QUADRATIC* quadraticdata    /**< quadratic data */
+   )
+{
+   assert(quadraticdata != NULL);
+
+   if( quadraticdata->sorted )
+   {
+#ifndef NDEBUG
+      int i;
+      for( i = 1; i < quadraticdata->nquadelems; ++i )
+      {
+         assert(quadraticdata->quadelems[i].idx1 <= quadraticdata->quadelems[i].idx2);
+         assert(quadraticdata->quadelems[i-1].idx1 <= quadraticdata->quadelems[i].idx1);
+         assert(quadraticdata->quadelems[i-1].idx1 < quadraticdata->quadelems[i].idx1 ||
+            quadraticdata->quadelems[i-1].idx2 <= quadraticdata->quadelems[i].idx2);
+      }
+#endif
+      return;
+   }
+
+   if( quadraticdata->nquadelems > 0 )
+      SCIPquadelemSort(quadraticdata->quadelems, quadraticdata->nquadelems);
+
+   quadraticdata->sorted = TRUE;
+}
+
 static
 SCIP_DECL_EVAL( SCIPexprevalPushVar )
 {
    assert(result  != NULL);
    assert(varvals != NULL);
-   
+
    *result = varvals[opdata.intval];
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -98,9 +192,9 @@ static
 SCIP_DECL_EVAL( SCIPexprevalPushValue )
 {
    assert(result != NULL);
-   
+
    *result = opdata.dbl;
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -269,23 +363,90 @@ SCIP_DECL_INTEVAL( SCIPexprevalSqrtInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalPower )
+SCIP_DECL_EVAL( SCIPexprevalRealPower )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   *result = pow(argvals[0], argvals[1]);
+   *result = pow(argvals[0], opdata.dbl);
 
    return SCIP_OKAY;
 } /*lint !e715*/
 
 static
-SCIP_DECL_INTEVAL( SCIPexprevalPowerInt )
+SCIP_DECL_INTEVAL( SCIPexprevalRealPowerInt )
 {
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   SCIPintervalPower(infinity, result, argvals[0], argvals[1]);
+   SCIPintervalPowerScalar(infinity, result, argvals[0], opdata.dbl);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EVAL( SCIPexprevalIntPower )
+{
+   assert(result  != NULL);
+   assert(argvals != NULL);
+
+   switch( opdata.intval )
+   {
+      case -1:
+         *result = 1.0 / argvals[0];
+         return SCIP_OKAY;
+
+      case 0:
+         *result = 1.0;
+         return SCIP_OKAY;
+
+      case 1:
+         *result = argvals[0];
+         return SCIP_OKAY;
+
+      case 2:
+         *result = argvals[0] * argvals[0];
+         return SCIP_OKAY;
+
+      default:
+         *result = pow(argvals[0], (SCIP_Real)opdata.intval);
+   }
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_INTEVAL( SCIPexprevalIntPowerInt )
+{
+   assert(result  != NULL);
+   assert(argvals != NULL);
+
+   SCIPintervalPowerScalar(infinity, result, argvals[0], (SCIP_Real)opdata.intval);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_EVAL( SCIPexprevalSignPower )
+{
+   assert(result  != NULL);
+   assert(argvals != NULL);
+
+   if( argvals[0] > 0 )
+     *result =  pow( argvals[0], opdata.dbl);
+   else
+     *result = -pow(-argvals[0], opdata.dbl);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
+
+static
+SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
+{
+   assert(result  != NULL);
+   assert(argvals != NULL);
+
+   SCIPintervalSignPowerScalar(infinity, result, argvals[0], opdata.dbl);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -297,7 +458,7 @@ SCIP_DECL_EVAL( SCIPexprevalExp )
    assert(argvals != NULL);
 
    *result = exp(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -319,7 +480,7 @@ SCIP_DECL_EVAL( SCIPexprevalLog )
    assert(argvals != NULL);
 
    *result = log(argvals[0]);
-   
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -516,77 +677,6 @@ SCIP_DECL_INTEVAL( SCIPexprevalSignInt )
 } /*lint !e715*/
 
 static
-SCIP_DECL_EVAL( SCIPexprevalSignPower )
-{
-   assert(result  != NULL);
-   assert(argvals != NULL);
-
-   if( argvals[0] > 0 )
-     *result =  pow( argvals[0], argvals[1]);
-   else
-     *result = -pow(-argvals[0], argvals[1]);
-
-   return SCIP_OKAY;
-} /*lint !e715*/
-
-#if 0 /* @todo implement SCIPintervalSignPower */
-static
-SCIP_DECL_INTEVAL( SCIPexprevalSignPowerInt )
-{
-   assert(result  != NULL);
-   assert(argvals != NULL);
-
-   SCIPintervalSignPowerScalar(infinity, result, argvals[0], argvals[1]);
-
-   return SCIP_OKAY;
-} /*lint !e715*/
-#endif
-
-#define SCIPexprevalSignPowerInt NULL
-
-static
-SCIP_DECL_EVAL( SCIPexprevalIntPower )
-{
-   assert(result  != NULL);
-   assert(argvals != NULL);
-
-   switch( opdata.intval )
-   {
-      case -1:
-         *result = 1.0 / argvals[0];
-         return SCIP_OKAY;
-
-      case 0:
-         *result = 1.0;
-         return SCIP_OKAY;
-
-      case 1:
-         *result = argvals[0];
-         return SCIP_OKAY;
-
-      case 2:
-         *result = argvals[0] * argvals[0];
-         return SCIP_OKAY;
-
-      default:
-         *result = pow(argvals[0], (SCIP_Real)opdata.intval);
-   }
-
-   return SCIP_OKAY;
-} /*lint !e715*/
-
-static
-SCIP_DECL_INTEVAL( SCIPexprevalIntPowerInt )
-{
-   assert(result  != NULL);
-   assert(argvals != NULL);
-
-   SCIPintervalPowerScalar(infinity, result, argvals[0], (SCIP_Real)opdata.intval);
-
-   return SCIP_OKAY;
-} /*lint !e715*/
-
-static
 SCIP_DECL_EVAL( SCIPexprevalSum )
 {
    int i;
@@ -685,21 +775,31 @@ SCIP_DECL_INTEVAL( SCIPexprevalLinearInt )
 static
 SCIP_DECL_EVAL( SCIPexprevalQuadratic )
 {
+   SCIP_EXPRDATA_QUADRATIC* quaddata;
+   SCIP_Real* lincoefs;
    SCIP_QUADELEM* quadelems;
    int nquadelems;
    int i;
 
    assert(result  != NULL);
    assert(argvals != NULL || nargs == 0);
-   assert(opdata.data != NULL);
 
-   nquadelems = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->nquadelems;
-   quadelems  = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->quadelems;
+   quaddata = (SCIP_EXPRDATA_QUADRATIC*)opdata.data;
+   assert(quaddata != NULL);
+
+   lincoefs   = quaddata->lincoefs;
+   nquadelems = quaddata->nquadelems;
+   quadelems  = quaddata->quadelems;
    
    assert(quadelems != NULL || nquadelems == 0);
    assert(argvals != NULL   || nquadelems == 0);
    
-   *result = 0.0;
+   *result = quaddata->constant;
+
+   if( lincoefs != NULL )
+      for( i = nargs-1; i >= 0; --i )
+         *result += lincoefs[i] * argvals[i];
+
    for( i = nquadelems; i > 0 ; --i, ++quadelems )  /*lint !e613*/
       *result += quadelems->coef * argvals[quadelems->idx1] * argvals[quadelems->idx2];  /*lint !e613*/
 
@@ -709,34 +809,73 @@ SCIP_DECL_EVAL( SCIPexprevalQuadratic )
 static
 SCIP_DECL_INTEVAL( SCIPexprevalQuadraticInt )
 {
+   SCIP_EXPRDATA_QUADRATIC* quaddata;
+   SCIP_Real* lincoefs;
    SCIP_QUADELEM* quadelems;
    int nquadelems;
    int i;
+   int argidx;
+   SCIP_Real sqrcoef;
+   SCIP_INTERVAL lincoef;
    SCIP_INTERVAL tmp;
 
    assert(result  != NULL);
    assert(argvals != NULL || nargs == 0);
-   assert(opdata.data != NULL);
 
-   nquadelems = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->nquadelems;
-   quadelems  = ((SCIP_EXPRDATA_QUADRATIC*)opdata.data)->quadelems;
-   
+   quaddata = (SCIP_EXPRDATA_QUADRATIC*)opdata.data;
+   assert(quaddata != NULL);
+
+   lincoefs   = quaddata->lincoefs;
+   nquadelems = quaddata->nquadelems;
+   quadelems  = quaddata->quadelems;
+
    assert(quadelems != NULL || nquadelems == 0);
    assert(argvals   != NULL || nquadelems == 0);
    
-   SCIPintervalSet(result, 0.0);
-   for( i = nquadelems; i > 0 ; --i, ++quadelems )  /*lint !e613*/
+   /* make sure coefficients are sorted */
+   quadraticdataSort(quaddata);
+
+   SCIPintervalSet(result, quaddata->constant);
+
+   /* for each argument, we collect it's linear index from lincoefs, it's square coefficients and all factors from bilinear terms
+    * then we compute the interval sqrcoef*x^2 + lincoef*x and add it to result */
+   i = 0;
+   for( argidx = 0; argidx < nargs; ++argidx )
    {
-      if( quadelems->idx1 == quadelems->idx2 )  /*lint !e613*/
-         SCIPintervalSquare(infinity, &tmp, argvals[quadelems->idx1]);  /*lint !e613*/
-      else
-         SCIPintervalMul(infinity, &tmp, argvals[quadelems->idx1], argvals[quadelems->idx2]);  /*lint !e613*/
-      
-      if( quadelems->coef != 1.0 )  /*lint !e613*/
-         SCIPintervalMulScalar(infinity, &tmp, tmp, quadelems->coef);  /*lint !e613*/
-      
+      if( i == nquadelems || quadelems[i].idx1 > argidx )
+      {
+         /* there are no quadratic terms with argidx in its first argument, that should be easy to handle */
+         if( lincoefs != NULL )
+         {
+            SCIPintervalMulScalar(infinity, &tmp, argvals[argidx], lincoefs[argidx]);
+            SCIPintervalAdd(infinity, result, *result, tmp);
+         }
+         continue;
+      }
+
+      sqrcoef = 0.0;
+      SCIPintervalSet(&lincoef, lincoefs != NULL ? lincoefs[argidx] : 0.0);
+
+      assert(i < nquadelems && quadelems[i].idx1 == argidx);
+      do
+      {
+         if( quadelems[i].idx2 == argidx )
+         {
+            sqrcoef += quadelems[i].coef;
+         }
+         else
+         {
+            SCIPintervalMulScalar(infinity, &tmp, argvals[quadelems[i].idx2], quadelems[i].coef);
+            SCIPintervalAdd(infinity, &lincoef, lincoef, tmp);
+         }
+         ++i;
+      } while( i < nquadelems && quadelems[i].idx1 == argidx );
+      assert(i == nquadelems || quadelems[i].idx1 > argidx);
+
+      SCIPintervalQuad(infinity, &tmp, sqrcoef, lincoef, argvals[argidx]);
       SCIPintervalAdd(infinity, result, *result, tmp);
    }
+   assert(i == nquadelems);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -933,7 +1072,9 @@ struct SCIPexprOpTableElement SCIPexprOpTable[] =
    { "div",               2, SCIPexprevalDiv,           SCIPexprevalDivInt           },
    { "sqr",               1, SCIPexprevalSqr,           SCIPexprevalSqrInt           },
    { "sqrt",              1, SCIPexprevalSqrt,          SCIPexprevalSqrtInt          },
-   { "power",             2, SCIPexprevalPower,         SCIPexprevalPowerInt         },
+   { "realpower",         1, SCIPexprevalRealPower,     SCIPexprevalRealPowerInt     },
+   { "intpower",          1, SCIPexprevalIntPower,      SCIPexprevalIntPowerInt      },
+   { "signpower",         1, SCIPexprevalSignPower,     SCIPexprevalSignPowerInt     },
    { "exp",               1, SCIPexprevalExp,           SCIPexprevalExpInt           },
    { "log",               1, SCIPexprevalLog,           SCIPexprevalLogInt           },
    { "sin",               1, SCIPexprevalSin,           SCIPexprevalSinInt           },
@@ -945,8 +1086,6 @@ struct SCIPexprOpTableElement SCIPexprOpTable[] =
    { "max",               2, SCIPexprevalMax,           SCIPexprevalMaxInt           },
    { "abs",               1, SCIPexprevalAbs,           SCIPexprevalAbsInt           },
    { "sign",              1, SCIPexprevalSign,          SCIPexprevalSignInt          },
-   { "signpower",         2, SCIPexprevalSignPower,     SCIPexprevalSignPowerInt     },
-   { "intpower",          1, SCIPexprevalIntPower,      SCIPexprevalIntPowerInt      },
    {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
    {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
    {NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},{NULL,-1,NULL,NULL},
@@ -1068,10 +1207,8 @@ SCIP_RETCODE SCIPexprCreate(
       case SCIP_EXPR_MINUS    :
       case SCIP_EXPR_MUL      :
       case SCIP_EXPR_DIV      :
-      case SCIP_EXPR_POWER    :
       case SCIP_EXPR_MIN      :
       case SCIP_EXPR_MAX      :
-      case SCIP_EXPR_SIGNPOWER:
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 2) );
          
@@ -1111,7 +1248,22 @@ SCIP_RETCODE SCIPexprCreate(
          SCIP_CALL( exprCreate( blkmem, expr, op, 1, children, opdata ) );
          break;
       }
-         
+
+      case SCIP_EXPR_REALPOWER:
+      case SCIP_EXPR_SIGNPOWER:
+      {
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
+
+         va_start(ap, op );  /*lint !e826*/
+         children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
+         assert(children[0] != NULL);
+         opdata.dbl = va_arg( ap, SCIP_Real);  /*lint !e416 !e826*/
+         va_end( ap );  /*lint !e826*/
+
+         SCIP_CALL( exprCreate( blkmem, expr, op, 1, children, opdata ) );
+         break;
+      }
+
       case SCIP_EXPR_INTPOWER:
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );
@@ -1174,70 +1326,6 @@ SCIP_RETCODE SCIPexprCreate(
    }
    
    return SCIP_OKAY;
-}
-
-/** creates SCIP_EXPRDATA_QUADRATIC data structure from given quadratic elements */
-static
-SCIP_RETCODE quadraticdataCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_QUADRATIC** quadraticdata,  /**< buffer to store pointer to quadratic data */
-   int                   nquadelems,         /**< number of quadratic elements */
-   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
-   )
-{
-   assert(blkmem != NULL);
-   assert(quadraticdata != NULL);
-   assert(quadelems != NULL || nquadelems == 0);
-
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, quadraticdata) );
-
-   (*quadraticdata)->nquadelems = nquadelems;
-   (*quadraticdata)->quadelems  = NULL;
-   (*quadraticdata)->sorted     = (nquadelems <= 1);
-
-   if( nquadelems > 0 )
-   {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*quadraticdata)->quadelems, quadelems, nquadelems) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** frees SCIP_EXPRDATA_QUADRATIC data structure */
-static
-void quadraticdataFree(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_EXPRDATA_QUADRATIC** quadraticdata   /**< buffer to store pointer to quadratic data */
-   )
-{
-   assert(blkmem != NULL);
-   assert(quadraticdata != NULL);
-   assert(*quadraticdata != NULL);
-
-   if( (*quadraticdata)->nquadelems > 0 )
-   {
-      assert((*quadraticdata)->quadelems != NULL);
-      BMSfreeBlockMemoryArray(blkmem, &(*quadraticdata)->quadelems, (*quadraticdata)->nquadelems);
-   }
-
-   BMSfreeBlockMemory(blkmem, quadraticdata);
-}
-
-/** sorts quadratic elements in a SCIP_EXPRDATA_QUADRATIC data structure */
-static
-void quadraticdataSort(
-   SCIP_EXPRDATA_QUADRATIC* quadraticdata    /**< quadratic data */
-   )
-{
-   assert(quadraticdata != NULL);
-
-   if( quadraticdata->sorted )
-      return;
-
-   if( quadraticdata->nquadelems > 0 )
-      SCIPquadelemSort((void*)quadraticdata->quadelems, quadraticdata->nquadelems);
-
-   quadraticdata->sorted = TRUE;
 }
 
 /** compares two monomials
@@ -1531,7 +1619,7 @@ SCIP_RETCODE SCIPexprCopyDeep(
          assert(sourcedata != NULL);
          
          SCIP_CALL( quadraticdataCreate(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&(*targetexpr)->data.data,
-            sourcedata->nquadelems, sourcedata->quadelems) );
+            sourcedata->constant, sourceexpr->nchildren, sourcedata->lincoefs, sourcedata->nquadelems, sourcedata->quadelems) );
          break;
       }
 
@@ -1583,7 +1671,7 @@ void SCIPexprFreeDeep(
       case SCIP_EXPR_QUADRATIC:
       {
          assert((*expr)->data.data != NULL);
-         quadraticdataFree(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&(*expr)->data.data);
+         quadraticdataFree(blkmem, (SCIP_EXPRDATA_QUADRATIC**)&(*expr)->data.data, (*expr)->nchildren);
          break;
       }
 
@@ -1682,6 +1770,17 @@ void* SCIPexprGetOpData(
    return expr->data.data;
 }
 
+/** gives exponent belonging to a SCIP_EXPR_REALPOWER expression */
+SCIP_Real SCIPexprGetRealPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_REALPOWER);
+
+   return expr->data.dbl;
+}
+
 /** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
 int SCIPexprGetIntPowerExponent(
    SCIP_EXPR*            expr                /**< expression */
@@ -1691,6 +1790,17 @@ int SCIPexprGetIntPowerExponent(
    assert(expr->op == SCIP_EXPR_INTPOWER);
 
    return expr->data.intval;
+}
+
+/** gives exponent belonging to a SCIP_EXPR_SIGNPOWER expression */
+SCIP_Real SCIPexprGetSignPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_SIGNPOWER);
+
+   return expr->data.dbl;
 }
 
 /** creates a SCIP_EXPR_LINEAR expression that is (affine) linear in its children: constant + sum_i coef_i child_i */
@@ -1756,12 +1866,14 @@ SCIP_Real SCIPexprGetLinearConstant(
    return ((SCIP_Real*)expr->data.data)[expr->nchildren];
 }
 
-/** creates a SCIP_EXPR_QUADRATIC expression: sum_i coef_i child1_i child2_i */
+/** creates a SCIP_EXPR_QUADRATIC expression: constant + sum_i coef_i child_i + sum_i coef_i child1_i child2_i */
 SCIP_RETCODE SCIPexprCreateQuadratic(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
+   SCIP_Real             constant,           /**< constant */
+   SCIP_Real*            lincoefs,           /**< linear coefficients of children, or NULL if all 0.0 */
    int                   nquadelems,         /**< number of quadratic elements */
    SCIP_QUADELEM*        quadelems           /**< quadratic elements specifying coefficients and child indices */
 )
@@ -1781,7 +1893,7 @@ SCIP_RETCODE SCIPexprCreateQuadratic(
    else
       childrencopy = NULL;
 
-   SCIP_CALL( quadraticdataCreate(blkmem, &data, nquadelems, quadelems) );
+   SCIP_CALL( quadraticdataCreate(blkmem, &data, constant, nchildren, lincoefs, nquadelems, quadelems) );
 
    opdata.data = (void*)data;
 
@@ -1800,6 +1912,31 @@ SCIP_QUADELEM* SCIPexprGetQuadElements(
    assert(expr->data.data != NULL);
 
    return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->quadelems;
+}
+
+/** gives constant belonging to a SCIP_EXPR_QUADRATIC expression */
+SCIP_Real SCIPexprGetQuadConstant(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->constant;
+}
+
+/** gives linear coefficients belonging to a SCIP_EXPR_QUADRATIC expression
+ * can be NULL if all coefficients are 0.0 */
+SCIP_Real* SCIPexprGetQuadLinearCoefs(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+)
+{
+   assert(expr != NULL);
+   assert(expr->op == SCIP_EXPR_QUADRATIC);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_QUADRATIC*)expr->data.data)->lincoefs;
 }
 
 /** gives number of quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */
@@ -2181,25 +2318,21 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          break;
       }
 
-      case SCIP_EXPR_POWER:
+      case SCIP_EXPR_REALPOWER:
       {
-         SCIP_Real val;
-         
          assert(expr->children[0] != NULL);
-         assert(expr->children[1] != NULL);
 
          SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
-         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[1], &child2) );
 
          /* constant ^ constant has degree 0 */
-         if( child1 == 0 && child2 == 0 )
+         if( child1 == 0 )
          {
             *maxdegree = 0;
             break;
          }
          
-         /* non-polynomial ^ non-constant is not a polynomial */
-         if( child1 >= SCIP_EXPR_DEGREEINFINITY || child2 > 0 || SCIPexprHasParam(expr->children[1]) )
+         /* non-polynomial ^ constant is not a polynomial */
+         if( child1 >= SCIP_EXPR_DEGREEINFINITY )
          {
             *maxdegree = SCIP_EXPR_DEGREEINFINITY;
             break;
@@ -2207,49 +2340,14 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
 
          /* so it is polynomial ^ constant
           * let's see whether the constant is integral */
-         SCIP_CALL( SCIPexprEval(expr->children[1], NULL, NULL, &val) );
 
-         if( val == 0.0 ) /* polynomial ^ 0 == 0 */
+         if( expr->data.dbl == 0.0 ) /* polynomial ^ 0 == 0 */
             *maxdegree = 0;
-         else if( val > 0.0 && floor(val) == val ) /* natural exponent gives polynomial again */  /*lint !e777*/
-            *maxdegree = child1 * (int)floor(val);
+         else if( expr->data.dbl > 0.0 && (int)expr->data.dbl == expr->data.dbl ) /* natural exponent gives polynomial again */  /*lint !e777*/
+            *maxdegree = child1 * (int)expr->data.dbl;
          else /* negative or nonintegral exponent does not give polynomial */
             *maxdegree = SCIP_EXPR_DEGREEINFINITY;
 
-         break;
-      }
-
-      case SCIP_EXPR_EXP:
-      case SCIP_EXPR_LOG:
-      case SCIP_EXPR_SIN:
-      case SCIP_EXPR_COS:
-      case SCIP_EXPR_TAN:
-      /* case SCIP_EXPR_ERF: */
-      /* case SCIP_EXPR_ERFI: */
-      case SCIP_EXPR_ABS:
-      case SCIP_EXPR_SIGN:
-      {
-         assert(expr->children[0] != NULL);
-         
-         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
-         
-         /* if argument is not a constant, then no polynomial, otherwise it is a constant */
-         *maxdegree = (child1 != 0) ? SCIP_EXPR_DEGREEINFINITY : 0;
-         break;
-      }
-
-      case SCIP_EXPR_MIN:
-      case SCIP_EXPR_MAX:
-      case SCIP_EXPR_SIGNPOWER:
-      {
-         assert(expr->children[0] != NULL);
-         assert(expr->children[1] != NULL);
-
-         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
-         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[1], &child2) );
-
-         /* if any of the operands is not constant, then it is no polynomial */
-         *maxdegree = (child1 != 0 || child2 != 0) ? SCIP_EXPR_DEGREEINFINITY : 0;
          break;
       }
 
@@ -2276,6 +2374,50 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
          /* so it is polynomial ^ natural, which gives a polynomial again */
          *maxdegree = child1 * expr->data.intval;
 
+         break;
+      }
+
+      case SCIP_EXPR_SIGNPOWER:
+      {
+         assert(expr->children[0] != NULL);
+
+         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
+
+         /* if child is not constant, then it is no polynomial */
+         *maxdegree = child1 != 0 ? SCIP_EXPR_DEGREEINFINITY : 0;
+         break;
+      }
+
+      case SCIP_EXPR_EXP:
+      case SCIP_EXPR_LOG:
+      case SCIP_EXPR_SIN:
+      case SCIP_EXPR_COS:
+      case SCIP_EXPR_TAN:
+      /* case SCIP_EXPR_ERF: */
+      /* case SCIP_EXPR_ERFI: */
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      {
+         assert(expr->children[0] != NULL);
+         
+         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
+         
+         /* if argument is not a constant, then no polynomial, otherwise it is a constant */
+         *maxdegree = (child1 != 0) ? SCIP_EXPR_DEGREEINFINITY : 0;
+         break;
+      }
+
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      {
+         assert(expr->children[0] != NULL);
+         assert(expr->children[1] != NULL);
+
+         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[0], &child1) );
+         SCIP_CALL( SCIPexprGetMaxDegree(expr->children[1], &child2) );
+
+         /* if any of the operands is not constant, then it is no polynomial */
+         *maxdegree = (child1 != 0 || child2 != 0) ? SCIP_EXPR_DEGREEINFINITY : 0;
          break;
       }
 
@@ -2317,33 +2459,54 @@ SCIP_RETCODE SCIPexprGetMaxDegree(
       case SCIP_EXPR_QUADRATIC:
       {
          SCIP_EXPRDATA_QUADRATIC* quadraticdata;
-         int i;
+         int childidx;
+         int quadidx;
          
          quadraticdata = (SCIP_EXPRDATA_QUADRATIC*)expr->data.data;
 
+         /* make sure quadratic elements are sorted */
+         quadraticdataSort(quadraticdata);
+
          *maxdegree = 0;
-         for( i = 0; i < quadraticdata->nquadelems; ++i )
+         quadidx = 0;
+         for( childidx = 0; childidx < expr->nchildren; ++childidx )
          {
-            /* compute degree of both children */
-            SCIP_CALL( SCIPexprGetMaxDegree(expr->children[quadraticdata->quadelems[i].idx1], &child1) );
-            if( quadraticdata->quadelems[i].idx1 != quadraticdata->quadelems[i].idx2 )
-            {
-               SCIP_CALL( SCIPexprGetMaxDegree(expr->children[quadraticdata->quadelems[i].idx1], &child2) );
-            }
-            else
-            {
-               child2 = child1;
-            }
-            
-            if( child1 == SCIP_EXPR_DEGREEINFINITY || child2 == SCIP_EXPR_DEGREEINFINITY )
+            /* if no linear or no quadratic coefficient with current child on first position, then nothing to do */
+            if( (quadraticdata->lincoefs == NULL || quadraticdata->lincoefs[childidx] == 0.0) &&
+                (quadidx < quadraticdata->nquadelems && quadraticdata->quadelems[quadidx].idx1 > childidx) )
+               continue;
+
+            SCIP_CALL( SCIPexprGetMaxDegree(expr->children[childidx], &child1) );
+            if( child1 == SCIP_EXPR_DEGREEINFINITY )
             {
                *maxdegree = SCIP_EXPR_DEGREEINFINITY;
                break;
             }
-            
-            /* degree of term is sum of degrees of children */
-            if( child1 + child2 > *maxdegree )
-               *maxdegree = child1 + child2;
+
+            while( quadidx < quadraticdata->nquadelems && quadraticdata->quadelems[quadidx].idx1 == childidx )
+            {
+               if( quadraticdata->quadelems[quadidx].idx2 == childidx )
+               {
+                  /* square term */
+                  if( 2*child1 > *maxdegree )
+                     *maxdegree = 2*child1;
+               }
+               else
+               {
+                  /* bilinear term */
+                  SCIP_CALL( SCIPexprGetMaxDegree(expr->children[quadraticdata->quadelems[quadidx].idx2], &child2) );
+                  if( child2 == SCIP_EXPR_DEGREEINFINITY )
+                  {
+                     *maxdegree = SCIP_EXPR_DEGREEINFINITY;
+                     break;
+                  }
+                  if( child1 + child2 > *maxdegree )
+                     *maxdegree = child1 + child2;
+               }
+               ++quadidx;
+            }
+            if( *maxdegree == SCIP_EXPR_DEGREEINFINITY )
+               break;
          }
 
          break;
@@ -2617,12 +2780,11 @@ void SCIPexprPrint(
          SCIPmessageFPrintInfo(file, ")");
          break;
 
-      case SCIP_EXPR_POWER:
-         SCIPmessageFPrintInfo(file, "(");
+      case SCIP_EXPR_REALPOWER:
+      case SCIP_EXPR_SIGNPOWER:
+         SCIPmessageFPrintInfo(file, "%s(", SCIPexprOpTable[expr->op].name);
          SCIPexprPrint(expr->children[0], file, varnames, paramnames);
-         SCIPmessageFPrintInfo(file, " ** ");
-         SCIPexprPrint(expr->children[1], file, varnames, paramnames);
-         SCIPmessageFPrintInfo(file, ")");
+         SCIPmessageFPrintInfo(file, ", %g)", expr->data.dbl);
          break;
         
       case SCIP_EXPR_INTPOWER:
@@ -2644,7 +2806,6 @@ void SCIPexprPrint(
       case SCIP_EXPR_MAX:
       case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
-      case SCIP_EXPR_SIGNPOWER:
       {
          int i;
          
@@ -2733,6 +2894,18 @@ void SCIPexprPrint(
          assert(quadraticdata != NULL);
 
          SCIPmessageFPrintInfo(file, "(");
+
+         if( quadraticdata->constant != 0.0 )
+            SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->constant);
+
+         if( quadraticdata->lincoefs != NULL )
+            for( i = 0; i < expr->nchildren; ++i )
+            {
+               if( quadraticdata->lincoefs[i] == 0.0 )
+                  continue;
+               SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->lincoefs[i]);
+               SCIPexprPrint(expr->children[i], file, varnames, paramnames);
+            }
 
          for( i = 0; i < quadraticdata->nquadelems; ++i )
          {
@@ -3256,6 +3429,14 @@ void SCIPquadelemSort(
 {
    if( nquadelems == 0 )
       return;
+
+#ifndef NDEBUG
+   {
+      int i;
+      for( i = 0; i < nquadelems; ++i )
+         assert(quadelems[i].idx1 <= quadelems[i].idx2);
+   }
+#endif
 
    quadelemsQuickSort(quadelems, 0, nquadelems-1);
 }

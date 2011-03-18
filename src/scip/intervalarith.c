@@ -2423,19 +2423,31 @@ void SCIPintervalExp(
 
    if( operand.inf == operand.sup )
    {
-      SCIP_Real tmp;
+      if( operand.inf == 0.0 )
+      {
+         resultant->inf = 1.0;
+         resultant->sup = 1.0;
+      }
+      else
+      {
+         SCIP_Real tmp;
 
-      assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      tmp = exp(operand.inf);
-      resultant->inf = nextafter(tmp, SCIP_REAL_MIN);
-      resultant->sup = nextafter(tmp, SCIP_REAL_MAX);
+         assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
+         tmp = exp(operand.inf);
+         resultant->inf = nextafter(tmp, SCIP_REAL_MIN);
+         resultant->sup = nextafter(tmp, SCIP_REAL_MAX);
 
-      return;
+         return;
+      }
    }
 
    if( operand.inf <= -infinity )
    {
       resultant->inf = 0.0;
+   }
+   else if( operand.inf == 0.0 )
+   {
+      resultant->inf = 1.0;
    }
    else
    {
@@ -2446,6 +2458,10 @@ void SCIPintervalExp(
    if( operand.sup >=  infinity )
    {
       resultant->sup = infinity;
+   }
+   else if( operand.sup == 0.0 )
+   {
+      resultant->sup = 1.0;
    }
    else
    {
@@ -2479,6 +2495,11 @@ void SCIPintervalLog(
          resultant->inf = -infinity;
          resultant->sup = -infinity;
       }
+      else if( operand.sup == 1.0 )
+      {
+         resultant->inf = 0.0;
+         resultant->sup = 0.0;
+      }
       else
       {
          SCIP_Real tmp;
@@ -2496,6 +2517,10 @@ void SCIPintervalLog(
    {
       resultant->inf = -infinity;
    }
+   else if( operand.inf == 1.0 )
+   {
+      resultant->inf = 0.0;
+   }
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
@@ -2505,6 +2530,10 @@ void SCIPintervalLog(
    if( operand.sup >= infinity )
    {
       resultant->sup =  infinity;
+   }
+   else if( operand.sup == 1.0 )
+   {
+      resultant->sup = 0.0;
    }
    else if( operand.sup == 0.0 )
    {

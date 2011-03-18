@@ -118,9 +118,21 @@ void* SCIPexprGetOpData(
    SCIP_EXPR*            expr                /**< expression */
 );
 
+/** gives exponent belonging to a SCIP_EXPR_REALPOWER expression */
+extern
+SCIP_Real SCIPexprGetRealPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
 /** gives exponent belonging to a SCIP_EXPR_INTPOWER expression */
 extern
 int SCIPexprGetIntPowerExponent(
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** gives exponent belonging to a SCIP_EXPR_SIGNPOWER expression */
+extern
+SCIP_Real SCIPexprGetSignPowerExponent(
    SCIP_EXPR*            expr                /**< expression */
 );
 
@@ -147,15 +159,29 @@ SCIP_Real SCIPexprGetLinearConstant(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** creates a SCIP_EXPR_QUADRATIC expression: sum_i coef_i child1_i child2_i */
-extern
+/** creates a SCIP_EXPR_QUADRATIC expression: constant + sum_i coef_i child_i + sum_i coef_i child1_i child2_i */
 SCIP_RETCODE SCIPexprCreateQuadratic(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
+   SCIP_Real             constant,           /**< constant */
+   SCIP_Real*            lincoefs,           /**< linear coefficients of children, or NULL if all 0.0 */
    int                   nquadelems,         /**< number of quadratic elements */
    SCIP_QUADELEM*        quadelems           /**< quadratic elements specifying coefficients and child indices */
+);
+
+/** gives constant belonging to a SCIP_EXPR_QUADRATIC expression */
+extern
+SCIP_Real SCIPexprGetQuadConstant(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+);
+
+/** gives linear coefficients belonging to a SCIP_EXPR_QUADRATIC expression
+ * can be NULL if all coefficients are 0.0 */
+extern
+SCIP_Real* SCIPexprGetQuadLinearCoefs(
+   SCIP_EXPR*            expr                /**< quadratic expression */
 );
 
 /** gives quadratic elements belonging to a SCIP_EXPR_QUADRATIC expression */

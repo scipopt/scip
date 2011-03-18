@@ -91,7 +91,7 @@ $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o: src/nlpi/exprinterpret_cppad.cpp src/sc
  lib/cppad/local/erf.hpp lib/cppad/local/pow.hpp \
  lib/cppad/local/discrete.hpp lib/cppad/local/bool_valued.hpp \
  lib/cppad/local/compare.hpp lib/cppad/local/near_equal_ext.hpp \
- lib/cppad/local/bool_fun.hpp lib/cppad/local/bool_fun_link.hpp \
+ lib/cppad/local/bool_fun.hpp \
  lib/cppad/local/par_var.hpp lib/cppad/local/equal_op_seq.hpp \
  lib/cppad/local/op.hpp lib/cppad/local/sparse_pack.hpp \
  lib/cppad/local/sparse_set.hpp lib/cppad/local/abs_op.hpp \
