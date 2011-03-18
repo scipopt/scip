@@ -16,7 +16,7 @@
 =opt= feedtray2      0.0
 =opt= fuel        8566.1190
 =opt= gbd            2.2000
-=opt= lop97ic     4284.5905
+=best= lop97ic    4045.24221
 =opt= lop97icx    4099.0600
 =opt= meanvarx      14.3692321148754
 =opt= meanvarxsc    14.3692
@@ -25,12 +25,12 @@
 =opt= netmod_kar1   -0.419789612097304
 =opt= netmod_kar2   -0.419789612097304
 =opt= nous1          1.5670693
-=opt= nous2          0.6265960
+=opt= nous2          0.625967407
 =unkn= nuclear104
 =unkn= nuclear10a
 =unkn= nuclear10b
 =best= nuclear14    -1.1277
-=best= nuclear14a   -1.1280
+=best= nuclear14a   -1.12843559
 =best= nuclear14b   -1.1135
 =best= nuclear24    -1.1277
 =best= nuclear24a   -1.1280
@@ -58,8 +58,8 @@
 =best= nvs15         1.0000
 =best= nvs17     -1100.4000
 =best= nvs18      -778.4000
-=best= nvs19     -1098.4000
-=best= nvs23     -1125.2000
+=opt= nvs19      -1098.4000
+=opt= nvs23      -1125.2000
 =best= nvs24     -1033.2000
 =best= pb302035 3379359.0000
 =best= pb302055 3599602.0000
@@ -137,8 +137,8 @@
 =best= ilaser0 2412734.25615098
 =opt= imas284    91407.9925004858
 =opt= imisc07     2814.19074904978
-=best= imod011       0.0
-=best= inug06-3rd 1422.99998470302
+=best= imod011      -3.84341364
+=opt= inug06-3rd  1318.0
 =opt= inug08      7212.99999740944
 =best= iportfolio   -0.494308172243584
 =opt= iqap10       353.828077511481
@@ -150,4 +150,48 @@
 =best= isqp     -21000.5203881463
 =opt= iswath2      387.162836498974
 =best= itointqor -1146.70000106175
-=best= ivalues       0.0
+=best= ivalues      -1.100504
+
+=opt= classical_40_0  -0.081521062
+=opt= classical_40_1  -0.0847464884
+=opt= classical_50_0 -0.0907421855
+=opt= classical_50_1  -0.0947612803
+=best= classical_200_0 -0.107203225
+=best= classical_200_1 -0.115814958
+=opt= robust_40_0  -0.0760100154
+=opt= robust_40_1  -0.076470612
+=opt= robust_50_0  -0.0860884355
+=opt= robust_50_1  -0.0856947675
+=best= robust_100_0 -0.0971028718
+=opt= robust_100_1 -0.0720898657
+=best= robust_200_0 -0.14108946
+=best= robust_200_1 -0.140442617
+=opt= shortfall_40_0 -1.08321681
+=opt= shortfall_40_1 -1.0870437
+=opt= shortfall_50_0 -1.09542359
+=opt= shortfall_50_1 -1.10182355
+=best= shortfall_100_0 -1.11411225
+=opt= shortfall_100_1 -1.1063497
+=best= shortfall_200_0     -1.11874452
+=best= shortfall_200_1     -1.12929201
+
+=opt= 10bar1D             1623.08782
+=opt= 10bar2              1954.23376
+=opt= 10bar3              5156.64366
+=opt= 10bar4              5647.06129
+=opt= 25bar               387.072605
+=opt= 72bar               75.9048516
+=best= 90bar              105.478654
+
+=opt= SLay08H             84960.2124
+=opt= SLay08M             84960.2124
+=opt= SLay09H             107805.753
+=opt= SLay09M             107805.753
+=opt= SLay10H             129579.884
+=opt= SLay10M             129579.884
+
+=opt= uflquad-15-80       1217.98941
+=opt= uflquad-20-150      550.112295
+=opt= uflquad-25-40       828.164519
+=opt= uflquad-30-100      361.916808
+=opt= uflquad-40-80       347.488613
