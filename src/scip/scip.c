@@ -3883,7 +3883,7 @@ SCIP_RETCODE SCIPreadProb(
          readingtime = SCIPgetReadingTime(scip);
          
          /* display timing statistics */
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "Reading Time: %.2f\n", readingtime);
       }
       retcode = SCIP_OKAY;
