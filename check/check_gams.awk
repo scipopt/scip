@@ -120,7 +120,7 @@ BEGIN  {
     solstat[nprobs] = $12;
     dualbnd[nprobs] = $14;
     primalbnd[nprobs] = $13;
-    time[nprobs] = $16;  # we take wallclock time here, $15 would be cputime
+    time[nprobs] = max($15,$16);  # we take max of solver reported time and wallclock time here
     iters[nprobs] = $17;
     nodes[nprobs] = $18;
     nprobs++;
