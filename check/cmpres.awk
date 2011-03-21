@@ -204,6 +204,7 @@ BEGIN {
    texcmpfile = "";
    texcmpfiledir = "";
    texcmpfilename = "";
+   diagrammfile = "";
    thesisnames = 0;
    nsetnames = 0;
    onlygroup = 0;
@@ -1619,5 +1620,145 @@ END {
             printf("%% =mean=  %s %.4f %.4f %g\n", solvername[s], 
                timegeom[s,0]/reftimegeom[s,0], nodegeom[s,0]/refnodegeom[s,0], weight) >> texsummaryfile;
       }
+   }
+
+   if( diagrammfile != "" )
+   {
+      nsteps = 4;        # number of steps at the time line
+      yellowbg = 0;      # Should the background be colored in SCIP-HP-yellow ?
+      german = 0;        # Soll die Beschriftung deutsch sein?
+
+      refsolver = 0;
+      mintime = timeshiftedgeom[0,0];
+      maxtime = timeshiftedgeom[0,0];
+      for( s = 0; s < nsolver; ++s )
+      {
+         if( substr(solvername[s], 1, 4) == "SCIP" )
+            refsolver = s;
+
+         if( timeshiftedgeom[s,0] < mintime )
+            mintime = timeshiftedgeom[s,0];
+         else if( timeshiftedgeom[s,0] > mintime )
+            maxtime = timeshiftedgeom[s,0];
+      }
+      # bound, over which solvers get cut off
+      upperbound = nsteps*timeshiftedgeom[refsolver,0];
+
+      yscale = 3000/upperbound;
+
+      printf("\\documentclass{article}\n\\usepackage{tikz}\n\\pagestyle{empty}\n\\begin{document}\n\n") > diagrammfile;
+
+      printf("\\definecolor{c1}{HTML}{000060}\n") > diagrammfile;
+      printf("\\definecolor{c2}{HTML}{0000FF}\n") > diagrammfile;
+      printf("\\definecolor{c3}{HTML}{36648B}\n") > diagrammfile;
+      printf("\\definecolor{c4}{HTML}{4682B4}\n") > diagrammfile;
+      printf("\\definecolor{c5}{HTML}{5CACEE}\n") > diagrammfile;
+      printf("\\definecolor{c6}{HTML}{00FFFF}\n") > diagrammfile;
+      #printf("\\definecolor{c7}{HTML}{A0FFFF}\n") > diagrammfile;
+      printf("\\definecolor{c7}{HTML}{008888}\n") > diagrammfile;
+      printf("\\definecolor{c8}{HTML}{00DD99}\n") > diagrammfile;
+      printf("\\definecolor{c9}{HTML}{527B10}\n") > diagrammfile;
+      printf("\\definecolor{c10}{HTML}{7BC618}\n") > diagrammfile;
+      printf("\\definecolor{c11}{HTML}{A00060}\n") > diagrammfile;
+      printf("\\definecolor{c12}{HTML}{A000FF}\n") > diagrammfile;
+      printf("\\definecolor{c13}{HTML}{E6648B}\n") > diagrammfile;
+      printf("\\definecolor{c14}{HTML}{F682B4}\n") > diagrammfile;
+      printf("\\definecolor{c15}{HTML}{DCACEE}\n") > diagrammfile;
+      printf("\\definecolor{c16}{HTML}{A0FFFF}\n") > diagrammfile;
+      #printf("\\definecolor{c7}{HTML}{A0FFFF}\n") > diagrammfile;
+      printf("\\definecolor{c17}{HTML}{A08888}\n") > diagrammfile;
+      printf("\\definecolor{c18}{HTML}{A0DD99}\n") > diagrammfile;
+      printf("\\definecolor{c19}{HTML}{D27B10}\n") > diagrammfile;
+      printf("\\definecolor{c20}{HTML}{FBC618}\n") > diagrammfile;
+
+      printf("\\definecolor{darkgreen}{HTML}{006600}\n") > diagrammfile;
+      if( yellowbg )
+        printf("\\definecolor{background}{HTML}{FFFFE6}\n\n") > diagrammfile;
+      else
+        printf("\\definecolor{background}{HTML}{FFFFFF}\n\n") > diagrammfile;
+
+      printf("\\begin{tikzpicture}[auto,scale=0.8,yscale=%1.2f]\n",yscale) > diagrammfile;
+      printf("\n%% tikz styles\n") > diagrammfile;
+      printf("\\tikzstyle{box} +=[draw=black,rectangle,inner sep=0mm, minimum size = 2.5mm,left];\n") > diagrammfile;
+      printf("\\tikzstyle{legend} +=[inner sep=1mm, right];\n") > diagrammfile;
+      printf("\\tikzstyle{tic} +=[left];\n") > diagrammfile;
+      printf("\\tikzstyle{bel} +=[below,inner sep=0.8mm];\n") > diagrammfile;
+      printf("\\tikzstyle{abo} +=[above,inner sep=0.3mm];\n\n") > diagrammfile;
+
+      #extendedub = (1+1/(2*nsteps-2))*upperbound;
+      extendedub = 1.2*upperbound;
+      printf("\\draw[background,fill=background] (-1.5,-0.3) rectangle (%1.2f,%1.2f);\n",nsolver+6.5,extendedub/1000.0+0.1) > diagrammfile;
+
+      printf("%% Beschriftungen und Hoehenlinien\n") > diagrammfile;
+      for( i = 0; i < nsteps; ++i )
+      {
+         perc = i/(nsteps-1.0)*upperbound/1000.0;
+         printf("\\node () at (0.2,%1.2f) [tic] {\\small %d};\n",perc,perc*1000) > diagrammfile;
+         printf("\\draw[dotted] (0.2,%1.2f) -- (%1.2f,%1.2f);\n",perc,nsolver+0.8,perc) > diagrammfile;
+      }
+      if( german )
+         printf("\\node () at (-1,%1.2f) [rotate=90]{\\footnotesize Zeit in Sekunden};\n",extendedub/2000.0) > diagrammfile;
+      else
+         printf("\\node () at (-1,%1.2f) [rotate=90]{\\footnotesize time in seconds};\n",extendedub/2000.0) > diagrammfile;
+      printf("\\draw[] (0.2,0) rectangle (%1.2f,%1.2f);\n\n",nsolver+0.8,extendedub/1000.0) > diagrammfile;
+
+      printf("%% BALKEN\n") > diagrammfile;
+      for( i = 1; i <= nsolver; ++i )
+      {
+         pos[i] = i-1;
+         if( timeshiftedgeom[pos[i],0] >= upperbound)
+            printf("\\draw[fill=c%d] (%d.5,0) rectangle (%d.5,%1.3f);\n",i,i-1,i,extendedub/1000.0) > diagrammfile;
+         else
+            printf("\\draw[fill=c%d] (%d.5,0) rectangle (%d.5,%1.3f);\n",i,i-1,i,timeshiftedgeom[pos[i],0]/1000.0) > diagrammfile;
+      }
+      printf("\n") > diagrammfile;
+
+      printf("%% TRENNLINIEN\n") > diagrammfile;
+      upperbreak = 0.92 * extendedub/1000.0;
+      lowerbreak = 0.90 * extendedub/1000.0;
+      printf("\\fill[background] (0.1,%1.4f) rectangle (%d,%1.4f);\n",lowerbreak,nsolver,upperbreak) > diagrammfile;
+      printf("\\draw[black] (0.1,%1.4f) --  (0.3,%1.4f);\n",lowerbreak,lowerbreak) > diagrammfile;
+      printf("\\draw[black] (0.1,%1.4f) --  (0.3,%1.4f);\n",upperbreak,upperbreak) > diagrammfile;
+
+      printf("%% BALKENBESCHRIFTUNG \n") > diagrammfile;
+      printf("\\draw[c%d] (0.2,%1.3f) -- (%1.2f,%1.3f);\n",refsolver+1,timeshiftedgeom[refsolver,0]/1000.0,
+         nsolver+0.8,timeshiftedgeom[refsolver,0]/1000.0) > diagrammfile;
+
+      for( i = 1; i <= nsolver; ++i )
+      {
+        if( timeshiftedgeom[pos[i],0] >= upperbound )
+           printf("\\node () at (%d,%1.3f) [bel,inner sep=0.3mm] {\\footnotesize\\textcolor{white}{%2.1fx}};\n",i,
+              extendedub/1000.0,timeshiftedgeom[pos[i],0]/timeshiftedgeom[refsolver,0]) > diagrammfile;
+        else if( pos[i] == refsolver )
+           printf("\\node () at (%d,%1.3f) [abo] {\\footnotesize\\textbf{%1.2fx}};\n",i,
+              timeshiftedgeom[pos[i],0]/1000.0,timeshiftedgeom[pos[i],0]/timeshiftedgeom[refsolver,0]) > diagrammfile;
+        else
+           printf("\\node () at (%d,%1.3f) [abo] {\\footnotesize %1.2fx};\n",i,
+              timeshiftedgeom[pos[i],0]/1000.0,timeshiftedgeom[pos[i],0]/timeshiftedgeom[refsolver,0]) > diagrammfile;
+      }
+      printf("\n") > diagrammfile;
+
+      printf("%% NOT SOLVED\n") > diagrammfile;
+      if( german )
+         printf("\\node () at (-0.4, %1.3f) [bel]{\\footnotesize\\textcolor{blue}{Nicht gel\\\"ost}};\n", -upperbound/6000.0) > diagrammfile;
+      else
+         printf("\\node () at (-0.4, %1.3f) [bel]{\\footnotesize\\textcolor{blue}{not solved}};\n", -upperbound/6000.0) > diagrammfile;
+      for( i = 1; i <= nsolver; ++i )
+         printf("\\node () at (%d, %1.3f) [bel]{\\footnotesize\\textcolor{blue}{%2.0f\\%}};\n",i,-upperbound/6000.0,100.0-100.0*((nsolved[pos[i],0]+0.0)/(nprocessedprobs[pos[i],0]+0.0))) > diagrammfile;
+      printf("\n") > diagrammfile;
+
+      printf("%% LEGEND\n") > diagrammfile;
+      for( i = 1; i <= nsolver; ++i )
+      {
+         perc = (nsolver-i)/(nsolver-1.0)*extendedub/1000.0;
+         if( pos[i] == refsolver )
+            printf("\\node () at (%1.4f,%1.4f) [legend]{\\small \\textbf{%s}};\n",nsolver+1.4,perc,solvername[pos[i]]) > diagrammfile;
+         else
+            printf("\\node () at (%1.4f,%1.4f) [legend]{\\small %s};\n",nsolver+1.4,perc,solvername[pos[i]]) > diagrammfile;
+         printf("\\node () at (%1.4f,%1.4f) [box,color=c%d,fill=c%d]{};\n",nsolver+1.4,perc,i,i) > diagrammfile;
+      }
+      printf("\\node () at (%1.4f,%1.3f) [legend]{\\footnotesize timings w.r.t. %d instances};\n",nsolver+1.4,-upperbound/6000.0,nevalprobs[printorder[0],0]) > diagrammfile;
+      printf("\\end{tikzpicture}\n") > diagrammfile;
+      printf("\n\\end{document}\n") > diagrammfile;
    }
 }
