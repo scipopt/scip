@@ -834,12 +834,18 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    assert(weights != NULL);
    assert(profits != NULL);
    assert(capacity >= 0);
-   assert(capacity < INT_MAX);
    assert(items != NULL);
    assert(nitems >= 0);
    assert(success != NULL);
 
    *success = TRUE;
+
+   if( capacity > INT_MAX )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   assert(capacity <= INT_MAX);
 
    if( capacity == 0 )
    {
@@ -1003,7 +1009,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    assert(weights != NULL);
    assert(profits != NULL);
    assert(capacity >= 0);
-   assert(capacity < INT_MAX);
    assert(items != NULL);
    assert(nitems >= 0);
 
