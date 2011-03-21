@@ -12,3 +12,6 @@ check/results/
 cplex.log
 doc/html/
 doc/html_devel/
+.cproject
+.project
+hooks/
