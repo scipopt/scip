@@ -16,3 +16,4 @@ doc/html_devel/
 .cproject
 .project
 hooks/
+localhooks/
